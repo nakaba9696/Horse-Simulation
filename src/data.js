@@ -180,18 +180,19 @@
   // クラスの格の順番（騎手が乗ってくれるかの判定に使う）
   HS.CLASS_ORDER = ['debut', 'maiden', 'win1', 'win2', 'win3', 'open', 'g3', 'g2', 'g1', 'intl'];
 
+  // 騎手（実在の騎手名。腕前・得意な脚質・騎乗料はゲーム用の値で、実際の成績や評価ではない）
   // skill：腕前、style：得意な脚質、minClass：このクラス以上の馬にしか乗らない、fee：1 回の騎乗料（万円）
   HS.JOCKEYS = [
-    { id: 'J1',  name: '武蔵野 翔',   skill: 92, style: 'sashi',  minClass: 'win2', fee: 60 },
-    { id: 'J2',  name: '天城 隼人',   skill: 88, style: 'senko',  minClass: 'win1', fee: 50 },
-    { id: 'J3',  name: '白峰 光',     skill: 85, style: 'nige',   minClass: 'win1', fee: 45 },
-    { id: 'J4',  name: '霧島 大河',   skill: 82, style: 'oikomi', minClass: 'maiden', fee: 35 },
-    { id: 'J5',  name: '朝霧 涼',     skill: 78, style: 'senko',  minClass: 'debut', fee: 30 },
-    { id: 'J6',  name: '早瀬 誠',     skill: 74, style: 'sashi',  minClass: 'debut', fee: 25 },
-    { id: 'J7',  name: '風間 悠斗',   skill: 70, style: 'nige',   minClass: 'debut', fee: 20 },
-    { id: 'J8',  name: '御影 弘',     skill: 66, style: 'oikomi', minClass: 'debut', fee: 15 },
-    { id: 'J9',  name: '岬 菜々子',   skill: 62, style: 'senko',  minClass: 'debut', fee: 12 },
-    { id: 'J10', name: '見習い 新田', skill: 50, style: 'senko',  minClass: 'debut', fee: 5 },
+    { id: 'J1',  name: 'C.ルメール', skill: 93, style: 'sashi',  minClass: 'win2',   fee: 60 },
+    { id: 'J2',  name: '川田 将雅',  skill: 92, style: 'senko',  minClass: 'win2',   fee: 60 },
+    { id: 'J3',  name: '武 豊',      skill: 90, style: 'nige',   minClass: 'win1',   fee: 55 },
+    { id: 'J4',  name: '戸崎 圭太',  skill: 86, style: 'senko',  minClass: 'win1',   fee: 45 },
+    { id: 'J5',  name: '横山 武史',  skill: 85, style: 'senko',  minClass: 'maiden', fee: 40 },
+    { id: 'J6',  name: '坂井 瑠星',  skill: 83, style: 'nige',   minClass: 'maiden', fee: 35 },
+    { id: 'J7',  name: '松山 弘平',  skill: 80, style: 'sashi',  minClass: 'debut',  fee: 30 },
+    { id: 'J8',  name: '岩田 望来',  skill: 78, style: 'oikomi', minClass: 'debut',  fee: 25 },
+    { id: 'J9',  name: '鮫島 克駿',  skill: 74, style: 'sashi',  minClass: 'debut',  fee: 18 },
+    { id: 'J10', name: '若手騎手',   skill: 50, style: 'senko',  minClass: 'debut',  fee: 5 },
   ];
   HS.DEFAULT_JOCKEY = 'J10';
 

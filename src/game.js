@@ -277,7 +277,7 @@
         }
         game.money -= HS.TRAVEL_COST * mine.length;
       }
-      // 騎手：同じレースで同じ騎手は 1 頭だけ。乗れないときは見習い騎手
+      // 騎手：同じレースで同じ騎手は 1 頭だけ。乗れないときは若手騎手
       const usedJ = new Set();
       mine.forEach((h) => {
         let j = jockeyOf(h);

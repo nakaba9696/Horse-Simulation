@@ -272,7 +272,7 @@ test('騎手：クラスが足りないと上手い騎手は乗らず、腕は�
   const game = HS.newGame(10);
   const h = game.horses.find((x) => x.status === 'stable');
   assert.ok(HS.setJockey(game, h.id, 'J1'), '新馬に一流騎手は乗らない');
-  assert.equal(HS.setJockey(game, h.id, 'J5'), null);
+  assert.equal(HS.setJockey(game, h.id, 'J7'), null);
   h.record.wins = 2; h.record.starts = 3;
   assert.equal(HS.setJockey(game, h.id, 'J1'), null);
   // 同じ馬どうしなら、上手い騎手の方が勝ちやすい
