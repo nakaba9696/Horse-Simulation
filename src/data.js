@@ -78,32 +78,40 @@
   HS.PRIZE_SHARE = [1, 0.4, 0.25, 0.15, 0.1];
   HS.APPEARANCE_FEE = 40; // 出走手当（万円）
 
-  // 重賞（架空のレース）。week は 1〜48、age は 2 / 3 / 'older'（3 歳以上）、filly は牝馬限定
+  // 重賞（実在のレース名。週・距離・条件はゲーム用に合わせている）。week は 1〜48、age は 2 / 3 / 'older'（3 歳以上）、filly は牝馬限定
   HS.GRADED_RACES = [
-    { week: 8,  name: '春砂ステークス',     grade: 'g3', surface: 'dirt', distance: 1600, age: 'older' },
-    { week: 10, name: '早春特別',           grade: 'g3', surface: 'turf', distance: 1800, age: 3 },
-    { week: 12, name: '弥生トライアル',     grade: 'g2', surface: 'turf', distance: 2000, age: 3 },
-    { week: 14, name: '桜雲杯',             grade: 'g1', surface: 'turf', distance: 1600, age: 3, filly: true },
-    { week: 15, name: '春光賞',             grade: 'g1', surface: 'turf', distance: 2000, age: 3 },
-    { week: 17, name: '陽春大賞',           grade: 'g1', surface: 'turf', distance: 3200, age: 'older' },
-    { week: 18, name: '青嵐トライアル',     grade: 'g2', surface: 'turf', distance: 2400, age: 3 },
-    { week: 19, name: '新緑マイル',         grade: 'g1', surface: 'turf', distance: 1600, age: 'older' },
-    { week: 20, name: '白百合オークス',     grade: 'g1', surface: 'turf', distance: 2400, age: 3, filly: true },
-    { week: 21, name: '蒼穹ダービー',       grade: 'g1', surface: 'turf', distance: 2400, age: 3 },
-    { week: 25, name: '宝珠記念',           grade: 'g1', surface: 'turf', distance: 2200, age: 'older' },
-    { week: 28, name: '夏空スプリント',     grade: 'g3', surface: 'turf', distance: 1200, age: 'older' },
-    { week: 31, name: '潮騒ステークス',     grade: 'g3', surface: 'turf', distance: 1800, age: 2 },
-    { week: 34, name: '初秋トライアル',     grade: 'g2', surface: 'turf', distance: 2200, age: 3 },
-    { week: 36, name: '疾風スプリント',     grade: 'g1', surface: 'turf', distance: 1200, age: 'older' },
-    { week: 37, name: '秋桜ステークス',     grade: 'g2', surface: 'turf', distance: 2000, age: 'older' },
-    { week: 39, name: '錦秋杯',             grade: 'g1', surface: 'turf', distance: 2000, age: 'older' },
-    { week: 41, name: '銀杏賞',             grade: 'g1', surface: 'turf', distance: 3000, age: 3 },
-    { week: 42, name: '翠嵐マイル',         grade: 'g1', surface: 'turf', distance: 1600, age: 'older' },
-    { week: 44, name: '星冠カップ',         grade: 'g1', surface: 'turf', distance: 2400, age: 'older' },
-    { week: 45, name: '木枯らしステークス', grade: 'g2', surface: 'turf', distance: 1400, age: 2 },
-    { week: 46, name: 'ジュニアクラウン',   grade: 'g1', surface: 'turf', distance: 1600, age: 2 },
-    { week: 47, name: '砂王決戦',           grade: 'g1', surface: 'dirt', distance: 1800, age: 'older' },
-    { week: 48, name: '冬星グランプリ',     grade: 'g1', surface: 'turf', distance: 2500, age: 'older' },
+    { week: 4,  name: '根岸ステークス',                 grade: 'g3', surface: 'dirt', distance: 1400, age: 'older' },
+    { week: 7,  name: 'フェブラリーステークス',         grade: 'g1', surface: 'dirt', distance: 1600, age: 'older' },
+    { week: 9,  name: '弥生賞',                         grade: 'g2', surface: 'turf', distance: 2000, age: 3 },
+    { week: 9,  name: 'チューリップ賞',                 grade: 'g2', surface: 'turf', distance: 1600, age: 3, filly: true },
+    { week: 12, name: '高松宮記念',                     grade: 'g1', surface: 'turf', distance: 1200, age: 'older' },
+    { week: 13, name: '大阪杯',                         grade: 'g1', surface: 'turf', distance: 2000, age: 'older' },
+    { week: 14, name: '桜花賞',                         grade: 'g1', surface: 'turf', distance: 1600, age: 3, filly: true },
+    { week: 15, name: '皐月賞',                         grade: 'g1', surface: 'turf', distance: 2000, age: 3 },
+    { week: 16, name: '青葉賞',                         grade: 'g2', surface: 'turf', distance: 2400, age: 3 },
+    { week: 17, name: '天皇賞（春）',                   grade: 'g1', surface: 'turf', distance: 3200, age: 'older' },
+    { week: 18, name: 'NHKマイルカップ',                grade: 'g1', surface: 'turf', distance: 1600, age: 3 },
+    { week: 19, name: 'ヴィクトリアマイル',             grade: 'g1', surface: 'turf', distance: 1600, age: 'older', filly: true },
+    { week: 20, name: '優駿牝馬（オークス）',           grade: 'g1', surface: 'turf', distance: 2400, age: 3, filly: true },
+    { week: 21, name: '東京優駿（日本ダービー）',       grade: 'g1', surface: 'turf', distance: 2400, age: 3 },
+    { week: 22, name: '安田記念',                       grade: 'g1', surface: 'turf', distance: 1600, age: 'older' },
+    { week: 23, name: '函館スプリントステークス',       grade: 'g3', surface: 'turf', distance: 1200, age: 'older' },
+    { week: 24, name: '宝塚記念',                       grade: 'g1', surface: 'turf', distance: 2200, age: 'older' },
+    { week: 35, name: '札幌2歳ステークス',              grade: 'g3', surface: 'turf', distance: 1800, age: 2 },
+    { week: 36, name: 'スプリンターズステークス',       grade: 'g1', surface: 'turf', distance: 1200, age: 'older' },
+    { week: 36, name: '神戸新聞杯',                     grade: 'g2', surface: 'turf', distance: 2200, age: 3 },
+    { week: 38, name: '秋華賞',                         grade: 'g1', surface: 'turf', distance: 2000, age: 3, filly: true },
+    { week: 38, name: '京都大賞典',                     grade: 'g2', surface: 'turf', distance: 2400, age: 'older' },
+    { week: 40, name: '菊花賞',                         grade: 'g1', surface: 'turf', distance: 3000, age: 3 },
+    { week: 41, name: '天皇賞（秋）',                   grade: 'g1', surface: 'turf', distance: 2000, age: 'older' },
+    { week: 42, name: 'エリザベス女王杯',               grade: 'g1', surface: 'turf', distance: 2200, age: 'older', filly: true },
+    { week: 43, name: 'マイルチャンピオンシップ',       grade: 'g1', surface: 'turf', distance: 1600, age: 'older' },
+    { week: 44, name: 'ジャパンカップ',                 grade: 'g1', surface: 'turf', distance: 2400, age: 'older' },
+    { week: 45, name: 'チャンピオンズカップ',           grade: 'g1', surface: 'dirt', distance: 1800, age: 'older' },
+    { week: 46, name: '阪神ジュベナイルフィリーズ',     grade: 'g1', surface: 'turf', distance: 1600, age: 2, filly: true },
+    { week: 47, name: '朝日杯フューチュリティステークス', grade: 'g1', surface: 'turf', distance: 1600, age: 2 },
+    { week: 48, name: '有馬記念',                       grade: 'g1', surface: 'turf', distance: 2500, age: 'older' },
+    { week: 48, name: 'ホープフルステークス',           grade: 'g1', surface: 'turf', distance: 2000, age: 2 },
   ];
 
   // 血統の系統。祖となる馬と、その系統名（実在の馬名。系統の分け方はゲーム用に簡単にしている）
@@ -206,12 +214,12 @@
     { id: 'R4', name: '青海牧場',         level: [340, 395], color: '#1565c0' },
   ];
 
-  // 海外遠征のレース。出るには重賞 1 勝以上、遠征費がかかる
+  // 海外遠征のレース（実在のレース名）。出るには重賞 1 勝以上、遠征費がかかる
   HS.OVERSEAS_RACES = [
-    { week: 12, name: '砂漠の黄金カップ', region: '中東',   surface: 'dirt', distance: 2000 },
-    { week: 27, name: '王冠ステークス',   region: '西方',   surface: 'turf', distance: 2400 },
-    { week: 40, name: '黄金門賞',         region: '西方',   surface: 'turf', distance: 2400, heavy: true },
-    { week: 45, name: '南十字カップ',     region: '南半球', surface: 'turf', distance: 3200 },
+    { week: 12, name: 'ドバイワールドカップ', region: 'ドバイ', surface: 'dirt', distance: 2000 },
+    { week: 28, name: 'キングジョージ6世&クイーンエリザベスステークス', region: 'イギリス', surface: 'turf', distance: 2400 },
+    { week: 37, name: '凱旋門賞', region: 'フランス', surface: 'turf', distance: 2400, heavy: true },
+    { week: 41, name: 'メルボルンカップ', region: 'オーストラリア', surface: 'turf', distance: 3200 },
   ];
   HS.CLASSES.intl = { label: '海外G1', sum: [355, 400], prize: 40000 };
   HS.TRAVEL_COST = 2000;
