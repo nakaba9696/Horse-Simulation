@@ -1,0 +1,78 @@
+:root {
+  --bg: #f4f1ea;
+  --panel: #ffffff;
+  --text: #22251f;
+  --muted: #6b6f66;
+  --line: #ddd8cc;
+  --accent: #2f7d32;
+  --accent-text: #ffffff;
+  --hit: #c62828;
+  --turf: #5c9e48;
+  --turf2: #538f41;
+  --dirt: #b08957;
+  --dirt2: #a17c4d;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #171a16;
+    --panel: #22261f;
+    --text: #e8eae3;
+    --muted: #a0a598;
+    --line: #3a3f36;
+    --accent: #5fae5f;
+    --accent-text: #0f140e;
+    --hit: #ff7a6e;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+  line-height: 1.5;
+}
+.topbar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.topbar h1 { font-size: 1.2rem; margin: 0; }
+.status { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.status strong { font-size: 1.2rem; }
+main { max-width: 1040px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+.panel { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.panel h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.race-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; }
+.race-info { color: var(--muted); }
+.hint { color: var(--muted); font-size: 0.9rem; margin: 4px 0 8px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+th { color: var(--muted); font-weight: normal; }
+td.name { text-align: left; }
+.name-btn { background: none; border: none; color: inherit; font: inherit; font-weight: bold; cursor: pointer; padding: 0; text-decoration: underline dotted; }
+.num { display: inline-block; width: 1.8em; border-radius: 4px; font-weight: bold; }
+select { font: inherit; padding: 2px 4px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 4px; }
+button { font: inherit; cursor: pointer; border-radius: 6px; padding: 6px 14px; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: bold; }
+button.ghost { background: transparent; }
+button.speed.active { border-color: var(--accent); color: var(--accent); font-weight: bold; }
+.bet-bar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.error { color: var(--hit); text-align: right; margin: 6px 0 0; }
+canvas { width: 100%; height: auto; display: block; border-radius: 8px; margin-top: 8px; }
+.race-controls { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.remain { font-weight: bold; font-size: 1.1rem; }
+.live-order { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 12px; padding: 0; margin: 10px 0 0; font-size: 0.9rem; list-style: none; counter-reset: pos; }
+.live-order li { counter-increment: pos; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live-order li::before { content: counter(pos) "位 "; color: var(--muted); display: inline-block; width: 2.6em; }
+.payout { margin-top: 12px; }
+.payout .hit { color: var(--hit); font-weight: bold; }
+.payout ul { margin: 4px 0; padding-left: 1.2em; }
+.history { margin: 0; padding-left: 1.2em; color: var(--muted); font-size: 0.9rem; }
+.plus { color: var(--hit); }
+dialog { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); max-width: 420px; width: calc(100% - 32px); }
+dialog::backdrop { background: rgba(0,0,0,0.4); }
+.stat-row { display: grid; grid-template-columns: 5em 1fr 2.5em; gap: 8px; align-items: center; margin: 4px 0; }
+.bar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--accent); }
+.rank-1 td { font-weight: bold; }

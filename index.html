@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ホースシミュレーション</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>ホースシミュレーション</h1>
+    <div class="status">
+      <span id="day">1日目</span>
+      <span>所持金 <strong id="money">10,000</strong> 円</span>
+      <button id="newGameBtn" class="ghost">はじめから</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 出馬表と馬券 -->
+    <section id="cardView" class="panel">
+      <div class="race-head">
+        <h2 id="raceName">レース名</h2>
+        <div id="raceInfo" class="race-info"></div>
+      </div>
+      <p class="hint">馬名を押すと能力が見られます。単勝は 1 着、複勝は <span id="placeHint">3</span> 着以内で当たり。</p>
+      <div class="table-wrap">
+        <table class="entries">
+          <thead>
+            <tr><th>番</th><th>馬名</th><th>脚質</th><th>総合</th><th>適性</th><th>戦績</th><th>人気</th><th>単勝</th><th>複勝</th><th>単勝に賭ける</th><th>複勝に賭ける</th></tr>
+          </thead>
+          <tbody id="entriesBody"></tbody>
+        </table>
+      </div>
+      <div class="bet-bar">
+        <span>賭け金の合計 <strong id="betTotal">0</strong> 円</span>
+        <button id="clearBetsBtn" class="ghost">賭けを消す</button>
+        <button id="startBtn" class="primary">出走！</button>
+      </div>
+      <p id="betError" class="error" hidden></p>
+    </section>
+
+    <!-- レース中 -->
+    <section id="raceView" class="panel" hidden>
+      <div class="race-head">
+        <h2 id="raceNameLive"></h2>
+        <div id="remain" class="remain"></div>
+      </div>
+      <canvas id="track" width="960" height="420"></canvas>
+      <div class="race-controls">
+        <span>速さ</span>
+        <button data-speed="1" class="speed active">×1</button>
+        <button data-speed="2" class="speed">×2</button>
+        <button data-speed="4" class="speed">×4</button>
+        <button id="skipBtn" class="ghost">結果へ</button>
+      </div>
+      <ol id="liveOrder" class="live-order"></ol>
+    </section>
+
+    <!-- 結果 -->
+    <section id="resultView" class="panel" hidden>
+      <h2 id="resultTitle"></h2>
+      <div class="table-wrap">
+        <table class="results">
+          <thead><tr><th>着</th><th>番</th><th>馬名</th><th>タイム</th><th>着差</th><th>人気</th><th>単勝</th></tr></thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+      <div id="payout" class="payout"></div>
+      <div class="bet-bar"><button id="nextBtn" class="primary">次のレースへ</button></div>
+    </section>
+
+    <section class="panel">
+      <h2>これまでのレース</h2>
+      <ul id="history" class="history"></ul>
+    </section>
+  </main>
+
+  <dialog id="horseDialog">
+    <div id="horseDetail"></div>
+    <form method="dialog"><button class="primary">閉じる</button></form>
+  </dialog>
+
+  <script src="src/rng.js"></script>
+  <script src="src/data.js"></script>
+  <script src="src/horses.js"></script>
+  <script src="src/race.js"></script>
+  <script src="src/game.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
