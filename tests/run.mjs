@@ -1,6 +1,7 @@
 // 画面を動かさない確認。`node tests/run.mjs` で全部走る。
 import assert from 'node:assert/strict';
 import { loadHS } from './load.mjs';
+import { autoplayWeek } from './autoplay.mjs';
 
 const HS = loadHS();
 const tests = [];
@@ -62,7 +63,7 @@ test('スピードが高い馬ほど勝ちやすい（ただし必ずではな�
     if (HS.simulateRace(RACE(1600), horses, k).results[0].horseId === 1) wins++;
   }
   const rate = wins / n;
-  assert.ok(rate > 0.3 && rate < 0.95, `勝率 ${rate}`);
+  assert.ok(rate > 0.4 && rate < 0.99, `勝率 ${rate}`);
 });
 
 test('スタミナは長い距離ほど効く', () => {
@@ -98,78 +99,166 @@ test('脚質ごとの勝ちやすさに極端な偏りが無い', () => {
   }
 });
 
-test('オッズ：控除率ぶんを引いた確率の合計がおおむね 1 で、人気は 1 から並ぶ', () => {
-  const game = HS.newGame(77);
-  for (let d = 0; d < 4; d++) {
-    const card = HS.createRaceCard(game);
-    const sum = card.odds.reduce((a, o) => a + 0.8 / o.win, 0);
-    assert.ok(sum > 0.85 && sum < 1.2, `合計 ${sum}`);
-    card.odds.forEach((o) => assert.ok(o.win >= 1.1 && o.place >= 1.1 && o.win <= 999.9));
-    assert.equal(JSON.stringify(Array.from(card.popularity).sort((a, b) => a - b)), JSON.stringify(card.entries.map((_, i) => i + 1)));
-    assert.ok(card.entries.length >= 8 && card.entries.length <= 12);
-    game.day++;
+
+test('データ：種牡馬の系統・ニックス・重賞・調教の参照先が実在する', () => {
+  const lines = new Set(Object.values(HS.FOUNDERS));
+  for (const st of HS.STALLIONS) {
+    assert.ok(lines.has(st.line), `${st.name} の系統 ${st.line}`);
+    assert.ok(lines.has(st.damLine), `${st.name} の母父系 ${st.damLine}`);
+    assert.ok(HS.STYLES[st.style] && HS.GROWTH[st.growth]);
+    for (const k of HS.STAT_KEYS) assert.ok(st.potential[k] > 0 && st.potential[k] <= 100);
   }
+  for (const [a, b] of HS.NICKS) assert.ok(lines.has(a) && lines.has(b));
+  for (const g of HS.GRADED_RACES) {
+    assert.ok(g.week >= 1 && g.week <= HS.WEEKS_PER_YEAR, g.name);
+    assert.ok(HS.CLASSES[g.grade] && HS.SURFACES[g.surface]);
+  }
+  for (const t of Object.values(HS.TRAININGS)) {
+    if (t.main) assert.ok(HS.STAT_KEYS.includes(t.main));
+    if (t.sub) assert.ok(HS.STAT_KEYS.includes(t.sub));
+  }
+  const names = new Set(HS.STALLIONS.map((s) => s.name).concat(Object.keys(HS.FOUNDERS)));
+  assert.equal(names.size, HS.STALLIONS.length + Object.keys(HS.FOUNDERS).length, '種牡馬と祖の名前が重なっている');
 });
 
-test('払い戻し：単勝・複勝の当たりはずれと金額', () => {
-  const entries = [1, 2, 3, 4, 5, 6, 7, 8].map((i) => flatHorse(i));
-  const card = { entries, odds: entries.map((_, i) => ({ win: 2 + i, place: 1.5 })) };
-  const results = [2, 0, 5, 1, 3, 4, 6, 7].map((index, i) => ({ index, rank: i + 1, horseId: index + 1, name: 'x' }));
-  const st = HS.settle(card, results, [
-    { type: 'win', index: 2, amount: 100 },   // 1 着：4 倍
-    { type: 'win', index: 0, amount: 100 },   // 2 着：はずれ
-    { type: 'place', index: 5, amount: 200 }, // 3 着：1.5 倍
-    { type: 'place', index: 1, amount: 100 }, // 4 着：はずれ
-  ]);
-  assert.equal(st.stake, 500);
-  assert.equal(st.payout, 400 + 300);
-  assert.deepEqual(st.lines.map((l) => l.hit), [true, false, true, false]);
-  // 7 頭以下なら複勝は 2 着まで
-  assert.equal(HS.placeSlots(7), 2);
-  assert.equal(HS.placeSlots(8), 3);
+test('配合理論：インブリードとニックスを見分ける', () => {
+  const game = HS.newGame(1);
+  const ruri = game.horses.find((h) => h.name === 'ルリノワルツ'); // 父ツキノミラクル（ツキ系）
+  const yuki = HS.STALLIONS.find((s) => s.name === 'ユキワルツ');   // 父ツキノミラクル
+  const th1 = HS.breedingTheory(yuki, ruri);
+  assert.equal(th1.inbreeds[0].name, 'ツキノミラクル');
+  assert.equal(th1.inbreeds[0].cross, '2×2');
+  assert.ok(th1.frail);
+  const ginga = HS.STALLIONS.find((s) => s.name === 'ギンガオー');  // オーロラ系 × 母父ツキ系 = ニックス
+  const th2 = HS.breedingTheory(ginga, ruri);
+  assert.ok(th2.nick);
+  assert.ok(th2.bonus > 0);
 });
 
-test('レース後に所持金・戦績・日付が進み、尽きたら援助される', () => {
+test('配合：良い種牡馬ほど素質の高い仔が出やすい', () => {
+  const game = HS.newGame(2);
+  const mare = game.horses.find((h) => h.status === 'broodmare');
+  const avg = (sid) => {
+    const rng = HS.createRng(9);
+    const st = HS.STALLIONS.find((s) => s.id === sid);
+    let total = 0;
+    for (let i = 0; i < 200; i++) {
+      const f = HS.makeFoal(rng, st, mare, 'x', 'テスト', 1);
+      for (const k of HS.STAT_KEYS) assert.ok(f.potential[k] >= 20 && f.potential[k] <= 100);
+      total += HS.sumStats(f.potential);
+    }
+    return total / 200;
+  };
+  assert.ok(avg('S1') > avg('S12') + 15);
+});
+
+test('出走できる条件：新馬・年齢・牝馬限定・クラス', () => {
   const game = HS.newGame(3);
-  const card = HS.createRaceCard(game);
-  const { results } = HS.simulateRace(card.race, card.entries, card.race.seed);
-  const winner = game.horses.find((h) => h.id === results[0].horseId);
-  const st = { stake: game.money, payout: 0, lines: [] };
-  const out = HS.applyResult(game, card, results, st);
-  assert.equal(game.day, 2);
-  assert.equal(winner.record.wins, 1);
-  assert.equal(winner.record.starts, 1);
-  assert.ok(out.bailout);
-  assert.equal(game.money, 3000);
-  assert.equal(game.history.length, 1);
+  const h = game.horses.find((x) => x.status === 'stable');
+  const race = (extra) => Object.assign({ year: game.year, week: 30, cls: 'debut', age: 2 }, extra);
+  assert.equal(HS.ineligibleReason(h, race()), null);
+  h.record.starts = 1;
+  assert.ok(HS.ineligibleReason(h, race()));
+  assert.equal(HS.ineligibleReason(h, race({ cls: 'maiden' })), null);
+  assert.ok(HS.ineligibleReason(h, race({ cls: 'maiden', age: 'older' })));
+  h.record.wins = 1;
+  assert.equal(HS.ineligibleReason(h, race({ cls: 'win1' })), null);
+  assert.equal(HS.ineligibleReason(h, race({ cls: 'g1' })), null);
+  h.sex = 'colt';
+  assert.ok(HS.ineligibleReason(h, race({ cls: 'g1', filly: true })));
+  h.fatigue = 95;
+  assert.ok(HS.ineligibleReason(h, race({ cls: 'win1' })));
 });
 
-test('古いセーブ（項目が足りない）でも読み込める', () => {
-  const g = HS.newGame(9);
-  delete g.history;
-  delete g.day;
+test('賞金：着順で配分し、出走手当がつく', () => {
+  const r = { cls: 'g1' };
+  assert.equal(HS.prizeFor(r, 1), HS.CLASSES.g1.prize + HS.APPEARANCE_FEE);
+  assert.equal(HS.prizeFor(r, 2), Math.round(HS.CLASSES.g1.prize * 0.4) + HS.APPEARANCE_FEE);
+  assert.equal(HS.prizeFor(r, 9), HS.APPEARANCE_FEE);
+});
+
+test('番組表：毎週レースがあり、重賞は決まった週にある', () => {
+  const game = HS.newGame(4);
+  for (let w = 1; w <= HS.WEEKS_PER_YEAR; w++) {
+    const races = HS.weekRaces(game, 1, w);
+    assert.ok(races.length >= 3, `${w}週`);
+    assert.equal(new Set(races.map((r) => r.id)).size, races.length);
+    const graded = HS.GRADED_RACES.filter((g) => g.week === w).length;
+    assert.equal(races.filter((r) => r.graded).length, graded);
+  }
+  // 同じ週は何度呼んでも同じ
+  assert.equal(JSON.stringify(HS.weekRaces(game, 2, 15)), JSON.stringify(HS.weekRaces(game, 2, 15)));
+});
+
+test('種付け：季節だけ・お金が減り・翌年 3 月に生まれる', () => {
+  const game = HS.newGame(5);
+  const mare = game.horses.find((h) => h.status === 'broodmare' && !h.pregnant);
+  assert.ok(HS.breed(game, mare.id, 'S8'), '季節外は断られる');
+  while (game.week !== HS.BREEDING_WEEKS[0]) HS.advanceWeek(game);
+  const before = game.money;
+  assert.equal(HS.breed(game, mare.id, 'S8'), null);
+  assert.equal(game.money, before - HS.studFee(HS.STALLIONS.find((s) => s.id === 'S8')));
+  assert.ok(HS.breed(game, mare.id, 'S1'), '受胎中は断られる');
+  const count = () => game.horses.filter((h) => h.birthYear === 2).length;
+  while (game.year < 2 || game.week < 10) HS.advanceWeek(game);
+  assert.ok(count() >= 1, '生まれていない');
+  assert.equal(mare.pregnant, null);
+});
+
+test('セリ：7 月に開かれ、買うと牧場に来る', () => {
+  const game = HS.newGame(6);
+  while (!HS.auctionOpen(game)) HS.advanceWeek(game);
+  assert.equal(game.auction.length, 6);
+  const n = game.horses.length;
+  game.money = 1e6;
+  assert.equal(HS.buyAtAuction(game, 0), null);
+  assert.equal(game.horses.length, n + 1);
+  assert.ok(HS.buyAtAuction(game, 0), '二度は買えない');
+  while (HS.auctionOpen(game)) HS.advanceWeek(game);
+  assert.equal(game.auction, null);
+});
+
+test('引退：牝馬は繁殖牝馬に、G1 を勝った牡馬は種牡馬になる', () => {
+  const game = HS.newGame(7);
+  const colt = game.horses.find((h) => h.status === 'stable');
+  colt.sex = 'colt';
+  colt.record.g1Wins = 1;
+  assert.equal(HS.retire(game, colt.id), null);
+  assert.equal(game.ownStallions.length, 1);
+  assert.equal(HS.studFee(game.ownStallions[0]), 0);
+  assert.ok(HS.allStallions(game).some((s) => s.name === colt.name));
+  const filly = game.horses.find((h) => h.status === 'farm');
+  game.year = filly.birthYear + 3;
+  filly.sex = 'filly';
+  assert.equal(HS.retire(game, filly.id), null);
+  assert.equal(filly.status, 'broodmare');
+});
+
+test('セーブ：古い形や壊れたデータは読み込まない', () => {
+  assert.equal(HS.migrate(null), null);
+  assert.equal(HS.migrate({ version: 1, horses: [] }), null);
+  const g = HS.newGame(8);
+  delete g.hallOfFame;
   delete g.horses[0].record;
   const m = HS.migrate(JSON.parse(JSON.stringify(g)));
-  assert.equal(m.day, 1);
-  assert.equal(JSON.stringify(m.history), '[]');
-  assert.equal(JSON.stringify(m.horses[0].record), JSON.stringify({ starts: 0, wins: 0, places: 0 }));
-  assert.equal(HS.migrate(null), null);
-  assert.equal(HS.migrate({ foo: 1 }), null);
+  assert.equal(JSON.stringify(m.hallOfFame), '[]');
+  assert.equal(m.horses[0].record.starts, 0);
 });
 
-test('自動で 30 日遊んでも壊れない', () => {
-  const game = HS.newGame(2024);
-  const rng = HS.createRng(1);
-  for (let d = 0; d < 30; d++) {
-    const card = HS.createRaceCard(game);
-    const { results, frames } = HS.simulateRace(card.race, card.entries, card.race.seed, { record: d % 10 === 0 });
-    if (d % 10 === 0) assert.ok(frames.length > 0);
-    const bets = [{ type: rng() < 0.5 ? 'win' : 'place', index: rng.int(0, card.entries.length - 1), amount: 100 }];
-    const st = HS.settle(card, results, bets);
-    HS.applyResult(game, card, results, st);
-    assert.ok(Number.isFinite(game.money) && game.money >= 0);
+test('自動で 6 年遊んでも壊れず、レースに勝てる', () => {
+  for (const seed of [1, 2]) {
+    const game = HS.newGame(seed);
+    const rng = HS.createRng(seed);
+    let wins = 0;
+    for (let w = 0; w < HS.WEEKS_PER_YEAR * 6; w++) {
+      const out = autoplayWeek(HS, game, rng);
+      out.races.forEach((o) => o.lines.forEach((l) => { if (l.rank === 1) wins++; }));
+      assert.ok(Number.isFinite(game.money));
+      for (const h of game.horses) for (const k of HS.STAT_KEYS) assert.ok(Number.isFinite(h.stats[k]));
+    }
+    assert.equal(game.year, 7);
+    assert.ok(wins >= 3, `勝ち数 ${wins}`);
   }
-  assert.equal(game.day, 31);
 });
 
 let failed = 0;

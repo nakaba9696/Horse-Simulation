@@ -39,6 +39,7 @@ body {
 .topbar h1 { font-size: 1.2rem; margin: 0; }
 .status { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
 .status strong { font-size: 1.2rem; }
+main > section { min-width: 0; }
 main { max-width: 1040px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
 .panel { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
 .panel h2 { margin: 0 0 4px; font-size: 1.15rem; }
@@ -76,3 +77,28 @@ dialog::backdrop { background: rgba(0,0,0,0.4); }
 .bar { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
 .bar > span { display: block; height: 100%; background: var(--accent); }
 .rank-1 td { font-weight: bold; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.tabs button { border-radius: 8px 8px 0 0; }
+.tabs button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: bold; }
+.notice { background: var(--panel); border-left: 4px solid var(--accent); padding: 8px 12px; margin-bottom: 8px; border-radius: 6px; }
+.panel h3 { margin: 16px 0 6px; font-size: 1rem; }
+.panel h3:first-child { margin-top: 0; }
+.grades span { display: inline-block; width: 1.4em; font-weight: bold; }
+.g-S { color: #d4a017; } .g-A { color: #c62828; } .g-B { color: #ef6c00; } .g-C { color: #2e7d32; }
+.g-D { color: #1565c0; } .g-E, .g-F, .g-G { color: var(--muted); }
+.fatigue { width: 60px; height: 8px; background: var(--line); border-radius: 4px; display: inline-block; overflow: hidden; vertical-align: middle; }
+.fatigue > span { display: block; height: 100%; }
+.small { font-size: 0.85rem; color: var(--muted); }
+.row-actions { display: flex; gap: 4px; justify-content: center; }
+.row-actions button { padding: 3px 8px; font-size: 0.85rem; }
+td.left, th.left { text-align: left; }
+.empty { color: var(--muted); }
+.theory { margin: 2px 0 0; padding-left: 1.2em; font-size: 0.85rem; }
+.score { font-weight: bold; font-size: 1.1rem; }
+.cond-2 { color: #c62828; font-weight: bold; } .cond-1 { color: #ef6c00; } .cond-m1 { color: #1565c0; } .cond-m2 { color: #1565c0; font-weight: bold; }
+.titles { margin: 4px 0; padding-left: 1.2em; }
+dialog { max-width: 880px; }
+td.wrap { white-space: normal; min-width: 16em; }
+.log { margin: 0; padding-left: 1.2em; font-size: 0.9rem; }
+.log .d { color: var(--muted); margin-right: 6px; }
+.live-order li.mine, tr.mine-row td { background: rgba(255, 235, 59, 0.25); font-weight: bold; }

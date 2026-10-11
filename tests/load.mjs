@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const LOGIC_FILES = ['src/rng.js', 'src/data.js', 'src/horses.js', 'src/race.js', 'src/game.js'];
+export const LOGIC_FILES = ['src/rng.js', 'src/data.js', 'src/horses.js', 'src/race.js', 'src/breeding.js', 'src/calendar.js', 'src/game.js'];
 
 export function loadHS() {
   const ctx = vm.createContext({ console, Math });

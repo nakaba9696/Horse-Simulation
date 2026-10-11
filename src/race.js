@@ -17,10 +17,11 @@
     const diff = Math.abs(race.distance - horse.bestDistance);
     const fit = 1 - Math.min(0.02, (diff / 1000) * 0.01);
     const cond = 1 - HS.CONDITIONS[race.condition].penalty * (1 - s.power / 140);
-    const form = 1 + rng.normal() * 0.012; // その日の調子
+    // その日の出来：調子と疲れも効く
+    const form = (1 + rng.normal() * 0.012) * (1 + (horse.condition || 0) * 0.004) * (1 - ((horse.fatigue || 0) / 100) * 0.02);
     return {
       horse,
-      base: (16.9 + s.speed * 0.009) * apt * fit * cond * form,
+      base: (16.3 + s.speed * 0.02) * apt * fit * cond * form,
       hpMax: 900 + s.stamina * 16,
       hp: 900 + s.stamina * 16,
       accel: 0.4 + s.power * 0.008,
@@ -137,53 +138,11 @@
     if (lengths < 3.5) return '3';
     if (lengths < 4.5) return '4';
     if (lengths < 5.5) return '5';
-    if (lengths < 8) return '大差気味';
+    if (lengths < 7) return '6';
+    if (lengths < 10) return '8';
     return '大差';
   }
 
-  // 何度も走らせて勝つ確率を見積もり、オッズにする（控除率 20%）
-  function estimateOdds(race, horses, seed, trials) {
-    const n = trials || 200;
-    const wins = new Array(horses.length).fill(0);
-    const places = new Array(horses.length).fill(0);
-    const placeCount = placeSlots(horses.length);
-    const rng = HS.createRng(seed ^ 0x9e3779b9);
-    for (let k = 0; k < n; k++) {
-      const { results } = simulateRace(race, horses, (rng() * 4294967296) >>> 0);
-      wins[results[0].index]++;
-      for (let j = 0; j < placeCount; j++) places[results[j].index]++;
-    }
-    return horses.map((h, i) => {
-      // 勝ちが少ない馬も、複勝圏に来た回数で差がつくようにならす（どちらも合計が 1 頭ぶん・複勝枠ぶんになる）
-      const k = horses.length;
-      const pp = (places[i] + 0.5) / (n + (0.5 * k) / placeCount);
-      const pw = 0.7 * ((wins[i] + 0.5) / (n + 0.5 * k)) + 0.3 * (pp / placeCount);
-      return {
-        win: clampOdds(0.8 / pw),
-        place: clampOdds(0.8 / pp),
-      };
-    });
-  }
-
-  function clampOdds(o) {
-    return Math.min(999.9, Math.max(1.1, Math.round(o * 10) / 10));
-  }
-
-  // 複勝の対象：7 頭以下なら 2 着まで、8 頭以上なら 3 着まで
-  function placeSlots(n) {
-    return n <= 7 ? 2 : 3;
-  }
-
-  function popularity(odds) {
-    const idx = odds.map((o, i) => i).sort((a, b) => odds[a].win - odds[b].win);
-    const pop = new Array(odds.length);
-    idx.forEach((i, rank) => { pop[i] = rank + 1; });
-    return pop;
-  }
-
   HS.simulateRace = simulateRace;
-  HS.estimateOdds = estimateOdds;
-  HS.placeSlots = placeSlots;
-  HS.popularity = popularity;
   HS.stableHash = stableHash;
 })(globalThis.HS = globalThis.HS || {});

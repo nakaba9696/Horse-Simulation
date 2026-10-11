@@ -10,34 +10,27 @@
   <header class="topbar">
     <h1>ホースシミュレーション</h1>
     <div class="status">
-      <span id="day">1日目</span>
-      <span>所持金 <strong id="money">10,000</strong> 円</span>
-      <button id="newGameBtn" class="ghost">はじめから</button>
+      <span id="date"></span>
+      <span>資金 <strong id="money"></strong></span>
+      <button id="nextWeekBtn" class="primary">次の週へ ▶</button>
     </div>
   </header>
 
   <main>
-    <!-- 出馬表と馬券 -->
-    <section id="cardView" class="panel">
-      <div class="race-head">
-        <h2 id="raceName">レース名</h2>
-        <div id="raceInfo" class="race-info"></div>
-      </div>
-      <p class="hint">馬名を押すと能力が見られます。単勝は 1 着、複勝は <span id="placeHint">3</span> 着以内で当たり。</p>
-      <div class="table-wrap">
-        <table class="entries">
-          <thead>
-            <tr><th>番</th><th>馬名</th><th>脚質</th><th>総合</th><th>適性</th><th>戦績</th><th>人気</th><th>単勝</th><th>複勝</th><th>単勝に賭ける</th><th>複勝に賭ける</th></tr>
-          </thead>
-          <tbody id="entriesBody"></tbody>
-        </table>
-      </div>
-      <div class="bet-bar">
-        <span>賭け金の合計 <strong id="betTotal">0</strong> 円</span>
-        <button id="clearBetsBtn" class="ghost">賭けを消す</button>
-        <button id="startBtn" class="primary">出走！</button>
-      </div>
-      <p id="betError" class="error" hidden></p>
+    <section id="homeView">
+      <nav class="tabs" id="tabs">
+        <button data-tab="stable" class="active">厩舎</button>
+        <button data-tab="farm">牧場</button>
+        <button data-tab="auction">セリ</button>
+        <button data-tab="program">番組表</button>
+        <button data-tab="record">記録</button>
+      </nav>
+      <div id="notice" class="notice" hidden></div>
+      <div class="panel" id="tab-stable"></div>
+      <div class="panel" id="tab-farm" hidden></div>
+      <div class="panel" id="tab-auction" hidden></div>
+      <div class="panel" id="tab-program" hidden></div>
+      <div class="panel" id="tab-record" hidden></div>
     </section>
 
     <!-- レース中 -->
@@ -57,27 +50,16 @@
       <ol id="liveOrder" class="live-order"></ol>
     </section>
 
-    <!-- 結果 -->
-    <section id="resultView" class="panel" hidden>
-      <h2 id="resultTitle"></h2>
-      <div class="table-wrap">
-        <table class="results">
-          <thead><tr><th>着</th><th>番</th><th>馬名</th><th>タイム</th><th>着差</th><th>人気</th><th>単勝</th></tr></thead>
-          <tbody id="resultBody"></tbody>
-        </table>
-      </div>
-      <div id="payout" class="payout"></div>
-      <div class="bet-bar"><button id="nextBtn" class="primary">次のレースへ</button></div>
-    </section>
-
-    <section class="panel">
-      <h2>これまでのレース</h2>
-      <ul id="history" class="history"></ul>
+    <!-- 週のまとめ -->
+    <section id="weekView" class="panel" hidden>
+      <h2 id="weekTitle"></h2>
+      <div id="weekBody"></div>
+      <div class="bet-bar"><button id="weekOkBtn" class="primary">牧場に戻る</button></div>
     </section>
   </main>
 
-  <dialog id="horseDialog">
-    <div id="horseDetail"></div>
+  <dialog id="dialog">
+    <div id="dialogBody"></div>
     <form method="dialog"><button class="primary">閉じる</button></form>
   </dialog>
 
@@ -85,6 +67,8 @@
   <script src="src/data.js"></script>
   <script src="src/horses.js"></script>
   <script src="src/race.js"></script>
+  <script src="src/breeding.js"></script>
+  <script src="src/calendar.js"></script>
   <script src="src/game.js"></script>
   <script src="src/main.js"></script>
 </body>
