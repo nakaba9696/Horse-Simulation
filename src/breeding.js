@@ -61,23 +61,34 @@
     return st ? st.line : '—';
   }
 
-  // 種牡馬の系統と祖先を、父の情報から組み立てる（読み込み時に一度だけ）
-  function initStallions() {
-    HS.STALLIONS.forEach((st) => {
-      const sireObj = findStallion(st.sire) || { name: st.sire, ancestors: [] };
-      const damObj = { name: null, ancestors: [{ name: st.damSire, gen: 1 }] };
-      st.line = lineOfName(st.sire);
-      st.damLine = lineOfName(st.damSire);
-      st.ancestors = mergeAncestors(sireObj, null).concat(damObj.ancestors.map((a) => ({ name: a.name, gen: a.gen + 1 })));
-    });
+  // 名前から、分かっている範囲の父系の祖先をたどる（種牡馬一覧か、祖先の父の表から）
+  function pedigreeOf(name, extra) {
+    const st = findStallion(name, extra);
+    if (st && st.ancestors) return { name, ancestors: st.ancestors };
+    const sire = HS.ANCESTOR_SIRES[name];
+    if (!sire) return { name, ancestors: [] };
+    const up = pedigreeOf(sire, extra);
+    return { name, ancestors: [{ name: sire, gen: 1 }].concat(up.ancestors.map((a) => ({ name: a.name, gen: a.gen + 1 }))) };
   }
 
-  // 繁殖牝馬など、父と母の父しか分からない馬の祖先
+  // 父と母の父から、祖先の一覧を作る（母の父は 2 代前）
   function ancestorsFromSire(sireName, damSireName, extra) {
-    const sireObj = findStallion(sireName, extra) || { name: sireName, ancestors: [] };
-    const list = mergeAncestors(sireObj, null);
-    if (damSireName) list.push({ name: damSireName, gen: 2 });
+    const list = mergeAncestors(pedigreeOf(sireName, extra), null);
+    if (damSireName) {
+      const ds = pedigreeOf(damSireName, extra);
+      list.push({ name: damSireName, gen: 2 });
+      ds.ancestors.forEach((a) => { if (a.gen + 2 <= MAX_GEN) list.push({ name: a.name, gen: a.gen + 2 }); });
+    }
     return list;
+  }
+
+  // 種牡馬の系統と祖先を、父と母の父から組み立てる（読み込み時に一度だけ）
+  function initStallions() {
+    HS.STALLIONS.forEach((st) => {
+      st.line = lineOfName(st.sire);
+      st.damLine = lineOfName(st.damSire);
+      st.ancestors = ancestorsFromSire(st.sire, st.damSire);
+    });
   }
 
   // 配合の評価（ダビスタ・ウイポ風）：ニックス・インブリード・アウトブリード

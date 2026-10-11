@@ -97,7 +97,7 @@ td.left, th.left { text-align: left; }
 .score { font-weight: bold; font-size: 1.1rem; }
 .cond-2 { color: #c62828; font-weight: bold; } .cond-1 { color: #ef6c00; } .cond-m1 { color: #1565c0; } .cond-m2 { color: #1565c0; font-weight: bold; }
 .titles { margin: 4px 0; padding-left: 1.2em; }
-dialog { max-width: 880px; }
+dialog { max-width: 960px; width: calc(100% - 32px); }
 td.wrap { white-space: normal; min-width: 16em; }
 .log { margin: 0; padding-left: 1.2em; font-size: 0.9rem; }
 .log .d { color: var(--muted); margin-right: 6px; }
