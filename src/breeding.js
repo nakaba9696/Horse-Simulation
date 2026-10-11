@@ -56,6 +56,7 @@
   // 系統：父の系統を受け継ぐ。祖となる馬なら、その系統
   function lineOfName(name, extra) {
     if (HS.FOUNDERS[name]) return HS.FOUNDERS[name];
+    if (HS.ANCESTOR_LINES[name]) return HS.ANCESTOR_LINES[name];
     const st = findStallion(name, extra);
     return st ? st.line : '—';
   }

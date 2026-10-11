@@ -102,6 +102,7 @@ test('脚質ごとの勝ちやすさに極端な偏りが無い', () => {
 
 test('データ：種牡馬の系統・ニックス・重賞・調教の参照先が実在する', () => {
   const lines = new Set(Object.values(HS.FOUNDERS));
+  for (const l of Object.values(HS.ANCESTOR_LINES)) assert.ok(lines.has(l), `祖先の系統 ${l}`);
   for (const st of HS.STALLIONS) {
     assert.ok(lines.has(st.line), `${st.name} の系統 ${st.line}`);
     assert.ok(lines.has(st.damLine), `${st.name} の母父系 ${st.damLine}`);
@@ -123,16 +124,22 @@ test('データ：種牡馬の系統・ニックス・重賞・調教の参照�
 
 test('配合理論：インブリードとニックスを見分ける', () => {
   const game = HS.newGame(1);
-  const ruri = game.horses.find((h) => h.name === 'ルリノワルツ'); // 父ツキノミラクル（ツキ系）
-  const yuki = HS.STALLIONS.find((s) => s.name === 'ユキワルツ');   // 父ツキノミラクル
-  const th1 = HS.breedingTheory(yuki, ruri);
-  assert.equal(th1.inbreeds[0].name, 'ツキノミラクル');
-  assert.equal(th1.inbreeds[0].cross, '2×2');
-  assert.ok(th1.frail);
-  const ginga = HS.STALLIONS.find((s) => s.name === 'ギンガオー');  // オーロラ系 × 母父ツキ系 = ニックス
-  const th2 = HS.breedingTheory(ginga, ruri);
-  assert.ok(th2.nick);
-  assert.ok(th2.bonus > 0);
+  const ruri = game.horses.find((h) => h.name === 'ルリノワルツ');  // 父ハーツクライ・母の父キングカメハメハ
+  const haru = game.horses.find((h) => h.name === 'ハルノソング');  // 父ダイワメジャー（サンデーサイレンス系）
+  const st = (name) => HS.STALLIONS.find((s) => s.name === name);
+  // キズナ（父ディープインパクト）× ルリノワルツ → サンデーサイレンス 3×3
+  const th1 = HS.breedingTheory(st('キズナ'), ruri);
+  assert.equal(th1.inbreeds[0].name, 'サンデーサイレンス');
+  assert.equal(th1.inbreeds[0].cross, '3×3');
+  assert.ok(!th1.frail);
+  // ハーツクライ × ルリノワルツ（父ハーツクライ）→ 1×2 の濃いインブリードで体質が弱い
+  const th2 = HS.breedingTheory(st('ハーツクライ'), ruri);
+  assert.equal(th2.inbreeds[0].cross, '1×2');
+  assert.ok(th2.frail);
+  // キングカメハメハ（ミスプロ系）× 母父サンデーサイレンス系 = ニックス
+  const th3 = HS.breedingTheory(st('キングカメハメハ'), haru);
+  assert.ok(th3.nick);
+  assert.ok(th3.bonus > 0);
 });
 
 test('配合：良い種牡馬ほど素質の高い仔が出やすい', () => {

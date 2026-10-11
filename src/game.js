@@ -22,6 +22,7 @@
       .concat(game.hallOfFame.map((h) => h.name))
       .concat((game.rivals || []).map((h) => h.name))
       .concat(Object.keys(HS.FOUNDERS))
+      .concat(Object.keys(HS.ANCESTOR_LINES))
       .concat(HS.allStallions(game).map((x) => x.name)));
     return HS.createHorse(rng, 'tmp', used).name;
   }
@@ -35,8 +36,8 @@
       rivals: [], awards: [], jockeyStats: {},
     };
     const rng = HS.createRng(s);
-    const m1 = makeMare(game, 'ハルノソング', 'ナギノカゼ', 'クロガネオー', { speed: 72, stamina: 68, power: 66, guts: 70, wits: 70 }, 'senko', 1800, { turf: 'B', dirt: 'B' }, -6);
-    const m2 = makeMare(game, 'ルリノワルツ', 'ツキノミラクル', 'オーロラスター', { speed: 68, stamina: 74, power: 62, guts: 66, wits: 72 }, 'sashi', 2200, { turf: 'B', dirt: 'C' }, -8);
+    const m1 = makeMare(game, 'ハルノソング', 'ダイワメジャー', 'サクラバクシンオー', { speed: 72, stamina: 68, power: 66, guts: 70, wits: 70 }, 'senko', 1800, { turf: 'B', dirt: 'B' }, -6);
+    const m2 = makeMare(game, 'ルリノワルツ', 'ハーツクライ', 'キングカメハメハ', { speed: 68, stamina: 74, power: 62, guts: 66, wits: 72 }, 'sashi', 2200, { turf: 'B', dirt: 'C' }, -8);
     game.horses.push(m1, m2);
     const s8 = HS.STALLIONS.find((x) => x.id === 'S8');
     m1.pregnant = { sire: JSON.parse(JSON.stringify(s8)), year: 0 };

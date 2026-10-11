@@ -106,37 +106,55 @@
     { week: 48, name: '冬星グランプリ',     grade: 'g1', surface: 'turf', distance: 2500, age: 'older' },
   ];
 
-  // 血統の系統（架空）。祖となる馬と、その系統名
+  // 血統の系統。祖となる馬と、その系統名（実在の馬名。系統の分け方はゲーム用に簡単にしている）
   HS.FOUNDERS = {
-    'オーロラスター': 'オーロラ系',
-    'ハヤテオー': 'ハヤテ系',
-    'ツキノカガミ': 'ツキ系',
-    'クロガネオー': 'クロガネ系',
-    'ナギノカゼ': 'ナギ系',
+    'サンデーサイレンス': 'サンデーサイレンス系',
+    'ミスタープロスペクター': 'ミスプロ系',
+    'ロベルト': 'ロベルト系',
+    'ノーザンダンサー': 'ノーザンダンサー系',
+    'ストームキャット': 'ストームキャット系',
+    'ナスルーラ': 'ナスルーラ系',
+  };
+  // 種牡馬の父・母の父として出てくる馬の系統
+  HS.ANCESTOR_LINES = {
+    'キングマンボ': 'ミスプロ系',
+    'アンブライドルズソング': 'ミスプロ系',
+    'シンボリクリスエス': 'ロベルト系',
+    'スクリーンヒーロー': 'ロベルト系',
+    'ステイゴールド': 'サンデーサイレンス系',
+    'スペシャルウィーク': 'サンデーサイレンス系',
+    'ブラックタイド': 'サンデーサイレンス系',
+    'アルザオ': 'ノーザンダンサー系',
+    'ラストタイクーン': 'ノーザンダンサー系',
+    'カーネギー': 'ノーザンダンサー系',
+    'ノーザンテースト': 'ノーザンダンサー系',
+    'ヌレイエフ': 'ノーザンダンサー系',
+    'トニービン': 'ナスルーラ系',
+    'サクラバクシンオー': 'ナスルーラ系',
   };
   // ニックス：この父系 × 母父系の組み合わせは相性が良い
   HS.NICKS = [
-    ['オーロラ系', 'ツキ系'],
-    ['ハヤテ系', 'クロガネ系'],
-    ['ツキ系', 'ナギ系'],
-    ['クロガネ系', 'オーロラ系'],
-    ['ナギ系', 'ハヤテ系'],
+    ['サンデーサイレンス系', 'ストームキャット系'],
+    ['ミスプロ系', 'サンデーサイレンス系'],
+    ['ロベルト系', 'サンデーサイレンス系'],
+    ['サンデーサイレンス系', 'ノーザンダンサー系'],
+    ['ストームキャット系', 'サンデーサイレンス系'],
   ];
 
-  // 種牡馬（架空）。sire は父、damSire は母の父。素質（potential）は 5 項目
+  // 種牡馬（実在の馬名）。sire は父、damSire は母の父。素質（potential）・脚質・距離・成長の型はゲーム用の値
   HS.STALLIONS = [
-    { id: 'S1', sire: 'オーロラスター', damSire: 'ツキノカガミ',  name: 'ギンガオー',       potential: { speed: 92, stamina: 84, power: 86, guts: 80, wits: 84 }, style: 'senko',  bestDistance: 2200, aptitude: { turf: 'A', dirt: 'C' }, growth: 'normal' },
-    { id: 'S2', sire: 'ハヤテオー', damSire: 'クロガネオー',  name: 'ハヤテキング',     potential: { speed: 95, stamina: 62, power: 88, guts: 76, wits: 72 }, style: 'nige',   bestDistance: 1400, aptitude: { turf: 'A', dirt: 'B' }, growth: 'early' },
-    { id: 'S3', sire: 'ツキノカガミ', damSire: 'オーロラスター',  name: 'ツキノミラクル',   potential: { speed: 84, stamina: 94, power: 76, guts: 86, wits: 80 }, style: 'sashi',  bestDistance: 2800, aptitude: { turf: 'A', dirt: 'D' }, growth: 'late' },
-    { id: 'S4', sire: 'クロガネオー', damSire: 'ナギノカゼ',  name: 'クロガネロード',   potential: { speed: 82, stamina: 76, power: 94, guts: 84, wits: 70 }, style: 'senko',  bestDistance: 1800, aptitude: { turf: 'C', dirt: 'A' }, growth: 'normal' },
-    { id: 'S5', sire: 'ギンガオー', damSire: 'ハヤテオー',  name: 'サクラフラッシュ', potential: { speed: 88, stamina: 70, power: 78, guts: 72, wits: 78 }, style: 'sashi',  bestDistance: 1600, aptitude: { turf: 'A', dirt: 'C' }, growth: 'early' },
-    { id: 'S6', sire: 'ツキノカガミ', damSire: 'クロガネオー',  name: 'アオノツバサ',     potential: { speed: 80, stamina: 82, power: 74, guts: 78, wits: 76 }, style: 'oikomi', bestDistance: 2400, aptitude: { turf: 'B', dirt: 'C' }, growth: 'late' },
-    { id: 'S7', sire: 'ハヤテキング', damSire: 'ナギノカゼ',  name: 'ヒスイダッシュ',   potential: { speed: 82, stamina: 66, power: 80, guts: 70, wits: 70 }, style: 'nige',   bestDistance: 1400, aptitude: { turf: 'B', dirt: 'B' }, growth: 'early' },
-    { id: 'S8', sire: 'ナギノカゼ', damSire: 'オーロラスター',  name: 'ナギノヒカリ',     potential: { speed: 76, stamina: 78, power: 72, guts: 74, wits: 74 }, style: 'senko',  bestDistance: 2000, aptitude: { turf: 'B', dirt: 'B' }, growth: 'normal' },
-    { id: 'S9', sire: 'クロガネロード', damSire: 'ツキノカガミ',  name: 'ミナミブレイブ',   potential: { speed: 74, stamina: 70, power: 82, guts: 80, wits: 66 }, style: 'senko',  bestDistance: 1600, aptitude: { turf: 'D', dirt: 'A' }, growth: 'normal' },
-    { id: 'S10', sire: 'ツキノミラクル', damSire: 'ハヤテオー', name: 'ユキワルツ',       potential: { speed: 72, stamina: 80, power: 68, guts: 72, wits: 78 }, style: 'sashi',  bestDistance: 2400, aptitude: { turf: 'B', dirt: 'C' }, growth: 'late' },
-    { id: 'S11', sire: 'ナギノヒカリ', damSire: 'クロガネオー', name: 'カゼノリズム',     potential: { speed: 74, stamina: 66, power: 72, guts: 70, wits: 72 }, style: 'oikomi', bestDistance: 1800, aptitude: { turf: 'B', dirt: 'B' }, growth: 'normal' },
-    { id: 'S12', sire: 'ナギノカゼ', damSire: 'ハヤテオー', name: 'トキノビート',     potential: { speed: 70, stamina: 68, power: 74, guts: 68, wits: 68 }, style: 'senko',  bestDistance: 1600, aptitude: { turf: 'C', dirt: 'B' }, growth: 'early' },
+    { id: 'S1',  name: 'ディープインパクト', sire: 'サンデーサイレンス', damSire: 'アルザオ',               potential: { speed: 96, stamina: 86, power: 82, guts: 82, wits: 86 }, style: 'oikomi', bestDistance: 2400, aptitude: { turf: 'A', dirt: 'C' }, growth: 'normal' },
+    { id: 'S2',  name: 'キングカメハメハ',   sire: 'キングマンボ',       damSire: 'ラストタイクーン',       potential: { speed: 88, stamina: 82, power: 90, guts: 82, wits: 80 }, style: 'senko',  bestDistance: 2000, aptitude: { turf: 'A', dirt: 'A' }, growth: 'normal' },
+    { id: 'S3',  name: 'ハーツクライ',       sire: 'サンデーサイレンス', damSire: 'トニービン',             potential: { speed: 82, stamina: 92, power: 80, guts: 86, wits: 78 }, style: 'sashi',  bestDistance: 2400, aptitude: { turf: 'A', dirt: 'C' }, growth: 'late' },
+    { id: 'S4',  name: 'ロードカナロア',     sire: 'キングカメハメハ',   damSire: 'ストームキャット',       potential: { speed: 95, stamina: 64, power: 88, guts: 78, wits: 80 }, style: 'senko',  bestDistance: 1400, aptitude: { turf: 'A', dirt: 'B' }, growth: 'normal' },
+    { id: 'S5',  name: 'エピファネイア',     sire: 'シンボリクリスエス', damSire: 'スペシャルウィーク',     potential: { speed: 84, stamina: 86, power: 86, guts: 80, wits: 72 }, style: 'senko',  bestDistance: 2200, aptitude: { turf: 'A', dirt: 'C' }, growth: 'early' },
+    { id: 'S6',  name: 'キタサンブラック',   sire: 'ブラックタイド',     damSire: 'サクラバクシンオー',     potential: { speed: 84, stamina: 90, power: 82, guts: 90, wits: 82 }, style: 'nige',   bestDistance: 2400, aptitude: { turf: 'A', dirt: 'C' }, growth: 'late' },
+    { id: 'S7',  name: 'ドゥラメンテ',       sire: 'キングカメハメハ',   damSire: 'サンデーサイレンス',     potential: { speed: 90, stamina: 82, power: 86, guts: 80, wits: 72 }, style: 'sashi',  bestDistance: 2000, aptitude: { turf: 'A', dirt: 'C' }, growth: 'early' },
+    { id: 'S8',  name: 'モーリス',           sire: 'スクリーンヒーロー', damSire: 'カーネギー',             potential: { speed: 86, stamina: 74, power: 84, guts: 76, wits: 76 }, style: 'senko',  bestDistance: 1600, aptitude: { turf: 'A', dirt: 'C' }, growth: 'late' },
+    { id: 'S9',  name: 'ゴールドアリュール', sire: 'サンデーサイレンス', damSire: 'ヌレイエフ',             potential: { speed: 78, stamina: 72, power: 86, guts: 80, wits: 70 }, style: 'senko',  bestDistance: 1800, aptitude: { turf: 'C', dirt: 'A' }, growth: 'normal' },
+    { id: 'S10', name: 'ダイワメジャー',     sire: 'サンデーサイレンス', damSire: 'ノーザンテースト',       potential: { speed: 82, stamina: 68, power: 82, guts: 76, wits: 70 }, style: 'senko',  bestDistance: 1600, aptitude: { turf: 'A', dirt: 'B' }, growth: 'early' },
+    { id: 'S11', name: 'キズナ',             sire: 'ディープインパクト', damSire: 'ストームキャット',       potential: { speed: 80, stamina: 76, power: 80, guts: 74, wits: 72 }, style: 'oikomi', bestDistance: 2000, aptitude: { turf: 'A', dirt: 'B' }, growth: 'normal' },
+    { id: 'S12', name: 'コントレイル',       sire: 'ディープインパクト', damSire: 'アンブライドルズソング', potential: { speed: 76, stamina: 72, power: 74, guts: 70, wits: 72 }, style: 'senko',  bestDistance: 2000, aptitude: { turf: 'A', dirt: 'C' }, growth: 'normal' },
   ];
 })(globalThis.HS = globalThis.HS || {});
 
