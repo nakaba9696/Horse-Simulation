@@ -139,3 +139,54 @@
     { id: 'S12', sire: 'ナギノカゼ', damSire: 'ハヤテオー', name: 'トキノビート',     potential: { speed: 70, stamina: 68, power: 74, guts: 68, wits: 68 }, style: 'senko',  bestDistance: 1600, aptitude: { turf: 'C', dirt: 'B' }, growth: 'early' },
   ];
 })(globalThis.HS = globalThis.HS || {});
+
+// ---- 騎手・調教師・ライバル馬主・海外遠征（架空） ----
+(function (HS) {
+  // クラスの格の順番（騎手が乗ってくれるかの判定に使う）
+  HS.CLASS_ORDER = ['debut', 'maiden', 'win1', 'win2', 'win3', 'open', 'g3', 'g2', 'g1', 'intl'];
+
+  // skill：腕前、style：得意な脚質、minClass：このクラス以上の馬にしか乗らない、fee：1 回の騎乗料（万円）
+  HS.JOCKEYS = [
+    { id: 'J1',  name: '武蔵野 翔',   skill: 92, style: 'sashi',  minClass: 'win2', fee: 60 },
+    { id: 'J2',  name: '天城 隼人',   skill: 88, style: 'senko',  minClass: 'win1', fee: 50 },
+    { id: 'J3',  name: '白峰 光',     skill: 85, style: 'nige',   minClass: 'win1', fee: 45 },
+    { id: 'J4',  name: '霧島 大河',   skill: 82, style: 'oikomi', minClass: 'maiden', fee: 35 },
+    { id: 'J5',  name: '朝霧 涼',     skill: 78, style: 'senko',  minClass: 'debut', fee: 30 },
+    { id: 'J6',  name: '早瀬 誠',     skill: 74, style: 'sashi',  minClass: 'debut', fee: 25 },
+    { id: 'J7',  name: '風間 悠斗',   skill: 70, style: 'nige',   minClass: 'debut', fee: 20 },
+    { id: 'J8',  name: '御影 弘',     skill: 66, style: 'oikomi', minClass: 'debut', fee: 15 },
+    { id: 'J9',  name: '岬 菜々子',   skill: 62, style: 'senko',  minClass: 'debut', fee: 12 },
+    { id: 'J10', name: '見習い 新田', skill: 50, style: 'senko',  minClass: 'debut', fee: 5 },
+  ];
+  HS.DEFAULT_JOCKEY = 'J10';
+
+  // skill：調教の効き（倍率）、specialty：特に伸ばしやすい能力、care：故障しにくさ（小さいほど故障しにくい）、fee：週の預託料（万円）
+  HS.TRAINERS = [
+    { id: 'T1', name: '大河原 厩舎', skill: 1.25, specialty: 'speed',   care: 1.1, fee: 16, note: 'スパルタ。伸びるが故障に注意' },
+    { id: 'T2', name: '桐生 厩舎',   skill: 1.15, specialty: 'stamina', care: 0.8, fee: 14, note: '長距離の名門。馬を大事にする' },
+    { id: 'T3', name: '真田 厩舎',   skill: 1.1,  specialty: 'power',   care: 1.0, fee: 12, note: 'ダートとパワー型が得意' },
+    { id: 'T4', name: '日向 厩舎',   skill: 1.05, specialty: 'wits',    care: 0.7, fee: 11, note: '気性の難しい馬もうまく扱う' },
+    { id: 'T5', name: '藤枝 厩舎',   skill: 1.0,  specialty: 'guts',    care: 0.9, fee: 10, note: '根性を鍛える昔気質' },
+    { id: 'T6', name: '小野寺 厩舎', skill: 0.9,  specialty: 'speed',   care: 0.9, fee: 7,  note: '開業したての若手。安い' },
+  ];
+  HS.DEFAULT_TRAINER = 'T5';
+
+  // ライバル馬主。level は素質の高さ（合計の幅）
+  HS.RIVAL_OWNERS = [
+    { id: 'R1', name: '黒崎ファーム',     level: [370, 425], color: '#222222' },
+    { id: 'R2', name: '白鳥レーシング',   level: [362, 418], color: '#f5f5f5' },
+    { id: 'R3', name: '紅葉ホースクラブ', level: [350, 405], color: '#d32f2f' },
+    { id: 'R4', name: '青海牧場',         level: [340, 395], color: '#1565c0' },
+  ];
+
+  // 海外遠征のレース。出るには重賞 1 勝以上、遠征費がかかる
+  HS.OVERSEAS_RACES = [
+    { week: 12, name: '砂漠の黄金カップ', region: '中東',   surface: 'dirt', distance: 2000 },
+    { week: 27, name: '王冠ステークス',   region: '西方',   surface: 'turf', distance: 2400 },
+    { week: 40, name: '黄金門賞',         region: '西方',   surface: 'turf', distance: 2400, heavy: true },
+    { week: 45, name: '南十字カップ',     region: '南半球', surface: 'turf', distance: 3200 },
+  ];
+  HS.CLASSES.intl = { label: '海外G1', sum: [355, 400], prize: 40000 };
+  HS.TRAVEL_COST = 2000;
+  HS.AWARD_BONUS = 1000;
+})(globalThis.HS = globalThis.HS || {});

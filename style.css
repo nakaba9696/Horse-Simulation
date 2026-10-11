@@ -102,3 +102,13 @@ td.wrap { white-space: normal; min-width: 16em; }
 .log { margin: 0; padding-left: 1.2em; font-size: 0.9rem; }
 .log .d { color: var(--muted); margin-right: 6px; }
 .live-order li.mine, tr.mine-row td { background: rgba(255, 235, 59, 0.25); font-weight: bold; }
+.horse-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+.hc-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; align-items: center; }
+.hc-stats { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 0.9rem; }
+.hc-controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 12px; margin-top: 8px; font-size: 0.9rem; }
+.hc-controls label { display: flex; gap: 6px; align-items: center; }
+.hc-controls select { flex: 1; min-width: 0; }
+.comment { margin: 8px 0 4px; font-size: 0.9rem; }
+.row-actions.left { justify-content: flex-start; }
+.commentary { list-style: none; margin: 8px 0 0; padding: 8px 12px; min-height: 5.5em; background: var(--bg); border-radius: 6px; font-size: 0.95rem; }
+.commentary li:last-child { font-weight: bold; }

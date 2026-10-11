@@ -35,6 +35,10 @@
       list.push({ cls: g.grade, age: g.age, filly: !!g.filly, surface: g.surface, distance: g.distance,
         name: `${g.name}（${HS.CLASSES[g.grade].label}）`, graded: true });
     });
+    HS.OVERSEAS_RACES.filter((o) => o.week === week).forEach((o) => {
+      list.push({ cls: 'intl', age: 'older', surface: o.surface, distance: o.distance, overseas: true, heavy: !!o.heavy,
+        name: `${o.name}（${o.region}・海外G1）` });
+    });
     if (week >= 21) list.push(regular(rng, 'debut', 2));
     if (week >= 25) list.push(regular(rng, 'maiden', 2));
     if (week >= 30 && week % 2 === 0) list.push(regular(rng, 'win1', 2));
@@ -52,7 +56,7 @@
     return list.map((r, i) => Object.assign(r, {
       id: `${year}-${week}-${i}`,
       year, week,
-      condition: raceConditionFor(rng),
+      condition: r.heavy && rng() < 0.6 ? 'soft' : raceConditionFor(rng),
       seed: HS.stableHash(`${seed}:${i}`),
     }));
   }
@@ -85,6 +89,7 @@
       case 'win1': return w === 1 ? null : '1勝馬のみ';
       case 'win2': return w === 2 ? null : '2勝馬のみ';
       case 'win3': return w === 3 ? null : '3勝馬のみ';
+      case 'intl': return horse.record.gradedWins >= 1 ? null : '重賞1勝以上が必要';
       default: return w >= 1 ? null : '1勝以上が必要';
     }
   }
@@ -105,12 +110,37 @@
     return base;
   }
 
-  function buildField(race, myHorses) {
+  // 騎手を割り当てる。使われていない騎手から、クラスが高いほど上手い騎手が乗りやすい
+  function pickJockey(rng, race, usedJockeys, preferBest) {
+    const rank = HS.CLASS_ORDER.indexOf(race.cls);
+    const ok = HS.JOCKEYS.filter((j) => !usedJockeys.has(j.id) && HS.CLASS_ORDER.indexOf(j.minClass) <= rank);
+    if (!ok.length) return { id: null, name: rng.pick(['地方 騎手', '短期免許 騎手', '若手 騎手']), skill: Math.round(rng.range(48, 66)), style: rng.pick(HS.STYLE_KEYS) };
+    ok.sort((a, b) => b.skill - a.skill);
+    const j = preferBest || rng() < rank / 12 ? ok[0] : rng.pick(ok);
+    usedJockeys.add(j.id);
+    return j;
+  }
+  function ride(horse, j) {
+    horse.jockeyId = j.id;
+    horse.jockeyName = j.name;
+    horse.jockeySkill = j.skill;
+    horse.jockeyStyle = j.style;
+  }
+
+  // myHorses には騎手がもう決まっている。rivals はライバル馬主の馬
+  function buildField(race, myHorses, rivals) {
     const rng = HS.createRng(race.seed ^ 0x5bd1e995);
-    const size = Math.max(myHorses.length + 1, Math.min(12, rng.int(9, 12)));
-    const used = new Set(myHorses.map((h) => h.name));
-    const field = myHorses.slice();
-    for (let i = field.length; i < size; i++) field.push(makeOpponent(rng, race, i, used));
+    const others = rivals || [];
+    const size = Math.max(myHorses.length + others.length + (myHorses.length ? 1 : 2), Math.min(12, rng.int(9, 12)));
+    const used = new Set(myHorses.concat(others).map((h) => h.name));
+    const usedJockeys = new Set(myHorses.map((h) => h.jockeyId).filter(Boolean));
+    others.forEach((h) => ride(h, pickJockey(rng, race, usedJockeys, true)));
+    const field = myHorses.concat(others);
+    for (let i = field.length; i < size; i++) {
+      const o = makeOpponent(rng, race, i, used);
+      ride(o, pickJockey(rng, race, usedJockeys, false));
+      field.push(o);
+    }
     // 馬番はランダム
     for (let i = field.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));
@@ -132,4 +162,5 @@
   HS.buildField = buildField;
   HS.prizeFor = prizeFor;
   HS.makeOpponent = makeOpponent;
+  HS.ride = ride;
 })(globalThis.HS = globalThis.HS || {});

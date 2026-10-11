@@ -1,6 +1,6 @@
 // 画面の操作（厩舎・牧場・セリ・番組表・記録・レースの描画）
 (function (HS) {
-  const SAVE_KEY = 'horse-sim-save-v2';
+  const SAVE_KEY = 'horse-sim-save-v2'; // 中身の版は game.version で見る（2 → 3 は自動で移行）
   // 馬番ごとの色（騎手の服と馬番の地）
   const COLORS = ['#f5f5f5', '#222222', '#d32f2f', '#1565c0', '#f9a825', '#2e7d32', '#ef6c00', '#ec407a',
     '#6a1b9a', '#00838f', '#8d6e63', '#9e9d24'];
@@ -71,11 +71,12 @@
     $('date').textContent = HS.dateLabel(game.year, game.week);
     $('money').textContent = money(game.money);
     document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
-    ['stable', 'farm', 'auction', 'program', 'record'].forEach((t) => { $('tab-' + t).hidden = t !== tab; });
+    ['stable', 'farm', 'auction', 'program', 'rivals', 'record'].forEach((t) => { $('tab-' + t).hidden = t !== tab; });
     renderStable();
     renderFarm();
     renderAuction();
     renderProgram();
+    renderRivals();
     renderRecord();
     if (game.gameOver) notice('借金がふくらみ、牧場を手放すことになりました。「記録」の画面からはじめからやり直せます。');
   }
@@ -85,27 +86,34 @@
     const horses = game.horses.filter((h) => h.status === 'stable');
     const opts = (h) => {
       const ok = races.filter((r) => !HS.ineligibleReason(h, r));
-      return `<option value="">出走しない</option>` + ok.map((r) => `<option value="${r.id}" ${h.entry === r.id ? 'selected' : ''}>${esc(raceLabel(r))}</option>`).join('');
+      return `<option value="">出走しない（調教する）</option>` + ok.map((r) => `<option value="${r.id}" ${h.entry === r.id ? 'selected' : ''}>${esc(raceLabel(r))}</option>`).join('');
     };
     const trainOpts = (h) => HS.TRAINING_KEYS.map((k) => `<option value="${k}" ${(h.training || 'wood') === k ? 'selected' : ''}>${HS.TRAININGS[k].label}</option>`).join('');
+    const jockeyOpts = (h) => HS.JOCKEYS.map((j) => {
+      const ok = HS.jockeyAccepts(j, h);
+      return `<option value="${j.id}" ${HS.jockeyOf(h).id === j.id ? 'selected' : ''} ${ok ? '' : 'disabled'}>${esc(j.name)}（腕${HS.grade(j.skill)}・${HS.STYLES[j.style].label}が得意・${j.fee}万円）${ok ? '' : ' ×'}</option>`;
+    }).join('');
+    const trainerOpts = (h) => HS.TRAINERS.map((t) => `<option value="${t.id}" ${HS.trainerOf(h).id === t.id ? 'selected' : ''}>${esc(t.name)}（週${t.fee}万円）</option>`).join('');
     $('tab-stable').innerHTML = `
       <h3>厩舎（${horses.length}/${HS.STABLE_LIMIT}頭）</h3>
-      <p class="hint">毎週、調教か出走を選んで「次の週へ」。能力は ${HS.STAT_KEYS.map((k) => HS.STAT_LABELS[k]).join('・')} の順に S〜G で表示。疲れが赤いときに強い調教をすると故障しやすくなります。</p>
-      ${horses.length ? `<div class="table-wrap"><table>
-        <thead><tr><th class="left">馬名</th><th>性齢</th><th>クラス</th><th>能力</th><th>調子</th><th>疲れ</th><th>戦績</th><th>今週の調教</th><th>今週の出走</th><th></th></tr></thead>
-        <tbody>${horses.map((h) => `
-          <tr>
-            <td class="left">${nameBtn(h)}<div class="small">父 ${esc(h.sireName)}</div></td>
-            <td>${ageLabel(h)}</td>
-            <td>${HS.CLASSES[HS.classOf(h)].label}</td>
-            <td>${grades(h)}</td>
-            <td>${condLabel(h.condition)}</td>
-            <td>${fatigueBar(h.fatigue)}</td>
-            <td>${h.record.starts}戦${h.record.wins}勝</td>
-            <td><select data-train="${h.id}" ${h.entry ? 'disabled' : ''}>${trainOpts(h)}</select></td>
-            <td><select data-entry="${h.id}">${opts(h)}</select></td>
-            <td class="row-actions"><button data-farm="${h.id}">放牧</button><button data-retire="${h.id}">引退</button></td>
-          </tr>`).join('')}</tbody></table></div>` : '<p class="empty">厩舎に馬がいません。牧場から 2 歳以上の馬を入厩させましょう。</p>'}`;
+      <p class="hint">毎週、調教か出走を選んで「次の週へ」。能力は ${HS.STAT_KEYS.map((k) => HS.STAT_LABELS[k]).join('・')} の順に S〜G。上手い騎手はクラスの低い馬には乗ってくれません。</p>
+      ${horses.length ? horses.map((h) => {
+        const race = h.entry && races.find((r) => r.id === h.entry);
+        return `<div class="horse-card">
+          <div class="hc-head">
+            <div>${nameBtn(h)} <span class="small">${ageLabel(h)}・${HS.CLASSES[HS.classOf(h)].label}・父 ${esc(h.sireName)}</span></div>
+            <div class="hc-stats">${grades(h)} 調子 ${condLabel(h.condition)} 疲れ ${fatigueBar(h.fatigue)} ${h.record.starts}戦${h.record.wins}勝</div>
+          </div>
+          <div class="hc-controls">
+            <label>出走 <select data-entry="${h.id}">${opts(h)}</select></label>
+            <label>調教 <select data-train="${h.id}" ${h.entry ? 'disabled' : ''}>${trainOpts(h)}</select></label>
+            <label>騎手 <select data-jockey="${h.id}">${jockeyOpts(h)}</select></label>
+            <label>調教師 <select data-trainer="${h.id}">${trainerOpts(h)}</select></label>
+          </div>
+          <p class="comment">💬 ${esc(HS.trainerOf(h).name.replace(' 厩舎', ''))}調教師「${esc(race ? HS.raceComment(h, race) : HS.stableComment(h, game))}」</p>
+          <div class="row-actions left"><button data-farm="${h.id}">放牧に出す</button><button data-retire="${h.id}">引退</button></div>
+        </div>`;
+      }).join('') : '<p class="empty">厩舎に馬がいません。牧場から 2 歳以上の馬を入厩させましょう。</p>'}`;
   }
 
   function renderFarm() {
@@ -171,10 +179,10 @@
     });
     const ageText = (r) => (r.age === 2 ? '2歳' : r.age === 3 ? '3歳' : '3歳以上') + (r.filly ? '・牝' : '');
     $('tab-program').innerHTML = weeks.map(({ y, w }, i) => {
-      const races = HS.weekRaces(game, y, w).filter((r) => i === 0 || r.graded);
+      const races = HS.weekRaces(game, y, w).filter((r) => i === 0 || r.graded || r.overseas);
       return `<h3>${HS.dateLabel(y, w)}${i === 0 ? '（今週）' : 'の重賞'}</h3>
         ${races.length ? `<div class="table-wrap"><table><tbody>${races.map((r) => `
-          <tr><td class="left">${r.graded ? '<strong>' : ''}${esc(r.name)}${r.graded ? '</strong>' : ''}</td>
+          <tr><td class="left">${r.graded || r.overseas ? '<strong>' : ''}${esc(r.name)}${r.graded || r.overseas ? '</strong>' : ''}</td>
           <td>${HS.SURFACES[r.surface]}${r.distance}m</td><td>${ageText(r)}</td><td>1着 ${money(HS.CLASSES[r.cls].prize)}</td></tr>`).join('')}
         </tbody></table></div>` : '<p class="empty">重賞はありません。</p>'}`;
     }).join('');
@@ -183,6 +191,8 @@
   function renderRecord() {
     const hof = game.hallOfFame;
     $('tab-record').innerHTML = `
+      <h3>年度の表彰</h3>
+      ${game.awards && game.awards.length ? game.awards.map((a) => `<p><strong>${a.year}年目</strong><br>${a.items.map((it) => `${it.title}：${it.mine ? '🎉 ' : ''}${esc(it.name)}（${esc(it.owner)}）`).join('<br>')}</p>`).join('') : '<p class="empty">年が明けると、前の年の表彰が発表されます。</p>'}
       <h3>引退した馬</h3>
       ${hof.length ? `<div class="table-wrap"><table><thead><tr><th class="left">馬名</th><th>父</th><th>戦績</th><th>獲得賞金</th><th class="left">主な勝ち鞍</th></tr></thead><tbody>
         ${hof.map((h) => `<tr><td class="left">${esc(h.name)}（${h.sex === 'colt' ? '牡' : '牝'}）</td><td>${esc(h.sireName)}</td>
@@ -234,6 +244,41 @@
     $('dialog').showModal();
   }
 
+  function showTrainerPick(id) {
+    const h = game.horses.find((x) => x.id === id);
+    $('dialogBody').innerHTML = `
+      <h2>${esc(h.name)} をどの厩舎に預けますか</h2>
+      <div class="table-wrap"><table><thead><tr><th class="left">厩舎</th><th>腕</th><th>得意</th><th>預託料</th><th class="left">特徴</th><th></th></tr></thead><tbody>
+      ${HS.TRAINERS.map((t) => `<tr><td class="left"><strong>${esc(t.name)}</strong></td><td>${HS.grade(Math.round(t.skill * 70))}</td>
+        <td>${HS.STAT_LABELS[t.specialty]}</td><td>週${t.fee}万円</td><td class="left wrap small">${esc(t.note)}</td>
+        <td><button data-doenter="${h.id}|${t.id}" class="primary">預ける</button></td></tr>`).join('')}
+      </tbody></table></div>`;
+    $('dialog').showModal();
+  }
+
+  function renderRivals() {
+    const year = game.year;
+    $('tab-rivals').innerHTML = HS.RIVAL_OWNERS.map((o) => {
+      const list = (game.rivals || []).filter((h) => h.owner === o.id).sort((a, b) => b.record.earnings - a.record.earnings);
+      const earn = list.reduce((a, h) => a + HS.yearStat(h, year).earn, 0);
+      return `<h3>${esc(o.name)} <span class="small">今年の賞金 ${money(earn)}</span></h3>
+        <div class="table-wrap"><table><thead><tr><th class="left">馬名</th><th>性齢</th><th>クラス</th><th>戦績</th><th>獲得賞金</th><th class="left">主な勝ち鞍</th></tr></thead><tbody>
+        ${list.map((h) => `<tr><td class="left">${esc(h.name)}</td><td>${ageLabel(h)}</td><td>${HS.CLASSES[HS.classOf(h)].label}</td>
+          <td>${h.record.starts}戦${h.record.wins}勝</td><td>${money(h.record.earnings)}</td>
+          <td class="left small wrap">${h.record.titles.slice(-3).map(esc).join('<br>') || '—'}</td></tr>`).join('')}
+        </tbody></table></div>`;
+    }).join('') + renderJockeyTable();
+  }
+
+  function renderJockeyTable() {
+    const js = (game.jockeyStats && game.jockeyStats[game.year]) || {};
+    const rows = HS.JOCKEYS.map((j) => ({ j, s: js[j.id] || { rides: 0, wins: 0 } })).sort((a, b) => b.s.wins - a.s.wins);
+    return `<h3>騎手リーディング（${game.year}年目）</h3>
+      <div class="table-wrap"><table><thead><tr><th class="left">騎手</th><th>腕</th><th>得意</th><th>勝ち</th><th>騎乗</th><th>騎乗料</th></tr></thead><tbody>
+      ${rows.map(({ j, s }) => `<tr><td class="left">${esc(j.name)}</td><td>${HS.grade(j.skill)}</td><td>${HS.STYLES[j.style].label}</td><td>${s.wins}</td><td>${s.rides}</td><td>${j.fee}万円</td></tr>`).join('')}
+      </tbody></table></div>`;
+  }
+
   // ---- 週を進める ----
   function nextWeek() {
     notice('');
@@ -249,6 +294,9 @@
     if (!item) { showWeek(); return; }
     const mine = new Set(item.field.map((h, i) => (item.mineIds.includes(h.id) ? i : -1)).filter((i) => i >= 0));
     playback = { race: item.race, field: item.field, sim: item.sim, mine, t: 0, speed: playback ? playback.speed : 1, last: null, done: false, item };
+    const pad = (item.paddock || []).map((p) => ({ t: 0, text: `パドック：★${p.name} … ${p.text}` }));
+    playback.commentary = pad.concat(item.commentary || []);
+    $('commentary').innerHTML = '';
     $('raceNameLive').textContent = `${item.race.name}（${HS.SURFACES[item.race.surface]}${item.race.distance}m・${HS.CONDITIONS[item.race.condition].label}・${item.field.length}頭）`;
     show('raceView');
     requestAnimationFrame(tick);
@@ -274,6 +322,11 @@
       return;
     }
     draw(frameAt(sim, playback.t));
+    const shown = playback.commentary.filter((c) => c.t <= playback.t);
+    if (shown.length !== playback.shownCount) {
+      playback.shownCount = shown.length;
+      $('commentary').innerHTML = shown.slice(-4).map((c) => `<li>${esc(c.text)}</li>`).join('');
+    }
     requestAnimationFrame(tick);
   }
 
@@ -284,10 +337,10 @@
     $('weekTitle').textContent = `今週のできごと`;
     $('weekBody').innerHTML = out.races.map((o) => `
       <h3>${esc(o.race.name)}（${HS.SURFACES[o.race.surface]}${o.race.distance}m・${HS.CONDITIONS[o.race.condition].label}）</h3>
-      <div class="table-wrap"><table class="results"><thead><tr><th>着</th><th>番</th><th class="left">馬名</th><th>タイム</th><th>着差</th></tr></thead><tbody>
+      <div class="table-wrap"><table class="results"><thead><tr><th>着</th><th>番</th><th class="left">馬名</th><th>騎手</th><th>馬主</th><th>タイム</th><th>着差</th></tr></thead><tbody>
       ${o.sim.results.map((r) => {
         const mine = o.mineIds.includes(r.horseId);
-        return `<tr class="${mine ? 'mine-row' : ''}"><td>${r.rank}</td><td>${numBadge(r.index)}</td><td class="left">${mine ? '★ ' : ''}${esc(r.name)}</td><td>${formatTime(r.time)}</td><td>${r.margin}</td></tr>`;
+        return `<tr class="${mine ? 'mine-row' : ''}"><td>${r.rank}</td><td>${numBadge(r.index)}</td><td class="left">${mine ? '★ ' : ''}${esc(r.name)}</td><td class="small">${esc(o.field[r.index].jockeyName || '')}</td><td class="small">${mine ? 'あなた' : esc(o.field[r.index].ownerName || '')}</td><td>${formatTime(r.time)}</td><td>${r.margin}</td></tr>`;
       }).join('')}</tbody></table></div>`).join('') +
       (out.events.length ? `<h3>お知らせ</h3><ul class="log">${out.events.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>` : '') +
       `<p class="small">いまは ${label}</p>`;
@@ -426,6 +479,8 @@
   document.addEventListener('change', (e) => {
     const d = e.target.dataset;
     if (d.train) { HS.setTraining(game, d.train, e.target.value); save(); }
+    if (d.jockey) act(HS.setJockey(game, d.jockey, e.target.value));
+    if (d.trainer) act(HS.setTrainer(game, d.trainer, e.target.value));
     if (d.entry !== undefined && 'entry' in d) act(HS.setEntry(game, d.entry, e.target.value));
   });
   document.addEventListener('click', (e) => {
@@ -434,7 +489,8 @@
     const d = t.dataset;
     if (d.tab) { tab = d.tab; notice(''); render(); return; }
     if (d.detail) { showDetail(d.detail); return; }
-    if (d.enter) { act(HS.enterStable(game, d.enter)); return; }
+    if (d.enter) { showTrainerPick(d.enter); return; }
+    if (d.doenter) { const [id, t] = d.doenter.split('|'); $('dialog').close(); act(HS.enterStable(game, id, t)); return; }
     if (d.farm) { act(HS.sendToFarm(game, d.farm)); return; }
     if (d.retire) {
       const h = game.horses.find((x) => x.id === d.retire);

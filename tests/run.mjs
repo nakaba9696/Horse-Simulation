@@ -261,6 +261,94 @@ test('自動で 6 年遊んでも壊れず、レースに勝てる', () => {
   }
 });
 
+test('騎手：クラスが足りないと上手い騎手は乗らず、腕はレースに効く', () => {
+  const game = HS.newGame(10);
+  const h = game.horses.find((x) => x.status === 'stable');
+  assert.ok(HS.setJockey(game, h.id, 'J1'), '新馬に一流騎手は乗らない');
+  assert.equal(HS.setJockey(game, h.id, 'J5'), null);
+  h.record.wins = 2; h.record.starts = 3;
+  assert.equal(HS.setJockey(game, h.id, 'J1'), null);
+  // 同じ馬どうしなら、上手い騎手の方が勝ちやすい
+  let wins = 0;
+  for (let k = 0; k < 200; k++) {
+    const a = flatHorse(1); a.jockeySkill = 92;
+    const b = flatHorse(2); b.jockeySkill = 50;
+    const res = HS.simulateRace(RACE(2000), [a, b, flatHorse(3), flatHorse(4)], k).results;
+    if (res.findIndex((r) => r.horseId === 1) < res.findIndex((r) => r.horseId === 2)) wins++;
+  }
+  assert.ok(wins > 110, `上手い騎手が先着 ${wins}/200`);
+});
+
+test('調教師：腕の良い厩舎ほど調教で伸びる', () => {
+  const grow = (tid) => {
+    const game = HS.newGame(11);
+    const h = game.horses.find((x) => x.status === 'stable');
+    HS.setTrainer(game, h.id, tid);
+    const before = HS.sumStats(h.stats);
+    for (let w = 0; w < 6; w++) { HS.setTraining(game, h.id, w % 2 ? 'rest' : 'wood'); HS.advanceWeek(game); }
+    return HS.sumStats(h.stats) - before;
+  };
+  assert.ok(grow('T1') > grow('T6'));
+});
+
+test('ライバル：重賞に出てきて、成績と表彰が記録される', () => {
+  const game = HS.newGame(12);
+  assert.equal(game.rivals.length, HS.RIVAL_OWNERS.length * 6);
+  const rng = HS.createRng(12);
+  for (let w = 0; w < HS.WEEKS_PER_YEAR * 2; w++) autoplayWeek(HS, game, rng);
+  const g1 = game.rivals.reduce((a, h) => a + h.record.g1Wins, 0);
+  assert.ok(g1 > 0, 'ライバルが G1 を勝っていない');
+  assert.equal(game.awards.length, 2);
+  const titles = game.awards[0].items.map((i) => i.title);
+  for (const t of ['年度代表馬', 'リーディング馬主', 'リーディング騎手']) assert.ok(titles.includes(t), t);
+  // 年が明けると新しい 2 歳馬が来て、古い馬は引退する
+  assert.ok(game.rivals.every((h) => HS.ageOf(h, game.year) < 6));
+});
+
+test('海外遠征：重賞馬だけが出られ、遠征費がかかる', () => {
+  const game = HS.newGame(13);
+  const h = game.horses.find((x) => x.status === 'stable');
+  game.year = h.birthYear + 4;
+  game.week = HS.OVERSEAS_RACES[0].week;
+  const race = HS.weekRaces(game, game.year, game.week).find((r) => r.overseas);
+  assert.ok(race, '海外のレースが番組表に無い');
+  assert.ok(HS.ineligibleReason(h, race));
+  h.record.wins = 5; h.record.starts = 8; h.record.gradedWins = 1;
+  h.fatigue = 0;
+  assert.equal(HS.setEntry(game, h.id, race.id), null);
+  const before = game.money;
+  const out = HS.advanceWeek(game);
+  assert.equal(out.races.length, 1);
+  assert.ok(game.money < before + out.races[0].lines[0].prize - HS.TRAVEL_COST + 1);
+});
+
+test('実況とコメント：レースの流れに沿った文ができる', () => {
+  const game = HS.newGame(14);
+  const h = game.horses.find((x) => x.status === 'stable');
+  game.week = 30;
+  const race = HS.weekRaces(game, game.year, game.week).find((r) => r.cls === 'debut');
+  HS.setEntry(game, h.id, race.id);
+  const out = HS.advanceWeek(game);
+  const c = out.races[0].commentary;
+  assert.ok(c.length >= 5);
+  assert.ok(c[0].text.includes('スタート'));
+  assert.ok(c[c.length - 1].text.includes('ゴール') || c[c.length - 2].text.includes('ゴール'));
+  for (let i = 1; i < c.length; i++) assert.ok(c[i].t >= c[i - 1].t, '時間の順になっていない');
+  assert.ok(out.races[0].paddock[0].text.length > 0);
+  assert.ok(HS.raceComment(h, race).length > 0);
+  assert.ok(HS.stableComment(h, game).length > 0);
+});
+
+test('セーブ：版 2 のセーブを読み込むとライバルが足される', () => {
+  const g = HS.newGame(15);
+  delete g.rivals; delete g.awards; delete g.jockeyStats;
+  g.version = 2;
+  const m = HS.migrate(JSON.parse(JSON.stringify(g)));
+  assert.equal(m.version, 3);
+  assert.ok(m.rivals.length > 0);
+  HS.advanceWeek(m);
+});
+
 let failed = 0;
 for (const t of tests) {
   const start = Date.now();

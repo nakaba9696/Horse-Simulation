@@ -1,12 +1,11 @@
 // ゲームの進行（牧場・厩舎・週の進行）。画面には依存しない。お金の単位は万円。
 (function (HS) {
-  const SAVE_VERSION = 2;
+  const SAVE_VERSION = 3;
   const START_MONEY = 5000;
   const STABLE_LIMIT = 8;
   const BROODMARE_LIMIT = 6;
   const BREEDING_WEEKS = [5, 16];
   const BIRTH_WEEK = 10;
-  const COST_STABLE = 10;  // 厩舎の預託料（週）
   const COST_FARM = 2;     // 牧場の飼い葉代（週）
   const RETIRE_AGE = 8;
 
@@ -21,6 +20,7 @@
   function nameFor(game, rng) {
     const used = new Set(game.horses.map((h) => h.name)
       .concat(game.hallOfFame.map((h) => h.name))
+      .concat((game.rivals || []).map((h) => h.name))
       .concat(Object.keys(HS.FOUNDERS))
       .concat(HS.allStallions(game).map((x) => x.name)));
     return HS.createHorse(rng, 'tmp', used).name;
@@ -32,6 +32,7 @@
     const game = {
       version: SAVE_VERSION, seed: s, year: 1, week: 1, money: START_MONEY, nextId: 1,
       horses: [], ownStallions: [], hallOfFame: [], log: [], gameOver: false, auction: null,
+      rivals: [], awards: [], jockeyStats: {},
     };
     const rng = HS.createRng(s);
     const m1 = makeMare(game, 'ハルノソング', 'ナギノカゼ', 'クロガネオー', { speed: 72, stamina: 68, power: 66, guts: 70, wits: 70 }, 'senko', 1800, { turf: 'B', dirt: 'B' }, -6);
@@ -42,10 +43,13 @@
     // 2 歳馬（すぐ入厩済み）と 1 歳馬
     const colt = HS.makeFoal(rng, HS.STALLIONS.find((x) => x.id === 'S5'), m2, 'p' + game.nextId++, nameFor(game, rng), -1);
     colt.status = 'stable';
+    colt.trainer = HS.DEFAULT_TRAINER;
+    colt.jockey = 'J7';
     grow(colt, 2, 0.88);
     const filly = HS.makeFoal(rng, HS.STALLIONS.find((x) => x.id === 'S9'), m1, 'p' + game.nextId++, nameFor(game, rng), 0);
     grow(filly, 1, 0.9);
     game.horses.push(colt, filly);
+    HS.makeRivals(game);
     log(game, '牧場を引き継ぎました。まずは 2 歳馬をデビューさせましょう。');
     return game;
   }
@@ -111,13 +115,18 @@
   }
 
   function migrate(save) {
-    if (!save || typeof save !== 'object' || save.version !== SAVE_VERSION || !Array.isArray(save.horses)) return null;
-    const g = Object.assign({ ownStallions: [], hallOfFame: [], log: [], gameOver: false }, save);
+    if (!save || typeof save !== 'object' || !Array.isArray(save.horses)) return null;
+    if (save.version !== 2 && save.version !== SAVE_VERSION) return null;
+    const g = Object.assign({ ownStallions: [], hallOfFame: [], log: [], gameOver: false, awards: [], jockeyStats: {} }, save);
+    // 2 → 3：騎手・調教師・ライバル馬主を足した
+    if (!Array.isArray(g.rivals)) HS.makeRivals(g);
+    g.version = SAVE_VERSION;
     g.horses.forEach((h) => {
       h.record = Object.assign(newRecord(), h.record);
       if (h.fatigue === undefined) h.fatigue = 0;
       if (h.condition === undefined) h.condition = 0;
       if (h.injuredWeeks === undefined) h.injuredWeeks = 0;
+      if (h.status === 'stable' && !h.trainer) h.trainer = HS.DEFAULT_TRAINER;
     });
     return g;
   }
@@ -144,14 +153,15 @@
     return null;
   }
 
-  function enterStable(game, id) {
+  function enterStable(game, id, trainerId) {
     const h = find(game, id);
     if (!h || h.status !== 'farm') return '牧場にいません';
     if (HS.ageOf(h, game.year) < 2) return '入厩は 2 歳から';
     if (h.injuredWeeks > 0) return '故障が治るまで待ちましょう';
     if (game.horses.filter((x) => x.status === 'stable').length >= STABLE_LIMIT) return `厩舎は ${STABLE_LIMIT} 頭までです`;
     h.status = 'stable';
-    log(game, `${h.name} が入厩しました。`);
+    h.trainer = HS.TRAINERS.some((t) => t.id === trainerId) ? trainerId : h.trainer || HS.DEFAULT_TRAINER;
+    log(game, `${h.name} が ${trainerOf(h).name} に入厩しました。`);
     return null;
   }
 
@@ -161,6 +171,32 @@
     h.status = 'farm';
     h.entry = null;
     log(game, `${h.name} を放牧に出しました。`);
+    return null;
+  }
+
+  const trainerOf = (h) => HS.TRAINERS.find((t) => t.id === h.trainer) || HS.TRAINERS.find((t) => t.id === HS.DEFAULT_TRAINER);
+  const jockeyOf = (h) => HS.JOCKEYS.find((j) => j.id === h.jockey) || HS.JOCKEYS.find((j) => j.id === HS.DEFAULT_JOCKEY);
+
+  // 騎手がこの馬に乗ってくれるか（クラスが足りないと断られる）
+  function jockeyAccepts(j, h) {
+    return HS.CLASS_ORDER.indexOf(HS.classOf(h)) >= HS.CLASS_ORDER.indexOf(j.minClass) || h.record.gradedWins > 0;
+  }
+
+  function setJockey(game, id, jockeyId) {
+    const h = find(game, id);
+    const j = HS.JOCKEYS.find((x) => x.id === jockeyId);
+    if (!h || !j) return '騎手がいません';
+    if (!jockeyAccepts(j, h)) return `${j.name} は ${HS.CLASSES[j.minClass].label} 以上の馬にしか乗りません`;
+    h.jockey = jockeyId;
+    return null;
+  }
+
+  function setTrainer(game, id, trainerId) {
+    const h = find(game, id);
+    const t = HS.TRAINERS.find((x) => x.id === trainerId);
+    if (!h || !t) return '調教師がいません';
+    if (h.trainer !== trainerId) log(game, `${h.name} が ${t.name} に転厩しました。`);
+    h.trainer = trainerId;
     return null;
   }
 
@@ -199,7 +235,7 @@
     const h = find(game, id);
     if (!h || (h.status !== 'stable' && h.status !== 'farm')) return '引退できません';
     if (HS.ageOf(h, game.year) < 2) return 'まだ若すぎます';
-    game.hallOfFame.unshift({ name: h.name, sex: h.sex, sireName: h.sireName, damName: h.damName, record: h.record, retiredYear: game.year });
+    game.hallOfFame.unshift({ name: h.name, sex: h.sex, birthYear: h.birthYear, sireName: h.sireName, damName: h.damName, record: h.record, retiredYear: game.year });
     if (h.sex === 'filly' && game.horses.filter((x) => x.status === 'broodmare').length < BROODMARE_LIMIT) {
       h.status = 'broodmare';
       h.pregnant = null;
@@ -228,31 +264,48 @@
     const raced = new Set();
     const outcomes = [];
 
-    // 1. レース
+    // 1. レース（自分の馬が出るレース）
+    let jockeyFees = 0;
     races.forEach((race) => {
       const mine = game.horses.filter((h) => h.entry === race.id && !HS.ineligibleReason(h, race));
       if (!mine.length) return;
-      const field = HS.buildField(race, mine);
+      if (race.overseas) {
+        if (game.money < HS.TRAVEL_COST * mine.length) {
+          events.push(`${race.name}：遠征費（${HS.TRAVEL_COST}万円）が足りず、出走を取りやめました。`);
+          return;
+        }
+        game.money -= HS.TRAVEL_COST * mine.length;
+      }
+      // 騎手：同じレースで同じ騎手は 1 頭だけ。乗れないときは見習い騎手
+      const usedJ = new Set();
+      mine.forEach((h) => {
+        let j = jockeyOf(h);
+        if (usedJ.has(j.id) || !jockeyAccepts(j, h)) j = HS.JOCKEYS.find((x) => x.id === HS.DEFAULT_JOCKEY && !usedJ.has(x.id)) || { id: null, name: '代わりの騎手', skill: 45, style: h.style, fee: 5 };
+        if (j.id) usedJ.add(j.id);
+        HS.ride(h, j);
+        jockeyFees += j.fee || 0;
+      });
+      const paddock = mine.map((h) => ({ name: h.name, text: HS.paddockComment ? HS.paddockComment(h) : '' }));
+      const rrng = rngFor(game, 'rivals' + race.id);
+      const rivals = HS.rivalsFor(game, race, rrng, Math.min(3, 11 - mine.length));
+      const field = HS.buildField(race, mine, rivals);
       const sim = HS.simulateRace(race, field, race.seed, { record: true });
       const lines = [];
       sim.results.forEach((r) => {
         const h = field[r.index];
-        if (!mine.includes(h)) return;
+        HS.recordJockey(game, h.jockeyId, game.year, r.rank);
         const prize = HS.prizeFor(race, r.rank);
-        h.record.starts++;
-        h.record.earnings += prize;
-        if (r.rank === 1) {
-          h.record.wins++;
-          if (HS.CLASSES[race.cls] && ['g1', 'g2', 'g3'].includes(race.cls)) {
-            h.record.gradedWins++;
-            h.record.titles.push(`${game.year}年 ${race.name}`);
-          }
-          if (race.cls === 'g1') h.record.g1Wins++;
+        if (rivals.includes(h)) {
+          HS.recordRace(h, race, r.rank, prize);
+          h.fatigue += 30;
+          h.busy = true;
+          return;
         }
-        if (r.rank <= 3) h.record.places++;
+        if (!mine.includes(h)) return;
+        HS.recordRace(h, race, r.rank, prize);
         game.money += prize;
         const rng = rngFor(game, 'race' + h.id);
-        h.fatigue = Math.min(100, h.fatigue + 25 + race.distance / 200 + rng.range(0, 8));
+        h.fatigue = Math.min(100, h.fatigue + 25 + race.distance / 200 + rng.range(0, 8) + (race.overseas ? 20 : 0));
         h.condition = Math.max(-2, h.condition - (rng() < 0.5 ? 1 : 0));
         // レース中の故障（まれ）
         if (rng() < (0.01 + h.fatigue / 4000) * (h.frail ? 2 : 1)) {
@@ -262,11 +315,34 @@
         }
         raced.add(h.id);
         lines.push({ name: h.name, rank: r.rank, prize });
-        events.push(`${race.name}：${h.name} は ${r.rank} 着（${prize}万円）`);
-        if (r.rank === 1 && race.cls === 'g1') events.push(`🏆 ${h.name} が ${race.name} を勝ちました！`);
+        events.push(`${race.name}：${h.name}（${h.jockeyName}）は ${r.rank} 着（${prize}万円）`);
+        if (r.rank === 1 && (race.cls === 'g1' || race.cls === 'intl')) events.push(`🏆 ${h.name} が ${race.name} を勝ちました！`);
       });
-      outcomes.push({ race, field, sim, mineIds: mine.map((h) => h.id), lines });
+      const winner = field[sim.results[0].index];
+      if (winner.ownerName) events.push(`ライバル：${winner.ownerName} の ${winner.name} が ${race.name} を勝ちました。`);
+      const commentary = HS.buildCommentary ? HS.buildCommentary(race, field, sim, mine.map((h) => h.id)) : [];
+      outcomes.push({ race, field, sim, mineIds: mine.map((h) => h.id), lines, commentary, paddock });
     });
+
+    // 1b. 自分の馬が出ない重賞も、ライバルの馬は走る（年度の表彰に効く）
+    races.filter((r) => ['g1', 'g2', 'g3', 'intl'].includes(r.cls) && !outcomes.some((o) => o.race.id === r.id)).forEach((race) => {
+      const rivals = HS.rivalsFor(game, race, rngFor(game, 'rivals' + race.id), 3);
+      if (!rivals.length) return;
+      const field = HS.buildField(race, [], rivals);
+      const sim = HS.simulateRace(race, field, race.seed);
+      sim.results.forEach((r) => {
+        const h = field[r.index];
+        HS.recordJockey(game, h.jockeyId, game.year, r.rank);
+        if (rivals.includes(h)) {
+          HS.recordRace(h, race, r.rank, HS.prizeFor(race, r.rank));
+          h.fatigue += 30;
+          h.busy = true;
+        }
+      });
+      const winner = field[sim.results[0].index];
+      if (winner.ownerName && (race.cls === 'g1' || race.cls === 'intl')) events.push(`ライバル：${winner.ownerName} の ${winner.name} が ${race.name} を勝ちました。`);
+    });
+    HS.rivalWeek(game);
 
     // 2. 調教・成長・回復
     game.horses.forEach((h) => {
@@ -275,13 +351,15 @@
       const rng = rngFor(game, 'week' + h.id);
       if (h.status === 'stable' && !raced.has(h.id)) {
         const t = HS.TRAININGS[h.training || 'wood'];
+        const tr = trainerOf(h);
         if (t.main) {
           const tired = h.fatigue > 70 ? 0.5 : 1;
-          trainStat(h, age, t.main, 0.16 * tired);
-          if (t.sub) trainStat(h, age, t.sub, 0.07 * tired);
+          const sp = (k) => (k === tr.specialty ? 1.15 : 1);
+          trainStat(h, age, t.main, 0.16 * tired * tr.skill * sp(t.main));
+          if (t.sub) trainStat(h, age, t.sub, 0.07 * tired * tr.skill * sp(t.sub));
         }
         h.fatigue = Math.max(0, Math.min(100, h.fatigue + t.fatigue + rng.range(-2, 2)));
-        if (t.main && h.fatigue > 80 && rng() < ((h.fatigue - 80) / 120) * (h.frail ? 2 : 1)) {
+        if (t.main && h.fatigue > 80 && rng() < ((h.fatigue - 80) / 120) * (h.frail ? 2 : 1) * tr.care) {
           h.injuredWeeks = rng.int(4, 12);
           h.status = 'farm';
           events.push(`${h.name} が調教中に故障しました。${h.injuredWeeks} 週ほど牧場で休ませます。`);
@@ -301,9 +379,9 @@
     });
 
     // 3. 費用
-    const nStable = game.horses.filter((h) => h.status === 'stable').length;
-    const nFarm = game.horses.length - nStable;
-    game.money -= nStable * COST_STABLE + nFarm * COST_FARM;
+    const stable = game.horses.filter((h) => h.status === 'stable');
+    const nFarm = game.horses.length - stable.length;
+    game.money -= stable.reduce((a, h) => a + trainerOf(h).fee, 0) + nFarm * COST_FARM + jockeyFees;
 
     // 4. 次の週へ。出産・年明け
     game.week++;
@@ -349,6 +427,16 @@
   }
 
   function newYear(game, events) {
+    // 前の年の表彰
+    const aw = HS.computeAwards(game, game.year - 1);
+    game.awards.unshift(aw);
+    game.awards = game.awards.slice(0, 30);
+    aw.items.forEach((it) => {
+      events.push(`【${game.year - 1}年 ${it.title}】${it.name}（${it.owner}）${it.mine ? ' 🎉' : ''}`);
+      if (it.mine) game.money += HS.AWARD_BONUS;
+    });
+    if (aw.items.some((it) => it.mine)) events.push(`表彰の賞金として、1 部門ごとに ${HS.AWARD_BONUS}万円を受け取りました。`);
+    HS.newCrop(game, events);
     events.push(`${game.year}年目が始まりました。`);
     game.horses.slice().forEach((h) => {
       const age = HS.ageOf(h, game.year);
@@ -372,6 +460,12 @@
   HS.rename = rename;
   HS.retire = retire;
   HS.advanceWeek = advanceWeek;
+  HS.setJockey = setJockey;
+  HS.setTrainer = setTrainer;
+  HS.jockeyAccepts = jockeyAccepts;
+  HS.trainerOf = trainerOf;
+  HS.jockeyOf = jockeyOf;
+  HS.uniqueName = nameFor;
   HS.buyAtAuction = buyAtAuction;
   HS.auctionOpen = auctionOpen;
   HS.allStallions = allStallions;
@@ -379,6 +473,5 @@
   HS.canStandAtStud = canStandAtStud;
   HS.STABLE_LIMIT = STABLE_LIMIT;
   HS.BREEDING_WEEKS = BREEDING_WEEKS;
-  HS.COST_STABLE = COST_STABLE;
   HS.COST_FARM = COST_FARM;
 })(globalThis.HS = globalThis.HS || {});

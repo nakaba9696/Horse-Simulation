@@ -23,6 +23,7 @@
         <button data-tab="farm">牧場</button>
         <button data-tab="auction">セリ</button>
         <button data-tab="program">番組表</button>
+        <button data-tab="rivals">ライバル</button>
         <button data-tab="record">記録</button>
       </nav>
       <div id="notice" class="notice" hidden></div>
@@ -30,6 +31,7 @@
       <div class="panel" id="tab-farm" hidden></div>
       <div class="panel" id="tab-auction" hidden></div>
       <div class="panel" id="tab-program" hidden></div>
+      <div class="panel" id="tab-rivals" hidden></div>
       <div class="panel" id="tab-record" hidden></div>
     </section>
 
@@ -47,6 +49,7 @@
         <button data-speed="4" class="speed">×4</button>
         <button id="skipBtn" class="ghost">結果へ</button>
       </div>
+      <ul id="commentary" class="commentary"></ul>
       <ol id="liveOrder" class="live-order"></ol>
     </section>
 
@@ -70,6 +73,8 @@
   <script src="src/breeding.js"></script>
   <script src="src/calendar.js"></script>
   <script src="src/game.js"></script>
+  <script src="src/rivals.js"></script>
+  <script src="src/commentary.js"></script>
   <script src="src/main.js"></script>
 </body>
 </html>

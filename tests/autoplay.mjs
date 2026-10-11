@@ -15,10 +15,13 @@ export function autoplayWeek(HS, game, rng) {
   }
   game.horses.forEach((h) => {
     const age = HS.ageOf(h, game.year);
-    if (h.status === 'farm' && age >= 2 && h.injuredWeeks === 0 && (h.fatigue < 20)) HS.enterStable(game, h.id);
+    if (h.status === 'farm' && age >= 2 && h.injuredWeeks === 0 && (h.fatigue < 20)) HS.enterStable(game, h.id, 'T2');
     if ((h.status === 'stable' || h.status === 'farm') && age >= 6) HS.retire(game, h.id);
   });
   game.horses.filter((h) => h.status === 'stable').forEach((h) => {
+    // 乗ってくれる中で一番上手い騎手
+    const j = HS.JOCKEYS.filter((x) => HS.jockeyAccepts(x, h)).sort((a, b) => b.skill - a.skill)[0];
+    if (j) HS.setJockey(game, h.id, j.id);
     const keys = ['wood', 'hill', 'pool', 'pair', 'gate'];
     HS.setTraining(game, h.id, h.fatigue > 60 ? 'rest' : keys[Math.floor(rng() * keys.length)]);
     if (h.fatigue < 40 && (game.week % 3 === 0)) {

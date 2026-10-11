@@ -18,7 +18,9 @@
     const fit = 1 - Math.min(0.02, (diff / 1000) * 0.01);
     const cond = 1 - HS.CONDITIONS[race.condition].penalty * (1 - s.power / 140);
     // その日の出来：調子と疲れも効く
-    const form = (1 + rng.normal() * 0.012) * (1 + (horse.condition || 0) * 0.004) * (1 - ((horse.fatigue || 0) / 100) * 0.02);
+    // 騎手の腕：上手いほど、得意な脚質の馬ならさらに少し速い
+    const jockey = 1 + ((horse.jockeySkill || 50) - 50) * 0.0004 + (horse.jockeyStyle === horse.style ? 0.004 : 0);
+    const form = (1 + rng.normal() * 0.012) * (1 + (horse.condition || 0) * 0.004) * (1 - ((horse.fatigue || 0) / 100) * 0.02) * jockey;
     return {
       horse,
       base: (16.3 + s.speed * 0.02) * apt * fit * cond * form,
