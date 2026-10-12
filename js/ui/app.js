@@ -16,6 +16,7 @@
     if (titleAnim) { cancelAnimationFrame(titleAnim); titleAnim = null; }
     if (st.screen === 'title') { app.innerHTML = UI.screens.title(); App.titleCanvas(); return; }
     if (st.screen === 'newgame') { app.innerHTML = UI.screens.newgame(st.ng); App.drawNgSilks(); return; }
+    if (st.screen === 'editor') { app.innerHTML = UI.screens.editor(st.ed || (st.ed = {})); App.hydrate(app); return; }
     const view = st.view || { name: st.tab };
     const html = UI.screens[view.name] ? UI.screens[view.name](view) : '';
     app.innerHTML = UI.header() + `<main>${html}</main>` + UI.nav(st.tab);
@@ -84,8 +85,8 @@
   App.save = function () { if (!W.saveLocal()) App.toast('この端末に保存できませんでした（セーブの書き出しを使ってください）'); };
 
   // ---------- 操作 ----------
-  const act = {};
-  act.title = () => { App.st.screen = 'title'; App.render(); };
+  const act = App.act = {};
+  act.title = () => { App.closeAll(); App.st.screen = 'title'; App.render(); };
   act['newgame-form'] = () => { App.st.screen = 'newgame'; App.st.ng = App.st.ng || { name: '', farm: '', crown: '', year: 1995, diff: 'normal', silks: { base: '#1f4fbf', sub: '#ffd100', pattern: 'hoops' } }; App.render(); };
   const readNg = () => { const ng = App.st.ng; ng.name = $('#ng-name').value; ng.farm = $('#ng-farm').value; ng.crown = $('#ng-crown').value; ng.year = +$('#ng-year').value; ng.diff = $('#ng-diff').value; };
   act['ng-color'] = d => { readNg(); App.st.ng.silks[d.k] = d.c; App.render(); };
@@ -197,7 +198,7 @@
   act.next = () => App.nextWeek();
   act['next-many'] = () => App.nextMany(4);
 
-  const change = {};
+  const change = App.change = {};
   change.jockey = (el) => { const id = el.dataset.id; const ent = W.entryOf(id); if (!ent) return; W.enter(id, ent.raceKey, el.value); App.save(); };
   change.setting = (el) => { const G = W.get(); const k = el.dataset.k; G.settings[k] = k === 'watch' ? +el.value : el.value === '1'; App.save(); };
 
@@ -348,6 +349,7 @@
 
   // 起動
   window.addEventListener('DOMContentLoaded', () => {
+    if (HS.Edits) HS.Edits.apply(HS.Edits.loadLocal());
     W.index();
     App.render();
   });

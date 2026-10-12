@@ -51,6 +51,9 @@
 
   // ---------- 新しいゲーム ----------
   W.newGame = function (opts) {
+    // 競走馬エディットの内容をこのゲームに写す（以後、このセーブはこの内容で動く）
+    const edits = opts.edits || (HS.Edits ? HS.Edits.loadLocal() : {});
+    if (HS.Edits) HS.Edits.apply(edits);
     W.index();
     const seed = opts.seed || (Date.now() % 1e9);
     G = {
@@ -60,7 +63,7 @@
         silks: opts.silks || { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, money: opts.money || 30000,
       },
       difficulty: opts.difficulty || 'normal',
-      horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {},
+      horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, edits,
       records: { g1: {}, graded: {}, awards: {}, pts: {}, player: { starts: 0, wins: 0, earn: 0, g1: [] } },
       news: [], entries: {}, lastWeek: null, market: { gen: [], genMares: [], month: 0 },
       farmLevel: 1, stats: {}, settings: { animSpeed: 1, showHistNote: true },
@@ -919,6 +922,7 @@
     if (!g || !g.v || !g.horses) throw new Error('セーブデータが読めない');
     W.migrate(g);
     G = g;
+    if (HS.Edits) HS.Edits.apply(G.edits || {});
     W.index();
     P.build(G.pedExtra || {});
     rng = new U.RNG(G.rngState);
@@ -931,7 +935,7 @@
     g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
-    g.erased = g.erased || []; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {};
+    g.erased = g.erased || []; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
     for (const h of Object.values(g.horses)) { h.bonus = h.bonus || {}; h.results = h.results || []; h.gradedWins = h.gradedWins || []; h.coat = h.coat || '鹿毛'; }
     g.v = SAVE_VERSION;
   };

@@ -111,8 +111,10 @@
       wise: r - 3 + rng.normal(0, 3),
     };
     for (const k of H.STATS) pot[k] = U.clamp(pot[k], 30, 106);
+    // エディットで能力を個別に決めた馬
+    if (d.pot) for (const k of H.STATS) if (d.pot[k] != null) pot[k] = U.clamp(d.pot[k], 20, 120);
     const growth = H.GROWTHS.includes(d.growth) ? d.growth : '普通';
-    return {
+    const h = {
       id, name: d.name, sex: d.sex === 'セ' ? '牡' : d.sex, gelding: d.sex === 'セ', born: d.born,
       coat: H.COATS.includes(d.coat) ? d.coat : H.pickCoat(rng),
       sire: d.sire || null, dam: d.dam || null, damsire: d.damsire || null,
@@ -127,6 +129,10 @@
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [],
       restUntil: 0, retireYear: d.retire || (d.born + 5),
     };
+    // エディットで気性・体質を決めた馬
+    if (d.temper != null) h.temper = d.temper;
+    if (d.health != null) h.health = d.health;
+    return h;
   };
 
   // 架空の馬（モブ・生産馬）の素質を、総合の目安 mean から作る

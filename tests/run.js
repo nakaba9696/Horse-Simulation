@@ -200,6 +200,27 @@ check('history: 名牝を買い史実の相手をつけると史実馬が生ま�
   return `${m.name} × ${f[1]} → ${f[2]}`;
 });
 
+check('edits: エディットが新しいゲームとセーブに効く', () => {
+  const E = HS.Edits;
+  const edits = { 'ディープインパクト': { rating: 60, coat: '芦毛', jockey: '武豊', pot: { spd: 50, sta: 50, kick: 50, pow: 50, guts: 50, wise: 50 } } };
+  assert(!E.validate(edits['ディープインパクト']), '検証で落ちた');
+  W.newGame({ year: 2002, seed: 3, edits });
+  const G = W.get();
+  while (!(G.month === 3 && G.week === 2)) W.advance();
+  const h = W.all().find(x => x.name === 'ディープインパクト');
+  assert(h, '生まれていない');
+  assert(h.coat === '芦毛' && Math.round(h.pot.spd) === 50, `編集が効いていない ${h.coat} ${h.pot.spd}`);
+  const s = W.serialize();
+  E.apply({});
+  assert(D.historic.find(x => x.name === 'ディープインパクト').rating !== 60, '元に戻らない');
+  W.load(s);
+  assert(D.historic.find(x => x.name === 'ディープインパクト').rating === 60, 'ロードで編集が戻らない');
+  E.apply({}); W.index();
+  // clean：元と同じ値は残さない
+  const o = D.historic.find(x => x.name === 'キタサンブラック');
+  assert(E.clean(o.name, { rating: o.rating, jockey: '武豊' }) === null, 'clean が同じ値を残した');
+});
+
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
 process.exit(failures ? 1 : 0);

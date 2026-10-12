@@ -42,6 +42,7 @@
         ${W.hasLocal() ? '<button class="btn gold" data-act="continue">つづきから</button>' : ''}
         <button class="btn ${W.hasLocal() ? '' : 'gold'}" data-act="newgame-form">はじめから</button>
         <button class="btn" data-act="import">セーブを読み込む</button>
+        <button class="btn" data-act="editor">競走馬エディット</button>
       </div>
       <p class="small muted mt">実在の名馬と実在のレースで、馬主として・生産者として名馬の系譜をつくる競馬シミュレーション。</p>
     </div>`;
