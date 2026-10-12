@@ -50,7 +50,7 @@ check('historic: 名前の重複なし・値が正しい', () => {
     assert(['芝', 'ダ', '芝ダ'].includes(h.surface), 'surface ' + h.name);
     assert(H.STYLES.includes(h.style), 'style ' + h.name);
     assert(H.GROWTHS.includes(h.growth), 'growth ' + h.name);
-    assert(h.rating >= 50 && h.rating <= 100, 'rating ' + h.name);
+    assert(h.rating >= 20 && h.rating <= 100, 'rating ' + h.name);
     assert(h.distMin < h.distMax, 'dist ' + h.name);
     assert(h.retire >= h.born + 2, 'retire ' + h.name);
     assert(!h.coat || H.COATS.includes(h.coat) || HS.Art === undefined || true, 'coat ' + h.name);

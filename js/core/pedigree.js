@@ -90,7 +90,8 @@
   P.nicks = function (sire, dam) {
     const damsire = P.parents(dam)[0];
     if (!sire || !damsire) return [];
-    const sl = P.maleLine(sire), dl = P.maleLine(damsire);
+    // 父系の近い3代までで見る（遠い祖先どうしでは広く当たりすぎる）
+    const sl = P.maleLine(sire).slice(0, 3), dl = P.maleLine(damsire).slice(0, 3);
     return (HS.DATA.nicks || []).filter(([a, b]) => sl.includes(a) && dl.includes(b));
   };
 

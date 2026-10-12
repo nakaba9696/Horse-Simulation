@@ -596,7 +596,9 @@
   // 出産（3月）：プレイヤーの牝馬の仔と、史実馬の誕生
   W.foaling = function (report) {
     for (const m of W.mine('mare')) {
-      if (!m.cover || m.cover.year !== G.year - 1 || !m.cover.ok) { m.cover = null; continue; }
+      if (!m.cover) continue;
+      if (m.cover.year === G.year) continue; // 今年の種付け（出産は来年）
+      if (m.cover.year !== G.year - 1 || !m.cover.ok) { m.cover = null; continue; }
       const sire = W.findStallion(m.cover.sire) || { name: m.cover.sire, rating: 60 };
       // 史実の仔か？
       const histFoal = (W.histFoalsOfDam.get(m.name) || []).find(d => d.born === G.year && d.sire === m.cover.sire);
