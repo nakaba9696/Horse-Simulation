@@ -1,0 +1,40 @@
+name: CI
+# 検証のジョブを並べ、最後の「CI result」が全部を needs で待って成否を出す。
+# ルールセットの必須チェックは「CI result」だけにする。Actions は full SHA で固定し、pull_request_target は使わない。
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Syntax
+        run: for f in js/core/*.js js/ui/*.js data/*.js tests/*.js; do node --check "$f"; done
+      - name: Test
+        run: node tests/run.js
+  result:
+    name: CI result
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: [test]
+    # 前のジョブが失敗・取り消しでも必ず走り、ここで成否を決める
+    if: ${{ always() }}
+    steps:
+      - name: Check
+        env:
+          RESULT: ${{ needs.test.result }}
+        run: |
+          echo "test: $RESULT"
+          [ "$RESULT" = success ]

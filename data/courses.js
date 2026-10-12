@@ -1,0 +1,74 @@
+// 競馬場のデータ（おおよその値）。lap＝1周の長さ、straight＝最後の直線、slope＝ゴール前の坂、speed＝馬場の速さの補正
+(function () {
+  const HS = globalThis.HS = globalThis.HS || {}; HS.DATA = HS.DATA || {};
+  const C = (region, dir, turf, dirt, extra) => Object.assign({ region, dir, turf, dirt }, extra || {});
+  HS.DATA.courses = {
+    // JRA
+    '東京': C('JRA', '左', { lap: 2083, straight: 526, slope: '中' }, { lap: 1899, straight: 502, slope: '中' }, { area: '関東' }),
+    '中山': C('JRA', '右', { lap: 1667, straight: 310, slope: '急' }, { lap: 1493, straight: 308, slope: '急' }, { area: '関東' }),
+    '京都': C('JRA', '右', { lap: 1894, straight: 404, slope: '平' }, { lap: 1608, straight: 329, slope: '平' }, { area: '関西' }),
+    '阪神': C('JRA', '右', { lap: 2089, straight: 474, slope: '急' }, { lap: 1518, straight: 353, slope: '急' }, { area: '関西' }),
+    '中京': C('JRA', '左', { lap: 1706, straight: 413, slope: '急' }, { lap: 1530, straight: 411, slope: '急' }, { area: '関西' }),
+    '新潟': C('JRA', '左', { lap: 2223, straight: 659, slope: '平' }, { lap: 1473, straight: 354, slope: '平' }, { area: 'ローカル' }),
+    '福島': C('JRA', '右', { lap: 1600, straight: 292, slope: '小' }, { lap: 1445, straight: 296, slope: '小' }, { area: 'ローカル' }),
+    '小倉': C('JRA', '右', { lap: 1615, straight: 293, slope: '平' }, { lap: 1445, straight: 291, slope: '平' }, { area: 'ローカル' }),
+    '札幌': C('JRA', '右', { lap: 1641, straight: 266, slope: '平' }, { lap: 1487, straight: 264, slope: '平' }, { area: 'ローカル' }),
+    '函館': C('JRA', '右', { lap: 1627, straight: 262, slope: '小' }, { lap: 1476, straight: 260, slope: '小' }, { area: 'ローカル' }),
+    // 地方
+    '大井': C('地方', '右', null, { lap: 1600, straight: 386, slope: '平' }),
+    '川崎': C('地方', '左', null, { lap: 1200, straight: 300, slope: '平' }),
+    '船橋': C('地方', '左', null, { lap: 1400, straight: 308, slope: '平' }),
+    '盛岡': C('地方', '左', { lap: 1400, straight: 300, slope: '中' }, { lap: 1600, straight: 300, slope: '中' }),
+    '園田': C('地方', '右', null, { lap: 1051, straight: 213, slope: '平' }),
+    '名古屋': C('地方', '右', null, { lap: 1180, straight: 240, slope: '平' }),
+    '門別': C('地方', '右', null, { lap: 1600, straight: 330, slope: '平' }),
+    '金沢': C('地方', '右', null, { lap: 1200, straight: 236, slope: '平' }),
+    '佐賀': C('地方', '右', null, { lap: 1100, straight: 200, slope: '平' }),
+    '浦和': C('地方', '左', null, { lap: 1200, straight: 220, slope: '平' }),
+    '笠松': C('地方', '右', null, { lap: 1100, straight: 201, slope: '平' }),
+    '高知': C('地方', '右', null, { lap: 1100, straight: 200, slope: '平' }),
+    '水沢': C('地方', '右', null, { lap: 1200, straight: 247, slope: '平' }),
+    // 海外
+    'ロンシャン': C('海外', '右', { lap: 2750, straight: 533, slope: '小', speed: -0.025 }, null, { country: '仏' }),
+    'シャンティイ': C('海外', '右', { lap: 2400, straight: 600, slope: '小', speed: -0.02 }, null, { country: '仏' }),
+    'ドーヴィル': C('海外', '右', { lap: 2200, straight: 1000, slope: '平', speed: -0.02 }, null, { country: '仏' }),
+    'サンクルー': C('海外', '左', { lap: 2400, straight: 500, slope: '平', speed: -0.02 }, null, { country: '仏' }),
+    'アスコット': C('海外', '右', { lap: 2800, straight: 500, slope: '急', speed: -0.025 }, null, { country: '英' }),
+    'エプソム': C('海外', '左', { lap: 2400, straight: 600, slope: '中', speed: -0.02 }, null, { country: '英' }),
+    'ニューマーケット': C('海外', '右', { lap: 2400, straight: 1600, slope: '中', speed: -0.02 }, null, { country: '英' }),
+    'ヨーク': C('海外', '左', { lap: 3200, straight: 900, slope: '平', speed: -0.015 }, null, { country: '英' }),
+    'グッドウッド': C('海外', '右', { lap: 2400, straight: 600, slope: '中', speed: -0.02 }, null, { country: '英' }),
+    'メイダン': C('海外', '左', { lap: 2400, straight: 450, slope: '平' }, { lap: 1750, straight: 400, slope: '平' }, { country: 'UAE' }),
+    'ナドアルシバ': C('海外', '左', { lap: 2200, straight: 400, slope: '平' }, { lap: 2200, straight: 400, slope: '平' }, { country: 'UAE' }),
+    'シャティン': C('海外', '右', { lap: 1900, straight: 430, slope: '平' }, { lap: 1550, straight: 400, slope: '平' }, { country: '香港' }),
+    'サンタアニタ': C('海外', '左', { lap: 1400, straight: 300, slope: '平' }, { lap: 1609, straight: 300, slope: '平', speed: 0.02 }, { country: '米' }),
+    'チャーチルダウンズ': C('海外', '左', { lap: 1400, straight: 375, slope: '平' }, { lap: 1609, straight: 375, slope: '平', speed: 0.02 }, { country: '米' }),
+    'ベルモント': C('海外', '左', { lap: 2100, straight: 335, slope: '平' }, { lap: 2414, straight: 335, slope: '平', speed: 0.02 }, { country: '米' }),
+    'デルマー': C('海外', '左', { lap: 1400, straight: 280, slope: '平' }, { lap: 1609, straight: 280, slope: '平', speed: 0.02 }, { country: '米' }),
+    'キーンランド': C('海外', '左', { lap: 1500, straight: 330, slope: '平' }, { lap: 1700, straight: 330, slope: '平', speed: 0.02 }, { country: '米' }),
+    'ガルフストリームパーク': C('海外', '左', { lap: 1500, straight: 300, slope: '平' }, { lap: 1800, straight: 300, slope: '平', speed: 0.02 }, { country: '米' }),
+    'ローンスター': C('海外', '左', { lap: 1500, straight: 300, slope: '平' }, { lap: 1609, straight: 300, slope: '平', speed: 0.02 }, { country: '米' }),
+    'モンマスパーク': C('海外', '左', { lap: 1400, straight: 300, slope: '平' }, { lap: 1609, straight: 300, slope: '平', speed: 0.02 }, { country: '米' }),
+    'アーリントン': C('海外', '左', { lap: 1800, straight: 330, slope: '平' }, { lap: 1800, straight: 330, slope: '平' }, { country: '米' }),
+    'キングアブドゥルアジーズ': C('海外', '左', { lap: 2000, straight: 450, slope: '平' }, { lap: 2000, straight: 450, slope: '平' }, { country: 'サウジ' }),
+    'ムーニーバレー': C('海外', '左', { lap: 1805, straight: 173, slope: '平' }, null, { country: '豪' }),
+    'フレミントン': C('海外', '左', { lap: 2312, straight: 450, slope: '平' }, null, { country: '豪' }),
+    'ランドウィック': C('海外', '右', { lap: 2213, straight: 410, slope: '小' }, null, { country: '豪' }),
+    'コーフィールド': C('海外', '左', { lap: 2080, straight: 367, slope: '平' }, null, { country: '豪' }),
+    'ウッドバイン': C('海外', '右', { lap: 2400, straight: 450, slope: '平' }, { lap: 1609, straight: 300, slope: '平' }, { country: '加' }),
+    'ニューベリー': C('海外', '左', { lap: 2800, straight: 1000, slope: '平', speed: -0.02 }, null, { country: '英' }),
+    'ハリウッドパーク': C('海外', '左', { lap: 1400, straight: 300, slope: '平' }, { lap: 1609, straight: 300, slope: '平', speed: 0.02 }, { country: '米' }),
+    'アーリントンパーク': C('海外', '左', { lap: 1800, straight: 330, slope: '平' }, { lap: 1800, straight: 330, slope: '平' }, { country: '米' }),
+    'ローンスターパーク': C('海外', '左', { lap: 1500, straight: 300, slope: '平' }, { lap: 1609, straight: 300, slope: '平', speed: 0.02 }, { country: '米' }),
+    'レパーズタウン': C('海外', '左', { lap: 2800, straight: 450, slope: '中', speed: -0.02 }, null, { country: '愛' }),
+  };
+  // その月に条件戦を開く競馬場（おおよその開催）
+  HS.DATA.meets = {
+    1: ['中山', '京都', '中京'], 2: ['東京', '京都', '小倉'], 3: ['中山', '阪神', '中京'], 4: ['中山', '阪神', '福島'],
+    5: ['東京', '京都', '新潟'], 6: ['東京', '阪神', '函館'], 7: ['福島', '中京', '函館'], 8: ['新潟', '小倉', '札幌'],
+    9: ['中山', '阪神', '札幌'], 10: ['東京', '京都', '新潟'], 11: ['東京', '京都', '福島'], 12: ['中山', '阪神', '中京'],
+  };
+  // 枠の色（1〜8枠）
+  HS.DATA.frameColors = ['#ffffff', '#222222', '#e0312f', '#2a63d4', '#f2cf1d', '#2c9a48', '#f08a1c', '#f07fb0'];
+  HS.DATA.frameText = ['#222', '#fff', '#fff', '#fff', '#222', '#fff', '#fff', '#222'];
+})();

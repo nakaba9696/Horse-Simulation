@@ -1,0 +1,1 @@
+以下は mattpocock/skills（https://github.com/mattpocock/skills, MIT License, Copyright (c) 2026 Matt Pocock, commit 49dd158）から、そのまま写したもの：.claude/skills/grill-me・grilling・handoff・to-questionnaire・writing-for-agents。ライセンスは mattpocock-skills-LICENSE。
