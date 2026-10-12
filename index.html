@@ -66,6 +66,16 @@
     <form method="dialog"><button class="primary">閉じる</button></form>
   </dialog>
 
+  <!-- 確かめる（confirm / prompt の代わり。埋め込み先では標準のダイアログが出ないため） -->
+  <dialog id="askDialog">
+    <p id="askText"></p>
+    <input id="askInput" maxlength="9" hidden>
+    <div class="ask-buttons">
+      <button id="askCancel" class="ghost">やめる</button>
+      <button id="askOk" class="primary">はい</button>
+    </div>
+  </dialog>
+
   <script src="src/rng.js"></script>
   <script src="src/data.js"></script>
   <script src="src/horses.js"></script>

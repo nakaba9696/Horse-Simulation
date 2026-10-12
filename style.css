@@ -13,7 +13,7 @@
   --dirt2: #a17c4d;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #171a16;
     --panel: #22261f;
     --text: #e8eae3;
@@ -22,7 +22,19 @@
     --accent: #5fae5f;
     --accent-text: #0f140e;
     --hit: #ff7a6e;
+    color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #171a16;
+  --panel: #22261f;
+  --text: #e8eae3;
+  --muted: #a0a598;
+  --line: #3a3f36;
+  --accent: #5fae5f;
+  --accent-text: #0f140e;
+  --hit: #ff7a6e;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body {
@@ -112,3 +124,7 @@ td.wrap { white-space: normal; min-width: 16em; }
 .row-actions.left { justify-content: flex-start; }
 .commentary { list-style: none; margin: 8px 0 0; padding: 8px 12px; min-height: 5.5em; background: var(--bg); border-radius: 6px; font-size: 0.95rem; }
 .commentary li:last-child { font-weight: bold; }
+#askDialog { max-width: 360px; }
+#askDialog p { margin: 4px 0 12px; }
+#askInput { width: 100%; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); margin-bottom: 12px; }
+.ask-buttons { display: flex; gap: 8px; justify-content: flex-end; }

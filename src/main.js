@@ -483,9 +483,24 @@
     if (d.trainer) act(HS.setTrainer(game, d.trainer, e.target.value));
     if (d.entry !== undefined && 'entry' in d) act(HS.setEntry(game, d.entry, e.target.value));
   });
+  // 確かめる画面。onOk には入力欄があればその文字が渡る
+  let askOk = null;
+  function ask(text, onOk, value) {
+    $('askText').textContent = text;
+    const input = $('askInput');
+    input.hidden = value === undefined;
+    input.value = value || '';
+    askOk = onOk;
+    $('askDialog').showModal();
+    if (!input.hidden) input.focus();
+  }
+  $('askOk').addEventListener('click', () => { const f = askOk; askOk = null; $('askDialog').close(); if (f) f($('askInput').value); });
+  $('askCancel').addEventListener('click', () => { askOk = null; $('askDialog').close(); });
+  $('askInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('askOk').click(); });
+
   document.addEventListener('click', (e) => {
     const t = e.target.closest('button');
-    if (!t) return;
+    if (!t || t.closest('#askDialog')) return;
     const d = t.dataset;
     if (d.tab) { tab = d.tab; notice(''); render(); return; }
     if (d.detail) { showDetail(d.detail); return; }
@@ -494,7 +509,7 @@
     if (d.farm) { act(HS.sendToFarm(game, d.farm)); return; }
     if (d.retire) {
       const h = game.horses.find((x) => x.id === d.retire);
-      if (h && confirm(`${h.name} を引退させますか？`)) act(HS.retire(game, d.retire));
+      if (h) ask(`${h.name} を引退させますか？`, () => act(HS.retire(game, d.retire)));
       return;
     }
     if (d.breed) { showBreeding(d.breed); return; }
@@ -507,13 +522,12 @@
     }
     if (d.buy !== undefined && 'buy' in d) {
       const lot = game.auction && game.auction[Number(d.buy)];
-      if (lot && confirm(`${lot.horse.name} を ${money(lot.price)} で買いますか？`)) act(HS.buyAtAuction(game, Number(d.buy)));
+      if (lot) ask(`${lot.horse.name} を ${money(lot.price)} で買いますか？`, () => act(HS.buyAtAuction(game, Number(d.buy))));
       return;
     }
     if (d.rename) {
       const h = game.horses.find((x) => x.id === d.rename);
-      const name = prompt('新しい名前（9 文字まで）', h ? h.name : '');
-      if (name !== null) { const err = HS.rename(game, d.rename, name); $('dialog').close(); act(err); }
+      ask('新しい名前（9 文字まで）', (name) => { const err = HS.rename(game, d.rename, name); $('dialog').close(); act(err); }, h ? h.name : '');
       return;
     }
     if (d.speed) {
@@ -522,11 +536,12 @@
       return;
     }
     if (t.id === 'newGameBtn') {
-      if (!confirm('牧場の記録を消して、はじめからにしますか？')) return;
-      game = HS.newGame(Date.now() >>> 0);
-      tab = 'stable';
-      act(null);
-      show('homeView');
+      ask('牧場の記録を消して、はじめからにしますか？', () => {
+        game = HS.newGame(Date.now() >>> 0);
+        tab = 'stable';
+        act(null);
+        show('homeView');
+      });
     }
   });
   $('nextWeekBtn').addEventListener('click', nextWeek);
