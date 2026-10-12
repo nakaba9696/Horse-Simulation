@@ -273,9 +273,8 @@
     const m = HS.DATA.historicJockeys && HS.DATA.historicJockeys[h.name];
     if (!m) return null;
     if (typeof m === 'string') return m;
-    let best = m.default || null, by = -1;
-    for (const [k, v] of Object.entries(m)) if (k !== 'default' && +k <= year && +k > by) { by = +k; best = v; }
-    return best;
+    // 年の指定はその年だけ（ほかの年は default）
+    return m[String(year)] || m.default || null;
   };
   W.travelCost = race => race.region !== '海外' ? 0 : (['仏', '英', '米', '愛', '加'].includes(race.country || (HS.DATA.courses[race.course] || {}).country) ? 3000 : 1500);
 

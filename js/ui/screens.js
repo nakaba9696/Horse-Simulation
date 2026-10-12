@@ -400,7 +400,7 @@
   UI.resultTable = function (r) {
     return `<h3>${UI.gradeTag(r)} ${e(r.short || r.name)}</h3><div class="small muted">${r.course} ${r.surface}${r.dist}m　馬場：${r.ground}</div>
       <div class="tblwrap mt card-sheet"><table class="t"><tr><th>着</th><th>馬番</th><th>馬名</th><th class="hide-sm">性齢</th><th class="hide-sm">騎手</th><th>タイム</th><th>着差</th><th class="hide-sm">上がり</th><th>人気</th></tr>
-      ${r.rows.map(x => `<tr class="${x.mine ? 'mine' : ''}"><td class="num ${x.pos <= 3 ? 'pos' + x.pos : ''}">${x.pos}</td><td>${UI.waku(x.frame, x.num)}</td><td class="nm">${e(x.name)} ${x.hist ? '<span class="chip hist">史</span>' : ''}<div class="small muted">${x.sire ? '父 ' + e(x.sire) : ''}</div></td><td class="small hide-sm">${x.sex}${x.age}</td><td class="small hide-sm">${e(x.jockey || '')}</td><td class="num">${U.time(x.time)}</td><td class="small">${e(x.margin)}</td><td class="num small hide-sm">${x.last3f ? x.last3f.toFixed(1) : ''}</td><td class="num small">${x.pop}<div class="muted">${x.odds}</div></td></tr>`).join('')}
+      ${r.rows.map(x => `<tr class="${x.mine ? 'mine' : ''}"><td class="num ${x.pos <= 3 ? 'pos' + x.pos : ''}">${x.pos}</td><td>${UI.waku(x.frame, x.num)}</td><td class="nm">${e(x.name)} ${x.hist ? '<span class="chip hist">史</span>' : ''}<div class="small muted">${x.sire ? '父 ' + e(x.sire) : ''}<span class="show-sm">　${e(x.jockey || '')}</span></div></td><td class="small hide-sm">${x.sex}${x.age}</td><td class="small hide-sm">${e(x.jockey || '')}</td><td class="num">${U.time(x.time)}</td><td class="small">${e(x.margin)}</td><td class="num small hide-sm">${x.last3f ? x.last3f.toFixed(1) : ''}</td><td class="num small">${x.pop}<div class="muted">${x.odds}</div></td></tr>`).join('')}
       </table></div>`;
   };
   // 出馬表
@@ -411,7 +411,7 @@
     return `<h3>${UI.gradeTag(race)} ${e(race.short || race.name)}</h3>
       <div class="small muted">${G.year}年${race.month}月 ${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　馬場：${race.ground}　${runners.length}頭</div>
       <div class="tblwrap mt card-sheet"><table class="t"><tr><th>枠番</th><th></th><th>馬名</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th class="hide-sm">騎手</th><th>人気</th><th>単勝</th></tr>
-      ${rows.map(x => `<tr class="${x.mine ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td><td><canvas class="silks" width="52" height="52" data-art="silks" data-key="${e(x.horse.name)}" data-mine="${x.mine ? 1 : 0}"></canvas></td><td class="nm">${e(x.horse.name)} ${x.horse.hist ? '<span class="chip hist">史</span>' : ''}<div class="small muted">${x.horse.sire ? '父 ' + e(x.horse.sire) : x.horse.foreign ? '外国馬' : ''}</div></td>
+      ${rows.map(x => `<tr class="${x.mine ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td><td><canvas class="silks" width="52" height="52" data-art="silks" data-key="${e(x.horse.name)}" data-mine="${x.mine ? 1 : 0}"></canvas></td><td class="nm">${e(x.horse.name)} ${x.horse.hist ? '<span class="chip hist">史</span>' : ''}<div class="small muted">${x.horse.sire ? '父 ' + e(x.horse.sire) : x.horse.foreign ? '外国馬' : ''}<span class="show-sm">　${e(x.jockey ? x.jockey.name : '')}</span></div></td>
         <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td><td class="small hide-sm">${e(x.jockey ? x.jockey.name : '')}</td><td class="num">${x.pop}</td><td class="num">${x.odds}</td></tr>`).join('')}
       </table></div>`;
   };
