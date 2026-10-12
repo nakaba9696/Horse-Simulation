@@ -676,7 +676,7 @@
     const h = G.horses[id];
     if (!h || h.owner !== 'P') return { err: '持ち馬ではない' };
     W.unenter(id);
-    if (h.sex === '牝') { h.loc = 'mare'; h.cover = null; h.foals = []; news(`${h.name}は引退し、繁殖牝馬になった。`, 'info'); return { to: 'mare' }; }
+    if (h.sex === '牝') { h.loc = 'mare'; h.cover = null; h.foals = []; if (W.mareByName.has(h.name)) h.quality = W.mareByName.get(h.name).quality; news(`${h.name}は引退し、繁殖牝馬になった。`, 'info'); return { to: 'mare' }; }
     const g1 = h.gradedWins.filter(g => g.grade === 'G1').length;
     const data = W.stallionByName.get(h.name);
     if (!h.gelding && (data || g1 > 0 || h.prize >= 30000 || h.gradedWins.length >= 3)) {
@@ -768,7 +768,7 @@
     for (const m of HS.DATA.mares || []) {
       if (m.from > G.year || G.year - m.born > 20 || G.year - m.born < 3) continue;
       if (G.erased.includes(m.name)) continue;
-      if (W.all().some(h => h.name === m.name && h.owner === 'P')) continue;
+      if (W.all().some(h => h.name === m.name)) continue; // 持ち馬、またはまだ現役で走っている
       const price = Math.round((1500 + Math.pow(m.quality / 10, 3) * 9) / 10) * 10;
       // 今年生まれる史実の仔がいるなら「受胎中」で買える
       const inFoal = (m.foals || []).find(f => f[0] === G.year && G.month < 3);

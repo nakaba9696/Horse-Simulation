@@ -211,6 +211,47 @@
     ctx.restore();
   };
 
+  // 口取り（重賞を勝ったときの記念の絵）
+  A.winner = function (canvas, horse, silks, title, sub) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    // スタンドと観客
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, '#1d2b45'); bg.addColorStop(0.55, '#33405c'); bg.addColorStop(0.56, '#3d7d36'); bg.addColorStop(1, '#2a5a25');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+    const r = U.hashRng('crowd:' + title);
+    for (let i = 0; i < 900; i++) {
+      const x = r.float(0, w), y = r.float(h * 0.12, h * 0.55);
+      ctx.fillStyle = r.pick(['#c9b8a6', '#e8d6c0', '#3b3f52', '#8a6d5a', '#f2f2f2', '#c83a3a', '#3a6bc8', '#e0c040']);
+      ctx.beginPath(); ctx.arc(x, y, r.float(1.5, 3.2) * w / 960, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(10,18,32,0.35)'; ctx.fillRect(0, 0, w, h * 0.56);
+    // 光
+    const glow = ctx.createRadialGradient(w / 2, h * 0.6, 10, w / 2, h * 0.6, w * 0.5);
+    glow.addColorStop(0, 'rgba(255,230,160,0.35)'); glow.addColorStop(1, 'rgba(255,230,160,0)');
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
+    const s = Math.min(w / 215, h / 135);
+    const x = w * 0.5, y = h * 0.9;
+    A.horse(ctx, x, y, s, 0.18, { coat: horse.coat, marks: A.marks(horse.name || horse.id), silks, cap: '#ffffff' });
+    // レイ（花の首飾り）
+    ctx.save(); ctx.translate(x, y + (Math.abs(Math.sin(0.18 * Math.PI * 2)) * -3 + 1.5) * s); ctx.scale(s, s);
+    const cols = ['#e83b5a', '#ffd34d', '#ffffff', '#ff8fb1', '#7fd06b'];
+    for (let i = 0; i <= 26; i++) {
+      const t = i / 26;
+      const px = 26 + Math.sin(t * Math.PI) * 9 + t * 12, py = -54 + t * 30 + Math.sin(t * Math.PI) * 6;
+      ctx.fillStyle = cols[i % cols.length]; ctx.beginPath(); ctx.arc(px, py, 2.6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    // 帯
+    ctx.fillStyle = 'rgba(10,22,38,0.85)'; ctx.fillRect(0, h * 0.04, w, h * 0.17);
+    ctx.fillStyle = '#d6ad3c'; ctx.fillRect(0, h * 0.04, w, 3); ctx.fillRect(0, h * 0.21 - 3, w, 3);
+    ctx.fillStyle = '#f3d27a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 ${Math.round(h * 0.075)}px "Noto Serif JP", serif`;
+    ctx.fillText(title, w / 2, h * 0.11);
+    ctx.fillStyle = '#e8eef6'; ctx.font = `700 ${Math.round(h * 0.04)}px "Noto Sans JP", sans-serif`;
+    ctx.fillText(sub || '', w / 2, h * 0.175);
+  };
+
   // 肖像（牧場の背景に、立ち止まり気味に走る馬）
   A.portrait = function (canvas, horse, silks) {
     const ctx = canvas.getContext('2d');

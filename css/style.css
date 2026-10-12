@@ -1,5 +1,6 @@
 /* ターフの系譜：紺と金の画面 */
 :root {
+  color-scheme: dark;
   --bg: #0b1726; --bg2: #10223a; --panel: #142a45; --panel2: #1a3556; --line: #2b4a72;
   --gold: #d6ad3c; --gold2: #f3d27a; --text: #eef3fa; --muted: #9fb2c8; --good: #4cc27a; --bad: #ff6b6b; --warn: #ffb648;
   --g1: #1d4fb8; --g2: #c0262d; --g3: #1f8a3a; --jpn: #6a3fb5; --turf: #3f8f3a; --dirt: #a77a4c;
@@ -19,7 +20,7 @@ a { color: var(--gold2); }
 #app { max-width: 820px; margin: 0 auto; padding: 0 12px calc(84px + env(safe-area-inset-bottom)); }
 
 /* ヘッダー：日付と資金 */
-.hdr { position: sticky; top: 0; z-index: 20; display: flex; align-items: stretch; gap: 8px; padding: 10px 0 8px; background: linear-gradient(180deg, rgba(11,23,38,.98) 70%, rgba(11,23,38,0)); }
+.hdr { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; align-items: stretch; gap: 8px; padding: 10px 0 8px; background: linear-gradient(180deg, rgba(11,23,38,.98) 70%, rgba(11,23,38,0)); }
 .cal { display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 84px; padding: 4px 8px; border-radius: 8px; background: linear-gradient(180deg, #f6e7b8, #d9b75a); color: #2b1d05; box-shadow: var(--shadow); }
 .cal .y { font-size: 12px; font-weight: 700; line-height: 1.1; }
 .cal .mw { font-family: "Noto Serif JP", serif; font-weight: 900; font-size: 20px; line-height: 1.1; }

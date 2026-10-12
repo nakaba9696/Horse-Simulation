@@ -195,6 +195,7 @@
     W.clearLocal(); App.st.screen = 'title'; App.render();
   };
   act.next = () => App.nextWeek();
+  act['next-many'] = () => App.nextMany(4);
 
   const change = {};
   change.jockey = (el) => { const id = el.dataset.id; const ent = W.entryOf(id); if (!ent) return; W.enter(id, ent.raceKey, el.value); App.save(); };
@@ -235,6 +236,31 @@
       App.toast('エラー：' + err.message);
     } finally { busy = false; }
   };
+  // まとめて進める（映像なし。最後にまとめを出す）
+  App.nextMany = async function (n) {
+    if (busy) return; busy = true;
+    try {
+      const rows = [], g1 = [];
+      const start = W.dateLabel(W.get().year, W.get().month, W.get().week);
+      for (let i = 0; i < n; i++) {
+        const rep = W.advance();
+        W.lastReport = rep;
+        for (const r of rep.races) {
+          for (const x of r.sim.results.filter(x => x.mine)) rows.push(`<tr><td class="small">${rep.m}/${rep.w}</td><td>${UI.gradeTag(r.race)} ${e(R.label(r.race))}</td><td><b>${e(x.horse.name)}</b></td><td class="num ${x.pos <= 3 ? 'pos' + x.pos : ''}">${x.pos}着</td></tr>`);
+          if (r.race.grade === 'G1' && r.race.region !== '海外') g1.push(`<div class="small">${UI.gradeTag(r.race)} ${e(R.label(r.race))}　${e(r.sim.results[0].horse.name)}</div>`);
+        }
+      }
+      App.save();
+      App.render();
+      App.modal(`<h3>${e(start)}から${n}週</h3>
+        ${rows.length ? `<div class="tblwrap"><table class="t">${rows.join('')}</table></div>` : '<div class="panel empty">自分の馬の出走はありませんでした。</div>'}
+        ${g1.length ? `<div class="panel mt">${g1.join('')}</div>` : ''}
+        <ul class="news mt">${W.get().news.slice(0, 10).map(x => `<li class="${x.kind}"><span class="d">${x.y}/${x.m}-${x.w}</span>${e(x.text)}</li>`).join('')}</ul>
+        <div class="btns mt"><button class="btn gold" data-act="close">閉じる</button></div>`);
+    } catch (err) { console.error(err); App.toast('エラー：' + err.message); }
+    finally { busy = false; }
+  };
+
   // 出馬表 → レース → 結果
   App.playRace = async function (r, replay) {
     const G = W.get();
@@ -251,8 +277,13 @@
     const slim = W.slimResult(r);
     await new Promise(res => {
       const mine = slim.rows.filter(x => x.mine);
-      const msg = mine.map(x => x.pos === 1 ? `<div class="panel gold center"><div class="serif" style="font-size:24px;font-weight:900;color:var(--gold2)">🏆 ${e(x.name)} 優勝！</div></div>` : `<div class="panel center">${e(x.name)}は${x.pos}着</div>`).join('');
+      const msg = mine.map(x => x.pos === 1 ? (r.race.graded ? `<div class="hero"><canvas class="winner-cv" width="960" height="560" data-name="${e(x.name)}"></canvas></div>` : `<div class="panel gold center"><div class="serif" style="font-size:24px;font-weight:900;color:var(--gold2)">🏆 ${e(x.name)} 優勝！</div></div>`) : `<div class="panel center">${e(x.name)}は${x.pos}着</div>`).join('');
       const bg = App.modal(`${msg}${UI.resultTable(slim)}<div class="btns mt"><button class="btn gold" data-x="ok">次へ</button></div>`, { noClose: true });
+      bg.querySelectorAll('.winner-cv').forEach(cv => {
+        const run = r.runners.find(x => x.horse.name === cv.dataset.name);
+        const win = r.sim.results[0];
+        A.winner(cv, run.horse, G.player.silks, `${r.race.short || r.race.name} 優勝`, `${run.horse.name}　${U.time(win.time)}　騎手 ${win.jockey ? win.jockey.name : ''}`);
+      });
       bg.querySelector('[data-x=ok]').onclick = () => { App.closeModal(); res(); };
     });
     r.skip = false;

@@ -90,6 +90,7 @@
     if (!stable.length && !ready.length) tips.push('<a href="#" data-act="tab" data-tab="market">市場で馬を買ってみよう</a>');
     return `
       ${tips.length ? `<div class="panel gold mt">${tips.map(t => `<div>📌 ${t}</div>`).join('')}</div>` : ''}
+      <div class="row mt"><span class="small muted grow">おまかせの馬が多いときは、まとめて進めると早い（映像は出ない）。</span><button class="btn sm" data-act="next-many">4週まとめて進める</button></div>
       <h2 class="sec">今週の出走<span class="r">${G.month}月${G.week}週</span></h2>
       ${mineIn.length ? `<div class="list">${mineIn.map(x => `<div class="card" data-act="horse" data-id="${x.h.id}">
           ${UI.thumb(x.h)}
@@ -326,6 +327,8 @@
   UI.breedDetail = function (mare, stallion) {
     const ev = P.evaluate(stallion, mare);
     return `<h3>${e(stallion.name)} × ${e(mare.name)}</h3>
+      <div class="hero"><canvas width="960" height="480" data-art="thumbdata" data-coat="${e(stallion.coat || '鹿毛')}" data-key="${e(stallion.name)}"></canvas>
+        <div class="plate"><div class="nm">${e(stallion.name)}</div><div class="pd">${stallion.born ? stallion.born + '年生' : ''} ${e(stallion.coat || '')}　父 ${e(P.parents(stallion.name)[0] || '?')}　母父 ${e(P.parents(P.parents(stallion.name)[1])[0] || '?')}</div></div></div>
       <div class="row"><span class="rank ${ev.rank}" style="width:44px;height:44px;line-height:44px;font-size:22px">${ev.rank}</span>
         <div class="grow small">父系 ${e(ev.sireLine)}　母父系 ${e(ev.damsireLine)}<br>種付け料 ${stallion.owner === 'P' ? '無料（自家の種牡馬）' : U.money(stallion.fee)}　${stallion.surface}・${stallion.distMin}〜${stallion.distMax}m・${stallion.growth}${(stallion.traits || []).length ? '・' + stallion.traits.map(e).join('・') : ''}</div></div>
       <div class="panel mt small">${ev.notes.length ? ev.notes.map(n => `<div>・${e(n)}</div>`).join('') : '5代内にクロスなし（アウトブリード）'}</div>
