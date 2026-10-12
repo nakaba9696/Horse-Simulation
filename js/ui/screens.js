@@ -238,7 +238,7 @@
             <td class="small hide-sm">${r.ground}</td>
             <td>${on ? `<button class="btn sm" data-act="unenter" data-id="${h.id}">取消</button>` : `<button class="btn sm gold" data-act="enter" data-id="${h.id}" data-race="${r.key}">出走</button>`}</td></tr>`;
         }).join('')}</table></div>` : '<div class="panel empty">今週は出られるレースがありません。</div>'}
-      ${ent ? `<div class="panel mt"><div class="row"><span>騎手</span><select class="grow" data-act-change="jockey" data-id="${h.id}">${HS.DATA.jockeys.map(j => `<option ${j.name === ent.jockey ? 'selected' : ''} value="${e(j.name)}">${e(j.name)}（腕 ${U.grade(j.skill)}・${j.region}）</option>`).join('')}</select></div></div>` : ''}
+      ${ent ? `<div class="panel mt"><div class="row"><span>騎手</span><select class="grow" data-act-change="jockey" data-id="${h.id}">${W.ridersForPlayer(G.year).map(j => `<option ${j.name === ent.jockey ? 'selected' : ''} value="${e(j.name)}">${e(j.name)}（腕 ${U.grade(j.skill)}・${j.region === '外国' ? '短期免許' : j.region}）</option>`).join('')}</select></div></div>` : ''}
       <h2 class="sec">この先の重賞（出られるもの）</h2>
       <div class="panel"><table class="t">${upcoming.map(r => `<tr><td class="small muted">${r.inWeeks}週後</td><td>${UI.gradeTag(r)}</td><td><b>${e(R.label(r))}</b></td><td class="small">${r.course}${r.surface}${r.dist}m</td></tr>`).join('') || '<tr><td class="muted">なし</td></tr>'}</table></div>`;
   }
@@ -454,6 +454,6 @@
           <li>引退した牡馬は実績しだいで種牡馬に、牝馬は繁殖牝馬になります。</li>
         </ul></div>
       <div class="panel"><b>データを消す</b><div class="small muted">この端末のセーブを消して、タイトルに戻ります。</div><div class="btns mt"><button class="btn red" data-act="reset">セーブを消す</button></div></div>
-      <div class="small muted center mt">馬名・レース名は実在のものを使ったファンメイドのゲームです。騎手は架空の人物です。</div>`;
+      <div class="small muted center mt">馬名・レース名・騎手名は実在のものを使ったファンメイドのゲームです。調教師・馬主は架空です。</div>`;
   };
 })();

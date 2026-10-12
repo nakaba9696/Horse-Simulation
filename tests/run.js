@@ -92,6 +92,22 @@ if (D.stallions) {
   });
 }
 
+check('jockeys: 毎年 JRA の騎手が足りる・主戦騎手が実在する', () => {
+  const J = D.jockeys || [];
+  assert(J.length > 0, '騎手のデータがない');
+  for (let y = 1995; y <= 2026; y++) {
+    const n = W.jockeysOf(y, W.JRA).length;
+    assert(n >= 18, `${y}年の JRA の騎手が ${n} 人`);
+  }
+  const bad = [];
+  for (const [horse, v] of Object.entries(D.historicJockeys || {})) {
+    const names = typeof v === 'string' ? [v] : Object.values(v);
+    for (const nm of names) if (!J.some(j => j.name === nm)) bad.push(`${horse}:${nm}`);
+  }
+  assert(bad.length === 0, '騎手の表にいない: ' + bad.slice(0, 10).join(', '));
+  return `${J.length}人・主戦 ${Object.keys(D.historicJockeys || {}).length}頭`;
+});
+
 // ---------- 模擬 ----------
 check('sim: 走破タイムが現実的', () => {
   const rng = new U.RNG(1);

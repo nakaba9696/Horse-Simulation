@@ -1,4 +1,4 @@
-// 架空の馬（モブ）と架空の騎手の名前の材料。史実馬の名前は historic_*.js にある。
+// 架空の馬（モブ）の名前の材料。騎手は data/jockeys.js（実名）。史実馬の名前は historic_*.js にある。
 (function () {
   const HS = globalThis.HS = globalThis.HS || {}; HS.DATA = HS.DATA || {};
   HS.DATA.nameParts = {
@@ -8,16 +8,4 @@
     foreignHead: ['サー', 'ロード', 'キャプテン', 'ゴールド', 'ロイヤル', 'ハイランド', 'ノーザン', 'ウエスタン', 'ブリティッシュ', 'ルージュ', 'ル', 'ドン', 'ミスター', 'レディ'],
     foreignTail: ['ドラゴン', 'アーサー', 'ウィンザー', 'シャンゼリゼ', 'セーヌ', 'ボルドー', 'ケンブリッジ', 'ハイネス', 'ノーブル', 'ブラボー', 'エクスプレス', 'ガーディアン', 'マーベリック', 'グローリー', 'セイバー', 'タイタン', 'ストライカー', 'カリフ', 'エミール', 'スルタン', 'ペガサス', 'ビクトリー'],
   };
-  // 架空の騎手（実在の騎手とは関係ない）。skill＝腕、region＝所属
-  HS.DATA.jockeys = [
-    { name: '東雲 隼', skill: 92, region: '栗東' }, { name: '一条 拓海', skill: 90, region: '美浦' },
-    { name: '鷹野 亮', skill: 88, region: '栗東' }, { name: '白峰 蓮', skill: 86, region: '美浦' },
-    { name: '藤堂 光輝', skill: 84, region: '栗東' }, { name: '真壁 翔', skill: 82, region: '美浦' },
-    { name: '氷室 圭', skill: 80, region: '栗東' }, { name: '結城 大地', skill: 78, region: '美浦' },
-    { name: '霧島 葵', skill: 76, region: '栗東' }, { name: '嵐山 剛', skill: 74, region: '美浦' },
-    { name: '柏木 誠司', skill: 72, region: '栗東' }, { name: '早瀬 透', skill: 70, region: '美浦' },
-    { name: '朝比奈 陸', skill: 68, region: '栗東' }, { name: '御堂 湊', skill: 66, region: '美浦' },
-    { name: '桐生 晴', skill: 64, region: '栗東' }, { name: '日向 颯', skill: 62, region: '美浦' },
-    { name: '若林 叶', skill: 60, region: '栗東' }, { name: '水城 想', skill: 58, region: '美浦' },
-  ];
 })();

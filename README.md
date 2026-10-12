@@ -19,4 +19,4 @@
 - 検証：`node tests/run.js`
 - 構成と決まりは [CLAUDE.md](CLAUDE.md)、方向性は [docs/VISION.md](docs/VISION.md)、作業の分け方は [docs/ROADMAP.md](docs/ROADMAP.md)。
 
-馬名・レース名は実在のものを使ったファンメイドのゲームです。騎手・調教師・馬主は架空です。史実データの出典は JBIS・netkeiba・ja.wikipedia。
+馬名・レース名・騎手名は実在のものを使ったファンメイドのゲームです。調教師・馬主は架空です。史実データの出典は JBIS・netkeiba・ja.wikipedia。

@@ -23,7 +23,8 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `data/races.js` | 重賞の暦（JRA の G1〜G3・地方の交流 G1・海外 G1）。年代ごとの名前・距離・時期の違いを from/to で分ける | D |
 | `data/historic_1.js`・`historic_2.js` | 史実馬（1987〜2004年生・2005〜2022年生）。能力の目安・適性・史実の勝ち鞍・毛色 | D |
 | `data/stallions.js` | 種牡馬（年代・種付け料）・血統表（祖先）・ニックス・名牝と史実の仔 | D |
-| `data/courses.js`・`names.js` | 競馬場の形・開催・枠の色／架空の馬名の材料・架空の騎手 | D |
+| `data/courses.js`・`names.js` | 競馬場の形・開催・枠の色／モブ馬の名前の材料 | D |
+| `data/jockeys.js`・`historic_jockeys.js` | 実在の騎手（年代・所属・腕前の推移）／史実馬の主戦騎手 | D |
 | `js/core/util.js` | 乱数（種で固定）・書式 | C |
 | `js/core/horse.js` | 馬の形・成長・調教・故障 | C |
 | `js/core/pedigree.js` | 血統表・クロス・ニックス・系統・配合の評価・仔の誕生 | M |
@@ -52,7 +53,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 - **コミット・PR・コメントにモデル名を書かない。** Claude Code が自動で付ける `Co-Authored-By` 行は `.claude/settings.json` で切ってある（`includeCoAuthoredBy: false`）。
 
 ## 決まり（このゲーム）
-- **馬名・レース名・競馬場名・種牡馬名は実名。** 騎手・調教師・馬主は架空（実在の人の名前を使わない）。史実馬の馬主名も出さない。
+- **馬名・レース名・競馬場名・種牡馬名・騎手名は実名。** 騎手は年代ごとに実在の騎手（`data/jockeys.js`）、史実馬は主戦騎手（`data/historic_jockeys.js`）が乗る。調教師・馬主は架空で、史実馬の馬主名も出さない。
 - **頭数合わせの馬（モブ）は架空の名前。** 実名にするのは史実馬だけ。
 - **絵は canvas で描く**（`js/ui/art.js`）。画像ファイル・画像生成は使わない（持ち主が変えるまで）。
 - **遊んでいる間に AI を呼ばない。** 判定・レース・出来事はデータとルールと種付きの乱数で動かす。

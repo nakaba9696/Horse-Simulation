@@ -215,7 +215,7 @@
     }
     W.unenter(horseId);
     G.entries[raceKey] = G.entries[raceKey] || [];
-    G.entries[raceKey].push({ horseId, jockey: jockeyName || W.bestFreeJockey(raceKey) });
+    G.entries[raceKey].push({ horseId, jockey: jockeyName || W.bestFreeJockey(raceKey, horseId) });
     return null;
   };
   W.unenter = function (horseId) {
@@ -225,12 +225,58 @@
     for (const [k, arr] of Object.entries(G.entries)) for (const e of arr) if (e.horseId === horseId) return { raceKey: k, jockey: e.jockey };
     return null;
   };
-  W.bestFreeJockey = function (raceKey) {
-    const taken = new Set((G.entries[raceKey] || []).map(e => e.jockey));
-    const j = HS.DATA.jockeys.find(j => !taken.has(j.name));
-    return j ? j.name : HS.DATA.jockeys[0].name;
+  // ---------- 騎手（実名・年代ごと） ----------
+  // 腕前は年ごとの値を線でつなぐ
+  W.skillAt = function (j, year) {
+    if (typeof j.skill === 'number') return j.skill;
+    const pts = Object.entries(j.skill || {}).map(([y, v]) => [+y, v]).sort((a, b) => a[0] - b[0]);
+    if (!pts.length) return 70;
+    if (year <= pts[0][0]) return pts[0][1];
+    if (year >= pts[pts.length - 1][0]) return pts[pts.length - 1][1];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [y1, v1] = pts[i], [y2, v2] = pts[i + 1];
+      if (year >= y1 && year <= y2) return v1 + (v2 - v1) * (year - y1) / (y2 - y1);
+    }
+    return 70;
   };
-  W.jockey = name => HS.DATA.jockeys.find(j => j.name === name) || HS.DATA.jockeys[HS.DATA.jockeys.length - 1];
+  // その年に乗っている騎手。regions：['美浦','栗東'] など
+  W.jockeysOf = function (year, regions) {
+    return (HS.DATA.jockeys || []).filter(j => j.from <= year && year <= (j.to || 9999) && (!regions || regions.includes(j.region)))
+      .map(j => ({ name: j.name, region: j.region, skill: Math.round(W.skillAt(j, year)) }))
+      .sort((a, b) => b.skill - a.skill);
+  };
+  W.JRA = ['美浦', '栗東'];
+  // プレイヤーが選べる騎手（JRA と短期免許の外国人）
+  W.ridersForPlayer = year => W.jockeysOf(year, ['美浦', '栗東', '外国']);
+  // 既定の騎手：その年の上位8人から、馬ごとに決まった1人（空いていなければ次）
+  W.bestFreeJockey = function (raceKey, horseId) {
+    const taken = new Set((G.entries[raceKey] || []).map(e => e.jockey));
+    const list = W.jockeysOf(G.year, W.JRA);
+    if (!list.length) return '騎手未定';
+    const top = list.slice(0, Math.min(8, list.length));
+    const start = U.hash(`${horseId || raceKey}:${G.year}`) % top.length;
+    for (let i = 0; i < list.length; i++) {
+      const j = i < top.length ? top[(start + i) % top.length] : list[i];
+      if (!taken.has(j.name)) return j.name;
+    }
+    return list[0].name;
+  };
+  W.jockey = function (name) {
+    const yr = G ? G.year : 2000;
+    const all = (HS.DATA.jockeys || []).filter(j => j.name === name);
+    const j = all.find(x => x.from <= yr && yr <= (x.to || 9999)) || all[0];
+    if (!j) return { name: name || '騎手未定', skill: 65, region: '' };
+    return { name: j.name, region: j.region, skill: Math.round(W.skillAt(j, yr)) };
+  };
+  // 史実馬の主戦騎手（その年）
+  W.histJockey = function (h, year) {
+    const m = HS.DATA.historicJockeys && HS.DATA.historicJockeys[h.name];
+    if (!m) return null;
+    if (typeof m === 'string') return m;
+    let best = m.default || null, by = -1;
+    for (const [k, v] of Object.entries(m)) if (k !== 'default' && +k <= year && +k > by) { by = +k; best = v; }
+    return best;
+  };
   W.travelCost = race => race.region !== '海外' ? 0 : (['仏', '英', '米', '愛', '加'].includes(race.country || (HS.DATA.courses[race.course] || {}).country) ? 3000 : 1500);
 
   // ---------- AI の出走の判断 ----------
@@ -303,7 +349,7 @@
     for (const h of W.mine('stable')) {
       if (!h.auto || W.entryOf(h.id) || h.injury) continue;
       const rc = W.aiChoose(h, races, wIdx, rng);
-      if (rc && rc.region !== '海外') (field[rc.key] = field[rc.key] || []).push({ horse: h, jockey: W.jockey(W.bestFreeJockey(rc.key)), mine: true, auto: true });
+      if (rc && rc.region !== '海外') (field[rc.key] = field[rc.key] || []).push({ horse: h, jockey: W.jockey(W.bestFreeJockey(rc.key, h.id)), mine: true, auto: true });
     }
     // 2. レースを走らせる（G1 は出走が無くても実施）
     for (const race of races) {
@@ -352,15 +398,32 @@
       runners.push({ horse: f, jockey: null });
     }
     void ageOf;
-    // 騎手
+    // 騎手：プレイヤーの指名 → 史実馬の主戦 → 残りを強い馬から
     const taken = new Set(runners.filter(x => x.jockey).map(x => x.jockey.name));
-    const free = HS.DATA.jockeys.filter(j => !taken.has(j.name));
-    const byPower = runners.filter(x => !x.jockey).sort((a, b) => H.overall(H.cur(b.horse, wIdx)) - H.overall(H.cur(a.horse, wIdx)));
-    for (const x of byPower) {
-      if (x.horse.foreign || x.horse.foreignTrained) { x.jockey = { name: rng.pick(['C.ベルナール', 'A.ハーディング', 'J.マクレラン', 'P.ドゥラン', 'W.チャン', 'L.ソシエ']), skill: 82 }; continue; }
-      if (x.horse.local) { x.jockey = { name: rng.pick(['地方 騎手A', '地方 騎手B', '地方 騎手C']), skill: 66 }; continue; }
-      x.jockey = free.length ? free.splice(rng.int(0, Math.min(3, free.length - 1)), 1)[0] : { name: '見習い', skill: 55 };
+    for (const x of runners) {
+      if (x.jockey || !x.horse.hist) continue;
+      const nm = W.histJockey(x.horse, year);
+      if (!nm || taken.has(nm)) continue;
+      const jj = W.jockey(nm);
+      if (!(HS.DATA.jockeys || []).some(j => j.name === nm && j.from <= year && year <= (j.to || 9999))) continue;
+      x.jockey = jj; taken.add(nm);
     }
+    const pools = { JRA: W.jockeysOf(year, W.JRA), foreign: W.jockeysOf(year, ['外国']), local: W.jockeysOf(year, ['地方']) };
+    for (const k of Object.keys(pools)) pools[k] = pools[k].filter(j => !taken.has(j.name));
+    const take = (pool, strong) => {
+      if (!pool.length) return { name: '騎手未定', skill: 60 };
+      // 強い馬ほど上位の騎手に乗ってもらいやすい
+      const k = strong ? Math.min(pool.length - 1, rng.int(0, 3)) : rng.int(0, pool.length - 1);
+      const j = pool.splice(k, 1)[0];
+      return j;
+    };
+    const byPower = runners.filter(x => !x.jockey).sort((a, b) => H.overall(H.cur(b.horse, wIdx)) - H.overall(H.cur(a.horse, wIdx)));
+    byPower.forEach((x, i) => {
+      const strong = i < 6;
+      if (x.horse.foreign || x.horse.foreignTrained) x.jockey = take(pools.foreign.length ? pools.foreign : pools.JRA, strong);
+      else if (x.horse.local) x.jockey = take(pools.local.length ? pools.local : pools.JRA, strong);
+      else x.jockey = take(pools.JRA.length ? pools.JRA : pools.foreign, strong);
+    });
     // 枠順
     rng.shuffle(runners);
     const n = runners.length;
