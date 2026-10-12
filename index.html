@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ホースシミュレーション</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>ホースシミュレーション</h1>
+    <div class="status">
+      <span id="date"></span>
+      <span>資金 <strong id="money"></strong></span>
+      <button id="nextWeekBtn" class="primary">次の週へ ▶</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="homeView">
+      <nav class="tabs" id="tabs">
+        <button data-tab="stable" class="active">厩舎</button>
+        <button data-tab="farm">牧場</button>
+        <button data-tab="auction">セリ</button>
+        <button data-tab="program">番組表</button>
+        <button data-tab="rivals">ライバル</button>
+        <button data-tab="record">記録</button>
+      </nav>
+      <div id="notice" class="notice" hidden></div>
+      <div class="panel" id="tab-stable"></div>
+      <div class="panel" id="tab-farm" hidden></div>
+      <div class="panel" id="tab-auction" hidden></div>
+      <div class="panel" id="tab-program" hidden></div>
+      <div class="panel" id="tab-rivals" hidden></div>
+      <div class="panel" id="tab-record" hidden></div>
+    </section>
+
+    <!-- レース中 -->
+    <section id="raceView" class="panel" hidden>
+      <div class="race-head">
+        <h2 id="raceNameLive"></h2>
+        <div id="remain" class="remain"></div>
+      </div>
+      <canvas id="track" width="960" height="420"></canvas>
+      <div class="race-controls">
+        <span>速さ</span>
+        <button data-speed="1" class="speed active">×1</button>
+        <button data-speed="2" class="speed">×2</button>
+        <button data-speed="4" class="speed">×4</button>
+        <button id="skipBtn" class="ghost">結果へ</button>
+      </div>
+      <ul id="commentary" class="commentary"></ul>
+      <ol id="liveOrder" class="live-order"></ol>
+    </section>
+
+    <!-- 週のまとめ -->
+    <section id="weekView" class="panel" hidden>
+      <h2 id="weekTitle"></h2>
+      <div id="weekBody"></div>
+      <div class="bet-bar"><button id="weekOkBtn" class="primary">牧場に戻る</button></div>
+    </section>
+  </main>
+
+  <dialog id="dialog">
+    <div id="dialogBody"></div>
+    <form method="dialog"><button class="primary">閉じる</button></form>
+  </dialog>
+
+  <!-- 確かめる（confirm / prompt の代わり。埋め込み先では標準のダイアログが出ないため） -->
+  <dialog id="askDialog">
+    <p id="askText"></p>
+    <input id="askInput" maxlength="9" hidden>
+    <div class="ask-buttons">
+      <button id="askCancel" class="ghost">やめる</button>
+      <button id="askOk" class="primary">はい</button>
+    </div>
+  </dialog>
+
+  <script src="src/rng.js"></script>
+  <script src="src/data.js"></script>
+  <script src="src/horses.js"></script>
+  <script src="src/race.js"></script>
+  <script src="src/breeding.js"></script>
+  <script src="src/calendar.js"></script>
+  <script src="src/game.js"></script>
+  <script src="src/rivals.js"></script>
+  <script src="src/commentary.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
