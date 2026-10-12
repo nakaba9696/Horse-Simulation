@@ -14,6 +14,7 @@
     const app = $('#app');
     const st = App.st;
     if (titleAnim) { cancelAnimationFrame(titleAnim); titleAnim = null; }
+    if (HS.Audio && !App.inRace) HS.Audio.bgm(st.screen === 'game' ? 'home' : 'title');
     if (st.screen === 'title') { app.innerHTML = UI.screens.title(); App.titleCanvas(); return; }
     if (st.screen === 'newgame') { app.innerHTML = UI.screens.newgame(st.ng); App.drawNgSilks(); return; }
     if (st.screen === 'editor') { app.innerHTML = UI.screens.editor(st.ed || (st.ed = {})); App.hydrate(app); return; }
@@ -156,6 +157,7 @@
     App.closeAll();
     if (r.err) return App.toast(r.err);
     App.save();
+    if (HS.Audio) HS.Audio.se(r.ok ? 'ok' : 'error');
     App.toast(r.ok ? '受胎を確認した！' : '不受胎……もう一度つけられます');
     App.back();
   };
@@ -171,7 +173,7 @@
     if (!(await App.confirm(`${e(name)}を${U.money(item.price)}で買いますか？`, '買う'))) return;
     const err = W.buy(item);
     if (err) return App.toast(err);
-    App.save(); App.toast('購入した！'); App.render();
+    App.save(); if (HS.Audio) HS.Audio.se('coin'); App.toast('購入した！'); App.render();
   };
   act.result = d => { const r = W.get().lastWeek.races.filter(x => x.grade || x.mine)[+d.i]; if (r) App.modal(UI.resultTable(r)); };
   act.replay = async d => {
@@ -196,10 +198,18 @@
     W.clearLocal(); App.st.screen = 'title'; App.render();
   };
   act.next = () => App.nextWeek();
+  // 音のあり・なし（タイトル）
+  act.sound = () => {
+    const AU = HS.Audio; const on = AU.settings.bgm + AU.settings.se > 0;
+    if (on) { AU._prev = { bgm: AU.settings.bgm, se: AU.settings.se }; AU.settings.bgm = 0; AU.settings.se = 0; }
+    else Object.assign(AU.settings, AU._prev || { bgm: 0.5, se: 0.7 });
+    AU.saveSettings(); AU.applyVolume(); App.render();
+  };
   act['next-many'] = () => App.nextMany(4);
 
   const change = App.change = {};
   change.jockey = (el) => { const id = el.dataset.id; const ent = W.entryOf(id); if (!ent) return; W.enter(id, ent.raceKey, el.value); App.save(); };
+  change.volume = (el) => { const AU = HS.Audio; AU.settings[el.dataset.k] = (+el.value) / 100; AU.saveSettings(); AU.applyVolume(); if (el.dataset.k === 'se') AU.se('click'); };
   change.setting = (el) => { const G = W.get(); const k = el.dataset.k; G.settings[k] = k === 'watch' ? +el.value : el.value === '1'; App.save(); };
 
   document.addEventListener('click', ev => {
@@ -208,6 +218,7 @@
     const name = el.dataset.act;
     if (!act[name]) return;
     ev.preventDefault();
+    if (HS.Audio) HS.Audio.se(name === 'tab' ? 'tab' : name === 'next' || name === 'next-many' ? 'week' : 'click');
     if (el.tagName === 'BUTTON' || el.tagName === 'A') ev.stopPropagation();
     act[name](el.dataset);
   });
@@ -270,16 +281,31 @@
       bg.querySelector('[data-x=go]').onclick = () => { App.closeModal(); res(true); };
       const sk = bg.querySelector('[data-x=skip]'); if (sk) sk.onclick = () => { App.closeModal(); r.skip = true; res(false); };
     });
+    const AU = HS.Audio;
     if (!r.skip) {
+      App.inRace = true;
       const bg = App.modal('<div class="rv-holder"></div>', { wide: true, noClose: true });
-      await HS.RaceView.play(bg.querySelector('.rv-holder'), r, { speed: G.settings.animSpeed || 1, onSpeed: s => { G.settings.animSpeed = s; } });
+      // ファンファーレ → 発走
+      if (AU && AU.ready() && AU.settings.bgm > 0) {
+        bg.querySelector('.rv-holder').innerHTML = `<div class="panel gold center" style="padding:40px 10px"><div class="serif" style="font-size:22px;font-weight:900;color:var(--gold2)">${e(R.label(r.race))}</div><div class="mt">ファンファーレ……</div><button class="btn sm mt" data-x="skipfan">飛ばす</button></div>`;
+        await Promise.race([AU.playOnce('fanfare'), new Promise(res => { bg.querySelector('[data-x=skipfan]').onclick = () => { AU.stopBgm(); res(); }; })]);
+      }
+      if (AU) { AU.bgm('race'); AU.raceStart(); }
+      await HS.RaceView.play(bg.querySelector('.rv-holder'), r, {
+        speed: G.settings.animSpeed || 1, onSpeed: s => { G.settings.animSpeed = s; },
+        onStart: () => AU && AU.se('gate'),
+        onTick: (remain, straight, running, finished) => AU && AU.raceUpdate(remain, straight, running, finished),
+      });
+      if (AU) { AU.raceEnd(); AU.stopBgm(); }
       App.closeModal();
+      App.inRace = false;
     }
     const slim = W.slimResult(r);
     await new Promise(res => {
       const mine = slim.rows.filter(x => x.mine);
       const msg = mine.map(x => x.pos === 1 ? (r.race.graded ? `<div class="hero"><canvas class="winner-cv" width="960" height="560" data-name="${e(x.name)}"></canvas></div>` : `<div class="panel gold center"><div class="serif" style="font-size:24px;font-weight:900;color:var(--gold2)">🏆 ${e(x.name)} 優勝！</div></div>`) : `<div class="panel center">${e(x.name)}は${x.pos}着</div>`).join('');
       const bg = App.modal(`${msg}${UI.resultTable(slim)}<div class="btns mt"><button class="btn gold" data-x="ok">次へ</button></div>`, { noClose: true });
+      if (AU && mine.some(x => x.pos === 1)) { App.inRace = true; AU.playOnce('victory').then(() => { App.inRace = false; AU.bgm('home'); }); }
       bg.querySelectorAll('.winner-cv').forEach(cv => {
         const run = r.runners.find(x => x.horse.name === cv.dataset.name);
         const win = r.sim.results[0];
@@ -288,6 +314,8 @@
       bg.querySelector('[data-x=ok]').onclick = () => { App.closeModal(); res(); };
     });
     r.skip = false;
+    App.inRace = false;
+    if (AU) AU.bgm('home');
   };
   App.weekSummary = function (report) {
     const G = W.get();

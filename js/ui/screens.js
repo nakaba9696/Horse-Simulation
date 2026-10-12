@@ -43,6 +43,7 @@
         <button class="btn ${W.hasLocal() ? '' : 'gold'}" data-act="newgame-form">はじめから</button>
         <button class="btn" data-act="import">セーブを読み込む</button>
         <button class="btn" data-act="editor">競走馬エディット</button>
+        <button class="btn" data-act="sound">${HS.Audio && HS.Audio.settings.bgm + HS.Audio.settings.se > 0 ? '🔊 音：あり' : '🔇 音：なし'}</button>
       </div>
       <p class="small muted mt">実在の名馬と実在のレースで、馬主として・生産者として名馬の系譜をつくる競馬シミュレーション。</p>
     </div>`;
@@ -442,6 +443,10 @@
     return `<h2 class="sec">メニュー</h2>
       <div class="panel"><div class="small muted">セーブは毎週自動でこの端末に保存されます。</div>
         <div class="btns mt"><button class="btn" data-act="export">セーブを書き出す</button><button class="btn" data-act="import">セーブを読み込む</button></div></div>
+      <div class="panel"><b>音</b>
+        <div class="row mt"><label class="grow" for="vol-bgm">BGM の音量</label><input id="vol-bgm" type="range" min="0" max="100" value="${Math.round(HS.Audio.settings.bgm * 100)}" data-act-change="volume" data-k="bgm"></div>
+        <div class="row mt"><label class="grow" for="vol-se">効果音の音量</label><input id="vol-se" type="range" min="0" max="100" value="${Math.round(HS.Audio.settings.se * 100)}" data-act-change="volume" data-k="se"></div>
+        <div class="small muted">音は画面にさわったあとで鳴り始めます。0 にすると消えます。</div></div>
       <div class="panel"><b>設定</b>
         <div class="row mt"><span class="grow">自分の馬のレースを</span><select data-act-change="setting" data-k="watch"><option value="1" ${G.settings.watch !== 0 ? 'selected' : ''}>映像で見る</option><option value="0" ${G.settings.watch === 0 ? 'selected' : ''}>結果だけ見る</option></select></div>
         <div class="row mt"><span class="grow">史実メモ（史実の勝ち鞍など）</span><select data-act-change="setting" data-k="showHistNote"><option value="1" ${G.settings.showHistNote ? 'selected' : ''}>表示する</option><option value="0" ${!G.settings.showHistNote ? 'selected' : ''}>隠す</option></select></div>

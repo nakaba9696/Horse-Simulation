@@ -192,6 +192,7 @@
         ctx.fillStyle = '#356f2f'; ctx.fillRect(0, 502, VW, VH - 502);
         for (let k = p0; k < p0 + VW / cam.pxm / 4 + 2; k++) { ctx.fillStyle = '#c8cdd2'; ctx.fillRect(X(k * 4) - 40, 496, 3, 16); }
         // ---- 画面の飾り ----
+        if (opts.onTick) opts.onTick(Math.max(0, sim.D - lead), sim.straight, T > 0 && T < winT, T >= winT);
         hudTitle();
         hudMap(P);
         hudOrder(order);
@@ -304,7 +305,9 @@
         if (done) return;
         if (last == null) last = ts;
         const dt = Math.min(0.1, (ts - last) / 1000); last = ts;
+        const Tprev = T;
         T += dt * speed;
+        if (Tprev < 0 && T >= 0 && opts.onStart) opts.onStart();
         draw();
         if (T > winT + 0.3 && !finishShown) { finishShown = 1; }
         if (T > Math.min(tEnd, winT + 6) && finishShown === 1) {
