@@ -20,6 +20,7 @@
       (!st.born || (st.born.length === 3 ? String(d.born).startsWith(st.born) : d.born === +st.born)) &&
       (!st.sex || (st.sex === '牡' ? d.sex !== '牝' : d.sex === '牝')) &&
       (!st.surf || (st.surf === '芝' ? d.surface !== 'ダ' : d.surface !== '芝')) &&
+      (!st.cty || (st.cty === '日' ? !HS.DATA.isForeign(d) : HS.DATA.isForeign(d))) &&
       (!st.edited || ed[d.name]));
     const sort = st.sort || 'born';
     a = a.slice().sort((x, y) => sort === 'rating' ? y.rating - x.rating || x.born - y.born : sort === 'name' ? x.name.localeCompare(y.name, 'ja') : x.born - y.born || y.rating - x.rating);
@@ -38,10 +39,11 @@
         <div class="field"><label for="ed-q">検索（馬名・父・母・騎手）</label><input id="ed-q" value="${e(st.q || '')}" placeholder="例：ディープ、サンデーサイレンス、武豊"></div>
         <div class="filters">
           <select id="ed-born" aria-label="生年"><option value="">生年：すべて</option>
-            ${['198', '199', '200', '201', '202'].map(dc => `<option value="${dc}" ${st.born === dc ? 'selected' : ''}>${dc}0年代生</option>`).join('')}
+            ${['195', '196', '197', '198', '199', '200', '201', '202'].map(dc => `<option value="${dc}" ${st.born === dc ? 'selected' : ''}>${dc}0年代生</option>`).join('')}
             ${years.map(y => `<option value="${y}" ${String(st.born) === String(y) ? 'selected' : ''}>${y}年生</option>`).join('')}</select>
           <select id="ed-sex" aria-label="性別"><option value="">性：すべて</option><option ${st.sex === '牡' ? 'selected' : ''} value="牡">牡・セ</option><option ${st.sex === '牝' ? 'selected' : ''} value="牝">牝</option></select>
           <select id="ed-surf" aria-label="馬場"><option value="">馬場：すべて</option><option ${st.surf === '芝' ? 'selected' : ''} value="芝">芝</option><option ${st.surf === 'ダ' ? 'selected' : ''} value="ダ">ダート</option></select>
+          <select id="ed-cty" aria-label="国"><option value="">国：すべて</option><option ${st.cty === '日' ? 'selected' : ''} value="日">日本</option><option ${st.cty === '外' ? 'selected' : ''} value="外">海外</option></select>
           <select id="ed-sort" aria-label="並び順"><option value="born" ${(st.sort || 'born') === 'born' ? 'selected' : ''}>生年順</option><option value="rating" ${st.sort === 'rating' ? 'selected' : ''}>評価の高い順</option><option value="name" ${st.sort === 'name' ? 'selected' : ''}>名前順</option></select>
           <label class="small"><input type="checkbox" id="ed-edited" ${st.edited ? 'checked' : ''}> 編集済みだけ</label>
         </div>
@@ -59,7 +61,7 @@
       <div class="tblwrap mt"><table class="t">
         <tr><th>馬名</th><th>生年</th><th>評価</th><th class="hide-sm">馬場</th><th class="hide-sm">距離</th><th class="hide-sm">脚質</th><th class="hide-sm">成長</th><th class="hide-sm">主戦</th></tr>
         ${a.slice(0, lim).map(d => `<tr class="click ${ed[d.name] ? 'mine' : ''}" data-act="ed-open" data-name="${e(d.name)}">
-          <td><b>${e(d.name)}</b>${ed[d.name] ? ' <span class="chip mine">編集</span>' : ''}<div class="small muted">${d.sex}・${e(d.coat || '')}・父 ${e(d.sire || '?')}</div><div class="small muted show-sm">${surfLabel(d.surface)}・${d.distMin}〜${d.distMax}m・${d.style}・${d.growth}</div></td>
+          <td><b>${e(d.name)}</b>${ed[d.name] ? ' <span class="chip mine">編集</span>' : ''}<div class="small muted">${HS.DATA.isForeign(d) ? e(d.country) + '・' : ''}${d.sex}・${e(d.coat || '')}・父 ${e(d.sire || '?')}</div><div class="small muted show-sm">${surfLabel(d.surface)}・${d.distMin}〜${d.distMax}m・${d.style}・${d.growth}</div></td>
           <td class="num small">${d.born}</td>
           <td class="num"><span class="serif" style="color:var(--gold2);font-weight:900">${U.grade(d.rating)}</span> <span class="small muted">${d.rating}</span></td>
           <td class="small hide-sm">${surfLabel(d.surface)}</td><td class="small hide-sm">${d.distMin}〜${d.distMax}</td><td class="small hide-sm">${d.style}</td><td class="small hide-sm">${d.growth}</td><td class="small hide-sm">${e(jockeyOf(d))}</td></tr>`).join('')}
@@ -80,7 +82,7 @@
   document.addEventListener('change', ev => {
     if (App.st.screen !== 'editor') return;
     const st = App.st.ed; const id = ev.target.id;
-    const map = { 'ed-born': 'born', 'ed-sex': 'sex', 'ed-surf': 'surf', 'ed-sort': 'sort' };
+    const map = { 'ed-born': 'born', 'ed-sex': 'sex', 'ed-surf': 'surf', 'ed-sort': 'sort', 'ed-cty': 'cty' };
     if (map[id]) { st[map[id]] = ev.target.value; st.limit = PAGE; refreshList(); }
     if (id === 'ed-edited') { st.edited = ev.target.checked; st.limit = PAGE; refreshList(); }
   });

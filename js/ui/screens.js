@@ -8,7 +8,7 @@
 
   // ---------- 小物 ----------
   UI.waku = (frame, num) => { const c = HS.DATA.frameColors[(frame - 1) % 8], t = HS.DATA.frameText[(frame - 1) % 8]; return `<span class="waku" style="background:${c};color:${t}">${num}</span>`; };
-  UI.gradeTag = r => { const b = R.gradeBadge(r); if (!b) return ''; const cls = b.startsWith('Jpn') ? 'Jpn' : b; return `<span class="grade ${cls}">${b}</span>`; };
+  UI.gradeTag = r => { const b = R.gradeBadge(r); if (!b) return ''; const cls = b.startsWith('Jpn') ? 'Jpn' : b === '重賞' ? 'Pre' : b; return `<span class="grade ${cls}">${b}</span>`; };
   UI.surf = s => `<span class="chip ${s === 'ダ' ? 'dirt' : 'turf'}">${s === 'ダ' ? 'ダート' : '芝'}</span>`;
   UI.age = h => `${h.gelding ? 'セ' : h.sex}${W.get().year - h.born}`;
   UI.yen = m => `<span class="${m < 0 ? 'neg' : ''}">${U.money(m)}</span>`;
@@ -50,7 +50,7 @@
   };
 
   S.newgame = function (st) {
-    const years = []; for (let y = 1995; y <= 2025; y++) years.push(y);
+    const years = []; for (let y = 1960; y <= 2025; y++) years.push(y);
     const cols = ['#1f4fbf', '#c8102e', '#ffd100', '#00843d', '#ffffff', '#111111', '#ff6a13', '#7a2182', '#e04e9a', '#5bc2e7', '#8a5a2b', '#a4d65e'];
     const sk = st.silks;
     return `<div class="panel gold" style="margin-top:20px">
@@ -61,9 +61,10 @@
       <div class="field"><label>開始年</label><select id="ng-year">${years.map(y => `<option ${y === st.year ? 'selected' : ''}>${y}</option>`).join('')}</select>
         <div class="small muted">その年に生きている実在の馬が走り、まだデビュー前の史実馬は市場で買える。</div></div>
       <div class="field"><label>資金</label><select id="ng-diff">
-        <option value="easy" ${st.diff === 'easy' ? 'selected' : ''}>たっぷり（5億円）</option>
-        <option value="normal" ${st.diff === 'normal' ? 'selected' : ''}>ふつう（3億円）</option>
-        <option value="hard" ${st.diff === 'hard' ? 'selected' : ''}>きびしい（1億円）</option></select></div>
+        <option value="easy" ${st.diff === 'easy' ? 'selected' : ''}>たっぷり（今の5億円ぶん）</option>
+        <option value="normal" ${st.diff === 'normal' ? 'selected' : ''}>ふつう（今の3億円ぶん）</option>
+        <option value="hard" ${st.diff === 'hard' ? 'selected' : ''}>きびしい（今の1億円ぶん）</option></select>
+        <div class="small muted">昔の年から始めると、その時代の物価に合わせて減ります。</div></div>
       <div class="field"><label>勝負服</label>
         <div class="row"><canvas id="ng-silks" width="80" height="80" style="width:64px;height:64px;background:#0c1a2c;border-radius:8px"></canvas>
           <div class="grow">
@@ -343,15 +344,18 @@
     const G = W.get();
     const tab = st.mtab || 'hist';
     let body = '';
-    if (tab === 'hist') {
-      const list = W.marketHistoric();
-      body = list.length ? `<div class="list">${list.map((it, i) => {
+    if (tab === 'hist' || tab === 'foreign') {
+      const all = tab === 'hist' ? W.marketHistoric() : W.marketForeign();
+      const lim = st.mlimit || 30;
+      const list = all.slice(0, lim);
+      body = list.length ? `<div class="small muted">${all.length}頭${tab === 'foreign' ? '（輸入の費用込み。買うと日本で走らせられる）' : ''}</div><div class="list mt">${list.map((it, i) => {
         const h = it.horse, d = it.data;
-        return `<div class="card">${UI.thumb(h)}<div class="grow"><div class="row"><span class="nm">${e(h.name)}</span><span class="chip hist">史実</span></div>
-          <div class="sub">${G.year - h.born}歳 ${h.gelding ? 'セ' : h.sex}・${e(h.coat || '')}・父 ${e(h.sire || '?')}・母 ${e(h.dam || '?')}</div>
-          ${G.settings.showHistNote && d ? `<div class="small muted">${d.note ? e(d.note) : ''}${(d.wins || []).length ? '（史実G1 ' + d.wins.length + '勝）' : ''}</div>` : ''}</div>
-          <div class="center"><div class="small" style="color:var(--gold2);font-weight:900">${U.money(it.price)}</div><button class="btn sm gold" data-act="buy" data-kind="hist" data-i="${i}">買う</button></div></div>`;
-      }).join('')}</div>` : '<div class="panel empty">いま買えるデビュー前の史実馬はいません。毎年3月に新しい世代が生まれます。</div>';
+        return `<div class="card">${UI.thumb(h)}<div class="grow"><div class="row"><span class="nm">${e(h.name)}</span><span class="chip hist">${tab === 'foreign' ? '海外' : '史実'}</span></div>
+          <div class="sub">${G.year - h.born}歳 ${h.gelding ? 'セ' : h.sex}・${e(h.coat || '')}${h.country && tab === 'foreign' ? '・' + e(h.country) : ''}・父 ${e(h.sire || '?')}・母 ${e(h.dam || '?')}</div>
+          ${G.settings.showHistNote && d ? `<div class="small muted">${d.note ? e(d.note) : ''}${(d.wins || []).length ? '（史実の重賞 ' + d.wins.length + '勝）' : ''}</div>` : ''}</div>
+          <div class="center"><div class="small" style="color:var(--gold2);font-weight:900">${U.money(it.price)}</div><button class="btn sm gold" data-act="buy" data-kind="${tab === 'hist' ? 'hist' : 'fhist'}" data-i="${i}">買う</button></div></div>`;
+      }).join('')}</div>${all.length > lim ? `<div class="center mt"><button class="btn" data-act="mmore">もっと見る（残り${all.length - lim}頭）</button></div>` : ''}`
+        : `<div class="panel empty">いま買えるデビュー前の${tab === 'hist' ? '' : '海外の'}史実馬はいません。毎年3月に新しい世代が生まれます。</div>`;
     } else if (tab === 'gen') {
       body = `<div class="list">${G.market.gen.map((it, i) => {
         const h = it.horse;
@@ -372,7 +376,7 @@
       body = mine.length ? `<div class="tblwrap"><table class="t"><tr><th>馬</th><th>場所</th><th>値段</th><th></th></tr>${mine.map(h => `<tr><td><b>${e(W.displayName(h))}</b><div class="small muted">${UI.age(h)}</div></td><td class="small">${{ stable: '厩舎', farm: '牧場', mare: '繁殖', stud: '種牡馬' }[h.loc]}</td><td class="num">${U.money(W.sellPrice(h))}</td><td><button class="btn sm red" data-act="sell" data-id="${h.id}">売る</button></td></tr>`).join('')}</table></div>` : '<div class="panel empty">持ち馬がいません。</div>';
     }
     return `<h2 class="sec">市場<span class="r">資金 ${U.money(G.player.money)}</span></h2>
-      <div class="tabs">${[['hist', '史実馬（デビュー前）'], ['gen', '一般の若駒'], ['mare', '繁殖牝馬'], ['sell', '売却']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="mtab" data-tab="${k}">${l}</button>`).join('')}</div>
+      <div class="tabs">${[['hist', '史実馬（デビュー前）'], ['foreign', '海外の史実馬'], ['gen', '一般の若駒'], ['mare', '繁殖牝馬'], ['sell', '売却']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="mtab" data-tab="${k}">${l}</button>`).join('')}</div>
       ${body}`;
   };
 

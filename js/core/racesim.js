@@ -60,7 +60,7 @@
     const surfKey = race.surface === 'ダ' ? 'dirt' : 'turf';
     const geo = course[surfKey] || course.turf || course.dirt;
     const D = race.dist;
-    const v0 = S.baseSpeed(D, race.surface, race.ground, geo.speed);
+    const v0 = S.baseSpeed(D, race.surface, race.ground, geo.speed) * U.eraSpeed(race.year);
     const straight = Math.min(geo.straight, D * 0.6);
     const slope = geo.slope;
     const nNige = runners.filter(r => r.horse.style === '逃げ').length;

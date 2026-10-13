@@ -36,6 +36,9 @@
 
   // ---------- 便利 ----------
   W.wIdx = () => H.weekIndex(G.year, G.month, G.week);
+  // その年の物価（1995年＝1）
+  const IDX = () => U.priceIndex(G.year);
+  W.priceIndex = IDX;
   W.dateLabel = (y, m, w) => `${y}年${m}月${w}週`;
   const news = (text, kind) => { G.news.unshift({ y: G.year, m: G.month, w: G.week, text, kind: kind || '' }); if (G.news.length > 120) G.news.length = 120; };
   W.news = news;
@@ -60,7 +63,7 @@
       v: SAVE_VERSION, seed, rngState: seed, year: opts.year || 1995, month: 1, week: 1,
       player: {
         name: opts.name || 'プレイヤー', farm: opts.farm || '新星牧場', crown: opts.crown || '',
-        silks: opts.silks || { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, money: opts.money || 30000,
+        silks: opts.silks || { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, money: Math.round((opts.money || 30000) * U.priceIndex(opts.year || 1995) / 10) * 10,
       },
       difficulty: opts.difficulty || 'normal',
       horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, edits,
@@ -92,7 +95,7 @@
     const damH = W.all().find(h => h.name === d.dam && h.owner === 'P');
     if (damH && !atStart) return null;
     const h = H.fromHistoric(d, newId());
-    if (W.foreignTrained.has(d.name)) h.foreignTrained = true;
+    if (W.foreignTrained.has(d.name) || HS.DATA.isForeign(d)) { h.foreignTrained = true; h.country = d.country || '外'; }
     G.bornHist.push(d.name);
     const age = G.year - d.born;
     if (atStart && age >= 2) {
@@ -195,6 +198,15 @@
     return W._cache.list;
   };
   W.raceByKey = key => W.weekRaces().find(r => r.key === key);
+  // 地域（外国の馬が普段走る場所）
+  const ZONES = { '英': 'EU', '愛': 'EU', '仏': 'EU', '独': 'EU', '伊': 'EU', '米': 'US', '加': 'US', '豪': 'OC', '新': 'OC', '香港': 'HK', 'UAE': 'ME', 'サウジ': 'ME', '星': 'SG' };
+  W.zoneOf = c => ZONES[c] || 'EU';
+  // 1〜6週先の重賞（その週の間は使い回す）
+  W.upcomingSoon = function () {
+    const key = `${G.year}-${G.month}-${G.week}`;
+    if (!W._soon || W._soon.key !== key) W._soon = { key, list: W.upcomingGraded(7).filter(r => r.inWeeks > 0) };
+    return W._soon.list;
+  };
   W.upcomingGraded = function (weeks) {
     const out = [];
     let y = G.year, m = G.month, w = G.week;
@@ -279,7 +291,7 @@
     // 年の指定はその年だけ（ほかの年は default）
     return m[String(year)] || m.default || null;
   };
-  W.travelCost = race => race.region !== '海外' ? 0 : (['仏', '英', '米', '愛', '加'].includes(race.country || (HS.DATA.courses[race.course] || {}).country) ? 3000 : 1500);
+  W.travelCost = race => race.region !== '海外' ? 0 : Math.round((['仏', '英', '米', '愛', '加', '独'].includes(race.country || (HS.DATA.courses[race.course] || {}).country) ? 3000 : 1500) * IDX());
 
   // ---------- AI の出走の判断 ----------
   const GRADE_NEED = { G1: 80, G2: 76, G3: 72 };
@@ -295,15 +307,21 @@
     const targets = h.hist ? W.histTargets(h, year) : [];
     const hit = races.find(rc => rc.graded && targets.includes(rc.name) && !R.ineligible(h, rc, year));
     if (hit) return hit;
-    if (h.foreignTrained) return null;
     if (wIdx < (h.restUntil || 0)) return null;
     if ((h.fatigue || 0) > 40) return null;
     // 目標が近いなら休む
     if (targets.length) {
-      const soon = W.upcomingGraded(6).some(rc => targets.includes(rc.name) && rc.inWeeks > 0);
+      const soon = W.upcomingSoon().some(rc => targets.includes(rc.name));
       if (soon) return null;
     }
-    if (!r.chance(0.5)) return null;
+    if (!r.chance(h.foreignTrained ? 0.35 : 0.5)) return null;
+    if (h.foreignTrained) {
+      // 外国の馬は自分の地域の大レースに出る
+      const z = W.zoneOf(h.country);
+      const cand = races.filter(rc => rc.region === '海外' && W.zoneOf(rc.country) === z && !R.ineligible(h, rc, year))
+        .filter(rc => rc.dist >= h.distMin - 300 && rc.dist <= h.distMax + 300 && (rc.surface === 'ダ' ? h.apt.dirt : h.apt.turf) >= 70);
+      return cand.length ? r.pick(cand) : null;
+    }
     const c = H.overall(H.cur(h, wIdx));
     const cand = races.filter(rc => !R.ineligible(h, rc, year) && rc.region !== '海外')
       .filter(rc => rc.dist >= h.distMin - 200 && rc.dist <= h.distMax + 200)
@@ -489,7 +507,9 @@
       if (race.graded && res.pos === 1) h.gradedWins.push({ y: year, race: race.name, short: race.short, grade: race.grade, region: race.region });
       if (race.trialFor && res.pos <= (race.trialTop || 2)) { h.rights = h.rights || {}; h.rights[race.trialFor] = year; }
       h.results.push({ y: year, m: race.month, w: race.week, race: race.short || race.name, grade: R.gradeBadge(race), course: race.course, surface: race.surface, dist: race.dist, ground: race.ground, pos: res.pos, n: sim.results.length, time: Math.round(res.time * 10) / 10, margin: res.margin, last3f: res.last3f ? Math.round(res.last3f * 10) / 10 : null, jockey: res.jockey && res.jockey.name, pop: res.pop });
-      if (h.results.length > 80) h.results.shift();
+      // AI の馬は最近の成績だけ残す（セーブを小さく）
+      const keep = h.owner === 'P' ? 80 : 12;
+      while (h.results.length > keep) h.results.shift();
       // 疲れ・調子・休み
       h.fatigue = Math.min(100, (h.fatigue || 0) + 18 + race.dist / 100 * 1.2 + (race.grade === 'G1' ? 6 : 0));
       h.cond = (h.cond || 0) - 15;
@@ -500,7 +520,7 @@
         if (h.owner === 'P') news(`${h.name}が${R.label(race)}のあと${inj.name}を発症。全治${inj.weeks}週。`, 'warn');
       }
       if (h.owner === 'P') {
-        const owner = Math.round(money * 0.8) + 30;
+        const owner = Math.round(money * 0.8 + 30 * IDX());
         G.player.money += owner;
         G.records.player.starts++; G.records.player.earn += owner;
         if (res.pos === 1) {
@@ -603,7 +623,7 @@
       else if (h.loc === 'mare') c += 15;
     }
     c += G.farmLevel * 50;
-    return c;
+    return Math.round(c * IDX());
   };
   W.monthEnd = function (report) {
     const c = W.monthlyCost();
@@ -762,11 +782,11 @@
   W.sellPrice = function (h) {
     const wIdx = W.wIdx();
     if (h.loc === 'stud') return Math.round(h.studFee * 40);
-    if (h.loc === 'mare') return Math.round(300 + Math.pow(P.mareQuality(h) / 10, 3) * 4);
+    if (h.loc === 'mare') return Math.round((300 + Math.pow(P.mareQuality(h) / 10, 3) * 4) * IDX());
     const age = G.year - h.born;
     const c = H.overall(H.cur(h, wIdx));
-    let p = 200 + Math.pow(Math.max(0, c - 40) / 10, 3) * 30 + (h.prize || 0) * 0.15;
-    if (age <= 1) p = 300 + Math.pow(H.overall(h.pot) / 10, 3) * 8;
+    let p = (200 + Math.pow(Math.max(0, c - 40) / 10, 3) * 30) * IDX() + (h.prize || 0) * 0.15;
+    if (age <= 1) p = (300 + Math.pow(H.overall(h.pot) / 10, 3) * 8) * IDX();
     if (age >= 6) p *= 0.5;
     return Math.round(p / 10) * 10;
   };
@@ -781,7 +801,7 @@
     return { price: p };
   };
   W.farmCap = () => 4 + G.farmLevel * 2;
-  W.farmUpgradeCost = () => 5000 * G.farmLevel;
+  W.farmUpgradeCost = () => Math.round(5000 * G.farmLevel * IDX() / 10) * 10;
   W.upgradeFarm = function () {
     const c = W.farmUpgradeCost();
     if (G.farmLevel >= 5) return '最大です';
@@ -804,14 +824,14 @@
       const mean = 58 + r.normal(0, 7);
       const h = W.makeGenYoung(r, G.year - age, mean);
       const sireFee = (W.stallionsOf(G.year - age - 1).find(s => s.name === h.sire) || { fee: 100 }).fee;
-      const price = Math.round((300 + sireFee * 0.9 + Math.pow(Math.max(0, mean - 40) / 10, 3) * 6 + r.normal(0, 150)) / 10) * 10;
+      const price = Math.round(((300 + Math.pow(Math.max(0, mean - 40) / 10, 3) * 6 + r.normal(0, 150)) * IDX() + sireFee * 0.9) / 10) * 10;
       G.market.gen.push({ horse: h, price: Math.max(200, price) });
     }
     G.market.genMares = [];
     for (let i = 0; i < 4; i++) {
       const q = 45 + r.int(0, 25);
       const m = W.makeGenMare(r, q);
-      G.market.genMares.push({ horse: m, price: Math.round((400 + Math.pow(q / 10, 3) * 5) / 10) * 10 });
+      G.market.genMares.push({ horse: m, price: Math.round((400 + Math.pow(q / 10, 3) * 5) * IDX() / 10) * 10 });
     }
   };
   // 史実馬（デビュー前）と史実の繁殖牝馬
@@ -824,9 +844,23 @@
       const d = W.histByName.get(h.name);
       const sire = W.stallionsOf(h.born - 1).find(s => s.name === h.sire) || W.stallionByName.get(h.sire);
       const sireFee = sire ? (sire.fee != null ? sire.fee : W.feeOf(sire, h.born - 1)) : 200;
-      let price = 800 + sireFee * 1.1 + Math.max(0, ((d ? d.rating : 80) - 80)) * 60;
+      let price = (800 + Math.max(0, ((d ? d.rating : 80) - 80)) * 60) * IDX() + sireFee * 1.1;
       price *= age === 0 ? 0.8 : age === 2 ? 1.3 : 1;
       out.push({ kind: 'hist', horse: h, data: d, price: Math.round(price / 10) * 10 });
+    }
+    return out.sort((a, b) => a.horse.born - b.horse.born || b.price - a.price);
+  };
+  // 海外の史実馬（デビュー前）。輸入の費用を足した値段
+  W.marketForeign = function () {
+    const out = [];
+    for (const h of W.all()) {
+      if (!h.hist || !h.foreignTrained || h.owner === 'P' || h.loc !== 'farm' || h.starts > 0) continue;
+      const age = G.year - h.born;
+      if (age > 2) continue;
+      const d = W.histByName.get(h.name);
+      let price = (2500 + Math.max(0, ((d ? d.rating : 80) - 80)) * 90) * IDX();
+      price *= age === 0 ? 0.8 : age === 2 ? 1.3 : 1;
+      out.push({ kind: 'hist', horse: h, data: d, price: Math.round(price / 10) * 10, foreign: true });
     }
     return out.sort((a, b) => a.horse.born - b.horse.born || b.price - a.price);
   };
@@ -836,7 +870,7 @@
       if (m.from > G.year || G.year - m.born > 20 || G.year - m.born < 3) continue;
       if (G.erased.includes(m.name)) continue;
       if (W.all().some(h => h.name === m.name)) continue; // 持ち馬、またはまだ現役で走っている
-      const price = Math.round((1500 + Math.pow(m.quality / 10, 3) * 9) / 10) * 10;
+      const price = Math.round((1500 + Math.pow(m.quality / 10, 3) * 9) * IDX() / 10) * 10;
       // 今年生まれる史実の仔がいるなら「受胎中」で買える
       const inFoal = (m.foals || []).find(f => f[0] === G.year && G.month < 3);
       out.push({ kind: 'hmare', data: m, price: inFoal ? Math.round(price * 1.3) : price, inFoal });
@@ -851,6 +885,7 @@
       const h = G.horses[item.horse.id];
       if (!h || h.owner === 'P') return '売り切れ';
       h.owner = 'P'; h.loc = 'farm';
+      if (h.foreignTrained) { h.foreignTrained = false; h.imported = true; } // 日本に連れてきて走らせる
       G.player.money -= item.price;
       news(`史実馬「${h.name}」を${U.money(item.price)}で購入した！`, 'g1');
       return null;

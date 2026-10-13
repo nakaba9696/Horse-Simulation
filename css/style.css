@@ -72,7 +72,7 @@ h2.sec .r { margin-left: auto; font-family: "Noto Sans JP", sans-serif; font-siz
 .chip.mine { background: var(--gold); color: #241800; }
 .chip.hist { background: #7b5b14; color: #ffe7a6; }
 .grade { display: inline-block; min-width: 34px; text-align: center; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: 900; color: #fff; }
-.grade.G1 { background: var(--g1); } .grade.G2 { background: var(--g2); } .grade.G3 { background: var(--g3); } .grade.Jpn { background: var(--jpn); } .grade.OP { background: #5a6270; }
+.grade.G1 { background: var(--g1); } .grade.G2 { background: var(--g2); } .grade.G3 { background: var(--g3); } .grade.Jpn { background: var(--jpn); } .grade.OP { background: #5a6270; } .grade.Pre { background: #8a6a1c; }
 
 /* 一覧 */
 .list { display: flex; flex-direction: column; gap: 8px; }

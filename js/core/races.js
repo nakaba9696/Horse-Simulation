@@ -62,7 +62,7 @@
         const fem = sl.cls !== 'newcomer' && rng.chance(0.15);
         out.push({
           key: `${year}-${month}-${week}-c${ci}-${si}`, name: `${ageLabel}${clsLabel}${fem ? '（牝）' : ''}`, short: null, grade: null, cls: sl.cls,
-          region: 'JRA', course, surface, dist, month, week, age: sl.age, sex: fem ? '牝' : undefined, weight: '馬齢', prize: R.CLS_PRIZE[sl.cls], year, graded: false,
+          region: 'JRA', course, surface, dist, month, week, age: sl.age, sex: fem ? '牝' : undefined, weight: '馬齢', prize: Math.round(R.CLS_PRIZE[sl.cls] * U.priceIndex(year) / 10) * 10, year, graded: false,
         });
       });
     });
@@ -85,7 +85,8 @@
   };
 
   R.label = r => r.short || r.name;
-  R.gradeBadge = r => r.grade ? (r.region === '地方' ? (r.grade === 'G1' ? 'Jpn1' : r.grade.replace('G', 'Jpn')) : r.grade) : (r.cls === 'OP' ? 'OP' : '');
+  // 1984年より前の日本には格付けが無いので「重賞」と出す
+  R.gradeBadge = r => r.grade ? (r.region === 'JRA' && r.year && r.year < 1984 ? '重賞' : r.region === '地方' ? (r.grade === 'G1' ? 'Jpn1' : r.grade.replace('G', 'Jpn')) : r.grade) : (r.cls === 'OP' ? 'OP' : '');
   R.maxField = function (race) {
     if (race.region === '海外') return 14;
     if (race.region === '地方') return race.course === '大井' ? 16 : 14;
@@ -106,6 +107,8 @@
     if (race.sex === '牝' && horse.sex !== '牝') return '牝馬限定';
     if (race.noGelding && horse.gelding) return 'せん馬は出られない';
     if (horse.injury) return '故障中';
+    // 外国で調教されている馬は、向こうでの実績で出てくるのでクラスを問わない
+    if (horse.foreignTrained) return race.graded ? null : '外国調教馬';
     const cls = H.classOf(horse), rank = H.CLASS_RANK[cls];
     if (!race.graded) {
       if (race.cls === 'newcomer') return (horse.starts || 0) === 0 ? null : '新馬戦はデビュー戦のみ';

@@ -114,6 +114,7 @@
   act.horse = d => { App.closeAll(); App.go({ name: 'horse', id: d.id }); };
   act.htab = d => { App.st.view.htab = d.tab; App.render(); };
   act.mtab = d => { App.st.view = { name: 'market', mtab: d.tab }; App.render(); };
+  act.mmore = () => { App.st.view.mlimit = (App.st.view.mlimit || 30) + 30; App.render(); };
   act.rtab = d => { App.st.view = { name: 'races', rtab: d.tab }; App.render(); };
   act.ctab = d => { App.st.view = { name: 'records', ctab: d.tab }; App.render(); };
   act.menu = d => { const h = W.horse(d.id); h.menu = d.m; h.auto = false; App.save(); App.render(); };
@@ -165,6 +166,7 @@
     const G = W.get();
     let item;
     if (d.kind === 'hist') item = W.marketHistoric()[+d.i];
+    else if (d.kind === 'fhist') item = W.marketForeign()[+d.i];
     else if (d.kind === 'hmare') item = W.marketMares()[+d.i];
     else if (d.kind === 'gen') item = Object.assign({ kind: 'gen' }, G.market.gen[+d.i]);
     else if (d.kind === 'gmare') item = Object.assign({ kind: 'gmare' }, G.market.genMares[+d.i]);

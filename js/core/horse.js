@@ -70,6 +70,7 @@
     return 'OP';
   };
   H.className = function (cls, year) {
+    if (year < 1984) return ({ maiden: '未勝利', C1: '下級条件', C2: '中級条件', C3: '上級条件', OP: 'オープン' })[cls] || cls;
     const old = year < 2019;
     return ({ maiden: '未勝利', C1: old ? '500万下' : '1勝クラス', C2: old ? '1000万下' : '2勝クラス', C3: old ? '1600万下' : '3勝クラス', OP: 'オープン' })[cls] || cls;
   };
