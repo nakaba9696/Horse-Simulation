@@ -5,8 +5,8 @@
 
 ## 仕事を始める前に（知恵袋）
 - **仕事を始める前に、知恵袋（`nakaba9696/KnowledgeBase`）の skill を開く。** どの仕事でも `session-ops`、ほかは仕事の分野のもの（遊びの設計なら `game-design`、テストなら `testing-ci` など。一覧は KnowledgeBase の README.md）。
-  - 読み方：`git clone --depth 1 https://github.com/nakaba9696/KnowledgeBase`（読めなければ add_repo で足す）して `skills/<分野>/SKILL.md` を読む。
-  - 子を起動するときは、関係する skill の名前（か項目）を指示文に入れる。
+  - 読み方：知恵袋は非公開なので、仕事を始めるときに `mcp__claude-code-remote__add_repo`（owner `nakaba9696`、repo `KnowledgeBase`、access `"read"`。書き足す配り役は `"push"`）でセッションにつなぎ、返ってきた clone 先に clone してから `skills/<分野>/SKILL.md` を読む（持ち主の決定 2026-10-13）。
+  - 子を起こすときは、指示文の最初にこの手順と読む skill の名前を入れる。
   - このゲームの決まり（この CLAUDE.md・VISION）と食い違ったら、このゲームの決まりを優先し、食い違いを KnowledgeBase の inbox.md に書く。
 - **持ち主の指摘を受けたら、知恵袋に書き足す。** 手順は skill `add-lesson`：ゲーム固有のこと（馬名・設定）を外して一般化し、`skills/<分野>/SKILL.md` に 1 項目足し、出典（このリポジトリ・PR か issue の番号・日付）を添えて main に push する。
   - 迷ったら KnowledgeBase の inbox.md に書けばよい（係が後で整理する）。
