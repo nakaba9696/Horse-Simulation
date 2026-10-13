@@ -157,7 +157,7 @@ function autoPlay(year, seed, weeks) {
   }
   return { G, myStarts };
 }
-const years = QUICK ? [[1995, 3]] : [[1995, 6], [2005, 4], [2018, 4], [2024, 3]];
+const years = QUICK ? [[1995, 3]] : [[1960, 3], [1975, 3], [1995, 4], [2005, 3], [2018, 3], [2024, 2]];
 for (const [year, n] of years) {
   check(`autoplay: ${year}年から${n}年`, () => {
     const t0 = Date.now();
