@@ -14,7 +14,12 @@ const rows = [];
 for (const f of fs.readdirSync(path.join(ROOT, 'data/src')).filter(f => f.endsWith('.jsonl')).sort()) {
   for (const line of fs.readFileSync(path.join(ROOT, 'data/src', f), 'utf8').split('\n')) {
     if (!line.trim()) continue;
-    try { const r = JSON.parse(line); r.src = f; rows.push(r); } catch (e) { console.warn('bad line', f, line.slice(0, 80)); }
+    try {
+      const r = JSON.parse(line); r.src = f;
+      // 1995年までの「金杯」は東西が同じ名前なので、暦の名前（金杯（東）・金杯（西））に合わせる
+      if (r.race === '金杯' && r.lineage) r.race = r.year <= 1994 ? (r.lineage.includes('中山') ? '金杯（東）' : '金杯（西）') : r.lineage;
+      rows.push(r);
+    } catch (e) { console.warn('bad line', f, line.slice(0, 80)); }
   }
 }
 console.log('rows', rows.length);

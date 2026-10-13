@@ -22,6 +22,29 @@
     const h = byName.get(n) || byNorm.get(HS.normName(n)); if (!h) continue;
     h.wins = [...new Set([...(h.wins || []), ...ws])];
   }
+  // 勝ち鞍のレース名を、その年の暦の名前にそろえる（冠の有無・盃と杯・東西の金杯）
+  const races = D.races || [];
+  const raceByName = new Map();
+  for (const r of races) { if (!raceByName.has(r.name)) raceByName.set(r.name, []); raceByName.get(r.name).push(r); }
+  const active = (r, y) => r.from <= y && y <= (r.to || 9999);
+  const cache = new Map();
+  const canon = (n, y) => {
+    const key = y + n;
+    if (cache.has(key)) return cache.get(key);
+    let out = n;
+    if (!(raceByName.get(n) || []).some(r => active(r, y))) {
+      const alt = [n, n.replace(/盃/g, '杯'), n.replace(/杯/g, '盃')];
+      const east = /（東）$/.test(n), west = /（西）$/.test(n);
+      const base = alt.map(a => a.replace(/（[東西]）$/, ''));
+      const cands = races.filter(r => active(r, y) && r.region !== '海外' && base.some(b => (b.length >= 3 || /[杯盃]$/.test(b)) && (r.name.endsWith(b) || b.endsWith(r.name) || r.name.replace(/盃/g, '杯').endsWith(b.replace(/盃/g, '杯')))));
+      let pick = cands[0];
+      if (east || west) pick = cands.find(r => (east ? ['中山', '東京'] : ['京都', '阪神', '中京']).includes(r.course)) || pick;
+      if (pick) out = pick.name;
+    }
+    cache.set(key, out);
+    return out;
+  };
+  for (const h of out) for (const k of ['wins', 'ran']) if (h[k]) h[k] = [...new Set(h[k].map(w => { const y = +w.slice(0, 4); return y + canon(w.slice(4), y); }))];
   // 勝ち鞍を年の順に
   for (const h of out) if (h.wins) h.wins.sort();
   // 主戦騎手：馬のデータにある jockey を表へ（表にあるものが優先）
