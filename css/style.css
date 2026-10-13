@@ -199,3 +199,10 @@ input[type=range] { accent-color: var(--gold); min-width: 0; }
   .show-sm { display: inline; }
   table.t { font-size: 12px; }
 }
+/* 特殊能力・解説 */
+.chip.skill { background: #1f4f3a; color: #d6f5e4; margin: 0 4px 4px 0; }
+.chip.skill.bad { background: #5a2626; color: #ffd9d9; }
+.skills { display: flex; flex-wrap: wrap; }
+.skillpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 4px 10px; }
+.skillpick .bad, .ed-table .sk .bad { color: #ff9a9a; }
+.horse-text { line-height: 1.8; font-size: 14px; }

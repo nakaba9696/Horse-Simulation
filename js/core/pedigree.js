@@ -149,19 +149,19 @@
   P.makeFoal = function (rng, stallion, mare, year) {
     const ev = P.evaluate(stallion, mare);
     const talent = rng.normal(0, 5.5) + (ev.burst > 0 ? rng.normal(0, ev.burst * 0.6) : 0);
-    const prof = { spd: 0, sta: 0, kick: 0, pow: 0, guts: 0, wise: 0 };
+    const prof = { spd: 0, sta: 0, guts: 0, mind: 0, slope: 0 };
     const tr = stallion.traits || [];
-    if (tr.includes('瞬発力')) prof.kick += 4;
     if (tr.includes('スタミナ')) prof.sta += 4;
     if (tr.includes('スピード')) prof.spd += 4;
-    if (tr.includes('パワー')) prof.pow += 4;
+    if (tr.includes('パワー')) prof.slope += 5;
     if (tr.includes('底力')) prof.guts += 4;
     if (tr.includes('持続力')) { prof.sta += 2; prof.guts += 2; }
+    if (tr.includes('気性難')) prof.mind -= 6;
     const pot = {};
     for (const k of H.STATS) {
       // 母が競走馬だったなら、その能力の形も少し受け継ぐ
       let m = 0;
-      if (mare.pot) m = (mare.pot[k] - H.overall(mare.pot)) * 0.3;
+      if (mare.pot && mare.pot[k] != null) m = (mare.pot[k] - H.overall(mare.pot)) * 0.3;
       pot[k] = U.clamp(ev.mean + talent + prof[k] + m + rng.normal(0, 4), 25, 106);
     }
     // 適性
@@ -177,9 +177,9 @@
     const mMin = mare.distMin || stallion.distMin || 1600, mMax = mare.distMax || stallion.distMax || 2400;
     let dMin = Math.round(((stallion.distMin || 1600) * 0.6 + mMin * 0.4 + rng.normal(0, 150)) / 100) * 100;
     let dMax = Math.round(((stallion.distMax || 2400) * 0.6 + mMax * 0.4 + rng.normal(0, 200)) / 100) * 100;
-    dMin = U.clamp(dMin, 1000, 2600); dMax = U.clamp(Math.max(dMax, dMin + 400), 1400, 3600);
+    dMin = U.clamp(dMin, 1000, 3000); dMax = U.clamp(Math.max(dMax, dMin + 400), 1400, 4000);
     // スタミナが高いと長め・スピードが高いと短めに少し寄る
-    if (pot.sta - pot.spd > 6) dMax = Math.min(3600, dMax + 200);
+    if (pot.sta - pot.spd > 6) dMax = Math.min(4000, dMax + 200);
     if (pot.spd - pot.sta > 6) dMin = Math.max(1000, dMin - 200);
     // 成長型
     let growth;
@@ -189,11 +189,17 @@
     else growth = rng.pick(H.GROWTHS);
     if (!H.GROWTHS.includes(growth)) growth = '普通';
     // 脚質
-    const style = pot.kick - pot.spd > 4 ? rng.pick(['差し', '差し', '追込', '先行']) : pot.spd - pot.kick > 4 ? rng.pick(['逃げ', '先行', '先行', '差し']) : rng.pick(['先行', '差し', '先行', '差し', '逃げ', '追込']);
-    let temper = U.clamp(60 + rng.normal(0, 15) + (tr.includes('気性難') ? -15 : 0) + (tr.includes('気性安定') ? 10 : 0), 5, 100);
+    // 脚の切れ（父の切れ・持続、母の切れを受け継ぐ）
+    const sKire = stallion.kire || (tr.includes('瞬発力') ? 6.5 : tr.includes('持続力') ? 3 : tr.includes('パワー') ? 3.8 : 4.5);
+    const kire = U.clamp(Math.round(sKire * 0.6 + (mare.kire || 4.5) * 0.4 + rng.normal(0, 1.1)), 1, 8);
+    const style = kire >= 6 ? rng.pick(['差し', '差し', '追込', '先行']) : kire <= 3 ? rng.pick(['逃げ', '先行', '先行', '差し']) : rng.pick(['先行', '差し', '先行', '差し', '逃げ', '追込']);
     let health = U.clamp(75 + rng.normal(0, 12) + (tr.includes('丈夫') ? 10 : 0) + (tr.includes('体質弱') ? -10 : 0) - ev.risk * 6, 10, 100);
+    // 特殊能力：親の能力をときどき受け継ぎ、まれに新しく持つ
+    const skills = [];
+    for (const id of [...(stallion.skills || []), ...(mare.skills || [])]) if (!skills.includes(id) && rng.chance(0.25)) skills.push(id);
+    if (rng.chance(0.12)) { const id = rng.pick(H.SKILL_IDS); if (!skills.includes(id)) skills.push(id); }
     return {
-      pot, apt, distMin: dMin, distMax: dMax, growth, peakShift: rng.normal(0, 0.2), style, temper, health,
+      pot, apt, distMin: dMin, distMax: dMax, growth, peakShift: rng.normal(0, 0.2), style, kire, skills, health,
       sex: rng.chance(0.5) ? '牡' : '牝', ev,
     };
   };

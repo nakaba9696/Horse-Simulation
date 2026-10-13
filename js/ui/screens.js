@@ -194,19 +194,31 @@
         <div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div>
         <div>馬場<b>芝 ${UI.aptMark(h.apt.turf)}　ダート ${UI.aptMark(h.apt.dirt)}</b></div>
         <div>道悪<b>${h.apt.heavy >= 75 ? '得意' : h.apt.heavy >= 45 ? 'ふつう' : '苦手'}</b></div>
-        <div>脚質<b>${h.style}</b></div>
+        <div>脚質<b>${h.style}${known ? '・' + H.kireLabel(h.kire) : ''}</b></div>
         <div>成長型<b>${growthWord}（${peakNote}）</b></div>
-        <div>気性<b>${(h.temper ?? 60) >= 70 ? '落ち着いている' : (h.temper ?? 60) >= 45 ? 'ふつう' : '激しい'}</b></div>
-        <div>体質<b>${(h.health ?? 70) >= 80 ? '丈夫' : (h.health ?? 70) >= 60 ? 'ふつう' : '弱い'}</b></div>
+        <div>健康<b>${(h.health ?? 70) >= 85 ? '丈夫' : (h.health ?? 70) >= 65 ? 'ふつう' : '弱い'}</b></div>
         ${h.loc === 'stable' ? `<div>状態<b>${h.injury ? '故障中' : UI.condTag(h)}</b></div>` : ''}
       </div>
+      ${known && (h.skills || []).length ? `<h2 class="sec">特殊能力</h2><div class="panel skills">${UI.skillChips(h)}</div>` : ''}
       ${h.gradedWins.length ? `<h2 class="sec">重賞の勝ち鞍</h2><div class="panel">${h.gradedWins.map(g => `<div>${g.y}年 ${UI.gradeTag({ grade: g.grade, region: g.region, year: g.y })} ${e(g.short || g.race)}${g.hist ? ' <span class="small muted">（開始前）</span>' : ''}</div>`).join('')}</div>` : ''}
       ${h.hist && W.get().settings.showHistNote ? histNote(h) : ''}`;
   }
+  // 名馬の解説（市場などから開く）
+  UI.histTextModal = function (name) {
+    const d = W.histByName.get(name); if (!d) return '';
+    const h = H.fromHistoric(d, 'x');
+    return `<h3>${e(d.name)}</h3><div class="small muted">${d.born}年生 ${d.sex}・${e(d.coat || '')}　父 ${e(d.sire || '?')}　母 ${e(d.dam || '?')}</div>
+      ${d.text ? `<div class="panel mt horse-text">${e(d.text)}</div>` : ''}
+      <div class="apt mt"><div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div><div>脚質<b>${h.style}・${H.kireLabel(h.kire)}</b></div><div>成長型<b>${h.growth}</b></div></div>
+      ${(h.skills || []).length ? `<div class="skills mt">${UI.skillChips(h)}</div>` : ''}
+      ${(d.wins || []).length ? `<div class="small muted mt">史実の主な勝ち鞍：${d.wins.map(e).join('、')}</div>` : ''}
+      <div class="btns mt"><button class="btn" data-act="close">閉じる</button></div>`;
+  };
+  UI.skillChips = h => (h.skills || []).filter(x => H.SKILLS[x]).map(x => `<span class="chip skill ${H.SKILLS[x].bad ? 'bad' : ''}" title="${e(H.SKILLS[x].note)}">${e(H.SKILLS[x].label)}</span>`).join('');
   function histNote(h) {
     const d = W.histByName.get(h.name);
     if (!d) return '';
-    return `<h2 class="sec">史実メモ</h2><div class="panel small">${d.note ? e(d.note) + '<br>' : ''}${(d.wins || []).length ? '史実の主な勝ち鞍：' + d.wins.map(e).join('、') : '史実ではG1未勝利'}<div class="muted">史実の引退：${d.retire}年</div></div>`;
+    return `${d.text ? `<h2 class="sec">解説</h2><div class="panel horse-text">${e(d.text)}</div>` : ''}<h2 class="sec">史実メモ</h2><div class="panel small">${d.note ? e(d.note) + '<br>' : ''}${(d.wins || []).length ? '史実の主な勝ち鞍：' + d.wins.map(e).join('、') : '史実ではG1未勝利'}<div class="muted">史実の引退：${d.retire}年</div></div>`;
   }
   function trainTab(h, wIdx, st) {
     const G = W.get();
@@ -352,7 +364,9 @@
         const h = it.horse, d = it.data;
         return `<div class="card">${UI.thumb(h)}<div class="grow"><div class="row"><span class="nm">${e(h.name)}</span><span class="chip hist">${tab === 'foreign' ? '海外' : '史実'}</span></div>
           <div class="sub">${G.year - h.born}歳 ${h.gelding ? 'セ' : h.sex}・${e(h.coat || '')}${h.country && tab === 'foreign' ? '・' + e(h.country) : ''}・父 ${e(h.sire || '?')}・母 ${e(h.dam || '?')}</div>
-          ${G.settings.showHistNote && d ? `<div class="small muted">${d.note ? e(d.note) : ''}${(d.wins || []).length ? '（史実の重賞 ' + d.wins.length + '勝）' : ''}</div>` : ''}</div>
+          ${G.settings.showHistNote && d ? `<div class="small muted">${d.note ? e(d.note) : ''}${(d.wins || []).length ? '（史実の重賞 ' + d.wins.length + '勝）' : ''}</div>` : ''}
+          ${(h.skills || []).length ? `<div class="skills mt">${UI.skillChips(h)}</div>` : ''}
+          ${G.settings.showHistNote && d && d.text ? `<button class="btn sm mt" data-act="htext" data-name="${e(h.name)}">解説を読む</button>` : ''}</div>
           <div class="center"><div class="small" style="color:var(--gold2);font-weight:900">${U.money(it.price)}</div><button class="btn sm gold" data-act="buy" data-kind="${tab === 'hist' ? 'hist' : 'fhist'}" data-i="${i}">買う</button></div></div>`;
       }).join('')}</div>${all.length > lim ? `<div class="center mt"><button class="btn" data-act="mmore">もっと見る（残り${all.length - lim}頭）</button></div>` : ''}`
         : `<div class="panel empty">いま買えるデビュー前の${tab === 'hist' ? '' : '海外の'}史実馬はいません。毎年3月に新しい世代が生まれます。</div>`;

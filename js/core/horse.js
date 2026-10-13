@@ -11,8 +11,59 @@
     if ((sireCoat === '白毛' || damCoat === '白毛') && rng.chance(0.4)) return '白毛';
     return rng.weighted(['鹿毛', '黒鹿毛', '青鹿毛', '青毛', '栗毛', '栃栗毛'], c => ({ '鹿毛': 40, '黒鹿毛': 20, '青鹿毛': 7, '青毛': 2, '栗毛': 26, '栃栗毛': 4 })[c]);
   };
-  H.STATS = ['spd', 'sta', 'kick', 'pow', 'guts', 'wise'];
-  H.STAT_LABEL = { spd: 'スピード', sta: 'スタミナ', kick: '瞬発力', pow: 'パワー', guts: '根性', wise: '賢さ' };
+  // 能力（成長とともに伸びる素質）。芝・ダート・道悪・健康は apt と health に、脚の切れは kire に分けて持つ
+  H.STATS = ['spd', 'sta', 'guts', 'mind', 'slope'];
+  H.STAT_LABEL = { spd: 'スピード', sta: 'スタミナ', guts: '根性', mind: '気性', slope: '坂' };
+  H.STAT_NOTE = { spd: '道中の速さ', sta: '長く脚を保つ力', guts: '競り合いで抜かせない力', mind: '落ち着きと賢さ。出遅れ・掛かり・位置取り', slope: '坂での踏ん張り。弱いと坂で大きく脚がなくなる' };
+  // 脚の切れ（1〜8）。小さいほどズブい（長く脚を使う）、大きいほど一瞬で突き抜ける
+  H.KIRE_LABEL = ['', '極ズブ', 'ズブい', 'ややズブ', '持続型', 'やや切れ', '切れる', '鋭い切れ', '極上の切れ'];
+  H.kireLabel = k => H.KIRE_LABEL[U.clamp(Math.round(k || 4), 1, 8)];
+  // 特殊能力。bad＝弱み
+  H.SKILLS = {
+    big: { label: '大舞台', note: 'G1で力を出す' },
+    fresh: { label: '鉄砲駆け', note: '休み明けでも走る' },
+    tataki: { label: '叩き良化', note: '休み明けは割り引き。使われて良くなる' },
+    left: { label: '左回り巧者', note: '左回りのコースで走る' },
+    right: { label: '右回り巧者', note: '右回りのコースで走る' },
+    small: { label: '小回り巧者', note: '直線の短いコースが得意' },
+    long: { label: '直線巧者', note: '長い直線で伸びる' },
+    summer: { label: '夏馬', note: '6〜8月に調子を上げる' },
+    winter: { label: '冬馬', note: '12〜2月に調子を上げる' },
+    hipace: { label: 'ハイペース巧者', note: '流れが速いほど良い' },
+    slowpace: { label: 'スローペース巧者', note: '上がりの勝負に強い' },
+    oonige: { label: '大逃げ', note: '後ろを大きく離して逃げる' },
+    longspurt: { label: 'ロングスパート', note: '早めに動いて長く脚を使う' },
+    narabu: { label: '並ぶと強い', note: '競り合いで抜かせない' },
+    nino: { label: '二の脚', note: 'スタート後の加速が速く、前の位置を取る' },
+    inner: { label: '内枠巧者', note: '内の枠で走る' },
+    travel: { label: '遠征巧者', note: '海外の大レースで力を出す' },
+    homebody: { label: '遠征下手', note: '海外では力を出しきれない', bad: true },
+    deokure: { label: '出遅れ癖', note: 'ゲートの出が悪い', bad: true },
+    kakari: { label: '掛かり癖', note: '折り合いを欠きやすい', bad: true },
+    sora: { label: 'ソラを使う', note: '先頭に立つと気を抜く', bad: true },
+  };
+  H.SKILL_IDS = Object.keys(H.SKILLS);
+  H.has = (h, id) => !!(h.skills && h.skills.includes(id));
+
+  // 前の版の能力（瞬発力・パワー・賢さ・気性）を今の形に直す。pot・bonus・temper を持つものに使う
+  H.fromLegacy = function (h) {
+    const p = h.pot;
+    if (p && (p.kick != null || p.pow != null || p.wise != null)) {
+      if (h.kire == null && p.kick != null) h.kire = U.clamp(Math.round(4.5 + (p.kick - (p.spd || p.kick)) / 3), 1, 8);
+      if (p.mind == null) p.mind = ((p.wise != null ? p.wise : 70) + (h.temper != null ? h.temper : 60)) / 2;
+      if (p.slope == null) p.slope = p.pow != null ? p.pow : (p.spd || 70);
+      delete p.kick; delete p.pow; delete p.wise;
+    }
+    const b = h.bonus;
+    if (b && (b.kick != null || b.pow != null || b.wise != null)) {
+      if (b.wise != null) b.mind = (b.mind || 0) + b.wise;
+      if (b.pow != null) b.slope = (b.slope || 0) + b.pow;
+      delete b.kick; delete b.pow; delete b.wise;
+    }
+    delete h.temper;
+    return h;
+  };
+
   H.STYLES = ['逃げ', '先行', '差し', '追込'];
   H.GROWTHS = ['早熟', '早め', '普通', '遅め', '晩成'];
   // 成長型ごとの [ピークの始まり, ピークの終わり]（満年齢、4月生まれを0として）
@@ -46,7 +97,7 @@
   };
   // 総合力（表示や人気の目安）
   H.overall = function (stats) {
-    return stats.spd * 0.3 + stats.kick * 0.2 + stats.sta * 0.15 + stats.pow * 0.12 + stats.guts * 0.13 + stats.wise * 0.1;
+    return stats.spd * 0.35 + stats.sta * 0.25 + stats.guts * 0.15 + stats.mind * 0.12 + stats.slope * 0.13;
   };
 
   // 見立て（プレイヤーに見える値）。走るほど・調教するほど正確になる
@@ -91,6 +142,7 @@
     let kind = '中距離';
     if (max <= 1400) kind = '短距離';
     else if (mid <= 1700) kind = 'マイル';
+    else if (min >= 3000) kind = '超長距離';
     else if (min >= 2400) kind = '長距離';
     else if (max >= 3000) kind = '中長距離';
     return `${kind}（${min}〜${max}m）`;
@@ -102,19 +154,22 @@
     const r = d.rating;
     const dirt = d.surface === 'ダ', both = d.surface === '芝ダ';
     const longH = d.distMax >= 2400, sprint = d.distMax <= 1400;
-    const st = d.style;
+    const st = H.STYLES.includes(d.style) ? d.style : '先行';
     const pot = {
-      spd: r + rng.normal(0, 2) + (sprint ? 3 : 0) + (st === '逃げ' ? 2 : 0),
+      spd: r + rng.normal(0, 2) + (sprint ? 3 : 0) + (st === '逃げ' ? 1 : 0),
       sta: r + rng.normal(0, 2) + (longH ? 3 : 0) - (sprint ? 6 : 0),
-      kick: r + rng.normal(0, 2) + (st === '差し' || st === '追込' ? 3 : -2),
-      pow: r + rng.normal(0, 2) + (dirt ? 4 : both ? 2 : -2),
       guts: r + rng.normal(0, 3),
-      wise: r - 3 + rng.normal(0, 3),
+      mind: r - 4 + rng.normal(0, 4),
+      slope: r - 2 + rng.normal(0, 3) + (dirt ? 3 : 0),
     };
     for (const k of H.STATS) pot[k] = U.clamp(pot[k], 30, 106);
-    // エディットで能力を個別に決めた馬
-    if (d.pot) for (const k of H.STATS) if (d.pot[k] != null) pot[k] = U.clamp(d.pot[k], 20, 120);
+    // エディットで能力を個別に決めた馬（前の版の形でも読む）
+    if (d.pot) {
+      const ep = H.fromLegacy({ pot: Object.assign({}, d.pot), temper: d.temper }).pot;
+      for (const k of H.STATS) if (ep[k] != null) pot[k] = U.clamp(ep[k], 20, 120);
+    } else if (d.temper != null) pot.mind = (pot.mind + d.temper) / 2;
     const growth = H.GROWTHS.includes(d.growth) ? d.growth : '普通';
+    const kire0 = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[st] + rng.int(-1, 1) - (dirt ? 1 : 0) + (sprint ? 0 : longH && st !== '追込' ? -1 : 0);
     const h = {
       id, name: d.name, sex: d.sex === 'セ' ? '牡' : d.sex, gelding: d.sex === 'セ', born: d.born,
       coat: H.COATS.includes(d.coat) ? d.coat : H.pickCoat(rng),
@@ -123,17 +178,64 @@
       pot,
       apt: { turf: dirt ? 45 : both ? 85 : 100, dirt: dirt ? 100 : both ? 90 : 40 + rng.int(0, 15), heavy: 40 + rng.int(0, 50) },
       distMin: d.distMin || 1600, distMax: d.distMax || 2400,
-      style: H.STYLES.includes(st) ? st : '先行',
+      style: st, kire: U.clamp(d.kire != null ? d.kire : kire0, 1, 8),
       growth, peakShift: 0,
-      temper: 50 + rng.int(-20, 30), health: 70 + rng.int(0, 25),
+      health: d.health != null ? d.health : 70 + rng.int(0, 25),
+      skills: Array.isArray(d.skills) ? d.skills.filter(x => H.SKILLS[x]) : H.histSkills(d, rng),
       bonus: {}, cond: 0, fatigue: 0, injury: null,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [],
       restUntil: 0, retireYear: d.retire || (d.born + 5),
     };
-    // エディットで気性・体質を決めた馬
-    if (d.temper != null) h.temper = d.temper;
-    if (d.health != null) h.health = d.health;
+    // エディットで芝・ダート・道悪を決めた馬
+    for (const k of ['turf', 'dirt', 'heavy']) if (d[k] != null) h.apt[k] = d[k];
     return h;
+  };
+
+  // 史実馬の特殊能力を、史実の勝ち鞍（競馬場・時期・格）から見立てる。名馬の手書きの表（data/famous_*.js）があればそちらが正
+  let RACE_BY_NAME = null;
+  H.winRaces = function (d) {
+    if (!RACE_BY_NAME) {
+      RACE_BY_NAME = new Map();
+      for (const r of HS.DATA.races || []) { if (!RACE_BY_NAME.has(r.name)) RACE_BY_NAME.set(r.name, []); RACE_BY_NAME.get(r.name).push(r); }
+    }
+    const out = [];
+    for (const w of d.wins || []) {
+      const y = +w.slice(0, 4), n = w.slice(4);
+      const r = (RACE_BY_NAME.get(n) || []).find(x => x.from <= y && y <= (x.to || 9999));
+      if (r) out.push(r);
+    }
+    return out;
+  };
+  H.histSkills = function (d, rng) {
+    const ws = H.winRaces(d);
+    const C = HS.DATA.courses || {};
+    const sk = [];
+    const n = ws.length;
+    const cnt = f => ws.filter(f).length;
+    const geo = r => { const c = C[r.course]; return c ? (r.surface === 'ダ' ? c.dirt || c.turf : c.turf || c.dirt) : null; };
+    const g1 = cnt(r => r.grade === 'G1');
+    if (g1 >= 3 || (g1 >= 2 && d.rating >= 95)) sk.push('big');
+    if (n >= 3) {
+      const left = cnt(r => (C[r.course] || {}).dir === '左'), right = cnt(r => (C[r.course] || {}).dir === '右');
+      if (left >= 3 && right === 0) sk.push('left');
+      else if (right >= 3 && left === 0) sk.push('right');
+      const short = cnt(r => (geo(r) || {}).straight < 330), longS = cnt(r => (geo(r) || {}).straight >= 450);
+      if (short >= 2 && short / n >= 0.6) sk.push('small');
+      else if (longS >= 3 && longS / n >= 0.7) sk.push('long');
+    }
+    if (n >= 2) {
+      const sum = cnt(r => r.month >= 6 && r.month <= 8), win = cnt(r => r.month === 12 || r.month <= 2);
+      if (sum >= 2 && sum / n >= 0.5) sk.push('summer');
+      else if (win >= 2 && win / n >= 0.5) sk.push('winter');
+    }
+    if (HS.DATA.isForeign && !HS.DATA.isForeign(d) && cnt(r => r.region === '海外') >= 1) sk.push('travel');
+    // 勝ち鞍から見えない癖は、名前ごとに決まった運で少しだけ
+    if (sk.length < 2 && rng.chance(0.25)) {
+      const pool = d.style === '逃げ' ? ['nino', 'narabu', 'hipace'] : d.style === '先行' ? ['nino', 'narabu', 'fresh', 'tataki'] : ['longspurt', 'slowpace', 'hipace', 'tataki', 'fresh'];
+      const x = rng.pick(pool); if (!sk.includes(x)) sk.push(x);
+    }
+    if (rng.chance(0.06)) sk.push(rng.pick(['deokure', 'kakari', 'sora']));
+    return sk;
   };
 
   // 架空の馬（モブ・生産馬）の素質を、総合の目安 mean から作る
@@ -169,8 +271,8 @@
       sire: sireName || null, dam: null, hist: false, owner: 'AI', filler: true, foreign: !!foreign,
       pot, apt: { turf: surface === '芝' ? 95 + rng.int(0, 5) : 50, dirt: surface === 'ダ' ? 95 + rng.int(0, 5) : 50, heavy: 30 + rng.int(0, 60) },
       distMin: Math.max(1000, dist - 400 + rng.int(0, 2) * 100), distMax: dist + 200 + rng.int(0, 4) * 100,
-      style: rng.weighted(H.STYLES, s => ({ '逃げ': 1, '先行': 3, '差し': 3, '追込': 1.5 })[s]),
-      growth, peakShift: 0, temper: 30 + rng.int(0, 60), health: 60 + rng.int(0, 30),
+      style: rng.weighted(H.STYLES, s => ({ '逃げ': 1, '先行': 3, '差し': 3, '追込': 1.5 })[s]), kire: rng.int(2, 7), skills: [],
+      growth, peakShift: 0, health: 60 + rng.int(0, 30),
       bonus: {}, cond: rng.normal(0, 30), fatigue: 0, injury: null,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [],
     };
@@ -179,14 +281,14 @@
 
   // 調教のメニュー。gain＝伸びる能力、fat＝疲れ、cond＝調子への効き、risk＝故障の危険、time＝時計の目安
   H.MENUS = {
-    '坂路(強め)': { gain: { spd: 0.35, pow: 0.35 }, fat: 16, cond: 14, risk: 1.4, course: '坂路' },
-    '坂路(馬なり)': { gain: { spd: 0.15, pow: 0.15 }, fat: 8, cond: 8, risk: 0.6, course: '坂路' },
-    'ウッド(強め)': { gain: { sta: 0.35, kick: 0.3 }, fat: 15, cond: 14, risk: 1.3, course: 'ウッド' },
-    'ウッド(馬なり)': { gain: { sta: 0.15, kick: 0.15 }, fat: 7, cond: 8, risk: 0.5, course: 'ウッド' },
-    '併せ馬': { gain: { guts: 0.4, kick: 0.2 }, fat: 17, cond: 16, risk: 1.4, course: 'ウッド' },
-    'ダート': { gain: { pow: 0.3, sta: 0.15 }, fat: 10, cond: 8, risk: 0.8, course: 'ダート' },
+    '坂路(強め)': { gain: { spd: 0.35, slope: 0.35 }, fat: 16, cond: 14, risk: 1.4, course: '坂路' },
+    '坂路(馬なり)': { gain: { spd: 0.15, slope: 0.15 }, fat: 8, cond: 8, risk: 0.6, course: '坂路' },
+    'ウッド(強め)': { gain: { sta: 0.35, spd: 0.2 }, fat: 15, cond: 14, risk: 1.3, course: 'ウッド' },
+    'ウッド(馬なり)': { gain: { sta: 0.15, spd: 0.1 }, fat: 7, cond: 8, risk: 0.5, course: 'ウッド' },
+    '併せ馬': { gain: { guts: 0.4, spd: 0.15 }, fat: 17, cond: 16, risk: 1.4, course: 'ウッド' },
+    'ダート': { gain: { slope: 0.3, sta: 0.15 }, fat: 10, cond: 8, risk: 0.8, course: 'ダート' },
     'プール': { gain: { sta: 0.25 }, fat: 2, cond: 4, risk: 0.1, course: 'プール' },
-    'ゲート練習': { gain: { wise: 0.4 }, fat: 3, cond: 2, risk: 0.1, course: 'ゲート' },
+    'ゲート練習': { gain: { mind: 0.4 }, fat: 3, cond: 2, risk: 0.1, course: 'ゲート' },
     '軽め': { gain: {}, fat: -6, cond: 3, risk: 0.2, course: '軽め' },
     '休養': { gain: {}, fat: -18, cond: -4, risk: 0, course: '休養' },
   };
@@ -206,7 +308,7 @@
     }
     // 疲れと調子
     const fatBefore = horse.fatigue || 0;
-    horse.fatigue = U.clamp(fatBefore + m.fat * (0.8 + rng.next() * 0.4) - 6, 0, 100);
+    horse.fatigue = U.clamp(fatBefore + m.fat * (0.8 + rng.next() * 0.4) - H.recover(horse, 6), 0, 100);
     let dc = m.cond * (1 - fatBefore / 120) - fatBefore * 0.25 + rng.normal(0, 8);
     if (m.fat < 0) dc += 6;
     horse.cond = U.clamp((horse.cond || 0) * 0.85 + dc, -100, 100);
@@ -218,7 +320,7 @@
     // 調教タイム（強めのときだけ速い時計）
     let time = null;
     const c = H.cur(horse, wIdx);
-    const ability = (c.spd + c.pow + c.kick) / 3 + horse.cond * 0.04 - horse.fatigue * 0.03;
+    const ability = (c.spd * 2 + c.slope) / 3 + ((horse.kire || 4) - 4.5) * 0.8 + horse.cond * 0.04 - horse.fatigue * 0.03;
     if (m.course === '坂路') {
       const hard = menuName.includes('強め');
       const t4 = 58.5 - ability * 0.075 - (hard ? 1.6 : 0) + rng.normal(0, 0.4);
@@ -248,8 +350,10 @@
   };
 
   // 放牧中・牧場にいる週の回復
+  // 疲れの取れ方（健康が高いほど早い）。base＝健康70のときの1週の回復
+  H.recover = (horse, base) => base * (0.65 + (horse.health != null ? horse.health : 70) / 200);
   H.rest = function (horse, rng) {
-    horse.fatigue = Math.max(0, (horse.fatigue || 0) - 22);
+    horse.fatigue = Math.max(0, (horse.fatigue || 0) - H.recover(horse, 22));
     horse.cond = U.clamp((horse.cond || 0) * 0.6 + rng.normal(0, 10), -60, 40);
     if (horse.injury) { horse.injury.weeks -= 1; if (horse.injury.weeks <= 0) horse.injury = null; }
   };

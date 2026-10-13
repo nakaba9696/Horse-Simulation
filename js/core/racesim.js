@@ -22,7 +22,7 @@
   S.power = function (horse, race, wIdx, ctx) {
     const c = H.cur(horse, wIdx);
     const dirt = race.surface === 'ダ';
-    const w = dirt ? { spd: 0.30, kick: 0.12, sta: 0.13, pow: 0.25, guts: 0.12, wise: 0.08 } : { spd: 0.30, kick: 0.22, sta: 0.13, pow: 0.10, guts: 0.15, wise: 0.10 };
+    const w = dirt ? { spd: 0.42, sta: 0.20, guts: 0.15, mind: 0.11, slope: 0.12 } : { spd: 0.45, sta: 0.22, guts: 0.16, mind: 0.12, slope: 0.05 };
     let a = 0; for (const k of H.STATS) a += c[k] * w[k];
     const D = race.dist;
     let distPen = 0;
@@ -35,8 +35,36 @@
     const condAdj = (horse.cond || 0) / 100 * 3 - (horse.fatigue || 0) * 0.05;
     const jockAdj = ctx && ctx.jockey ? (ctx.jockey.skill - 75) * 0.06 : 0;
     const wtAdj = ctx && ctx.weight ? -(ctx.weight - 56) * 1.4 : 0;
-    const total = a - distPen - surfPen + groundAdj + condAdj + jockAdj + wtAdj;
-    return { total, base: a, distPen, surfPen, groundAdj, condAdj, cur: c };
+    const skillAdj = S.skillAdj(horse, race, wIdx, ctx);
+    const total = a - distPen - surfPen + groundAdj + condAdj + jockAdj + wtAdj + skillAdj;
+    return { total, base: a, distPen, surfPen, groundAdj, condAdj, skillAdj, cur: c };
+  };
+
+  // 特殊能力のうち、レースの条件で強さが上下するもの
+  S.skillAdj = function (horse, race, wIdx, ctx) {
+    const sk = horse.skills;
+    if (!sk || !sk.length) return 0;
+    const course = HS.DATA.courses[race.course] || {};
+    const geo = (race.surface === 'ダ' ? course.dirt : course.turf) || course.turf || course.dirt || {};
+    const gap = horse.lastRaceW != null && wIdx != null ? wIdx - horse.lastRaceW : null;
+    let a = 0;
+    for (const id of sk) {
+      if (id === 'big' && race.grade === 'G1') a += 2;
+      else if (id === 'fresh' && gap != null && gap >= 10) a += 2;
+      else if (id === 'tataki' && gap != null) a += gap >= 10 ? -2 : 1.2;
+      else if (id === 'left' && course.dir === '左') a += 1.8;
+      else if (id === 'right' && course.dir === '右') a += 1.8;
+      else if (id === 'small' && geo.straight && geo.straight < 330) a += 1.8;
+      else if (id === 'long' && geo.straight >= 450) a += 1.8;
+      else if (id === 'summer' && race.month >= 6 && race.month <= 8) a += 1.8;
+      else if (id === 'winter' && (race.month === 12 || race.month <= 2)) a += 1.8;
+      else if (id === 'inner' && ctx && ctx.num && ctx.num <= 4) a += 1.2;
+      else if (id === 'travel' && race.region === '海外') a += 2;
+      else if (id === 'homebody' && race.region === '海外') a -= 3;
+      else if (id === 'hipace' && ctx && ctx.paceF > 1.003) a += 1.8;
+      else if (id === 'slowpace' && ctx && ctx.paceF && ctx.paceF < 0.995) a += 1.8;
+    }
+    return a;
   };
 
   // 斤量（簡略）。定量・馬齢：年齢と性で、別定・ハンデ：実績で上下
@@ -52,6 +80,11 @@
     if (race.weight === '別定') w += Math.min(2, (horse.gradedWins || []).filter(g => g.grade === 'G1').length);
     return U.clamp(w, 48, 60);
   };
+
+  // 脚の切れの効き方（s＝終いの伸び、r＝仕掛けの早さ、a＝加速、c＝スパートの消耗、z＝バテたあとの粘り）
+  S.OONIGE = { early: 1.02, mid: 1.02, kick: 0.5, lead: 0.055 }; // 大逃げの速さ（道中）・終いの伸び・離す差（直線の長さに対して）
+  S.DS = 0.78; // スタミナの持ちの全体の倍率
+  S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0.01, z: 0.0015, top: 1.6 };
 
   // 本体。runners: [{horse, jockey, weight, num, frame}]
   S.run = function (race, runners, wIdx, rng, opts) {
@@ -70,23 +103,28 @@
 
     const st = runners.map((r, i) => {
       const h = r.horse;
-      const pw = S.power(h, race, wIdx, r);
+      const pw = S.power(h, race, wIdx, Object.assign({ paceF }, r));
       const form = rng.normal(0, 2.2);
       const A = pw.total + form;
       const vc = v0 * (1 + 0.0008 * (A - 85));
-      const sta = pw.cur.sta, kick = pw.cur.kick, guts = pw.cur.guts, wise = pw.cur.wise, pow = pw.cur.pow;
-      const Ds = Math.max(900, h.distMax + 300 + (sta - 75) * 10);
-      const kickS = 0.03 + 0.0009 * (kick - 70);
+      const sta = pw.cur.sta, guts = pw.cur.guts, mind = pw.cur.mind, slopeP = pw.cur.slope;
+      const has = id => H.has(h, id);
+      const Ds = Math.max(800, (h.distMax + 300 + (sta - 75) * 12) * S.DS);
+      // 脚の切れ：切れる馬は終いの伸びが大きく、ズブい馬は早めに動いて長く脚を使う
+      const kire = U.clamp(h.kire || 4, 1, 8);
+      const K = S.KIRE;
+      const kickS = K.s0 + K.s1 * (kire - 1) + 0.0006 * (pw.cur.spd - 80);
       const styleAdd = { '逃げ': 0, '先行': 60, '差し': 120, '追込': 170 }[h.style] || 80;
-      const spurtR = U.clamp(straight + 120 + styleAdd + rng.normal(0, 60) * (1.3 - wise / 120), 300, Math.min(1100, D * 0.55));
-      const temper = h.temper == null ? 60 : h.temper;
+      const spurtR = U.clamp(straight + 120 + styleAdd + (4.5 - kire) * K.r + (has('longspurt') ? 80 : 0) + rng.normal(0, 60) * (1.3 - mind / 120), 300, Math.min(1300, D * 0.6));
       let delay = Math.abs(rng.normal(0, 0.12));
-      const lateP = 0.025 + Math.max(0, 60 - temper) * 0.0007 + Math.max(0, 70 - wise) * 0.0004;
+      const lateP = 0.02 + Math.max(0, 75 - mind) * 0.0008 + (has('deokure') ? 0.14 : 0);
       const late = rng.chance(lateP);
       if (late) delay += rng.float(0.5, 1.4);
-      const kakari = rng.chance(Math.max(0, (55 - temper) / 100) * 0.45);
+      const kakari = rng.chance(Math.max(0, (72 - mind) / 100) * 0.3 + (has('kakari') ? 0.25 : 0));
       return {
-        r, h, i, A, vc, Ds, kickS, spurtR, guts, wise, pow, x: 0, v: 0, E: 1, delay, late, kakari,
+        r, h, i, A, vc, Ds, kickS, spurtR, guts, mind, slopeP, x: 0, v: 0, E: 1, delay, late, kakari,
+        acc: K.a0 + K.a1 * kire, zubu: (8 - kire) * K.z + (has('longspurt') ? 0.003 : 0), spurtCost: K.c0 + K.c1 * (kire - 1),
+        oonige: has('oonige') && h.style === '逃げ', nino: has('nino'), narabu: has('narabu'), sora: has('sora'),
         lane: (r.num - 1) * 0.5, laneT: 0, spurting: false, done: false, finishT: null, t600: null, blocked: 0, blockedOnce: false,
         styleMult: ({ '逃げ': 1.03, '先行': 1.014, '差し': 0.995, '追込': 0.982 })[h.style] || 1,
         gap: ({ '逃げ': 0, '先行': 5, '差し': 14, '追込': 24 })[h.style] || 10,
@@ -103,7 +141,9 @@
     while (finished < st.length && t < 400) {
       t += DT; step++;
       const order = st.filter(s => !s.done).sort((a, b) => b.x - a.x);
-      const leaderX = order.length ? order[0].x : D;
+      // 隊列の先頭（大逃げの馬は追いかけず、2番手以下の集団で隊列を作る）
+      const pack = order.find(o => !o.oonige) || order[0];
+      const leaderX = pack ? pack.x : D;
       for (const s of st) {
         if (s.done) continue;
         if (t < s.delay) continue;
@@ -117,16 +157,24 @@
         }
         const prog = s.x / D;
         if (s.E <= 0) {
-          target = s.vc * (0.9 + 0.0005 * s.guts);
+          target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu);
         } else if (s.spurting) {
-          target = s.vc * (1 + s.kickS);
+          // 残りの脚をゴールまでに使い切る速さ（切れの上限まで）
+          const ratioE = Math.cbrt(Math.max(0, s.E) * s.Ds / (0.9 * Math.max(R, 30) * s.spurtCost));
+          target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * S.KIRE.top);
+          // 大逃げは道中で脚を使っているので、終いは粘るだけ
+          if (s.oonige) target = s.vc * (1 + s.kickS * S.OONIGE.kick);
           // 叩き合い（根性）
-          if (R < 250) {
+          if (R < (s.narabu ? 350 : 250)) {
             const rival = st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5);
-            if (rival) target *= 1 + 0.004 * (s.guts - 70) / 30;
+            if (rival) target *= 1 + 0.004 * (s.guts - 70) / 30 + (s.narabu ? 0.004 : 0);
           }
+          // ソラを使う：抜け出すと気を抜く
+          if (s.sora && R < 200 && order[0] === s && order[1] && s.x - order[1].x > 2) target *= 0.985;
         } else if (prog < 0.22) {
-          target = pace * s.styleMult;
+          target = pace * s.styleMult * (s.nino && prog < 0.08 ? 1.02 : 1) * (s.oonige ? S.OONIGE.early : 1);
+        } else if (s.oonige) {
+          target = pace * (s.x - leaderX < S.OONIGE.lead * straight * 2000 / D ? S.OONIGE.mid : 1);
         } else {
           // 隊列を保つ：先頭からの目標の差に寄せる
           const gapNow = leaderX - s.x;
@@ -134,23 +182,27 @@
           target = pace * (1 + U.clamp(err * 0.0012, -0.02, 0.02));
           if (s.kakari && prog < 0.5) target *= 1.012;
         }
-        // 坂
-        if (R < 320 && slope !== '平') target *= 1 - ({ '急': 0.012, '中': 0.007, '小': 0.004 }[slope] || 0) * (1 - s.pow / 115);
+        // 坂：ゴール前の上りで脚を使う。坂が弱いほど大きく減る
+        const onHill = R < 320 && R > 60 && slope !== '平';
+        if (onHill) target *= 1 - ({ '急': 0.008, '中': 0.005, '小': 0.003 }[slope] || 0) * (1 - s.slopeP / 120);
         // 不利（差し・追込が直線で詰まる）
         if (s.spurting && !s.blockedOnce && st.length >= 10 && (s.h.style === '差し' || s.h.style === '追込')) {
           s.blockedOnce = true;
           const jk = s.r.jockey ? s.r.jockey.skill : 70;
-          if (rng.chance(0.1 * (1 - s.wise / 160) * (1.2 - jk / 150))) { s.blocked = rng.float(1.0, 2.4); say(t, `${s.h.name}、前が壁になった！`, 'trouble'); }
+          if (rng.chance(0.1 * (1 - s.mind / 160) * (1.2 - jk / 150))) { s.blocked = rng.float(1.0, 2.4); say(t, `${s.h.name}、前が壁になった！`, 'trouble'); }
         }
         if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
         // 加減速の上限
-        const acc = s.v < 10 ? 3.6 : 0.7 + s.pow * 0.006;
+        const acc = s.v < 10 ? 3.6 : s.acc + s.slopeP * 0.0015;
         const dv = U.clamp(target - s.v, -1.4 * DT, acc * DT);
         const vPrev = s.v;
         s.v = Math.max(0, s.v + dv);
         // スタミナの消耗（自分の巡航より速いほど重い）
         const ratio = s.v / s.vc;
-        s.E -= (s.v * DT) / s.Ds * 0.9 * ratio * ratio * ratio * (s.kakari && prog < 0.5 ? 1.15 : 1);
+        let cost = (s.v * DT) / s.Ds * 0.9 * ratio * ratio * ratio * (s.kakari && prog < 0.5 ? 1.3 : 1);
+        if (s.spurting) cost *= s.spurtCost;
+        if (onHill) cost *= 1 + ({ '急': 2.2, '中': 1.4, '小': 0.8 }[slope] || 0) * U.clamp(1 - s.slopeP / 100, 0, 0.6);
+        s.E -= cost;
         const xPrev = s.x;
         s.x += (vPrev + s.v) / 2 * DT;
         if (s.t600 == null && s.x >= D - 600) s.t600 = t - DT + (D - 600 - xPrev) / Math.max(0.1, s.x - xPrev) * DT;
@@ -216,7 +268,7 @@
       return {
         pos: k + 1, num: s.r.num, frame: s.r.frame, horse: s.h, jockey: s.r.jockey, weight: s.r.weight,
         time: s.finishT, margin: k === 0 ? '' : U.margin(lengths), lengths, last3f: s.t600 != null ? s.finishT - s.t600 : null,
-        late: s.late, blocked: s.blockedOnce && s.blocked !== 0, power: s.A,
+        late: s.late, blocked: s.blockedOnce && s.blocked !== 0, power: s.A, endE: s.E,
       };
     });
     const win = results[0];

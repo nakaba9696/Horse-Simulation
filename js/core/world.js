@@ -129,7 +129,7 @@
       id: newId(), name: H.makeName(r, used), sex: '牝', born: year - r.int(4, 9), sire: sire ? sire.name : null, dam: H.makeName(r, used),
       hist: false, owner: 'AI', loc: 'mare', quality, coat: H.pickCoat(r, sire && sire.coat),
       pot: H.makeStats(r, quality, 3), apt: { turf: 60 + r.int(0, 40), dirt: 40 + r.int(0, 55), heavy: 50 },
-      distMin: 1200 + r.int(0, 6) * 100, distMax: 1800 + r.int(0, 8) * 100, growth: r.pick(H.GROWTHS), style: r.pick(H.STYLES),
+      distMin: 1200 + r.int(0, 6) * 100, distMax: 1800 + r.int(0, 8) * 100, growth: r.pick(H.GROWTHS), style: r.pick(H.STYLES), kire: r.int(2, 7), skills: [],
       bonus: {}, wins: 0, starts: 0, earn: 0, gradedWins: [], results: [], cover: null, foals: [],
     };
     P.register(m.name, m.sire, m.dam);
@@ -152,7 +152,7 @@
     const h = {
       id: newId(), name: name || '', sex: f.sex, born, sire: sireName, dam: damName, hist: false, owner: 'AI', loc: 'farm',
       pot: f.pot, apt: f.apt, distMin: f.distMin, distMax: f.distMax, growth: f.growth, peakShift: f.peakShift, style: f.style,
-      temper: f.temper, health: f.health, bonus: {}, cond: 0, fatigue: 0, injury: null,
+      kire: f.kire, skills: f.skills || [], health: f.health, bonus: {}, cond: 0, fatigue: 0, injury: null,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [], restUntil: 0, coat: f.coat || '鹿毛',
     };
     return h;
@@ -175,7 +175,7 @@
       out.push(Object.assign({}, s, { fee: W.feeOf(s, year), owner: 'AI' }));
     }
     for (const h of W.all()) if (h.loc === 'stud' && year - h.born <= 26) {
-      out.push({ name: h.name, born: h.born, rating: h.studRating, fee: h.studFee, surface: h.apt.dirt > h.apt.turf + 10 ? 'ダ' : h.apt.turf > h.apt.dirt + 10 ? '芝' : '芝ダ', distMin: h.distMin, distMax: h.distMax, growth: h.growth, traits: h.studTraits || [], owner: h.owner, horseId: h.id, coat: h.coat });
+      out.push({ name: h.name, born: h.born, rating: h.studRating, fee: h.studFee, surface: h.apt.dirt > h.apt.turf + 10 ? 'ダ' : h.apt.turf > h.apt.dirt + 10 ? '芝' : '芝ダ', distMin: h.distMin, distMax: h.distMax, growth: h.growth, kire: h.kire, skills: h.skills || [], traits: h.studTraits || [], owner: h.owner, horseId: h.id, coat: h.coat });
     }
     return out;
   };
@@ -188,7 +188,7 @@
   W.findStallion = function (name) {
     if (!name) return null;
     const h = W.all().find(x => x.name === name && x.loc === 'stud');
-    if (h) return { name: h.name, rating: h.studRating, traits: h.studTraits || [] };
+    if (h) return { name: h.name, rating: h.studRating, traits: h.studTraits || [], kire: h.kire, skills: h.skills || [] };
     return W.stallionByName.get(name) || null;
   };
   W.pickSire = function (r, year) {
@@ -529,6 +529,7 @@
       h.fatigue = Math.min(100, (h.fatigue || 0) + 18 + race.dist / 100 * 1.2 + (race.grade === 'G1' ? 6 : 0));
       h.cond = (h.cond || 0) - 15;
       h.restUntil = wIdx + (race.grade === 'G1' ? 5 + rng.int(0, 4) : 3 + rng.int(0, 4));
+      h.lastRaceW = wIdx;
       // レース中の故障
       if (rng.chance(0.006 * (1.4 - (h.health || 70) / 100) * (1 + (h.fatigue || 0) / 60))) {
         const inj = H.injure(h, rng);
@@ -600,7 +601,7 @@
           if (tr.injury) news(`${h.name}が調教中に${tr.injury.name}。全治${tr.injury.weeks}週。`, 'warn');
         } else {
           // AI は軽く整える
-          h.fatigue = Math.max(0, (h.fatigue || 0) - 10);
+          h.fatigue = Math.max(0, (h.fatigue || 0) - H.recover(h, 10));
           h.cond = U.clamp((h.cond || 0) * 0.8 + rng.normal(5, 15), -100, 100);
           if (rng.chance(0.0015 * (1.3 - (h.health || 70) / 100))) H.injure(h, rng);
         }
@@ -914,7 +915,7 @@
       const r = new U.RNG(U.hash('mare:' + m.name));
       const h = {
         id: newId(), name: m.name, sex: '牝', born: m.born, sire: m.sire, dam: m.dam, hist: true, histMare: true, owner: 'P', loc: 'mare',
-        quality: m.quality, coat: m.coat || H.pickCoat(r), pot: H.makeStats(r, m.quality - 5, 3), apt: { turf: 85, dirt: 60, heavy: 50 }, distMin: 1600, distMax: 2400, growth: '普通', style: '先行',
+        quality: m.quality, coat: m.coat || H.pickCoat(r), pot: H.makeStats(r, m.quality - 5, 3), apt: { turf: 85, dirt: 60, heavy: 50 }, distMin: 1600, distMax: 2400, growth: '普通', style: '先行', kire: 3 + r.int(0, 3), skills: [],
         bonus: {}, wins: 0, starts: 0, earn: 0, gradedWins: [], results: [], cover: null, foals: [],
       };
       if (item.inFoal) h.cover = { year: G.year - 1, sire: item.inFoal[1], ok: true };
@@ -990,7 +991,15 @@
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
     g.erased = g.erased || []; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
-    for (const h of Object.values(g.horses)) { h.bonus = h.bonus || {}; h.results = h.results || []; h.gradedWins = h.gradedWins || []; h.coat = h.coat || '鹿毛'; }
+    for (const h of Object.values(g.horses)) {
+      h.bonus = h.bonus || {}; h.results = h.results || []; h.gradedWins = h.gradedWins || []; h.coat = h.coat || '鹿毛';
+      // 能力の形が変わる前のセーブ（瞬発力・パワー・賢さ・気性 → 気性・坂・脚の切れ）
+      H.fromLegacy(h);
+      if (h.pot) for (const k of H.STATS) if (h.pot[k] == null) h.pot[k] = h.pot.spd || 60;
+      if (h.kire == null) h.kire = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[h.style] || 4;
+      h.skills = h.skills || [];
+    }
+    // 前の版のエディット（瞬発力などの数値）は、遊ぶときに H.fromHistoric が読み替える
     g.v = SAVE_VERSION;
   };
   W.saveLocal = function () { try { localStorage.setItem(W.SAVE_KEY, W.serialize()); return true; } catch (e) { return false; } };

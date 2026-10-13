@@ -6,7 +6,7 @@ HS.DATA.historic = (HS.DATA.historic || []).concat([
  // ===== 1987年生 =====
  { name:'アイネスフウジン', born:1987, sex:'牡', coat:'黒鹿毛', sire:'シーホーク', dam:'テスコパール', damsire:'テスコボーイ', rating:89, surface:'芝', distMin:1600, distMax:2400, style:'逃げ', growth:'早熟', retire:1990, wins:['1989朝日杯3歳ステークス','1990東京優駿'], ran:['1990皐月賞'], note:'ダービーを逃げ切り「ナカノコール」' },
  { name:'アグネスフローラ', born:1987, sex:'牝', coat:'鹿毛', sire:'ロイヤルスキー', dam:'アグネスレディー', damsire:'リマンド', rating:86, surface:'芝', distMin:1600, distMax:2400, style:'差し', growth:'早熟', retire:1990, wins:['1990桜花賞'], ran:['1990優駿牝馬'], note:'アグネスタキオン・アグネスフライトの母' },
- { name:'イクノディクタス', born:1987, sex:'牝', coat:'栗毛', sire:'ディクタス', dam:'ダイナランディング', damsire:'ノーザンテースト', rating:82, surface:'芝', distMin:1400, distMax:2200, style:'先行', growth:'遅め', retire:1993, wins:[], ran:['1992安田記念','1992宝塚記念'], note:'「鉄の女」51戦9勝' },
+ { name:'イクノディクタス', born:1987, sex:'牝', coat:'栗毛', sire:'ディクタス', dam:'ダイナランディング', damsire:'ノーザンテースト', rating:82, surface:'芝', distMin:1400, distMax:2200, style:'先行', growth:'遅め', retire:1993, wins:[], ran:['1993安田記念','1993宝塚記念'], note:'「鉄の女」51戦9勝' },
  { name:'エイシンサニー', born:1987, sex:'牝', coat:'鹿毛', sire:'ミルジョージ', dam:'エイシンナツコ', damsire:'ダイアトム', rating:86, surface:'芝', distMin:1600, distMax:2400, style:'差し', growth:'早め', retire:1991, wins:['1990優駿牝馬'] },
  { name:'キョウエイタップ', born:1987, sex:'牝', coat:'鹿毛', sire:'タップオンウッド', dam:'キョウエイレッド', damsire:'アラナス', rating:86, surface:'芝', distMin:1800, distMax:2400, style:'差し', growth:'早め', retire:1992, wins:['1990エリザベス女王杯'] },
  { name:'コガネタイフウ', born:1987, sex:'牡', coat:'鹿毛', sire:'マグニテュード', dam:'コガネポプラ', damsire:'カブラヤオー', rating:85, surface:'芝', distMin:1200, distMax:1800, style:'先行', growth:'早熟', retire:1994, wins:['1989阪神3歳ステークス'] },

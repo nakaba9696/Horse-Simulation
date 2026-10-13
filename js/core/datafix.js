@@ -52,6 +52,18 @@
   for (const h of out) if (h.jockey && !D.historicJockeys[h.name]) D.historicJockeys[h.name] = h.jockey;
   for (const [n, j] of Object.entries(D.historicJockeysAuto || {})) if (!D.historicJockeys[n]) D.historicJockeys[n] = j;
   D.historic = out;
+  // 名馬の解説・脚の切れ・特殊能力（data/famous_*.js）。種牡馬になった馬は、仔に切れと能力を伝える
+  for (const f of D.famous || []) {
+    const h = byName.get(f.name) || byNorm.get(HS.normName(f.name)); if (!h) continue;
+    if (f.text) h.text = f.text;
+    if (h.kire == null && f.kire) h.kire = f.kire;
+    if (!h.skills && f.skills) h.skills = f.skills.slice();
+  }
+  for (const s of D.stallions || []) {
+    const h = byName.get(s.name); if (!h) continue;
+    if (s.kire == null && h.kire != null) s.kire = h.kire;
+    if (!s.skills && h.skills) s.skills = h.skills.slice();
+  }
   // 外国で調教された馬かどうか
   D.isForeign = h => !!(h.country && h.country !== '日');
 })();

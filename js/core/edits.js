@@ -3,7 +3,8 @@
   const HS = globalThis.HS = globalThis.HS || {};
   const E = HS.Edits = {};
   E.KEY = 'horse-sim-edits-v1';
-  E.FIELDS = ['rating', 'surface', 'distMin', 'distMax', 'style', 'growth', 'coat', 'retire', 'pot', 'temper', 'health', 'jockey'];
+  // temper は前の版（気性を別に持っていたころ）の編集を読むためだけに残す
+  E.FIELDS = ['rating', 'surface', 'distMin', 'distMax', 'style', 'kire', 'growth', 'coat', 'retire', 'pot', 'turf', 'dirt', 'heavy', 'health', 'skills', 'temper', 'jockey'];
   let ORIG = null, ORIGJ = null;
 
   // データの元の値を一度だけ控える
@@ -51,6 +52,11 @@
     if (ed.rating != null && !(ed.rating >= 20 && ed.rating <= 110)) return '評価は20〜110';
     if (ed.distMin != null && ed.distMax != null && ed.distMin >= ed.distMax) return '距離の下限は上限より短く';
     if (ed.pot) for (const v of Object.values(ed.pot)) if (!(v >= 20 && v <= 120)) return '能力は20〜120';
+    if (ed.kire != null && !(ed.kire >= 1 && ed.kire <= 8)) return '脚の切れは1〜8';
+    for (const k of ['turf', 'dirt', 'heavy', 'health']) if (ed[k] != null && !(ed[k] >= 0 && ed[k] <= 120)) return '適性・健康は0〜120';
+    if (ed.distMin != null && !(ed.distMin >= 1000 && ed.distMin <= 4000)) return '距離は1000〜4000m';
+    if (ed.distMax != null && !(ed.distMax >= 1000 && ed.distMax <= 4000)) return '距離は1000〜4000m';
+    if (ed.skills != null && !(Array.isArray(ed.skills) && ed.skills.every(x => HS.Horse && HS.Horse.SKILLS[x]))) return '特殊能力の名前が違う';
     return null;
   };
 })();

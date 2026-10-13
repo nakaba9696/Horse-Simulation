@@ -177,6 +177,7 @@
     if (err) return App.toast(err);
     App.save(); if (HS.Audio) HS.Audio.se('coin'); App.toast('購入した！'); App.render();
   };
+  act.htext = d => App.modal(UI.histTextModal(d.name));
   act.result = d => { const r = W.get().lastWeek.races.filter(x => x.grade || x.mine)[+d.i]; if (r) App.modal(UI.resultTable(r)); };
   act.replay = async d => {
     const r = W.lastReport && W.lastReport.races.find(x => x.race.key === d.key);

@@ -221,6 +221,74 @@ check('edits: エディットが新しいゲームとセーブに効く', () => 
   assert(E.clean(o.name, { rating: o.rating, jockey: '武豊' }) === null, 'clean が同じ値を残した');
 });
 
+// ---------- 能力の形・脚の切れ・坂・特殊能力 ----------
+check('stats: 能力の形と、前の版のセーブ・エディットの読み替え', () => {
+  const old = { pot: { spd: 80, sta: 70, kick: 90, pow: 60, guts: 75, wise: 70 }, bonus: { kick: 2, pow: 3, wise: 1 }, temper: 40, style: '差し' };
+  H.fromLegacy(old);
+  assert(JSON.stringify(Object.keys(old.pot).sort()) === JSON.stringify(H.STATS.slice().sort()), `能力の項目が違う ${Object.keys(old.pot)}`);
+  assert(old.pot.mind === 55 && old.pot.slope === 60 && old.kire >= 6 && old.temper == null, `読み替えが違う ${JSON.stringify(old)}`);
+  assert(old.bonus.slope === 3 && old.bonus.mind === 1 && old.bonus.kick == null, '調教の上積みの読み替えが違う');
+  const g = { v: 1, horses: { a: { name: 'x', pot: { spd: 80, sta: 80, kick: 70, pow: 70, guts: 70, wise: 70 }, temper: 60, style: '逃げ' } } };
+  W.migrate(g);
+  const a = g.horses.a;
+  assert(a.kire >= 1 && a.kire <= 8 && Array.isArray(a.skills) && a.pot.mind != null, '古いセーブが今の形にならない');
+  for (const d of D.historic.slice(0, 400)) {
+    const h = H.fromHistoric(d, 'x');
+    assert(h.kire >= 1 && h.kire <= 8, `${d.name} の切れ ${h.kire}`);
+    for (const k of H.STATS) assert(Number.isFinite(h.pot[k]), `${d.name} の ${k}`);
+    for (const sk of h.skills) assert(H.SKILLS[sk], `${d.name} の特殊能力 ${sk}`);
+  }
+});
+check('famous: 名馬の解説・切れ・特殊能力', () => {
+  const names = new Set(D.historic.map(h => h.name));
+  const seen = new Set();
+  for (const f of D.famous || []) {
+    assert(names.has(f.name), `史実馬にいない: ${f.name}`);
+    assert(!seen.has(f.name), `重複: ${f.name}`); seen.add(f.name);
+    assert(f.kire >= 1 && f.kire <= 8, `${f.name} の切れ`);
+    for (const sk of f.skills || []) assert(H.SKILLS[sk], `${f.name} の特殊能力 ${sk}`);
+    assert(f.text && f.text.length >= 20 && f.text.length <= 260, `${f.name} の解説の長さ ${f.text && f.text.length}`);
+    assert(!/[！!]|……|%|％/.test(f.text), `${f.name} の解説に避ける書き方`);
+  }
+  const withText = D.historic.filter(h => h.text).length;
+  assert(withText >= 200, `解説のある馬が少ない ${withText}`);
+  return `解説 ${withText}頭`;
+});
+function fieldTest(course, dist, mod, N, seed) {
+  const rng = new U.RNG(seed || 11); let pos = 0, wins = 0;
+  for (let k = 0; k < N; k++) {
+    const field = []; for (let i = 0; i < 14; i++) { const h = H.makeFiller(rng, { level: 82, surface: '芝', dist, born: 2000 }); h.name = 'h' + i; if (i === 0) mod(h); field.push({ horse: h, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 }); }
+    const res = HS.Sim.run({ dist, surface: '芝', course, ground: '良', year: 2004 }, field, H.weekIndex(2004, 5, 1), rng, {}).results;
+    const q = res.findIndex(r => r.horse.name === 'h0') + 1; pos += q; if (q === 1) wins++;
+  }
+  return { pos: pos / N, win: wins / N };
+}
+check('sim: 坂が弱い馬は坂のあるコースで沈む', () => {
+  const weak = h => { h.pot.slope = 50; };
+  const hill = fieldTest('中山', 2000, weak, 150).pos, flat = fieldTest('京都', 2000, weak, 150).pos;
+  assert(hill - flat > 0.6, `中山 ${hill.toFixed(2)} 京都 ${flat.toFixed(2)}`);
+  return `平均着順 中山 ${hill.toFixed(1)}・京都 ${flat.toFixed(1)}`;
+});
+check('sim: 脚の切れはコースで向き不向きがある', () => {
+  const kire = k => h => { h.kire = k; };
+  const tokyoCut = fieldTest('東京', 2400, kire(7), 150).pos, tokyoZubu = fieldTest('東京', 2400, kire(2), 150).pos;
+  const nakaCut = fieldTest('中山', 2000, kire(7), 150).pos, nakaZubu = fieldTest('中山', 2000, kire(2), 150).pos;
+  assert(tokyoCut - tokyoZubu < nakaCut - nakaZubu - 0.8, `東京 切れ${tokyoCut.toFixed(1)}/ズブ${tokyoZubu.toFixed(1)} 中山 切れ${nakaCut.toFixed(1)}/ズブ${nakaZubu.toFixed(1)}`);
+  return `東京 切れ${tokyoCut.toFixed(1)}・ズブ${tokyoZubu.toFixed(1)}／中山 切れ${nakaCut.toFixed(1)}・ズブ${nakaZubu.toFixed(1)}`;
+});
+check('sim: 特殊能力の効き目が極端でない', () => {
+  const out = [];
+  for (const sk of ['oonige', 'longspurt', 'big', 'narabu']) {
+    const r = fieldTest('東京', 2000, h => { h.skills = [sk]; if (sk === 'oonige') h.style = '逃げ'; }, 120);
+    assert(r.win < 0.5, `${sk} の勝率 ${r.win}`);
+    out.push(`${H.SKILLS[sk].label}${Math.round(r.win * 100)}%`);
+  }
+  const bad = fieldTest('東京', 2000, h => { h.skills = ['deokure']; }, 120);
+  const base = fieldTest('東京', 2000, () => {}, 120);
+  assert(bad.pos >= base.pos, '出遅れ癖が得になっている');
+  return out.join(' ');
+});
+
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
 process.exit(failures ? 1 : 0);

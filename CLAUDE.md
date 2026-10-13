@@ -35,10 +35,11 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `data/stallions.js`・`stallions_old.js` | 種牡馬（1995〜／1958〜1994）・血統表（祖先）・ニックス・名牝と史実の仔 | D |
 | `data/courses.js`・`names.js` | 競馬場の形・開催・枠の色／モブ馬の名前の材料 | D |
 | `data/jockeys.js`・`jockeys_old.js`・`jockeys_extra.js` | 実在の騎手（1987〜／1960年代〜と海外・地方／記録から見積もった騎手＝`node tools/build_jockeys_extra.js`） | D |
+| `data/famous_old.js`・`famous_1.js`・`famous_2.js`・`famous_world.js` | 名馬の解説（史実だけ。馬主・調教師の名は書かない）・脚の切れ・特殊能力。`js/core/datafix.js` が史実馬に合わせる | D |
 | `data/historic_jockeys.js` | 史実馬の主戦騎手（手で確かめたもの。ほかは馬のデータの jockey と記録から） | D |
 | `js/core/datafix.js` | 読み込んだ史実馬をまとめる（重複・小さいカナ・勝ち鞍のレース名を暦にそろえる） | C |
 | `js/core/util.js` | 乱数（種で固定）・書式 | C |
-| `js/core/horse.js` | 馬の形・成長・調教・故障 | C |
+| `js/core/horse.js` | 馬の形（能力・脚の切れ・特殊能力）・成長・調教・故障 | C |
 | `js/core/pedigree.js` | 血統表・クロス・ニックス・系統・配合の評価・仔の誕生 | M |
 | `js/core/races.js` | 週ごとのレース（重賞と条件戦）・出走できるか・優先順 | M |
 | `js/core/racesim.js` | レースの模擬（0.1秒刻み）・実況・描画用のコマ | M |
