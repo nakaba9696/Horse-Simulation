@@ -160,7 +160,8 @@
           if (winnerT == null) { winnerT = s.finishT; }
         }
       }
-      // 進路（描画用）：前から順に、近くの馬と重ならない一番内の位置
+      // 進路（描画用）：前から順に、近くの馬と重ならない一番内の位置。映像を出さないレースでは省く
+      if (opts.frames) {
       const live = st.slice().sort((a, b) => b.x - a.x);
       const placed = [];
       for (const s of live) {
@@ -175,8 +176,9 @@
         s.laneT = lane; placed.push(s);
         s.lane += (s.laneT - s.lane) * 0.08;
       }
-      // 実況
-      if (step % 5 === 0) {
+      }
+      // 実況（映像を出すときだけ）
+      if (opts.frames && step % 5 === 0) {
         const ord = st.slice().sort((a, b) => b.x - a.x);
         const lead = ord[0];
         if (t > 6 && t < 14 && !lastLeader) { lastLeader = lead; say(t, `ハナを切ったのは${lead.h.name}。`, 'lead'); }

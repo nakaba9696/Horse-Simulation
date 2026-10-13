@@ -86,7 +86,7 @@ for (const { name, rows: rs } of byKey.values()) {
   const scores = grades.map(g => SCORE[g] || 2);
   const bestG = grades.includes('G1') ? 'G1' : grades.includes('G2') ? 'G2' : 'G3';
   const total = scores.reduce((s, v) => s + v, 0);
-  const rating = Math.round(Math.min(97, BEST[bestG] + 3.2 * Math.log2(1 + (total - SCORE[bestG]) / 4)));
+  const rating = Math.round(Math.min(96, BEST[bestG] + 2.6 * Math.log2(1 + (total - SCORE[bestG]) / 6)));
   // 馬場と距離
   const surfs = new Set(rs.map(r => r.surface).filter(Boolean));
   const surface = surfs.size > 1 ? '芝ダ' : surfs.has('ダ') ? 'ダ' : '芝';

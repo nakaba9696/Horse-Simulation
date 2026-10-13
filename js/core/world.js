@@ -46,11 +46,15 @@
   W.horse = id => G.horses[id];
   W.all = () => Object.values(G.horses);
   W.mine = loc => W.all().filter(h => h.owner === 'P' && (!loc || h.loc === loc));
+  // 使われている名前（週の間は使い回し、新しい名前は足していく）
   W.usedNames = () => {
-    const s = new Set(W.histByName.keys());
-    for (const h of W.all()) s.add(h.name);
-    return s;
+    const wc = W.wc();
+    if (!wc.used) { wc.used = new Set(W.histByName.keys()); for (const h of W.all()) wc.used.add(h.name); }
+    return wc.used;
   };
+  // 週ごとの使い回し（暦が進んだとき・持ち馬が変わったときに捨てる）
+  W.wc = () => { const key = G ? `${G.year}-${G.month}-${G.week}` : ''; if (!W._wcache || W._wcache.key !== key) W._wcache = { key }; return W._wcache; };
+  W.dirty = () => { W._wcache = null; };
 
   // ---------- 新しいゲーム ----------
   W.newGame = function (opts) {
@@ -157,6 +161,11 @@
 
   // 種牡馬：その年に種付けできるもの（データ＋プレイヤーの種牡馬）
   W.stallionsOf = function (year) {
+    const wc = W.wc(); wc.st = wc.st || {};
+    if (!wc.st[year]) wc.st[year] = W.stallionsOf0(year);
+    return wc.st[year];
+  };
+  W.stallionsOf0 = function (year) {
     const mineNames = new Set(W.all().filter(h => h.owner === 'P').map(h => h.name));
     const out = [];
     for (const s of HS.DATA.stallions || []) {
@@ -256,6 +265,12 @@
   };
   // その年に乗っている騎手。regions：['美浦','栗東'] など
   W.jockeysOf = function (year, regions) {
+    const wc = W.wc(); wc.jk = wc.jk || {};
+    const key = year + ':' + (regions ? regions.join(',') : '*');
+    if (!wc.jk[key]) wc.jk[key] = W.jockeysOf0(year, regions);
+    return wc.jk[key].map(j => Object.assign({}, j));
+  };
+  W.jockeysOf0 = function (year, regions) {
     return (HS.DATA.jockeys || []).filter(j => j.from <= year && year <= (j.to || 9999) && (!regions || regions.includes(j.region)))
       .map(j => ({ name: j.name, region: j.region, skill: Math.round(W.skillAt(j, year)) }))
       .sort((a, b) => b.skill - a.skill);
@@ -748,6 +763,7 @@
   };
   W.toFarm = function (id) { const h = G.horses[id]; if (!h || h.owner !== 'P') return '持ち馬ではない'; W.unenter(id); h.loc = 'farm'; return null; };
   W.rename = function (id, name) {
+    W.dirty();
     const h = G.horses[id];
     name = (name || '').trim();
     if (!h || h.owner !== 'P') return '持ち馬ではない';
@@ -760,6 +776,7 @@
   };
   W.suggestName = function (r) { const used = W.usedNames(); const base = H.makeName(r || new U.RNG(Date.now() % 1e9), used); const c = G.player.crown; return c && (c + base).length <= 9 ? c + base.slice(0, 9 - c.length) : base; };
   W.retire = function (id) {
+    W.dirty();
     const h = G.horses[id];
     if (!h || h.owner !== 'P') return { err: '持ち馬ではない' };
     W.unenter(id);
@@ -791,6 +808,7 @@
     return Math.round(p / 10) * 10;
   };
   W.sell = function (id) {
+    W.dirty();
     const h = G.horses[id];
     if (!h || h.owner !== 'P') return { err: '持ち馬ではない' };
     const p = W.sellPrice(h);
@@ -878,6 +896,7 @@
     return out;
   };
   W.buy = function (item) {
+    W.dirty();
     const n = item.kind === 'hmare' || item.kind === 'gmare' ? W.mine('mare').length : 0;
     if ((item.kind === 'hmare' || item.kind === 'gmare') && n >= W.farmCap()) return '繁殖牝馬の枠がいっぱい（牧場を拡張しよう）';
     if (G.player.money < item.price) return '資金が足りない';
