@@ -3,6 +3,16 @@
 実在の名馬と実在のレースで遊ぶ、馬主・生産者の競馬シミュレーション。素の HTML・CSS・JavaScript（ビルド無し）で、ブラウザで遊ぶ。
 ゲームの方向性は [docs/VISION.md](docs/VISION.md)、並行作業の分け方は [docs/ROADMAP.md](docs/ROADMAP.md)。
 
+## 仕事を始める前に（知恵袋）
+- **仕事を始める前に `nakaba9696/KnowledgeBase` を読む。** README.md と、これからやる仕事の分野のファイル（画像なら image-gen.md、物語なら story-structure.md・novel.md など）。session-ops.md はどの仕事でも読む。
+  - 読み方：`git clone --depth 1 https://github.com/nakaba9696/KnowledgeBase`（読めなければ add_repo で足す）。
+  - 子を起動するときは、関係する項目か、読むべきファイルの名前を指示文に入れる。
+  - このゲームの決まり（この CLAUDE.md・VISION）と食い違ったら、このゲームの決まりを優先し、食い違いを KnowledgeBase の inbox.md に書く。
+- **持ち主の指摘を受けたら、KnowledgeBase に書き足す。** ゲーム固有のこと（キャラ名・設定）を外して一般化し、該当ファイルに 1 項目足し、出典（このリポジトリ・PR か issue の番号・日付）を添えて main に push する。書き方は KnowledgeBase の README.md。
+  - 迷ったら KnowledgeBase の inbox.md に書けばよい（係が後で整理する）。
+  - push できないセッションなら、持ち主か秘書に「KnowledgeBase に足してほしい一項目と出典」を伝える。
+
+
 ## 検証（PR の前に必ず）
 ```
 node tests/run.js          # 全部（自動プレイ込みで1分ほど）
