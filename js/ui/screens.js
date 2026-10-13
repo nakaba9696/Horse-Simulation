@@ -188,15 +188,14 @@
     return `
       ${h.loc === 'stable' && mine ? `<div class="comment mt">${e(H.comment(h, wIdx))}</div>` : ''}
       <h2 class="sec">能力<span class="r">${known ? (unc > 0.5 ? '見立て（まだ当てにならない）' : unc > 0.25 ? '見立て' : '見立て（ほぼ確か）') : ''}</span></h2>
-      <div class="panel"><div class="stats">${stats}</div></div>
+      <div class="panel"><div class="stats">${stats}</div>
+        <div class="grades mt">${H.GRADED.map(k => `<div title="${e(H.STAT_NOTE[k])}"><span class="lb">${H.STAT_LABEL[k]}</span><b class="g">${known ? e(H.gradeOf(h, k)) : '?'}</b></div>`).join('')}</div></div>
       <h2 class="sec">適性</h2>
       <div class="apt">
         <div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div>
         <div>馬場<b>芝 ${UI.aptMark(h.apt.turf)}　ダート ${UI.aptMark(h.apt.dirt)}</b></div>
-        <div>道悪<b>${h.apt.heavy >= 75 ? '得意' : h.apt.heavy >= 45 ? 'ふつう' : '苦手'}</b></div>
         <div>脚質<b>${h.style}${known ? '・' + H.kireLabel(h.kire) : ''}</b></div>
         <div>成長型<b>${growthWord}（${peakNote}）</b></div>
-        <div>健康<b>${(h.health ?? 70) >= 85 ? '丈夫' : (h.health ?? 70) >= 65 ? 'ふつう' : '弱い'}</b></div>
         ${h.loc === 'stable' ? `<div>状態<b>${h.injury ? '故障中' : UI.condTag(h)}</b></div>` : ''}
       </div>
       ${known && (h.skills || []).length ? `<h2 class="sec">特殊能力</h2><div class="panel skills">${UI.skillChips(h)}</div>` : ''}
@@ -210,6 +209,7 @@
     return `<h3>${e(d.name)}</h3><div class="small muted">${d.born}年生 ${d.sex}・${e(d.coat || '')}　父 ${e(d.sire || '?')}　母 ${e(d.dam || '?')}</div>
       ${d.text ? `<div class="panel mt horse-text">${e(d.text)}</div>` : ''}
       <div class="apt mt"><div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div><div>脚質<b>${h.style}・${H.kireLabel(h.kire)}</b></div><div>成長型<b>${h.growth}</b></div></div>
+      <div class="grades mt">${H.GRADED.map(k => `<div><span class="lb">${H.STAT_LABEL[k]}</span><b class="g">${e(h.gr[k])}</b></div>`).join('')}</div>
       ${(h.skills || []).length ? `<div class="skills mt">${UI.skillChips(h)}</div>` : ''}
       ${(d.wins || []).length ? `<div class="small muted mt">史実の主な勝ち鞍：${d.wins.map(e).join('、')}</div>` : ''}
       <div class="btns mt"><button class="btn" data-act="close">閉じる</button></div>`;

@@ -128,7 +128,8 @@
     const m = {
       id: newId(), name: H.makeName(r, used), sex: '牝', born: year - r.int(4, 9), sire: sire ? sire.name : null, dam: H.makeName(r, used),
       hist: false, owner: 'AI', loc: 'mare', quality, coat: H.pickCoat(r, sire && sire.coat),
-      pot: H.makeStats(r, quality, 3), apt: { turf: 60 + r.int(0, 40), dirt: 40 + r.int(0, 55), heavy: 50 },
+      pot: H.makeStats(r, quality, 3), apt: { turf: 60 + r.int(0, 40), dirt: 40 + r.int(0, 55) },
+      gr: { guts: H.toGrade(quality + r.normal(0, 6)), mind: H.toGrade(quality - 3 + r.normal(0, 7)), slope: H.toGrade(quality - 2 + r.normal(0, 6)), heavy: H.toGrade(65 + r.normal(0, 12)), health: H.toGrade(74 + r.normal(0, 9)) },
       distMin: 1200 + r.int(0, 6) * 100, distMax: 1800 + r.int(0, 8) * 100, growth: r.pick(H.GROWTHS), style: r.pick(H.STYLES), kire: r.int(2, 7), skills: [],
       bonus: {}, wins: 0, starts: 0, earn: 0, gradedWins: [], results: [], cover: null, foals: [],
     };
@@ -153,7 +154,7 @@
     const h = {
       id: newId(), name: name || '', sex: f.sex, born, sire: sireName, dam: damName, hist: false, owner: 'AI', loc: 'farm',
       pot: f.pot, apt: f.apt, distMin: f.distMin, distMax: f.distMax, growth: f.growth, peakShift: f.peakShift, style: f.style,
-      kire: f.kire, skills: f.skills || [], health: f.health, bonus: {}, cond: 0, fatigue: 0, injury: null,
+      kire: f.kire, skills: f.skills || [], gr: f.gr, bonus: {}, cond: 0, fatigue: 0, injury: null,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [], restUntil: 0, coat: f.coat || '鹿毛',
     };
     return h;
@@ -532,7 +533,7 @@
       h.restUntil = wIdx + (race.grade === 'G1' ? 5 + rng.int(0, 4) : 3 + rng.int(0, 4));
       h.lastRaceW = wIdx;
       // レース中の故障
-      if (rng.chance(0.006 * (1.4 - (h.health || 70) / 100) * (1 + (h.fatigue || 0) / 60))) {
+      if (rng.chance(0.006 * (1.4 - H.gv(h, 'health') / 100) * (1 + (h.fatigue || 0) / 60))) {
         const inj = H.injure(h, rng);
         if (h.owner === 'P') news(`${h.name}が${R.label(race)}のあと${inj.name}を発症。全治${inj.weeks}週。`, 'warn');
       }
@@ -604,7 +605,7 @@
           // AI は軽く整える
           h.fatigue = Math.max(0, (h.fatigue || 0) - H.recover(h, 10));
           h.cond = U.clamp((h.cond || 0) * 0.8 + rng.normal(5, 15), -100, 100);
-          if (rng.chance(0.0015 * (1.3 - (h.health || 70) / 100))) H.injure(h, rng);
+          if (rng.chance(0.0015 * (1.3 - H.gv(h, 'health') / 100))) H.injure(h, rng);
         }
       } else if (h.loc === 'farm') {
         H.rest(h, rng);
@@ -916,7 +917,8 @@
       const r = new U.RNG(U.hash('mare:' + m.name));
       const h = {
         id: newId(), name: m.name, sex: '牝', born: m.born, sire: m.sire, dam: m.dam, hist: true, histMare: true, owner: 'P', loc: 'mare',
-        quality: m.quality, coat: m.coat || H.pickCoat(r), pot: H.makeStats(r, m.quality - 5, 3), apt: { turf: 85, dirt: 60, heavy: 50 }, distMin: 1600, distMax: 2400, growth: '普通', style: '先行', kire: 3 + r.int(0, 3), skills: [],
+        quality: m.quality, coat: m.coat || H.pickCoat(r), pot: H.makeStats(r, m.quality - 5, 3), apt: { turf: 85, dirt: 60 },
+        gr: { guts: H.toGrade(m.quality - 5 + r.normal(0, 6)), mind: H.toGrade(m.quality - 8 + r.normal(0, 7)), slope: H.toGrade(m.quality - 7 + r.normal(0, 6)), heavy: H.toGrade(65 + r.normal(0, 12)), health: H.toGrade(74 + r.normal(0, 9)) }, distMin: 1600, distMax: 2400, growth: '普通', style: '先行', kire: 3 + r.int(0, 3), skills: [],
         bonus: {}, wins: 0, starts: 0, earn: 0, gradedWins: [], results: [], cover: null, foals: [],
       };
       H.splitSurface(h, r);
@@ -998,6 +1000,8 @@
       // 能力の形が変わる前のセーブ（瞬発力・パワー・賢さ・気性 → 気性・坂・脚の切れ）
       H.fromLegacy(h);
       if (h.pot) for (const k of H.STATS) if (h.pot[k] == null) h.pot[k] = h.pot.spd || 60;
+      h.gr = h.gr || {};
+      for (const k of H.GRADED) if (!H.isGrade(h.gr[k])) h.gr[k] = 'B';
       if (h.kire == null) h.kire = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[h.style] || 4;
       h.skills = h.skills || [];
     }

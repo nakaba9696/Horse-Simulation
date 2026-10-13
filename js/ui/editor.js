@@ -38,7 +38,7 @@
   function info(d) {
     if (infoVer !== E.version) { infoCache.clear(); infoVer = E.version; }
     let v = infoCache.get(d.name);
-    if (!v) { const h = H.fromHistoric(d, 'x'); v = { pot: h.pot, kire: h.kire, health: h.health, turf: h.apt.turf, dirt: h.apt.dirt, heavy: h.apt.heavy, skills: h.skills }; infoCache.set(d.name, v); }
+    if (!v) { const h = H.fromHistoric(d, 'x'); v = { pot: h.pot, gr: h.gr, kire: h.kire, turf: h.apt.turf, dirt: h.apt.dirt, skills: h.skills }; infoCache.set(d.name, v); }
     return v;
   }
   const order = arr => v => { const i = arr.indexOf(v); return i < 0 ? 99 : i; };
@@ -48,9 +48,8 @@
     { k: 'born', label: '生年', val: d => d.born, dir: 1 },
     { k: 'rating', label: '評価', val: d => d.rating, dir: -1, heat: true },
     ...H.STATS.map(k => ({ k, label: H.STAT_SHORT[k], val: d => Math.round(info(d).pot[k]), dir: -1, heat: true, title: H.STAT_LABEL[k] })),
-    { k: 'heavy', label: '道悪', val: d => Math.round(info(d).heavy), dir: -1, heat: true, title: '大きいほど重い馬場が得意' },
-    { k: 'health', label: '健康', val: d => Math.round(info(d).health), dir: -1, heat: true, title: '大きいほど故障しにくく、疲れが早く取れる' },
-    { k: 'kire', label: '切れ', val: d => info(d).kire, dir: -1, show: d => `${info(d).kire} ${H.kireLabel(info(d).kire)}`, title: '脚の切れ（1＝極ズブ〜8＝極上の切れ）' },
+    ...H.GRADED.map(k => ({ k, label: H.STAT_SHORT[k], val: d => H.GRV[info(d).gr[k]] || 0, dir: -1, grade: true, title: H.STAT_NOTE[k] })),
+    { k: 'kire', label: '切れ', val: d => info(d).kire, dir: -1, title: '脚の切れ（1＝ズブい〜8＝切れる）' },
     { k: 'skills', label: '特殊能力', val: d => info(d).skills.filter(x => !H.SKILLS[x].bad).length - info(d).skills.filter(x => H.SKILLS[x].bad).length * 0.5, dir: -1, show: d => info(d).skills.map(x => H.SKILLS[x].label).join('・') },
     { k: 'dist', label: '距離', val: d => d.distMin * 10000 + d.distMax, dir: 1, show: d => `${d.distMin}〜${d.distMax}` },
     { k: 'surface', label: '馬場', val: d => order(['芝', '芝ダ', 'ダ'])(d.surface), dir: 1, show: d => surfLabel(d.surface) },
@@ -100,6 +99,7 @@
       if (c.k === 'name') return `<td class="nm"><b>${e(d.name)}</b>${ed[d.name] ? ' <span class="chip mine">編集</span>' : ''}<div class="small muted">${d.sex}・${e(d.coat || '')}・父 ${e(d.sire || '?')}</div></td>`;
       const v = c.val(d);
       if (c.heat) return `<td class="num" style="${heat(v)}">${v}</td>`;
+      if (c.grade) return `<td class="num gradecell" style="${heat(v)}">${e(info(d).gr[c.k])}</td>`;
       if (c.k === 'skills') return `<td class="small sk">${info(d).skills.map(x => `<span class="${H.SKILLS[x].bad ? 'bad' : ''}">${e(H.SKILLS[x].label)}</span>`).join('・')}</td>`;
       return `<td class="small ${c.str ? '' : 'num'}">${e(c.show ? c.show(d) : v)}</td>`;
     };
@@ -156,7 +156,7 @@
     const now = H.fromHistoric(d, 'x');
     const custom = !!d.pot;
     const pot = now.pot;
-    const kire = now.kire, health = now.health, skills = now.skills;
+    const kire = now.kire, skills = now.skills;
     const span = [d.born + 2, d.retire];
     const riders = (HS.DATA.jockeys || []).filter(j => j.from <= span[1] && (j.to || 9999) >= span[0]).map(j => j.name);
     const curJ = jockeyOf(d);
@@ -187,11 +187,13 @@
           <div class="field grow"><label for="ed-jockey">主戦騎手</label>${sel('ed-jockey', jOpts, curJ)}</div>
         </div>
         <div class="row wrap">
-          <div class="field grow"><label for="ed-kire">脚の切れ（ズブい〜切れる）</label><select id="ed-kire">${[1, 2, 3, 4, 5, 6, 7, 8].map(k => `<option value="${k}" ${k === kire ? 'selected' : ''}>${k}：${H.KIRE_LABEL[k]}</option>`).join('')}</select></div>
-          <div class="field grow"><label for="ed-health">健康（故障しにくさ・疲れの取れ方）<b id="ed-hv">${Math.round(health)}</b></label><input type="range" id="ed-health" min="10" max="100" value="${Math.round(health)}"></div>
+          <div class="field grow"><label for="ed-kire">脚の切れ（1＝ズブい〜8＝切れる）</label>${sel('ed-kire', [1, 2, 3, 4, 5, 6, 7, 8], kire)}</div>
         </div>
         <div class="row wrap">
-          ${['turf', 'dirt', 'heavy'].map(k => `<div class="field grow"><label for="ed-a-${k}">${{ turf: '芝の向き', dirt: 'ダートの向き', heavy: '道悪' }[k]}<b id="ed-av-${k}">${Math.round(now.apt[k])}</b></label><input type="range" id="ed-a-${k}" min="10" max="100" value="${Math.round(now.apt[k])}"></div>`).join('')}
+          ${H.GRADED.map(k => `<div class="field grow"><label for="ed-g-${k}" title="${e(H.STAT_NOTE[k])}">${H.STAT_LABEL[k]}</label>${sel('ed-g-' + k, H.GR, now.gr[k])}</div>`).join('')}
+        </div>
+        <div class="row wrap">
+          ${['turf', 'dirt'].map(k => `<div class="field grow"><label for="ed-a-${k}">${{ turf: '芝の向き', dirt: 'ダートの向き' }[k]}<b id="ed-av-${k}">${Math.round(now.apt[k])}</b></label><input type="range" id="ed-a-${k}" min="10" max="100" value="${Math.round(now.apt[k])}"></div>`).join('')}
         </div>
         <div class="small muted">芝・ダートの向きは、能力を自動で決めるときに、苦手な側のスピード・スタミナをどれだけ下げるかに使います。</div>
         <label class="small"><input type="checkbox" id="ed-custom" ${custom ? 'checked' : ''}> 能力を個別に決める（決めないときは評価と向きから自動で決まる）</label>
@@ -205,7 +207,10 @@
     const syncStats = () => {
       const custom = $('#ed-custom').checked;
       const r = +$('#ed-rating').value;
-      const auto = defaultsFor(Object.assign({}, d, { surface: $('#ed-surface').value, distMax: +$('#ed-dmax').value, style: $('#ed-style').value }), r, { turf: +$('#ed-a-turf').value, dirt: +$('#ed-a-dirt').value }).pot;
+      const autoH = defaultsFor(Object.assign({}, d, { surface: $('#ed-surface').value, distMax: +$('#ed-dmax').value, style: $('#ed-style').value }), r, { turf: +$('#ed-a-turf').value, dirt: +$('#ed-a-dirt').value });
+      const auto = autoH.pot;
+      // 段階は、手で選んでいなければ評価に合わせて動かす
+      for (const k of H.GRADED) { const g = $('#ed-g-' + k); if (!g.dataset.touched && ed[k] == null) g.value = autoH.gr[k]; }
       for (const k of H.STATS) {
         const inp = $('#ed-p-' + k);
         inp.disabled = !custom;
@@ -214,8 +219,8 @@
       }
     };
     $('#ed-rating').oninput = () => { const r = +$('#ed-rating').value; $('#ed-rv').textContent = `${U.grade(r)} ${r}`; syncStats(); };
-    for (const k of ['turf', 'dirt', 'heavy']) $('#ed-a-' + k).oninput = () => { $('#ed-av-' + k).textContent = $('#ed-a-' + k).value; if (k !== 'heavy') syncStats(); };
-    $('#ed-health').oninput = () => { $('#ed-hv').textContent = $('#ed-health').value; };
+    for (const k of ['turf', 'dirt']) $('#ed-a-' + k).oninput = () => { $('#ed-av-' + k).textContent = $('#ed-a-' + k).value; syncStats(); };
+    for (const k of H.GRADED) $('#ed-g-' + k).onchange = () => { $('#ed-g-' + k).dataset.touched = '1'; };
     $('#ed-custom').onchange = syncStats;
     for (const id of ['#ed-surface', '#ed-dmax', '#ed-style']) $(id).onchange = syncStats;
     for (const k of H.STATS) $('#ed-p-' + k).oninput = () => { $('#ed-pv-' + k).textContent = $('#ed-p-' + k).value; };
@@ -226,11 +231,11 @@
         style: $('#ed-style').value, growth: $('#ed-growth').value, coat: $('#ed-coat').value, retire: +$('#ed-retire').value,
         jockey: $('#ed-jockey').value || null,
       };
-      // 切れ・健康・芝・ダート・道悪・特殊能力は、動かしたときだけ残す
+      // 切れ・段階・芝・ダートの向き・特殊能力は、動かしたときだけ残す
       const kv = +$('#ed-kire').value;
       if (kv !== base.kire || ed.kire != null) next.kire = kv;
-      if (+$('#ed-health').value !== Math.round(base.health) || ed.health != null) next.health = +$('#ed-health').value;
-      for (const k of ['turf', 'dirt', 'heavy']) { const v = +$('#ed-a-' + k).value; if (v !== Math.round(base.apt[k]) || ed[k] != null) next[k] = v; }
+      for (const k of H.GRADED) { const g = $('#ed-g-' + k); if (g.dataset.touched || ed[k] != null) next[k] = g.value; }
+      for (const k of ['turf', 'dirt']) { const v = +$('#ed-a-' + k).value; if (v !== Math.round(base.apt[k]) || ed[k] != null) next[k] = v; }
       const sk = [...bg.querySelectorAll('[data-skill]')].filter(x => x.checked).map(x => x.dataset.skill);
       if (sk.join() !== base.skills.join() || ed.skills != null) next.skills = sk;
       if ($('#ed-custom').checked) { next.pot = {}; for (const k of H.STATS) next.pot[k] = +$('#ed-p-' + k).value; }
