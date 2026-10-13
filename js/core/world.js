@@ -966,7 +966,7 @@
   // ---------- セーブ ----------
   W.slimResult = function (r) {
     return {
-      key: r.race.key, name: r.race.name, short: r.race.short, grade: r.race.grade, region: r.race.region, course: r.race.course, surface: r.race.surface, dist: r.race.dist, ground: r.race.ground, mine: r.hasMine,
+      key: r.race.key, name: r.race.name, short: r.race.short, grade: r.race.grade, year: r.race.year, region: r.race.region, course: r.race.course, surface: r.race.surface, dist: r.race.dist, ground: r.race.ground, mine: r.hasMine,
       rows: r.sim.results.map(x => ({ pos: x.pos, num: x.num, frame: x.frame, name: x.horse.name, mine: x.mine, hist: !!x.horse.hist, sex: x.horse.sex, age: G.year - x.horse.born, jockey: x.jockey && x.jockey.name, weight: x.weight, time: Math.round(x.time * 10) / 10, margin: x.margin, last3f: x.last3f ? Math.round(x.last3f * 10) / 10 : null, pop: x.pop, odds: x.odds, sire: x.horse.sire })),
     };
   };

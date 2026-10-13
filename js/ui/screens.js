@@ -200,7 +200,7 @@
         <div>体質<b>${(h.health ?? 70) >= 80 ? '丈夫' : (h.health ?? 70) >= 60 ? 'ふつう' : '弱い'}</b></div>
         ${h.loc === 'stable' ? `<div>状態<b>${h.injury ? '故障中' : UI.condTag(h)}</b></div>` : ''}
       </div>
-      ${h.gradedWins.length ? `<h2 class="sec">重賞の勝ち鞍</h2><div class="panel">${h.gradedWins.map(g => `<div>${g.y}年 ${UI.gradeTag({ grade: g.grade, region: g.region })} ${e(g.short || g.race)}${g.hist ? ' <span class="small muted">（開始前）</span>' : ''}</div>`).join('')}</div>` : ''}
+      ${h.gradedWins.length ? `<h2 class="sec">重賞の勝ち鞍</h2><div class="panel">${h.gradedWins.map(g => `<div>${g.y}年 ${UI.gradeTag({ grade: g.grade, region: g.region, year: g.y })} ${e(g.short || g.race)}${g.hist ? ' <span class="small muted">（開始前）</span>' : ''}</div>`).join('')}</div>` : ''}
       ${h.hist && W.get().settings.showHistNote ? histNote(h) : ''}`;
   }
   function histNote(h) {
@@ -429,14 +429,14 @@
     const years = Object.keys(G.records.g1).map(Number).sort((a, b) => b - a);
     let body = '';
     if (tab === 'g1') {
-      body = years.length ? years.map(y => `<h2 class="sec">${y}年のG1</h2><div class="tblwrap"><table class="t"><tr><th>レース</th><th>勝ち馬</th><th class="hide-sm">父</th><th>史実</th></tr>${G.records.g1[y].map(r => `<tr class="${r.owner === 'P' ? 'mine' : ''}"><td>${UI.gradeTag(r)} ${e(r.short || r.race)}</td><td><b>${e(r.winner)}</b>${r.hist ? ' <span class="chip hist">史</span>' : ''}</td><td class="small hide-sm">${e(r.sire || '')}</td><td class="small ${r.histWinner === r.winner ? '' : 'muted'}">${r.histWinner ? (r.histWinner === r.winner ? '史実どおり' : e(r.histWinner)) : ''}</td></tr>`).join('')}</table></div>`).join('') : '<div class="panel empty">まだG1は行われていません。</div>';
+      body = years.length ? years.map(y => `<h2 class="sec">${y}年のG1</h2><div class="tblwrap"><table class="t"><tr><th>レース</th><th>勝ち馬</th><th class="hide-sm">父</th><th>史実</th></tr>${G.records.g1[y].map(r => `<tr class="${r.owner === 'P' ? 'mine' : ''}"><td>${UI.gradeTag(Object.assign({ year: y }, r))} ${e(r.short || r.race)}</td><td><b>${e(r.winner)}</b>${r.hist ? ' <span class="chip hist">史</span>' : ''}</td><td class="small hide-sm">${e(r.sire || '')}</td><td class="small ${r.histWinner === r.winner ? '' : 'muted'}">${r.histWinner ? (r.histWinner === r.winner ? '史実どおり' : e(r.histWinner)) : ''}</td></tr>`).join('')}</table></div>`).join('') : '<div class="panel empty">まだG1は行われていません。</div>';
     } else if (tab === 'awards') {
       const ys = Object.keys(G.records.awards).map(Number).sort((a, b) => b - a);
       body = ys.length ? ys.map(y => `<h2 class="sec">${y}年の年度表彰</h2><div class="panel"><dl class="kv">${Object.entries(G.records.awards[y]).map(([k, v]) => `<dt>${k}</dt><dd>${v.owner === 'P' ? '★ ' : ''}<b>${e(v.name)}</b></dd>`).join('')}</dl></div>`).join('') : '<div class="panel empty">年が明けると、前の年の表彰が発表されます。</div>';
     } else if (tab === 'mine') {
       const pr = G.records.player;
       body = `<div class="panel"><dl class="kv"><dt>通算</dt><dd>${pr.starts}戦${pr.wins}勝</dd><dt>獲得賞金</dt><dd>${U.money(pr.earn)}</dd><dt>重賞勝利</dt><dd>${pr.g1.length}勝（うちG1 ${pr.g1.filter(x => x.grade === 'G1').length}勝）</dd></dl></div>
-        <h2 class="sec">重賞の勝利</h2>${pr.g1.length ? `<div class="tblwrap"><table class="t">${pr.g1.slice().reverse().map(x => `<tr><td class="small">${x.y}</td><td><span class="grade ${x.region === '地方' ? 'Jpn' : x.grade}">${x.region === '地方' ? x.grade.replace('G', 'Jpn') : x.grade}</span> ${e(x.race)}</td><td><b>${e(x.horse)}</b></td></tr>`).join('')}</table></div>` : '<div class="panel empty">まだありません。</div>'}`;
+        <h2 class="sec">重賞の勝利</h2>${pr.g1.length ? `<div class="tblwrap"><table class="t">${pr.g1.slice().reverse().map(x => `<tr><td class="small">${x.y}</td><td>${UI.gradeTag({ grade: x.grade, region: x.region, year: x.y })} ${e(x.race)}</td><td><b>${e(x.horse)}</b></td></tr>`).join('')}</table></div>` : '<div class="panel empty">まだありません。</div>'}`;
     }
     return `<h2 class="sec">記録</h2><div class="tabs">${[['g1', '年代記（G1）'], ['awards', '年度表彰'], ['mine', 'わたしの成績']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="ctab" data-tab="${k}">${l}</button>`).join('')}</div>${body}`;
   };

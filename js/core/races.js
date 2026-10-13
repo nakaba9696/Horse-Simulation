@@ -32,7 +32,7 @@
     return p;
   };
   R.gradedYear = function (year) {
-    return (HS.DATA.races || []).filter(r => r.from <= year && year <= (r.to || 9999))
+    return (HS.DATA.races || []).filter(r => r.from <= year && year <= (r.to || 9999)).map(r => Object.assign({}, r, { year }))
       .sort((a, b) => (a.month - b.month) || (a.week - b.week) || ((R.GRADE_RANK[b.grade] || 0) - (R.GRADE_RANK[a.grade] || 0)));
   };
 

@@ -208,7 +208,7 @@
         ctx.fillStyle = 'rgba(10,22,38,0.82)'; roundRect(ctx, 12, 12, 330, 54, 8); ctx.fill();
         ctx.strokeStyle = '#c9a43a'; ctx.lineWidth = 1.5; ctx.stroke();
         let x = 22;
-        if (badge) { ctx.fillStyle = gradeColor(race.grade, race.region); roundRect(ctx, x, 22, 44, 22, 4); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(badge, x + 22, 33.5); x += 52; }
+        if (badge) { ctx.fillStyle = badge === '重賞' ? '#8a6a1c' : gradeColor(race.grade, race.region); roundRect(ctx, x, 22, 44, 22, 4); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(badge, x + 22, 33.5); x += 52; }
         ctx.fillStyle = '#fff'; ctx.font = '900 20px "Noto Serif JP", serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
         ctx.fillText(race.short || race.name, x, 33);
         ctx.fillStyle = '#c8d3e2'; ctx.font = '12px "Noto Sans JP", sans-serif';
