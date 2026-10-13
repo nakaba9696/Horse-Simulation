@@ -28,7 +28,8 @@ const SCORE = { G1: 10, G2: 4, G3: 2 };
 const BEST = { G1: 87, G2: 80, G3: 76 };
 
 // ---- 馬ごとにまとめる ----
-const known = new Map(D.historic.map(h => [h.name, h]));
+const known0 = new Map(D.historic.map(h => [HS.normName(h.name), h]));
+const known = { get: n => known0.get(HS.normName(n)) };
 const byKey = new Map();
 for (const r of rows) {
   if (!r.horse || !r.year || !r.race) continue;
@@ -71,7 +72,7 @@ for (const { name, rows: rs } of byKey.values()) {
     // 既にデータがある馬：勝ち鞍だけ足す
     const have = new Set([...(k.wins || []), ...(k.ran || [])]);
     const add = wins.filter(w => !have.has(w));
-    if (add.length) extraWins[name] = add;
+    if (add.length) extraWins[k.name] = add;
     continue;
   }
   const bornCand = rs.filter(r => r.age).map(r => r.year - r.age);
