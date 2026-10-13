@@ -277,7 +277,7 @@
   };
   W.JRA = ['美浦', '栗東'];
   // プレイヤーが選べる騎手（JRA と短期免許の外国人）
-  W.ridersForPlayer = year => W.jockeysOf(year, ['美浦', '栗東', '外国']);
+  W.ridersForPlayer = year => W.jockeysOf(year, W.JRA).concat(W.jockeysOf(year, ['外国']).slice(0, 15)).sort((a, b) => b.skill - a.skill);
   // 既定の騎手：その年の上位8人から、馬ごとに決まった1人（空いていなければ次）
   W.bestFreeJockey = function (raceKey, horseId) {
     const taken = new Set((G.entries[raceKey] || []).map(e => e.jockey));
