@@ -20,11 +20,14 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 ## 構成
 | 場所 | 中身 | レーン |
 |---|---|---|
-| `data/races.js` | 重賞の暦（JRA の G1〜G3・地方の交流 G1・海外 G1）。年代ごとの名前・距離・時期の違いを from/to で分ける | D |
-| `data/historic_1.js`・`historic_2.js` | 史実馬（1987〜2004年生・2005〜2022年生）。能力の目安・適性・史実の勝ち鞍・毛色 | D |
-| `data/stallions.js` | 種牡馬（年代・種付け料）・血統表（祖先）・ニックス・名牝と史実の仔 | D |
+| `data/races.js`・`races_old.js`・`races_world.js`・`races_extra.js` | 重賞の暦（JRA 1995〜／JRA 1960〜1994／海外の大レース 1960〜／補い）。年代ごとの名前・距離・時期の違いを from/to で分ける | D |
+| `data/historic_1.js`・`historic_2.js`・`historic_old.js`・`historic_world.js` | 手で確かめた史実馬（1987〜2004年生・2005〜2022年生・1955〜1986年生・海外の名馬） | D |
+| `data/src/*.jsonl` → `data/historic_auto.js` | 重賞の勝ち馬の記録（JRA の G1〜G3・海外の大レース、1960〜2026）と、そこから `node tools/build_auto.js` で作る史実馬。生成物は手で直さない | D |
+| `data/stallions.js`・`stallions_old.js` | 種牡馬（1995〜／1958〜1994）・血統表（祖先）・ニックス・名牝と史実の仔 | D |
 | `data/courses.js`・`names.js` | 競馬場の形・開催・枠の色／モブ馬の名前の材料 | D |
-| `data/jockeys.js`・`historic_jockeys.js` | 実在の騎手（年代・所属・腕前の推移）／史実馬の主戦騎手 | D |
+| `data/jockeys.js`・`jockeys_old.js`・`jockeys_extra.js` | 実在の騎手（1987〜／1960年代〜と海外・地方／記録から見積もった騎手＝`node tools/build_jockeys_extra.js`） | D |
+| `data/historic_jockeys.js` | 史実馬の主戦騎手（手で確かめたもの。ほかは馬のデータの jockey と記録から） | D |
+| `js/core/datafix.js` | 読み込んだ史実馬をまとめる（重複・小さいカナ・勝ち鞍のレース名を暦にそろえる） | C |
 | `js/core/util.js` | 乱数（種で固定）・書式 | C |
 | `js/core/horse.js` | 馬の形・成長・調教・故障 | C |
 | `js/core/pedigree.js` | 血統表・クロス・ニックス・系統・配合の評価・仔の誕生 | M |
@@ -63,7 +66,9 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 - **プレイヤーの行動の形：週ごとのターン制。** 調教・出走・種付け・売買を決めて「次の週へ」。
 - **文章の言語：日本語。**
 - **遊べる版の届け方：** GitHub Pages（main のルートをそのまま配信）。ビルドは無い。
-- **年齢は満年齢で扱う**（2000年以前も）。レース名は年代どおり（例：2000年までは「朝日杯3歳ステークス」）。
+- **年齢は満年齢で扱う**（2000年以前も）。レース名は年代どおり（例：2000年までは「朝日杯3歳ステークス」）。1984年より前の JRA の重賞は「重賞」と出す。
+- **お金は年代の物価に合わせる**（`U.priceIndex`。1995年＝1）。走破タイムも年代で変わる（`U.eraSpeed`）。
+- **データを足したら** `node tools/build_auto.js` と `node tools/build_jockeys_extra.js` を回してから検証する。
 - **能力は「見立て」で見せる。** 内部の数値はそのまま出さず、評価（SS〜G）と言葉で出す。ただし競走馬エディット（タイトルから開く。`js/ui/editor.js`・`js/core/edits.js`）は数値を直接見せて書き換える場所。
 - **エディットはこの端末に保存し、「はじめから」のときセーブ（`G.edits`）へ写す。** 遊んでいるセーブは始めたときの内容で動く。
 
