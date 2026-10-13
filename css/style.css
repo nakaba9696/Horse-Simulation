@@ -151,6 +151,16 @@ table.t tr.click { cursor: pointer; } table.t tr.click:hover td { background: rg
 .colors button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #0008; cursor: pointer; }
 .colors button.on { outline: 3px solid var(--gold2); }
 
+/* エディットの表（Excel のように見出しで並べ替え。馬名の列は横に動かしても残す） */
+.ed-table th.sortable { cursor: pointer; user-select: none; }
+.ed-table th.sortable:hover, .ed-table th.sortable.on { color: #fff; background: #1d3556; }
+.ed-table th, .ed-table td { white-space: nowrap; }
+.ed-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ed-table th:first-child, .ed-table td:first-child { position: sticky; left: 0; z-index: 2; background: #12263f; min-width: 150px; white-space: normal; }
+.ed-table th:first-child { z-index: 3; background: #0f2034; }
+.ed-table tr.mine td:first-child { background: #3a3218; }
+.tblwrap.ed { max-height: 75vh; overflow: auto; }
+
 /* 絞り込み */
 .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; align-items: center; }
 .filters select, .row > select { background: #0c1a2c; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; min-width: 0; }

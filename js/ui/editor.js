@@ -22,10 +22,45 @@
       (!st.surf || (st.surf === '芝' ? d.surface !== 'ダ' : d.surface !== '芝')) &&
       (!st.cty || (st.cty === '日' ? !HS.DATA.isForeign(d) : HS.DATA.isForeign(d))) &&
       (!st.edited || ed[d.name]));
-    const sort = st.sort || 'born';
-    a = a.slice().sort((x, y) => sort === 'rating' ? y.rating - x.rating || x.born - y.born : sort === 'name' ? x.name.localeCompare(y.name, 'ja') : x.born - y.born || y.rating - x.rating);
+    // 見出しで選んだ列で並べる（同じ値なら生年・名前の順）
+    const col = COLS.find(c => c.k === (st.sortKey || 'born')) || COLS[1];
+    const dir = st.sortDir || col.dir;
+    a = a.map(d => [d, col.val(d)]).sort((x, y) => {
+      const c = col.str ? String(x[1] || '').localeCompare(String(y[1] || ''), 'ja') : (x[1] ?? -1e9) - (y[1] ?? -1e9);
+      return c * dir || x[0].born - y[0].born || x[0].name.localeCompare(y[0].name, 'ja');
+    }).map(x => x[0]);
     return a;
   }
+
+  // 1頭ぶんの能力（編集を当てたデータから計算。編集が変わるまで使い回す）
+  const infoCache = new Map();
+  let infoVer = -1;
+  function info(d) {
+    if (infoVer !== E.version) { infoCache.clear(); infoVer = E.version; }
+    let v = infoCache.get(d.name);
+    if (!v) { const h = H.fromHistoric(d, 'x'); v = { pot: h.pot, temper: h.temper, health: h.health, heavy: h.apt.heavy }; infoCache.set(d.name, v); }
+    return v;
+  }
+  const order = arr => v => { const i = arr.indexOf(v); return i < 0 ? 99 : i; };
+  // 一覧の列。dir：最初に押したときの向き（1＝小さい順、-1＝大きい順）
+  const COLS = [
+    { k: 'name', label: '馬名', val: d => d.name, str: true, dir: 1 },
+    { k: 'born', label: '生年', val: d => d.born, dir: 1 },
+    { k: 'rating', label: '評価', val: d => d.rating, dir: -1, heat: true },
+    ...H.STATS.map(k => ({ k, label: H.STAT_LABEL[k], val: d => Math.round(info(d).pot[k]), dir: -1, heat: true })),
+    { k: 'temper', label: '気性', val: d => Math.round(info(d).temper), dir: -1, heat: true, title: '大きいほど落ち着いている' },
+    { k: 'health', label: '体質', val: d => Math.round(info(d).health), dir: -1, heat: true, title: '大きいほど丈夫' },
+    { k: 'heavy', label: '道悪', val: d => Math.round(info(d).heavy), dir: -1, heat: true, title: '大きいほど重い馬場が得意（自動で決まる）' },
+    { k: 'dist', label: '距離', val: d => d.distMin * 10000 + d.distMax, dir: 1, show: d => `${d.distMin}〜${d.distMax}` },
+    { k: 'surface', label: '馬場', val: d => order(['芝', '芝ダ', 'ダ'])(d.surface), dir: 1, show: d => surfLabel(d.surface) },
+    { k: 'style', label: '脚質', val: d => order(H.STYLES)(d.style), dir: 1, show: d => d.style },
+    { k: 'growth', label: '成長', val: d => order(H.GROWTHS)(d.growth), dir: 1, show: d => d.growth },
+    { k: 'retire', label: '引退', val: d => d.retire, dir: 1 },
+    { k: 'country', label: '国', val: d => HS.DATA.isForeign(d) ? d.country : '日', str: true, dir: 1 },
+    { k: 'jockey', label: '主戦', val: d => jockeyOf(d), str: true, dir: 1 },
+  ];
+  // 数の大きさで色を付ける（Excel の条件付き書式のように）
+  const heat = v => { const t = Math.max(0, Math.min(1, (v - 50) / 50)); return `background:hsla(${210 - t * 170}, 70%, ${38 + t * 10}%, ${0.18 + t * 0.5})`; };
 
   UI.screens.editor = function (st) {
     const ed = edits();
@@ -44,7 +79,6 @@
           <select id="ed-sex" aria-label="性別"><option value="">性：すべて</option><option ${st.sex === '牡' ? 'selected' : ''} value="牡">牡・セ</option><option ${st.sex === '牝' ? 'selected' : ''} value="牝">牝</option></select>
           <select id="ed-surf" aria-label="馬場"><option value="">馬場：すべて</option><option ${st.surf === '芝' ? 'selected' : ''} value="芝">芝</option><option ${st.surf === 'ダ' ? 'selected' : ''} value="ダ">ダート</option></select>
           <select id="ed-cty" aria-label="国"><option value="">国：すべて</option><option ${st.cty === '日' ? 'selected' : ''} value="日">日本</option><option ${st.cty === '外' ? 'selected' : ''} value="外">海外</option></select>
-          <select id="ed-sort" aria-label="並び順"><option value="born" ${(st.sort || 'born') === 'born' ? 'selected' : ''}>生年順</option><option value="rating" ${st.sort === 'rating' ? 'selected' : ''}>評価の高い順</option><option value="name" ${st.sort === 'name' ? 'selected' : ''}>名前順</option></select>
           <label class="small"><input type="checkbox" id="ed-edited" ${st.edited ? 'checked' : ''}> 編集済みだけ</label>
         </div>
       </div>
@@ -57,14 +91,20 @@
     const ed = edits();
     const lim = st.limit || PAGE;
     if (!a.length) return '<div class="panel empty">当てはまる馬がいません。</div>';
-    return `<div class="small muted">${a.length}頭</div>
-      <div class="tblwrap mt"><table class="t">
-        <tr><th>馬名</th><th>生年</th><th>評価</th><th class="hide-sm">馬場</th><th class="hide-sm">距離</th><th class="hide-sm">脚質</th><th class="hide-sm">成長</th><th class="hide-sm">主戦</th></tr>
-        ${a.slice(0, lim).map(d => `<tr class="click ${ed[d.name] ? 'mine' : ''}" data-act="ed-open" data-name="${e(d.name)}">
-          <td><b>${e(d.name)}</b>${ed[d.name] ? ' <span class="chip mine">編集</span>' : ''}<div class="small muted">${HS.DATA.isForeign(d) ? e(d.country) + '・' : ''}${d.sex}・${e(d.coat || '')}・父 ${e(d.sire || '?')}</div><div class="small muted show-sm">${surfLabel(d.surface)}・${d.distMin}〜${d.distMax}m・${d.style}・${d.growth}</div></td>
-          <td class="num small">${d.born}</td>
-          <td class="num"><span class="serif" style="color:var(--gold2);font-weight:900">${U.grade(d.rating)}</span> <span class="small muted">${d.rating}</span></td>
-          <td class="small hide-sm">${surfLabel(d.surface)}</td><td class="small hide-sm">${d.distMin}〜${d.distMax}</td><td class="small hide-sm">${d.style}</td><td class="small hide-sm">${d.growth}</td><td class="small hide-sm">${e(jockeyOf(d))}</td></tr>`).join('')}
+    const key = st.sortKey || 'born';
+    const curCol = COLS.find(c => c.k === key) || COLS[1];
+    const dir = st.sortDir || curCol.dir;
+    const head = COLS.map(c => `<th class="sortable ${c.k === key ? 'on' : ''}" data-act="ed-sortcol" data-k="${c.k}"${c.title ? ` title="${e(c.title)}"` : ''}>${c.label}${c.k === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('');
+    const cell = (c, d) => {
+      if (c.k === 'name') return `<td class="nm"><b>${e(d.name)}</b>${ed[d.name] ? ' <span class="chip mine">編集</span>' : ''}<div class="small muted">${d.sex}・${e(d.coat || '')}・父 ${e(d.sire || '?')}</div></td>`;
+      const v = c.val(d);
+      if (c.heat) return `<td class="num" style="${heat(v)}">${v}</td>`;
+      return `<td class="small ${c.str ? '' : 'num'}">${e(c.show ? c.show(d) : v)}</td>`;
+    };
+    return `<div class="small muted">${a.length}頭・見出しを押すとその列で並べ替え（もう一度押すと逆順）</div>
+      <div class="tblwrap ed mt"><table class="t ed-table">
+        <tr>${head}</tr>
+        ${a.slice(0, lim).map(d => `<tr class="click ${ed[d.name] ? 'mine' : ''}" data-act="ed-open" data-name="${e(d.name)}">${COLS.map(c => cell(c, d)).join('')}</tr>`).join('')}
       </table></div>
       ${a.length > lim ? `<div class="center mt"><button class="btn" data-act="ed-more">もっと見る（残り${a.length - lim}頭）</button></div>` : ''}`;
   }
@@ -88,6 +128,14 @@
   });
 
   App.act.editor = () => { E.apply(E.loadLocal()); W.index(); App.st.screen = 'editor'; App.st.ed = App.st.ed || {}; App.render(); window.scrollTo(0, 0); };
+  // 見出しを押したら、その列で並べ替え。同じ列ならもう一度で逆順
+  App.act['ed-sortcol'] = ds => {
+    const st = App.st.ed;
+    const col = COLS.find(c => c.k === ds.k); if (!col) return;
+    if ((st.sortKey || 'born') === col.k) st.sortDir = -(st.sortDir || col.dir);
+    else { st.sortKey = col.k; st.sortDir = col.dir; }
+    st.limit = PAGE; refreshList();
+  };
   App.act['ed-more'] = () => { App.st.ed.limit = (App.st.ed.limit || PAGE) + PAGE; refreshList(); };
 
   // ---------- 1頭の編集 ----------

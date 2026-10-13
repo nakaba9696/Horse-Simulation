@@ -30,6 +30,7 @@
     HS.DATA.historicJockeys = Object.assign({}, ORIGJ);
     for (const [n, ed] of Object.entries(edits)) if (ed && ed.jockey) HS.DATA.historicJockeys[n] = ed.jockey;
     E.active = edits;
+    E.version = (E.version || 0) + 1;
   };
 
   // 端末に保存した編集
