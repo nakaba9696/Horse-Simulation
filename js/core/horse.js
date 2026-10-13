@@ -12,9 +12,32 @@
     return rng.weighted(['鹿毛', '黒鹿毛', '青鹿毛', '青毛', '栗毛', '栃栗毛'], c => ({ '鹿毛': 40, '黒鹿毛': 20, '青鹿毛': 7, '青毛': 2, '栗毛': 26, '栃栗毛': 4 })[c]);
   };
   // 能力（成長とともに伸びる素質）。芝・ダート・道悪・健康は apt と health に、脚の切れは kire に分けて持つ
-  H.STATS = ['spd', 'sta', 'guts', 'mind', 'slope'];
-  H.STAT_LABEL = { spd: 'スピード', sta: 'スタミナ', guts: '根性', mind: '気性', slope: '坂' };
-  H.STAT_NOTE = { spd: '道中の速さ', sta: '長く脚を保つ力', guts: '競り合いで抜かせない力', mind: '落ち着きと賢さ。出遅れ・掛かり・位置取り', slope: '坂での踏ん張り。弱いと坂で大きく脚がなくなる' };
+  // スピードとスタミナは芝（spd・sta）とダート（dspd・dsta）で別に持つ
+  H.STATS = ['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'];
+  H.STAT_LABEL = { spd: '芝スピード', sta: '芝スタミナ', dspd: 'ダートスピード', dsta: 'ダートスタミナ', guts: '根性', mind: '気性', slope: '坂' };
+  H.STAT_SHORT = { spd: '芝SP', sta: '芝ST', dspd: 'ダSP', dsta: 'ダST', guts: '根性', mind: '気性', slope: '坂' };
+  H.STAT_NOTE = { spd: '芝での道中の速さ', sta: '芝で長く脚を保つ力', dspd: 'ダートでの道中の速さ', dsta: 'ダートで長く脚を保つ力', guts: '競り合いで抜かせない力', mind: '落ち着きと賢さ。出遅れ・掛かり・位置取り', slope: '坂での踏ん張り。弱いと坂で大きく脚がなくなる' };
+  // 芝・ダートの向き（apt.turf・apt.dirt、100＝得意）から、苦手な側のスピード・スタミナを下げて分ける。pot の spd・sta は得意な側の値として受け取る
+  H.splitSurface = function (h, rng) {
+    const p = h.pot, a = h.apt;
+    const top = Math.max(a.turf, a.dirt);
+    const t = (a.turf - top) * 0.33, d = (a.dirt - top) * 0.33;
+    const n = () => rng ? rng.normal(0, 1.5) : 0;
+    p.dspd = U.clamp(p.spd + d + n(), 20, 120); p.dsta = U.clamp(p.sta + d + n(), 20, 120);
+    p.spd = U.clamp(p.spd + t, 20, 120); p.sta = U.clamp(p.sta + t, 20, 120);
+    return h;
+  };
+  // 能力から芝・ダートの向き（表示とAIの出走の目安）を出し直す
+  H.syncApt = function (h) {
+    const p = h.pot; if (p.dspd == null) return h;
+    const T = (p.spd + p.sta) / 2, D = (p.dspd + p.dsta) / 2, top = Math.max(T, D);
+    h.apt = h.apt || { heavy: 50 };
+    h.apt.turf = U.clamp(Math.round(100 + (T - top) * 3), 20, 100);
+    h.apt.dirt = U.clamp(Math.round(100 + (D - top) * 3), 20, 100);
+    return h;
+  };
+  // その馬場でのスピード・スタミナ
+  H.onSurface = (c, surface) => surface === 'ダ' ? { spd: c.dspd != null ? c.dspd : c.spd, sta: c.dsta != null ? c.dsta : c.sta } : { spd: c.spd, sta: c.sta };
   // 脚の切れ（1〜8）。小さいほどズブい（長く脚を使う）、大きいほど一瞬で突き抜ける
   H.KIRE_LABEL = ['', '極ズブ', 'ズブい', 'ややズブ', '持続型', 'やや切れ', '切れる', '鋭い切れ', '極上の切れ'];
   H.kireLabel = k => H.KIRE_LABEL[U.clamp(Math.round(k || 4), 1, 8)];
@@ -61,6 +84,8 @@
       delete b.kick; delete b.pow; delete b.wise;
     }
     delete h.temper;
+    // 芝・ダートを分ける前の能力
+    if (p && p.dspd == null && h.apt && h.apt.turf != null) H.splitSurface(h);
     return h;
   };
 
@@ -97,7 +122,9 @@
   };
   // 総合力（表示や人気の目安）
   H.overall = function (stats) {
-    return stats.spd * 0.35 + stats.sta * 0.25 + stats.guts * 0.15 + stats.mind * 0.12 + stats.slope * 0.13;
+    const turf = stats.spd * 0.35 + stats.sta * 0.25;
+    const dirt = stats.dspd != null ? stats.dspd * 0.35 + stats.dsta * 0.25 : turf;
+    return Math.max(turf, dirt) + stats.guts * 0.15 + stats.mind * 0.12 + stats.slope * 0.13;
   };
 
   // 見立て（プレイヤーに見える値）。走るほど・調教するほど正確になる
@@ -162,11 +189,12 @@
       mind: r - 4 + rng.normal(0, 4),
       slope: r - 2 + rng.normal(0, 3) + (dirt ? 3 : 0),
     };
-    for (const k of H.STATS) pot[k] = U.clamp(pot[k], 30, 106);
+    for (const k of Object.keys(pot)) pot[k] = U.clamp(pot[k], 30, 106);
     // エディットで能力を個別に決めた馬（前の版の形でも読む）
+    let custom = null;
     if (d.pot) {
-      const ep = H.fromLegacy({ pot: Object.assign({}, d.pot), temper: d.temper }).pot;
-      for (const k of H.STATS) if (ep[k] != null) pot[k] = U.clamp(ep[k], 20, 120);
+      custom = H.fromLegacy({ pot: Object.assign({}, d.pot), temper: d.temper }).pot;
+      for (const k of H.STATS) if (custom[k] != null) pot[k] = U.clamp(custom[k], 20, 120);
     } else if (d.temper != null) pot.mind = (pot.mind + d.temper) / 2;
     const growth = H.GROWTHS.includes(d.growth) ? d.growth : '普通';
     const kire0 = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[st] + rng.int(-1, 1) - (dirt ? 1 : 0) + (sprint ? 0 : longH && st !== '追込' ? -1 : 0);
@@ -188,6 +216,9 @@
     };
     // エディットで芝・ダート・道悪を決めた馬
     for (const k of ['turf', 'dirt', 'heavy']) if (d[k] != null) h.apt[k] = d[k];
+    // 芝とダートの能力を分ける（個別に決めた能力に芝・ダートの両方があれば、そのまま使う）
+    if (custom && custom.dspd != null && custom.dsta != null) H.syncApt(h);
+    else H.splitSurface(h, rng);
     return h;
   };
 
@@ -276,18 +307,18 @@
       bonus: {}, cond: rng.normal(0, 30), fatigue: 0, injury: null,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [],
     };
-    return h;
+    return H.splitSurface(h, rng);
   };
 
   // 調教のメニュー。gain＝伸びる能力、fat＝疲れ、cond＝調子への効き、risk＝故障の危険、time＝時計の目安
   H.MENUS = {
-    '坂路(強め)': { gain: { spd: 0.35, slope: 0.35 }, fat: 16, cond: 14, risk: 1.4, course: '坂路' },
-    '坂路(馬なり)': { gain: { spd: 0.15, slope: 0.15 }, fat: 8, cond: 8, risk: 0.6, course: '坂路' },
+    '坂路(強め)': { gain: { spd: 0.3, dspd: 0.3, slope: 0.35 }, fat: 16, cond: 14, risk: 1.4, course: '坂路' },
+    '坂路(馬なり)': { gain: { spd: 0.12, dspd: 0.12, slope: 0.15 }, fat: 8, cond: 8, risk: 0.6, course: '坂路' },
     'ウッド(強め)': { gain: { sta: 0.35, spd: 0.2 }, fat: 15, cond: 14, risk: 1.3, course: 'ウッド' },
     'ウッド(馬なり)': { gain: { sta: 0.15, spd: 0.1 }, fat: 7, cond: 8, risk: 0.5, course: 'ウッド' },
-    '併せ馬': { gain: { guts: 0.4, spd: 0.15 }, fat: 17, cond: 16, risk: 1.4, course: 'ウッド' },
-    'ダート': { gain: { slope: 0.3, sta: 0.15 }, fat: 10, cond: 8, risk: 0.8, course: 'ダート' },
-    'プール': { gain: { sta: 0.25 }, fat: 2, cond: 4, risk: 0.1, course: 'プール' },
+    '併せ馬': { gain: { guts: 0.4, spd: 0.1, dspd: 0.1 }, fat: 17, cond: 16, risk: 1.4, course: 'ウッド' },
+    'ダート': { gain: { dspd: 0.3, dsta: 0.3, slope: 0.15 }, fat: 10, cond: 8, risk: 0.8, course: 'ダート' },
+    'プール': { gain: { sta: 0.15, dsta: 0.15 }, fat: 2, cond: 4, risk: 0.1, course: 'プール' },
     'ゲート練習': { gain: { mind: 0.4 }, fat: 3, cond: 2, risk: 0.1, course: 'ゲート' },
     '軽め': { gain: {}, fat: -6, cond: 3, risk: 0.2, course: '軽め' },
     '休養': { gain: {}, fat: -18, cond: -4, risk: 0, course: '休養' },
@@ -320,7 +351,8 @@
     // 調教タイム（強めのときだけ速い時計）
     let time = null;
     const c = H.cur(horse, wIdx);
-    const ability = (c.spd * 2 + c.slope) / 3 + ((horse.kire || 4) - 4.5) * 0.8 + horse.cond * 0.04 - horse.fatigue * 0.03;
+    const sp = m.course === 'ダート' ? c.dspd : Math.max(c.spd, c.dspd);
+    const ability = (sp * 2 + c.slope) / 3 + ((horse.kire || 4) - 4.5) * 0.8 + horse.cond * 0.04 - horse.fatigue * 0.03;
     if (m.course === '坂路') {
       const hard = menuName.includes('強め');
       const t4 = 58.5 - ability * 0.075 - (hard ? 1.6 : 0) + rng.normal(0, 0.4);

@@ -162,7 +162,7 @@
       // 母が競走馬だったなら、その能力の形も少し受け継ぐ
       let m = 0;
       if (mare.pot && mare.pot[k] != null) m = (mare.pot[k] - H.overall(mare.pot)) * 0.3;
-      pot[k] = U.clamp(ev.mean + talent + prof[k] + m + rng.normal(0, 4), 25, 106);
+      pot[k] = U.clamp(ev.mean + talent + (prof[k] || 0) + m + rng.normal(0, 4), 25, 106);
     }
     // 適性
     const sSurf = stallion.surface || '芝';
@@ -173,6 +173,8 @@
       dirt: U.clamp(sDirt * 0.6 + mDirt * 0.4 + rng.normal(0, 8), 30, 100),
       heavy: U.clamp(50 + rng.normal(0, 18) + (tr.includes('道悪') ? 20 : 0), 10, 100),
     };
+    // 芝とダートのスピード・スタミナを、父母から来た芝・ダートの向きで分ける
+    H.splitSurface({ pot, apt }, rng);
     // 距離
     const mMin = mare.distMin || stallion.distMin || 1600, mMax = mare.distMax || stallion.distMax || 2400;
     let dMin = Math.round(((stallion.distMin || 1600) * 0.6 + mMin * 0.4 + rng.normal(0, 150)) / 100) * 100;

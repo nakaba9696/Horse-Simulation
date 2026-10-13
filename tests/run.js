@@ -223,15 +223,17 @@ check('edits: エディットが新しいゲームとセーブに効く', () => 
 
 // ---------- 能力の形・脚の切れ・坂・特殊能力 ----------
 check('stats: 能力の形と、前の版のセーブ・エディットの読み替え', () => {
-  const old = { pot: { spd: 80, sta: 70, kick: 90, pow: 60, guts: 75, wise: 70 }, bonus: { kick: 2, pow: 3, wise: 1 }, temper: 40, style: '差し' };
+  const old = { pot: { spd: 80, sta: 70, kick: 90, pow: 60, guts: 75, wise: 70 }, bonus: { kick: 2, pow: 3, wise: 1 }, temper: 40, style: '差し', apt: { turf: 100, dirt: 55, heavy: 50 } };
   H.fromLegacy(old);
   assert(JSON.stringify(Object.keys(old.pot).sort()) === JSON.stringify(H.STATS.slice().sort()), `能力の項目が違う ${Object.keys(old.pot)}`);
   assert(old.pot.mind === 55 && old.pot.slope === 60 && old.kire >= 6 && old.temper == null, `読み替えが違う ${JSON.stringify(old)}`);
+  assert(old.pot.spd === 80 && old.pot.dspd < 70, `芝・ダートの分け方が違う ${JSON.stringify(old.pot)}`);
   assert(old.bonus.slope === 3 && old.bonus.mind === 1 && old.bonus.kick == null, '調教の上積みの読み替えが違う');
-  const g = { v: 1, horses: { a: { name: 'x', pot: { spd: 80, sta: 80, kick: 70, pow: 70, guts: 70, wise: 70 }, temper: 60, style: '逃げ' } } };
+  const g = { v: 1, horses: { a: { name: 'x', pot: { spd: 80, sta: 80, kick: 70, pow: 70, guts: 70, wise: 70 }, temper: 60, style: '逃げ', apt: { turf: 50, dirt: 100, heavy: 50 } } } };
   W.migrate(g);
   const a = g.horses.a;
   assert(a.kire >= 1 && a.kire <= 8 && Array.isArray(a.skills) && a.pot.mind != null, '古いセーブが今の形にならない');
+  assert(a.pot.dspd === 80 && a.pot.spd < 70, `ダートの馬の芝の能力が下がっていない ${JSON.stringify(a.pot)}`);
   for (const d of D.historic.slice(0, 400)) {
     const h = H.fromHistoric(d, 'x');
     assert(h.kire >= 1 && h.kire <= 8, `${d.name} の切れ ${h.kire}`);
@@ -263,6 +265,21 @@ function fieldTest(course, dist, mod, N, seed) {
   }
   return { pos: pos / N, win: wins / N };
 }
+check('sim: 芝の馬はダートで沈み、ダートの馬はダートで走る', () => {
+  const run = (surface, mineSurf) => {
+    const rng = new U.RNG(21); let pos = 0; const N = 120;
+    for (let k = 0; k < N; k++) {
+      const field = []; for (let i = 0; i < 12; i++) { const h = H.makeFiller(rng, { level: 82, surface: i === 0 ? mineSurf : surface, dist: 1800, born: 2000 }); h.name = 'h' + i; field.push({ horse: h, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 }); }
+      pos += HS.Sim.run({ dist: 1800, surface, course: '東京', ground: '良', year: 2004 }, field, H.weekIndex(2004, 5, 1), rng, {}).results.findIndex(r => r.horse.name === 'h0') + 1;
+    }
+    return pos / N;
+  };
+  const turfOnDirt = run('ダ', '芝'), dirtOnDirt = run('ダ', 'ダ');
+  assert(turfOnDirt - dirtOnDirt > 2.5, `芝の馬 ${turfOnDirt.toFixed(1)} ダートの馬 ${dirtOnDirt.toFixed(1)}`);
+  const h = H.makeFiller(new U.RNG(3), { level: 80, surface: 'ダ', dist: 1800, born: 2000 });
+  assert(h.pot.dspd > h.pot.spd + 8 && h.apt.dirt > h.apt.turf, 'ダートの馬の芝スピードが下がっていない');
+  return `ダート1800の平均着順 芝の馬 ${turfOnDirt.toFixed(1)}・ダートの馬 ${dirtOnDirt.toFixed(1)}`;
+});
 check('sim: 坂が弱い馬は坂のあるコースで沈む', () => {
   const weak = h => { h.pot.slope = 50; };
   const hill = fieldTest('中山', 2000, weak, 150).pos, flat = fieldTest('京都', 2000, weak, 150).pos;

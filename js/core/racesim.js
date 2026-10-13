@@ -20,16 +20,17 @@
 
   // 1頭の、このレースでの強さ（点）を計算する。内訳も返す（人気・説明に使う）
   S.power = function (horse, race, wIdx, ctx) {
-    const c = H.cur(horse, wIdx);
+    const c0 = H.cur(horse, wIdx);
     const dirt = race.surface === 'ダ';
+    // この馬場でのスピード・スタミナを spd・sta として扱う
+    const c = Object.assign({}, c0, H.onSurface(c0, race.surface));
     const w = dirt ? { spd: 0.42, sta: 0.20, guts: 0.15, mind: 0.11, slope: 0.12 } : { spd: 0.45, sta: 0.22, guts: 0.16, mind: 0.12, slope: 0.05 };
-    let a = 0; for (const k of H.STATS) a += c[k] * w[k];
+    let a = 0; for (const k of Object.keys(w)) a += c[k] * w[k];
     const D = race.dist;
     let distPen = 0;
     if (D < horse.distMin) distPen = (horse.distMin - D) / 100 * 1.4;
     if (D > horse.distMax) distPen = (D - horse.distMax) / 100 * 1.2;
-    const apt = dirt ? horse.apt.dirt : horse.apt.turf;
-    const surfPen = (100 - apt) * 0.2;
+    const surfPen = 0; // 芝・ダートの違いは能力（芝スピードなど）に入っている
     const gl = { '良': 0, '稍重': 1, '重': 2, '不良': 3 }[race.ground] || 0;
     const groundAdj = gl * ((horse.apt.heavy || 50) - 55) / 45 * 1.3;
     const condAdj = (horse.cond || 0) / 100 * 3 - (horse.fatigue || 0) * 0.05;

@@ -132,6 +132,7 @@
       distMin: 1200 + r.int(0, 6) * 100, distMax: 1800 + r.int(0, 8) * 100, growth: r.pick(H.GROWTHS), style: r.pick(H.STYLES), kire: r.int(2, 7), skills: [],
       bonus: {}, wins: 0, starts: 0, earn: 0, gradedWins: [], results: [], cover: null, foals: [],
     };
+    H.splitSurface(m, r);
     P.register(m.name, m.sire, m.dam);
     return m;
   };
@@ -918,6 +919,7 @@
         quality: m.quality, coat: m.coat || H.pickCoat(r), pot: H.makeStats(r, m.quality - 5, 3), apt: { turf: 85, dirt: 60, heavy: 50 }, distMin: 1600, distMax: 2400, growth: '普通', style: '先行', kire: 3 + r.int(0, 3), skills: [],
         bonus: {}, wins: 0, starts: 0, earn: 0, gradedWins: [], results: [], cover: null, foals: [],
       };
+      H.splitSurface(h, r);
       if (item.inFoal) h.cover = { year: G.year - 1, sire: item.inFoal[1], ok: true };
       G.horses[h.id] = h;
       G.player.money -= item.price;

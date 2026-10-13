@@ -47,9 +47,7 @@
     { k: 'name', label: '馬名', val: d => d.name, str: true, dir: 1 },
     { k: 'born', label: '生年', val: d => d.born, dir: 1 },
     { k: 'rating', label: '評価', val: d => d.rating, dir: -1, heat: true },
-    ...H.STATS.map(k => ({ k, label: H.STAT_LABEL[k], val: d => Math.round(info(d).pot[k]), dir: -1, heat: true })),
-    { k: 'turf', label: '芝', val: d => Math.round(info(d).turf), dir: -1, heat: true, title: '芝の能力' },
-    { k: 'dirt', label: 'ダート', val: d => Math.round(info(d).dirt), dir: -1, heat: true, title: 'ダートの能力' },
+    ...H.STATS.map(k => ({ k, label: H.STAT_SHORT[k], val: d => Math.round(info(d).pot[k]), dir: -1, heat: true, title: H.STAT_LABEL[k] })),
     { k: 'heavy', label: '道悪', val: d => Math.round(info(d).heavy), dir: -1, heat: true, title: '大きいほど重い馬場が得意' },
     { k: 'health', label: '健康', val: d => Math.round(info(d).health), dir: -1, heat: true, title: '大きいほど故障しにくく、疲れが早く取れる' },
     { k: 'kire', label: '切れ', val: d => info(d).kire, dir: -1, show: d => `${info(d).kire} ${H.kireLabel(info(d).kire)}`, title: '脚の切れ（1＝極ズブ〜8＝極上の切れ）' },
@@ -193,9 +191,10 @@
           <div class="field grow"><label for="ed-health">健康（故障しにくさ・疲れの取れ方）<b id="ed-hv">${Math.round(health)}</b></label><input type="range" id="ed-health" min="10" max="100" value="${Math.round(health)}"></div>
         </div>
         <div class="row wrap">
-          ${['turf', 'dirt', 'heavy'].map(k => `<div class="field grow"><label for="ed-a-${k}">${{ turf: '芝', dirt: 'ダート', heavy: '道悪' }[k]}<b id="ed-av-${k}">${Math.round(now.apt[k])}</b></label><input type="range" id="ed-a-${k}" min="10" max="100" value="${Math.round(now.apt[k])}"></div>`).join('')}
+          ${['turf', 'dirt', 'heavy'].map(k => `<div class="field grow"><label for="ed-a-${k}">${{ turf: '芝の向き', dirt: 'ダートの向き', heavy: '道悪' }[k]}<b id="ed-av-${k}">${Math.round(now.apt[k])}</b></label><input type="range" id="ed-a-${k}" min="10" max="100" value="${Math.round(now.apt[k])}"></div>`).join('')}
         </div>
-        <label class="small"><input type="checkbox" id="ed-custom" ${custom ? 'checked' : ''}> 能力を個別に決める（決めないときは評価から自動で決まる）</label>
+        <div class="small muted">芝・ダートの向きは、能力を自動で決めるときに、苦手な側のスピード・スタミナをどれだけ下げるかに使います。</div>
+        <label class="small"><input type="checkbox" id="ed-custom" ${custom ? 'checked' : ''}> 能力を個別に決める（決めないときは評価と向きから自動で決まる）</label>
         <div class="stats mt">${H.STATS.map(statRow).join('')}</div>
         <div class="field mt"><label>特殊能力</label>
           <div class="skillpick">${H.SKILL_IDS.map(id => `<label class="small ${H.SKILLS[id].bad ? 'bad' : ''}" title="${e(H.SKILLS[id].note)}"><input type="checkbox" data-skill="${id}" ${skills.includes(id) ? 'checked' : ''}> ${e(H.SKILLS[id].label)}</label>`).join('')}</div></div>
@@ -206,7 +205,7 @@
     const syncStats = () => {
       const custom = $('#ed-custom').checked;
       const r = +$('#ed-rating').value;
-      const auto = defaultsFor(Object.assign({}, d, { surface: $('#ed-surface').value, distMax: +$('#ed-dmax').value, style: $('#ed-style').value }), r).pot;
+      const auto = defaultsFor(Object.assign({}, d, { surface: $('#ed-surface').value, distMax: +$('#ed-dmax').value, style: $('#ed-style').value }), r, { turf: +$('#ed-a-turf').value, dirt: +$('#ed-a-dirt').value }).pot;
       for (const k of H.STATS) {
         const inp = $('#ed-p-' + k);
         inp.disabled = !custom;
@@ -215,7 +214,7 @@
       }
     };
     $('#ed-rating').oninput = () => { const r = +$('#ed-rating').value; $('#ed-rv').textContent = `${U.grade(r)} ${r}`; syncStats(); };
-    for (const k of ['turf', 'dirt', 'heavy']) $('#ed-a-' + k).oninput = () => { $('#ed-av-' + k).textContent = $('#ed-a-' + k).value; };
+    for (const k of ['turf', 'dirt', 'heavy']) $('#ed-a-' + k).oninput = () => { $('#ed-av-' + k).textContent = $('#ed-a-' + k).value; if (k !== 'heavy') syncStats(); };
     $('#ed-health').oninput = () => { $('#ed-hv').textContent = $('#ed-health').value; };
     $('#ed-custom').onchange = syncStats;
     for (const id of ['#ed-surface', '#ed-dmax', '#ed-style']) $(id).onchange = syncStats;
