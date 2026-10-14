@@ -226,30 +226,25 @@ check('stats: 能力の形と、前の版のセーブ・エディットの読み
   const old = { pot: { spd: 80, sta: 70, kick: 90, pow: 60, guts: 75, wise: 70 }, bonus: { kick: 2, pow: 3, wise: 1 }, temper: 40, style: '差し', apt: { turf: 100, dirt: 55, heavy: 50 } };
   H.fromLegacy(old);
   assert(JSON.stringify(Object.keys(old.pot).sort()) === JSON.stringify(H.STATS.slice().sort()), `能力の項目が違う ${Object.keys(old.pot)}`);
-  assert(old.gr.mind === 'D' && old.gr.slope === 'C' && old.gr.guts === 'B+' && old.gr.heavy === 'E' && old.kire >= 6 && old.temper == null, `読み替えが違う ${JSON.stringify(old)}`);
+  assert(old.pot.mind === 55 && old.pot.slope === 60 && old.kire >= 6 && old.temper == null, `読み替えが違う ${JSON.stringify(old)}`);
   assert(old.pot.spd === 80 && old.pot.dspd < 70, `芝・ダートの分け方が違う ${JSON.stringify(old.pot)}`);
   assert(old.bonus.slope === 3 && old.bonus.mind === 1 && old.bonus.kick == null, '調教の上積みの読み替えが違う');
   const g = { v: 1, horses: { a: { name: 'x', pot: { spd: 80, sta: 80, kick: 70, pow: 70, guts: 70, wise: 70 }, temper: 60, style: '逃げ', apt: { turf: 50, dirt: 100, heavy: 50 } } } };
   W.migrate(g);
   const a = g.horses.a;
-  assert(a.kire >= 1 && a.kire <= 8 && Array.isArray(a.skills) && H.GRADED.every(k => H.isGrade(a.gr[k])), `古いセーブが今の形にならない ${JSON.stringify(a.gr)}`);
+  assert(a.kire >= 1 && a.kire <= 8 && Array.isArray(a.skills) && a.pot.mind != null, '古いセーブが今の形にならない');
   assert(a.pot.dspd === 80 && a.pot.spd < 70, `ダートの馬の芝の能力が下がっていない ${JSON.stringify(a.pot)}`);
+  // 一時期の版（段階で持っていた）のセーブも数に戻る
+  const g2 = { v: 1, horses: { b: { name: 'y', pot: { spd: 80, sta: 80, dspd: 70, dsta: 70 }, gr: { guts: 'A', mind: 'E', slope: 'SS', heavy: 'B', health: 'S' }, style: '先行', apt: { turf: 100, dirt: 70 } } } };
+  W.migrate(g2);
+  const b = g2.horses.b;
+  assert(b.pot.guts === 82 && b.pot.mind === 50 && b.pot.slope === 97 && b.health === 92 && b.apt.heavy === 72 && !b.gr, `段階のセーブが数に戻らない ${JSON.stringify(b)}`);
   for (const d of D.historic.slice(0, 400)) {
     const h = H.fromHistoric(d, 'x');
     assert(h.kire >= 1 && h.kire <= 8, `${d.name} の切れ ${h.kire}`);
     for (const k of H.STATS) assert(Number.isFinite(h.pot[k]), `${d.name} の ${k}`);
     for (const sk of h.skills) assert(H.SKILLS[sk], `${d.name} の特殊能力 ${sk}`);
-    for (const k of H.GRADED) assert(H.isGrade(h.gr[k]), `${d.name} の ${k} が段階でない ${h.gr[k]}`);
   }
-  // エディットの段階と、前の版の数のエディット
-  const dd = D.historic.find(x => x.name === 'ディープインパクト');
-  const e1 = H.fromHistoric(Object.assign({}, dd, { guts: 'E', heavy: 'SS' }), 'x');
-  assert(e1.gr.guts === 'E' && e1.gr.heavy === 'SS', 'エディットの段階が効かない');
-  const e2 = H.fromHistoric(Object.assign({}, dd, { health: 93, heavy: 41 }), 'x');
-  assert(e2.gr.health === 'S' && e2.gr.heavy === 'E', '前の版の数のエディットが段階にならない');
-  // 調教の上積みで段階が上がる
-  const t = { gr: { guts: 'B' }, bonus: { guts: 8 } };
-  assert(H.gradeOf(t, 'guts') === 'A', `調教で段階が上がらない ${H.gradeOf(t, 'guts')}`);
 });
 check('famous: 名馬の解説・切れ・特殊能力', () => {
   const names = new Set(D.historic.map(h => h.name));
@@ -291,7 +286,7 @@ check('sim: 芝の馬はダートで沈み、ダートの馬はダートで走�
   return `ダート1800の平均着順 芝の馬 ${turfOnDirt.toFixed(1)}・ダートの馬 ${dirtOnDirt.toFixed(1)}`;
 });
 check('sim: 坂が弱い馬は坂のあるコースで沈む', () => {
-  const weak = h => { h.gr.slope = 'E'; };
+  const weak = h => { h.pot.slope = 50; };
   const hill = fieldTest('中山', 2000, weak, 150).pos, flat = fieldTest('京都', 2000, weak, 150).pos;
   assert(hill - flat > 0.6, `中山 ${hill.toFixed(2)} 京都 ${flat.toFixed(2)}`);
   return `平均着順 中山 ${hill.toFixed(1)}・京都 ${flat.toFixed(1)}`;

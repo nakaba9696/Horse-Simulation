@@ -11,29 +11,12 @@
     if ((sireCoat === '白毛' || damCoat === '白毛') && rng.chance(0.4)) return '白毛';
     return rng.weighted(['鹿毛', '黒鹿毛', '青鹿毛', '青毛', '栗毛', '栃栗毛'], c => ({ '鹿毛': 40, '黒鹿毛': 20, '青鹿毛': 7, '青毛': 2, '栗毛': 26, '栃栗毛': 4 })[c]);
   };
-  // 能力（数で持ち、成長とともに伸びる素質）：スピードとスタミナを芝（spd・sta）とダート（dspd・dsta）で別に持つ
-  H.STATS = ['spd', 'sta', 'dspd', 'dsta'];
-  // 段階で持つ能力（h.gr に SS〜E の文字で持つ）。根性・気性・坂は成長とともに効きが増す
-  H.GRADED = ['guts', 'mind', 'slope', 'heavy', 'health'];
-  H.GROWN = ['guts', 'mind', 'slope'];
-  H.STAT_LABEL = { spd: '芝スピード', sta: '芝スタミナ', dspd: 'ダートスピード', dsta: 'ダートスタミナ', guts: '根性', mind: '気性', slope: '坂', heavy: '道悪', health: '健康' };
-  H.STAT_SHORT = { spd: '芝SP', sta: '芝ST', dspd: 'ダSP', dsta: 'ダST', guts: '根性', mind: '気性', slope: '坂', heavy: '道悪', health: '健康' };
-  H.STAT_NOTE = { spd: '芝での道中の速さ', sta: '芝で長く脚を保つ力', dspd: 'ダートでの道中の速さ', dsta: 'ダートで長く脚を保つ力', guts: '競り合いで抜かせない力', mind: '落ち着きと賢さ。出遅れ・掛かり・位置取り', slope: '坂での踏ん張り。弱いと坂で大きく脚がなくなる', heavy: '重い馬場での走り', health: '故障のしにくさと疲れの取れ方' };
-  // 段階（上から10段階）と、計算に使う値
-  H.GR = ['SS', 'S', 'A+', 'A', 'B+', 'B', 'C+', 'C', 'D', 'E'];
-  H.GRV = { SS: 97, S: 92, 'A+': 87, A: 82, 'B+': 77, B: 72, 'C+': 67, C: 62, D: 57, E: 50 };
-  H.toGrade = v => v >= 95 ? 'SS' : v >= 90 ? 'S' : v >= 85 ? 'A+' : v >= 80 ? 'A' : v >= 75 ? 'B+' : v >= 70 ? 'B' : v >= 65 ? 'C+' : v >= 60 ? 'C' : v >= 55 ? 'D' : 'E';
-  H.isGrade = g => Object.prototype.hasOwnProperty.call(H.GRV, g);
-  // 段階の値（調教の上積みを含む）
-  H.gv = function (h, k) {
-    const g = h.gr && h.gr[k];
-    const base = H.isGrade(g) ? H.GRV[g] : 72;
-    return base + (H.GROWN.includes(k) ? Math.min(H.BONUS_CAP || 8, (h.bonus && h.bonus[k]) || 0) : 0);
-  };
-  // いまの段階（調教で一つ上がることがある）
-  H.gradeOf = (h, k) => H.toGrade(H.gv(h, k));
-  // 数（前の版の値やエディットの数）を段階にそろえる
-  H.asGrade = v => H.isGrade(v) ? v : typeof v === 'number' && isFinite(v) ? H.toGrade(v) : null;
+  // 能力（成長とともに伸びる素質）。芝・ダート・道悪・健康は apt と health に、脚の切れは kire に分けて持つ
+  // スピードとスタミナは芝（spd・sta）とダート（dspd・dsta）で別に持つ
+  H.STATS = ['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'];
+  H.STAT_LABEL = { spd: '芝スピード', sta: '芝スタミナ', dspd: 'ダートスピード', dsta: 'ダートスタミナ', guts: '根性', mind: '気性', slope: '坂' };
+  H.STAT_SHORT = { spd: '芝SP', sta: '芝ST', dspd: 'ダSP', dsta: 'ダST', guts: '根性', mind: '気性', slope: '坂' };
+  H.STAT_NOTE = { spd: '芝での道中の速さ', sta: '芝で長く脚を保つ力', dspd: 'ダートでの道中の速さ', dsta: 'ダートで長く脚を保つ力', guts: '競り合いで抜かせない力', mind: '落ち着きと賢さ。出遅れ・掛かり・位置取り', slope: '坂での踏ん張り。弱いと坂で大きく脚がなくなる' };
   // 芝・ダートの向き（apt.turf・apt.dirt、100＝得意）から、苦手な側のスピード・スタミナを下げて分ける。pot の spd・sta は得意な側の値として受け取る
   H.splitSurface = function (h, rng) {
     const p = h.pot, a = h.apt;
@@ -100,13 +83,16 @@
       delete b.kick; delete b.pow; delete b.wise;
     }
     delete h.temper;
+    // 一時期の版（根性などを SS〜E の段階で h.gr に持っていた）のセーブ
+    if (h.gr) {
+      const GV = { SS: 97, S: 92, 'A+': 87, A: 82, 'B+': 77, B: 72, 'C+': 67, C: 62, D: 57, E: 50 };
+      for (const k of ['guts', 'mind', 'slope']) if (p && p[k] == null && GV[h.gr[k]]) p[k] = GV[h.gr[k]];
+      if (h.health == null && GV[h.gr.health]) h.health = GV[h.gr.health];
+      if (h.apt && h.apt.heavy == null && GV[h.gr.heavy]) h.apt.heavy = GV[h.gr.heavy];
+      delete h.gr;
+    }
     // 芝・ダートを分ける前の能力
     if (p && p.dspd == null && h.apt && h.apt.turf != null) H.splitSurface(h);
-    // 根性・気性・坂・道悪・健康を数から段階へ
-    h.gr = h.gr || {};
-    for (const k of H.GROWN) if (p && p[k] != null) { if (!h.gr[k]) h.gr[k] = H.toGrade(p[k]); delete p[k]; }
-    if (h.health != null && typeof h.health === 'number') { if (!h.gr.health) h.gr.health = H.toGrade(h.health); delete h.health; }
-    if (h.apt && h.apt.heavy != null) { if (!h.gr.heavy) h.gr.heavy = H.toGrade(h.apt.heavy); delete h.apt.heavy; }
     return h;
   };
 
@@ -139,17 +125,13 @@
     const g = horse.filler ? 1 : H.growthFactor(horse, wIdx); // 頭数合わせの馬は、いまの値をそのまま持つ
     const out = {};
     for (const k of H.STATS) out[k] = horse.pot[k] * g + ((horse.bonus && horse.bonus[k]) || 0);
-    for (const k of H.GROWN) out[k] = H.gv(horse, k) * g;
     return out;
   };
-  // 総合力（表示や人気の目安）。stats は H.cur の値か pot。段階の能力が無ければ B 相当とみなす
+  // 総合力（表示や人気の目安）
   H.overall = function (stats) {
     const turf = stats.spd * 0.35 + stats.sta * 0.25;
     const dirt = stats.dspd != null ? stats.dspd * 0.35 + stats.dsta * 0.25 : turf;
-    const o = (k, avg) => stats[k] != null ? stats[k] : avg;
-    // 段階の能力が無いとき（pot だけ）は、スピード・スタミナから見た平均で埋める
-    const sp = Math.max(turf, dirt) / 0.6;
-    return Math.max(turf, dirt) + o('guts', sp) * 0.15 + o('mind', sp) * 0.12 + o('slope', sp) * 0.13;
+    return Math.max(turf, dirt) + stats.guts * 0.15 + stats.mind * 0.12 + stats.slope * 0.13;
   };
 
   // 見立て（プレイヤーに見える値）。走るほど・調教するほど正確になる
@@ -229,26 +211,23 @@
       sire: d.sire || null, dam: d.dam || null, damsire: d.damsire || null,
       hist: true, owner: 'AI', loc: 'farm',
       pot,
-      apt: { turf: dirt ? 45 : both ? 85 : 100, dirt: dirt ? 100 : both ? 90 : 40 + rng.int(0, 15), heavy: 66 + rng.normal(0, 12) },
+      apt: { turf: dirt ? 45 : both ? 85 : 100, dirt: dirt ? 100 : both ? 90 : 40 + rng.int(0, 15), heavy: U.clamp(66 + rng.normal(0, 12), 20, 100) },
       distMin: d.distMin || 1600, distMax: d.distMax || 2400,
       style: st, kire: U.clamp(d.kire != null ? d.kire : kire0, 1, 8),
       growth, peakShift: 0,
-      health: 75 + rng.normal(0, 9),
+      health: d.health != null ? d.health : U.clamp(75 + rng.normal(0, 9), 30, 100),
       skills: Array.isArray(d.skills) ? d.skills.filter(x => H.SKILLS[x]) : H.histSkills(d, rng),
       bonus: {}, cond: 0, fatigue: 0, injury: null,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [],
       restUntil: 0, retireYear: d.retire || (d.born + 5),
     };
-    // エディットで芝・ダートの向きを決めた馬
-    for (const k of ['turf', 'dirt']) if (d[k] != null) h.apt[k] = d[k];
+    // エディットで芝・ダート・道悪を決めた馬
+    for (const k of ['turf', 'dirt', 'heavy']) if (d[k] != null) h.apt[k] = d[k];
     // 芝とダートの能力を分ける（個別に決めた能力に芝・ダートの両方があれば、そのまま使う）
     if (custom && custom.dspd != null && custom.dsta != null) H.syncApt(h);
     else H.splitSurface(h, rng);
-    // 根性・気性・坂・道悪・健康を段階に（エディットで決めた段階があればそちら。前の版の数も読む）
-    H.fromLegacy(h);
-    // 出遅れ癖・掛かり癖のある馬は気性が荒い
-    if (h.skills.includes('kakari') || h.skills.includes('deokure')) h.gr.mind = H.toGrade(H.GRV[h.gr.mind] - 14);
-    for (const k of H.GRADED) { const g = H.asGrade(d[k] != null ? d[k] : custom && custom[k]); if (g) h.gr[k] = g; }
+    // 出遅れ癖・掛かり癖のある馬は気性が荒い（気性を個別に決めた馬は除く）
+    if (!(custom && custom.mind != null) && (h.skills.includes('kakari') || h.skills.includes('deokure'))) pot.mind = U.clamp(pot.mind - 14, 20, 120);
     return h;
   };
 
@@ -330,11 +309,10 @@
     const h = {
       id: 'f' + rng.int(1, 1e9), name: opts.name || '', sex: sex || (rng.chance(0.75) ? '牡' : '牝'), born, coat: H.pickCoat(rng),
       sire: sireName || null, dam: null, hist: false, owner: 'AI', filler: true, foreign: !!foreign,
-      pot, apt: { turf: surface === '芝' ? 95 + rng.int(0, 5) : 50, dirt: surface === 'ダ' ? 95 + rng.int(0, 5) : 50 },
+      pot, apt: { turf: surface === '芝' ? 95 + rng.int(0, 5) : 50, dirt: surface === 'ダ' ? 95 + rng.int(0, 5) : 50, heavy: 30 + rng.int(0, 60) },
       distMin: Math.max(1000, dist - 400 + rng.int(0, 2) * 100), distMax: dist + 200 + rng.int(0, 4) * 100,
       style: rng.weighted(H.STYLES, s => ({ '逃げ': 1, '先行': 3, '差し': 3, '追込': 1.5 })[s]), kire: rng.int(2, 7), skills: [],
-      growth, peakShift: 0,
-      gr: { guts: H.toGrade(level + rng.normal(0, 6)), mind: H.toGrade(level - 3 + rng.normal(0, 7)), slope: H.toGrade(level - 2 + rng.normal(0, 6)), heavy: H.toGrade(65 + rng.normal(0, 13)), health: H.toGrade(72 + rng.normal(0, 9)) },
+      growth, peakShift: 0, health: 60 + rng.int(0, 30),
       bonus: {}, cond: rng.normal(0, 30), fatigue: 0, injury: null,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [],
     };
@@ -377,7 +355,7 @@
     horse.trainWeeks = (horse.trainWeeks || 0) + 1;
     // 故障（体質・疲れ・強さ）
     let injury = null;
-    const riskP = m.risk * 0.004 * (1 + fatBefore / 40) * (1.4 - H.gv(horse, 'health') / 100);
+    const riskP = m.risk * 0.004 * (1 + fatBefore / 40) * (1.4 - (horse.health || 70) / 100);
     if (rng.chance(riskP)) injury = H.injure(horse, rng);
     // 調教タイム（強めのときだけ速い時計）
     let time = null;
@@ -414,7 +392,7 @@
 
   // 放牧中・牧場にいる週の回復
   // 疲れの取れ方（健康が高いほど早い）。base＝健康70のときの1週の回復
-  H.recover = (horse, base) => base * (0.65 + H.gv(horse, 'health') / 200);
+  H.recover = (horse, base) => base * (0.65 + (horse.health != null ? horse.health : 70) / 200);
   H.rest = function (horse, rng) {
     horse.fatigue = Math.max(0, (horse.fatigue || 0) - H.recover(horse, 22));
     horse.cond = U.clamp((horse.cond || 0) * 0.6 + rng.normal(0, 10), -60, 40);

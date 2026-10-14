@@ -206,9 +206,3 @@ input[type=range] { accent-color: var(--gold); min-width: 0; }
 .skillpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 4px 10px; }
 .skillpick .bad, .ed-table .sk .bad { color: #ff9a9a; }
 .horse-text { line-height: 1.8; font-size: 14px; }
-/* 段階で持つ能力（根性・気性・坂・道悪・健康） */
-.grades { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; }
-.grades > div { background: #0f2034; border-radius: 6px; padding: 5px 8px; display: flex; align-items: baseline; justify-content: space-between; font-size: 12px; }
-.grades .lb { color: var(--muted); }
-.grades .g { font-family: "Noto Serif JP", serif; font-weight: 900; font-size: 16px; color: var(--gold2); }
-.ed-table td.gradecell { text-align: center; font-weight: 700; }

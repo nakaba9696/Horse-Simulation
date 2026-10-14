@@ -157,7 +157,6 @@
     if (tr.includes('底力')) prof.guts += 4;
     if (tr.includes('持続力')) { prof.sta += 2; prof.guts += 2; }
     if (tr.includes('気性難')) prof.mind -= 6;
-    prof.dspd = prof.spd; prof.dsta = prof.sta;
     const pot = {};
     for (const k of H.STATS) {
       // 母が競走馬だったなら、その能力の形も少し受け継ぐ
@@ -172,6 +171,7 @@
     const apt = {
       turf: U.clamp(sTurf * 0.6 + mTurf * 0.4 + rng.normal(0, 8), 30, 100),
       dirt: U.clamp(sDirt * 0.6 + mDirt * 0.4 + rng.normal(0, 8), 30, 100),
+      heavy: U.clamp(50 + rng.normal(0, 18) + (tr.includes('道悪') ? 20 : 0), 10, 100),
     };
     // 芝とダートのスピード・スタミナを、父母から来た芝・ダートの向きで分ける
     H.splitSurface({ pot, apt }, rng);
@@ -195,22 +195,13 @@
     const sKire = stallion.kire || (tr.includes('瞬発力') ? 6.5 : tr.includes('持続力') ? 3 : tr.includes('パワー') ? 3.8 : 4.5);
     const kire = U.clamp(Math.round(sKire * 0.6 + (mare.kire || 4.5) * 0.4 + rng.normal(0, 1.1)), 1, 8);
     const style = kire >= 6 ? rng.pick(['差し', '差し', '追込', '先行']) : kire <= 3 ? rng.pick(['逃げ', '先行', '先行', '差し']) : rng.pick(['先行', '差し', '先行', '差し', '逃げ', '追込']);
-    // 根性・気性・坂・道悪・健康（段階）。父の特徴と、母の段階を少し受け継ぐ
-    const base = ev.mean + talent;
-    const fromMare = k => mare.gr && H.isGrade(mare.gr[k]) ? (H.GRV[mare.gr[k]] - 72) * 0.25 : 0;
-    const gr = {
-      guts: H.toGrade(base + prof.guts + fromMare('guts') + rng.normal(0, 6)),
-      mind: H.toGrade(base - 3 + prof.mind + fromMare('mind') + rng.normal(0, 7)),
-      slope: H.toGrade(base - 2 + prof.slope + fromMare('slope') + rng.normal(0, 6)),
-      heavy: H.toGrade(65 + (tr.includes('道悪') ? 12 : 0) + fromMare('heavy') + rng.normal(0, 13)),
-      health: H.toGrade(76 + (tr.includes('丈夫') ? 8 : 0) - (tr.includes('体質弱') ? 8 : 0) - ev.risk * 5 + fromMare('health') + rng.normal(0, 9)),
-    };
+    let health = U.clamp(75 + rng.normal(0, 12) + (tr.includes('丈夫') ? 10 : 0) + (tr.includes('体質弱') ? -10 : 0) - ev.risk * 6, 10, 100);
     // 特殊能力：親の能力をときどき受け継ぎ、まれに新しく持つ
     const skills = [];
     for (const id of [...(stallion.skills || []), ...(mare.skills || [])]) if (!skills.includes(id) && rng.chance(0.25)) skills.push(id);
     if (rng.chance(0.12)) { const id = rng.pick(H.SKILL_IDS); if (!skills.includes(id)) skills.push(id); }
     return {
-      pot, apt, gr, distMin: dMin, distMax: dMax, growth, peakShift: rng.normal(0, 0.2), style, kire, skills,
+      pot, apt, distMin: dMin, distMax: dMax, growth, peakShift: rng.normal(0, 0.2), style, kire, skills, health,
       sex: rng.chance(0.5) ? '牡' : '牝', ev,
     };
   };
