@@ -669,7 +669,7 @@
         if (h.injury) { H.rest(h, rng); continue; }
         if (raced.has(h.id)) continue;
         if (h.owner === 'P') {
-          const menu = h.auto || !h.menu ? W.autoMenu(h, wIdx) : h.menu;
+          const menu = G.mode === 'jockey' || h.auto || !h.menu ? W.autoMenu(h, wIdx) : h.menu; // 騎手のゲームでは調教は調教師にまかせる
           const tr = H.train(h, menu, rng, wIdx);
           h.lastTrain = { menu, time: tr.time, date: report.date };
           if (tr.injury) news(`${h.name}が調教中に${tr.injury.name}。全治${tr.injury.weeks}週。`, 'warn');

@@ -144,7 +144,7 @@
     const wIdx = W.wIdx();
     const mine = h.owner === 'P';
     const tab = st.htab || (h.loc === 'stable' ? 'train' : 'info');
-    const tabs = [['info', '能力'], h.loc === 'stable' && mine ? ['train', '調教・出走'] : null, ['results', '戦績'], ['ped', '血統']].filter(Boolean);
+    const tabs = [['info', '能力'], h.loc === 'stable' && mine ? ['train', G.mode === 'jockey' ? '出走' : '調教・出走'] : null, ['results', '戦績'], ['ped', '血統']].filter(Boolean);
     const cls = H.className(H.classOf(h), G.year);
     let body = '';
     if (tab === 'info') body = infoTab(h, wIdx);
@@ -242,12 +242,12 @@
     const rsv = jm ? HS.Season.reserves(h.id) : [];
     return `
       <div class="comment mt">${e(H.comment(h, wIdx))}</div>
-      <h2 class="sec">今週の調教<span class="r">${h.lastTrain && h.lastTrain.time ? '前回 ' + e(h.lastTrain.time) : ''}</span></h2>
+      ${jm ? `<div class="panel mt"><div class="row small">調子 ${UI.condTag(h)}<span class="muted">疲れ</span><span class="grow">${UI.fatigue(h)}</span></div><div class="small muted">調教は調教師にまかせています。</div></div>` : `<h2 class="sec">今週の調教<span class="r">${h.lastTrain && h.lastTrain.time ? '前回 ' + e(h.lastTrain.time) : ''}</span></h2>
       <div class="panel">
         ${h.auto ? '<div class="small muted">おまかせ中：調教と出走は自動で決まります。</div>' : ''}
         <div class="menus">${H.MENU_LIST.map(m => `<button class="${menu === m && !h.auto ? 'on' : ''}" data-act="menu" data-id="${h.id}" data-m="${m}">${m}</button>`).join('')}</div>
         <div class="row small mt">調子 ${UI.condTag(h)}<span class="muted">疲れ</span><span class="grow">${UI.fatigue(h)}</span></div>
-      </div>
+      </div>`}
       <h2 class="sec">今週のレース<span class="r">${ent ? '登録済み' : elig.length + 'レースに出られる'}</span></h2>
       ${h.injury ? `<div class="panel empty">故障中（${e(h.injury.name)}・あと${h.injury.weeks}週）</div>` : elig.length ? `<div class="tblwrap"><table class="t">
         <tr><th></th><th>レース</th><th>条件</th><th class="hide-sm">馬場</th><th></th></tr>

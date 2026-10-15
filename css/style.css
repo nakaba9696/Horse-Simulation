@@ -328,3 +328,11 @@ html[data-theme="navy"] .pd-band { background: linear-gradient(180deg, #1d3a63, 
 .pd-band .md { padding: 1px 8px; border-radius: 999px; background: rgba(255,255,255,.12); } .pd-band .md.good { color: #9ff0b8; } .pd-band .md.bad { color: #ff9a7a; }
 html[data-theme="green"] .entry-head { background: linear-gradient(90deg, #14472b, #1f6a40); }
 html[data-theme="green"] .tenkai { background: #0e2a1a; }
+/* 馬の店（フリーハンデ順の一覧） */
+.shop-row { cursor: pointer; } .shop-row:hover { background: rgba(255,255,255,.05); }
+.fhv { display: inline-block; min-width: 42px; padding: 1px 6px; border-radius: 4px; color: #fff; font-weight: 700; }
+.fhv.turf { background: #2f8a7a; } .fhv.dirt { background: #a77a2c; }
+.t.shop td, .t.shop th { padding-left: 6px; padding-right: 6px; }
+.t.shop th.num { text-align: right; }
+.t.shop .btn, .t.shop td.num { white-space: nowrap; }
+@media (max-width: 600px) { .t.shop .sire { display: none; } .t.shop .fhv { min-width: 34px; padding: 1px 3px; } .t.shop td, .t.shop th { padding-left: 3px; padding-right: 3px; } }

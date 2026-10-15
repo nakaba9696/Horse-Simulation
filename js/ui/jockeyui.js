@@ -61,6 +61,7 @@
         <div><div class="small muted">成績</div><b>${h.starts || 0}戦${h.wins || 0}勝</b></div></div>
       ${(h.titles || []).length ? `<div class="mt">${UI.titleChips(h)}</div>` : ''}
       <div class="grrow mt"><div class="growth"><div class="small muted">成長の山（年齢）</div><div class="gbars">${bars}</div></div>
+        ${!mine ? (() => { const hi = W.marketHistoric().findIndex(x => x.horse.id === h.id), fi = hi < 0 ? W.marketForeign().findIndex(x => x.horse.id === h.id) : -1; if (hi < 0 && fi < 0) return ''; const it = hi >= 0 ? W.marketHistoric()[hi] : W.marketForeign()[fi]; return `<div class="small"><div>馬の店の値段 <b>${U.money(it.price)}</b></div><button class="btn sm gold mt" data-act="buy" data-kind="${hi >= 0 ? 'hist' : 'fhist'}" data-i="${hi >= 0 ? hi : fi}">買う</button></div>`; })() : ''}
         ${mine ? `<div class="small"><div>総獲得賞金 <b>${U.money(h.prize || 0)}</b></div><div>値段 <b>${U.money(W.sellPrice(h))}</b></div><div>毎月の費用 <b>${U.money(UI.costOf(h))}</b></div></div>` : ''}</div>
     </div>`;
   };
@@ -128,12 +129,30 @@
       </div></div>`;
   }
 
-  // ---------- 市場（史実馬のデビュー前だけ） ----------
+  // ---------- 馬の店：デビュー前の史実馬を、フリーハンデの高い順に一行ずつ。行を押すと馬の画面（解説もそこで読める） ----------
   const market0 = S.market;
   S.market = function (st) {
     if (!isJ()) return market0(st);
-    const html = market0(Object.assign({}, st, { mtab: 'hist' }));
-    return `<div class="panel small mt">デビュー前の史実馬を買って、自分で乗る。2歳の4月から自動で入厩します。資金は賞金（馬主の取り分と騎手の取り分）で増えます。</div>` + html.replace(/<div class="tabs">[\s\S]*?<\/div>/, '');
+    const G = W.get(), wIdx = W.wIdx();
+    const items = W.marketHistoric().map((it, i) => ({ it, i, kind: 'hist' })).concat(W.marketForeign().map((it, i) => ({ it, i, kind: 'fhist' })));
+    for (const x of items) { x.fh = T.fhBoth(x.it.horse, wIdx); x.top = Math.max(x.fh.turf, x.fh.dirt); }
+    items.sort((a, b) => b.top - a.top || b.it.price - a.it.price);
+    const lim = st.mlimit || 40;
+    const full = !T.canBuy();
+    const rows = items.slice(0, lim).map(({ it, i, kind, fh }) => {
+      const h = it.horse, ok = !full && it.price <= G.player.money;
+      return `<tr class="shop-row" data-act="horse" data-id="${e(h.id)}">
+        <td><b>${e(h.name)}</b>${kind === 'fhist' ? ' <span class="chip hist">海外</span>' : ''}${h.sire ? `<div class="small muted sire">父 ${e(h.sire)}</div>` : ''}</td>
+        <td class="small">${h.gelding ? 'セ' : h.sex}${G.year - h.born}</td>
+        <td class="num"><span class="fhv turf">${fh.turf.toFixed(1)}</span></td><td class="num"><span class="fhv dirt">${fh.dirt.toFixed(1)}</span></td>
+        <td class="num small"><b style="color:var(--gold2)">${U.money(it.price)}</b></td>
+        <td><button class="btn sm ${ok ? 'gold' : ''}" data-act="buy" data-kind="${kind}" data-i="${i}" ${ok ? '' : 'disabled'}>買う</button></td></tr>`;
+    }).join('');
+    return `<h2 class="sec">馬の店<span class="r">資金 ${U.money(G.player.money)}・お手馬 ${T.ownCount()}/${T.MAX_OWN}</span></h2>
+      <div class="small muted">デビュー前の史実馬。フリーハンデ（いまの力を斤量で表した数）の高い順。行を押すと馬の画面と解説。2歳の4月から自動で入厩します。</div>
+      ${items.length ? `<div class="tblwrap mt"><table class="t shop"><tr><th>馬名</th><th>性齢</th><th class="num">芝</th><th class="num">ダ</th><th class="num">値段</th><th></th></tr>${rows}</table></div>
+        ${items.length > lim ? `<div class="center mt"><button class="btn" data-act="mmore">もっと見る（残り${items.length - lim}頭）</button></div>` : ''}`
+        : '<div class="panel empty">いま買えるデビュー前の史実馬はいません。毎年3月に新しい世代が生まれます。</div>'}`;
   };
   const retire0 = App.act.retire;
   App.act.retire = async d => {
