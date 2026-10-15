@@ -206,6 +206,7 @@
   };
   // パドック：出馬表と自分の馬。自分で乗るか、おまかせか
   function paddock(card, runner) {
+    if (HS.Audio) HS.Audio.bgm('paddock');
     return new Promise(res => {
       const h = runner.horse;
       const tip = h.style === '逃げ' ? 'ハナを切って、そのまま粘らせてください。' : h.style === '先行' ? '好位につけて、直線で抜け出してください。' : h.style === '差し' ? '中団で脚をためて、直線勝負でお願いします。' : '後ろで脚をためて、最後に外から。';

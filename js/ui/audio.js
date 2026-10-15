@@ -53,16 +53,42 @@
     bass: { type: 'triangle', vol: 0.28, a: 0.005, d: 0.08, s: 0.7, r: 0.05 },
     pad: { type: 'triangle', vol: 0.05, a: 0.12, d: 0.2, s: 0.7, r: 0.4 },
     bell: { type: 'sine', vol: 0.12, a: 0.005, d: 0.3, s: 0.2, r: 0.6 },
+    // 90年代のロック・フュージョンの音色
+    guitar: { type: 'sawtooth', vol: 0.07, a: 0.008, d: 0.15, s: 0.75, r: 0.12, vib: 5.5, dist: 1, lp: 3200, det: 6 },
+    power: { type: 'sawtooth', vol: 0.045, a: 0.004, d: 0.06, s: 0.6, r: 0.05, dist: 1, lp: 2200, det: 9 },
+    slap: { type: 'square', vol: 0.16, a: 0.002, d: 0.09, s: 0.35, r: 0.05, lp: 1400, pluck: 1 },
+    ebass: { type: 'sawtooth', vol: 0.16, a: 0.004, d: 0.1, s: 0.7, r: 0.05, lp: 700 },
+    epiano: { type: 'sine', vol: 0.09, a: 0.004, d: 0.4, s: 0.35, r: 0.3, bellh: 1 },
+    synth: { type: 'sawtooth', vol: 0.05, a: 0.01, d: 0.12, s: 0.7, r: 0.15, lp: 2600, det: 8, vib: 5 },
+  };
+  // 歪み（ギター）
+  let distCurve = null;
+  const getDist = () => {
+    if (distCurve) return distCurve;
+    const n = 1024, k = 28; distCurve = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; distCurve[i] = (1 + k) * x / (1 + k * Math.abs(x)); }
+    return distCurve;
   };
   function tone(bus, f, t, dur, instName, volMul) {
     const I = INST[instName] || INST.lead;
-    const o = ctx.createOscillator(); o.type = I.type; o.frequency.setValueAtTime(f, t);
-    let node = o;
-    if (I.vib) { const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = I.vib; lg.gain.value = f * 0.004; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + dur + I.r + 0.05); }
-    if (I.lp) { const f2 = ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = I.lp; o.connect(f2); node = f2; }
+    const stopAt = t + dur + I.r + 0.05;
+    const mix = ctx.createGain();
+    const oscs = [];
+    const mk = (type, fq, det) => { const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(fq, t); if (det) o.detune.value = det; o.connect(mix); oscs.push(o); return o; };
+    mk(I.type, f, 0);
+    if (I.det) mk(I.type, f, I.det).detune.value = I.det; // 少しずらして厚く
+    if (I.bellh) { const o = mk('sine', f * 4, 0); const hg = ctx.createGain(); o.disconnect(); o.connect(hg); hg.connect(mix); hg.gain.setValueAtTime(0.35, t); hg.gain.exponentialRampToValueAtTime(0.001, t + 0.25); }
+    if (I.vib) { const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = I.vib; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.005, t + Math.min(0.25, dur)); l.connect(lg); for (const o of oscs) lg.connect(o.frequency); l.start(t); l.stop(stopAt); }
+    let node = mix;
+    if (I.dist) { const ws = ctx.createWaveShaper(); ws.curve = getDist(); ws.oversample = '2x'; node.connect(ws); node = ws; }
+    if (I.lp) {
+      const f2 = ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.setValueAtTime(I.pluck ? I.lp * 3 : I.lp, t);
+      if (I.pluck) f2.frequency.exponentialRampToValueAtTime(I.lp * 0.5, t + 0.12);
+      node.connect(f2); node = f2;
+    }
     const g = ctx.createGain(); node.connect(g); g.connect(bus);
     env(g, t, I.a, I.vol * (volMul || 1), I.d, I.s, dur, I.r);
-    o.start(t); o.stop(t + dur + I.r + 0.05);
+    for (const o of oscs) { o.start(t); o.stop(stopAt); }
   }
   function noise(bus, t, dur, type, fq, vol, q) {
     const s = ctx.createBufferSource(); s.buffer = noiseBuf;
@@ -83,37 +109,69 @@
     h: t => noise(bgmBus, t, 0.03, 'highpass', 7000, 0.08),
     x: t => { kick(bgmBus, t, 0.45); noise(bgmBus, t, 0.03, 'highpass', 7000, 0.08); },
     t: t => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.25); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3); o.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + 0.35); },
+    // ロックの太鼓：強いスネア・クラッシュ・オープンハイハット・低いタム
+    S: t => { noise(bgmBus, t, 0.16, 'bandpass', 1500, 0.36, 0.7); const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.08); g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1); o.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + 0.12); },
+    c: t => { kick(bgmBus, t, 0.5); noise(bgmBus, t, 1.1, 'highpass', 5000, 0.16); },
+    o: t => noise(bgmBus, t, 0.18, 'highpass', 6500, 0.07),
+    l: t => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(80, t); o.frequency.exponentialRampToValueAtTime(52, t + 0.3); g.gain.setValueAtTime(0.38, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); o.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + 0.4); },
+    K: t => { kick(bgmBus, t, 0.5); noise(bgmBus, t, 0.16, 'bandpass', 1500, 0.32, 0.7); },
   };
 
-  // ---------- 曲（拍は8分音符を1とする。「音:長さ」、和音は「+」、休符は R） ----------
+  // ---------- 曲（拍は8分音符を1とする。「音:長さ」、和音は「+」、休符は R、「*回数」でくり返し） ----------
+  // どれもこのゲームのための書き下ろし。90年代後半の家庭用競馬ゲームのような、ギターとブラスのロック・フュージョンの調子
+  // コード名から、1小節ぶんの伴奏を作る道具
+  const PC = { D: 'D3+A3', A: 'A2+E3', Bm: 'B2+F#3', G: 'G2+D3', Em: 'E3+B3', 'F#m': 'F#2+C#3', Bb: 'Bb2+F3', C: 'C3+G3', B: 'B2+F#3', Am: 'A2+E3', F: 'F2+C3', E: 'E3+B3', Dm: 'D3+A3' };
+  const BS = { D: 'D2', A: 'A1', Bm: 'B1', G: 'G1', Em: 'E2', 'F#m': 'F#1', Bb: 'Bb1', C: 'C2', B: 'B1', Am: 'A1', F: 'F1', E: 'E2', Dm: 'D2' };
+  const power = chords => chords.map(c => `${PC[c]}*8`).join(' | ');
+  const rockBass = chords => chords.map(c => `${BS[c]}*8`).join(' | ');
+  // フュージョンのスラップ（根音・オクターブ上・7度）
+  const slapBar = (r, o, s7) => `${r}2 R:1 ${o}3 ${r}2 R:1 ${r}2 ${s7} ${o}3`;
+  // エレピの刻み（裏拍）
+  const comp = v => `R:1 ${v}:1 R:2 ${v}:1 R:1 ${v}:2`;
+  const ROCK = 'k.h.S.h.k.k.S.h.', ROCK2 = 'k.h.S.hkk.h.S.h.', CRASH = 'c.h.S.h.k.k.S.h.';
+  const FILL = 'k.h.S.h.SSSSllll', FILL2 = 'SSSSSSllllllK.K.';
+  const FUNK = 'k.h.S.hkh.k.S.ho', FUNKF = 'k.h.S.hkS.SSS.l.';
   const SONGS = {
-    // タイトル：ハ長調、ゆったり堂々と
+    // タイトル：ニ長調、明るく駆け出すロック
     title: {
-      bpm: 104, loop: true,
-      tracks: [
-        { inst: 'brass', seq: 'E5:2 G5:2 C6:3 B5:1 | A5:4 E5:2 A5:2 | F5:2 A5:2 C6:2 A5:2 | G5:6 R:2 | E5:2 G5:2 C6:3 D6:1 | B5:4 G5:2 E5:2 | A5:2 C6:2 D6:2 B5:2 | C6:6 R:2 | A5:2 C6:2 F6:3 E6:1 | D6:4 B5:2 G5:2 | G5:2 B5:2 E6:3 D6:1 | C6:4 A5:2 E5:2 | F5:2 A5:2 D6:3 C6:1 | B5:2 D6:2 G6:3 F6:1 | E6:4 D6:2 C6:2 | C6:6 R:2' },
-        { inst: 'pad', seq: 'C4+E4+G4:8 | A3+C4+E4:8 | F3+A3+C4:8 | G3+B3+D4:8 | C4+E4+G4:8 | E3+G3+B3:8 | F3+A3+C4:4 G3+B3+D4:4 | C4+E4+G4:8 | F3+A3+C4:8 | G3+B3+D4:8 | E3+G3+B3:8 | A3+C4+E4:8 | D4+F4+A4:8 | G3+B3+D4:8 | C4+E4+G4:8 | C4+E4+G4:8' },
-        { inst: 'bass', seq: 'C3:2 C3:2 G2:2 C3:2 | A2:2 A2:2 E2:2 A2:2 | F2:2 F2:2 C3:2 F2:2 | G2:2 G2:2 D3:2 G2:2 | C3:2 C3:2 G2:2 C3:2 | E2:2 E2:2 B2:2 E2:2 | F2:2 F2:2 G2:2 G2:2 | C3:2 G2:2 C3:4 | F2:2 F2:2 C3:2 F2:2 | G2:2 G2:2 D3:2 G2:2 | E2:2 E2:2 B2:2 E2:2 | A2:2 A2:2 E2:2 A2:2 | D3:2 D3:2 A2:2 D3:2 | G2:2 G2:2 D3:2 G2:2 | C3:2 C3:2 G2:2 C3:2 | C3:4 C3:4' },
-        { drum: 'k...h...s...h...k...h.k.s...h...' },
-      ],
-    },
-    // 牧場・ホーム：ヘ長調、のどか
-    home: {
-      bpm: 88, loop: true,
-      tracks: [
-        { inst: 'flute', seq: 'A4:3 C5:1 F5:2 E5:2 | D5:4 A4:4 | Bb4:2 D5:2 F5:2 D5:2 | C5:6 R:2 | A4:3 C5:1 F5:2 G5:2 | A5:4 E5:4 | D5:2 F5:2 E5:2 C5:2 | F5:6 R:2 | C5:2 F5:2 A5:3 G5:1 | F5:4 D5:4 | Bb4:2 D5:2 G5:3 F5:1 | E5:4 C5:4 | D5:2 F5:2 Bb5:3 A5:1 | G5:4 C5:4 | A4:2 C5:2 E5:2 G5:2 | F5:6 R:2' },
-        { inst: 'pad', seq: 'F3+A3+C4:8 | D3+F3+A3:8 | Bb2+D3+F3:8 | C3+E3+G3:8 | F3+A3+C4:8 | A2+C3+E3:8 | Bb2+D3+F3:4 C3+E3+G3:4 | F3+A3+C4:8 | F3+A3+C4:8 | D3+F3+A3:8 | G3+Bb3+D4:8 | C3+E3+G3:8 | Bb2+D3+F3:8 | C3+E3+G3:8 | C3+E3+G3:8 | F3+A3+C4:8' },
-        { inst: 'bass', seq: 'F2:4 C3:4 | D2:4 A2:4 | Bb2:4 F2:4 | C3:4 G2:4 | F2:4 C3:4 | A2:4 E2:4 | Bb2:4 C3:4 | F2:4 F2:4 | F2:4 C3:4 | D2:4 A2:4 | G2:4 D3:4 | C3:4 G2:4 | Bb2:4 F2:4 | C3:4 G2:4 | C3:4 C3:4 | F2:4 F2:4' },
-        { drum: 'k.......h.......k.......h.......' },
-      ],
-    },
-    // レース：ニ短調、速く
-    race: {
       bpm: 152, loop: true,
       tracks: [
-        { inst: 'lead', seq: 'D5 F5 A5 F5 D5 F5 A5 C6 | Bb4 D5 F5 D5 Bb4 D5 F5 A5 | C5 E5 G5 E5 C5 E5 G5 Bb5 | A4 C#5 E5 A5 G5 E5 C#5 A4 | D5 F5 A5 D6 C6 A5 F5 D5 | F5 A5 C6 F6 E6 C6 A5 F5 | G5 Bb5 D6 G6 F6 D6 Bb5 G5 | A5:2 C#6:2 E6:2 A6:2' },
-        { inst: 'bass', seq: 'D3 D3 D3 D3 D3 D3 D3 D3 | Bb2 Bb2 Bb2 Bb2 Bb2 Bb2 Bb2 Bb2 | C3 C3 C3 C3 C3 C3 C3 C3 | A2 A2 A2 A2 A2 A2 A2 A2 | D3 D3 D3 D3 D3 D3 D3 D3 | F2 F2 F2 F2 F2 F2 F2 F2 | G2 G2 G2 G2 G2 G2 G2 G2 | A2 A2 A2 A2 A2 A2 A2 A2' },
-        { drum: 'k.h.s.hkk.h.s.h.' },
+        { inst: 'guitar', seq: 'D5:2 E5:1 F#5:1 A5:3 F#5:1 | E5:2 C#5:2 A4:4 | B4:2 D5:1 F#5:1 B5:3 A5:1 | G5:4 F#5:2 E5:2 | E5:2 G5:1 B5:1 E6:3 D6:1 | C#6:2 B5:2 A5:2 E5:2 | F#5:2 A5:2 D6:2 C#6:1 D6:1 | E6:6 R:2 | D6:3 B5:1 G5:2 D6:2 | E6:3 C#6:1 A5:2 E6:2 | F#6:3 E6:1 C#6:2 A5:2 | B5:4 F#5:4 | G5:2 B5:2 D6:2 G6:2 | F#6:2 E6:2 C#6:2 A5:2 | Bb5:2 D6:2 F6:2 D6:2 | E6:4 C#6:2 A5:2' },
+        { inst: 'power', seq: power(['D', 'A', 'Bm', 'G', 'Em', 'A', 'D', 'A', 'G', 'A', 'F#m', 'Bm', 'G', 'A', 'Bb', 'A']) },
+        { inst: 'ebass', seq: rockBass(['D', 'A', 'Bm', 'G', 'Em', 'A', 'D', 'A', 'G', 'A', 'F#m', 'Bm', 'G', 'A', 'Bb', 'A']) },
+        { inst: 'brass', seq: 'D4+F#4+A4:2 R:6 | R:8 | R:8 | G4+B4+D5:1 R:1 G4+B4+D5:1 R:5 | E4+G4+B4:2 R:6 | R:8 | R:8 | A4+C#5+E5:1 R:1 A4+C#5+E5:1 R:1 A4+C#5+E5:4 | G4+B4+D5:2 R:6 | R:8 | R:8 | B4+D5+F#5:1 R:1 B4+D5+F#5:1 R:5 | G4+B4+D5:2 R:6 | R:8 | Bb4+D5+F5:2 R:2 Bb4+D5+F5:2 R:2 | A4+C#5+E5:6 R:2', vol: 0.8 },
+        { drum: CRASH + ROCK.repeat(6) + FILL + CRASH + ROCK2.repeat(6) + FILL2 },
+      ],
+    },
+    // ホーム：ヘ長調のフュージョン。スラップベースとエレピ、シンセの歌
+    home: {
+      bpm: 116, loop: true,
+      tracks: [
+        { inst: 'synth', seq: 'R:2 D5:1 F5:1 G5:2 Bb5:2 | A5:1 G5:1 E5:2 C5:2 R:2 | R:1 C5:1 E5:1 F5:1 A5:3 G5:1 | F5:4 R:2 A4:1 C5:1 | D5:2 F5:1 A5:1 Bb5:2 D6:2 | C6:1 Bb5:1 G5:2 E5:2 G5:2 | A5:3 G5:1 E5:2 C5:2 | F#5:4 A5:2 C6:2 | D6:3 C6:1 A5:2 F5:2 | G5:2 Bb5:1 C6:1 E5:2 G5:2 | A5:2 C6:1 E6:1 D6:2 C6:2 | A5:4 R:2 F5:1 G5:1 | Bb5:2 A5:1 G5:1 F5:2 D5:2 | C#5:2 E5:1 G5:1 A5:2 C#6:2 | D6:3 C6:1 A5:2 F5:2 | E5:2 G5:2 Bb5:2 C6:2' },
+        { inst: 'epiano', seq: [comp('F4+Bb4+D5'), comp('E4+Bb4+D5'), comp('E4+A4+C5'), comp('F4+A4+C5'), comp('F4+Bb4+D5'), comp('E4+Bb4+D5'), comp('G4+C5+E5'), comp('F#4+C5+E5'), comp('D4+F4+A4'), comp('E4+Bb4+D5'), comp('G4+C5+E5'), comp('F4+A4+C5'), comp('F4+Bb4+D5'), comp('G4+C#5+E5'), comp('F4+A4+C5'), comp('E4+Bb4+D5')].join(' | ') },
+        { inst: 'slap', seq: [slapBar('G', 'G', 'F3'), slapBar('C', 'C', 'Bb2'), slapBar('F', 'F', 'E3'), slapBar('D', 'D', 'C3'), slapBar('G', 'G', 'F3'), slapBar('C', 'C', 'Bb2'), slapBar('A', 'A', 'G3'), slapBar('D', 'D', 'C3'), slapBar('Bb', 'Bb', 'A2'), slapBar('C', 'C', 'Bb2'), slapBar('A', 'A', 'G3'), slapBar('D', 'D', 'C3'), slapBar('G', 'G', 'F3'), slapBar('A', 'A', 'G3'), slapBar('D', 'D', 'C3'), slapBar('C', 'C', 'Bb2')].join(' | ') },
+        { drum: FUNK.repeat(7) + FUNKF + FUNK.repeat(7) + FUNKF },
+      ],
+    },
+    // パドック：イ短調、少し張りつめて
+    paddock: {
+      bpm: 126, loop: true,
+      tracks: [
+        { inst: 'synth', seq: 'A4 C5 E5 A5 E5 C5 A4 C5 | F4 A4 C5 F5 C5 A4 F4 A4 | G4 B4 D5 G5 D5 B4 G4 B4 | E4 G#4 B4 E5 B4 G#4 E4 G#4 | A4 C5 E5 A5 E5 C5 A4 C5 | F4 A4 C5 F5 C5 A4 F4 A4 | D4 F4 A4 D5 A4 F4 D4 F4 | E4 G#4 B4 E5 G#5:2 B5:2', vol: 0.8 },
+        { inst: 'guitar', seq: 'R:8 | R:8 | R:8 | R:4 B5:2 G#5:2 | A5:6 C6:2 | F5:6 A5:2 | D6:4 C6:2 A5:2 | B5:6 R:2', vol: 0.8 },
+        { inst: 'ebass', seq: 'A1:3 A1:1 R:2 A1:2 | F1:3 F1:1 R:2 F1:2 | G1:3 G1:1 R:2 G1:2 | E2:3 E2:1 R:2 E2:2 | A1:3 A1:1 R:2 A1:2 | F1:3 F1:1 R:2 F1:2 | D2:3 D2:1 R:2 D2:2 | E2:3 E2:1 R:2 E2:2' },
+        { drum: ('k...h...S...h.h.').repeat(7) + 'k...h...S.S.SSll' },
+      ],
+    },
+    // レース：ホ短調、速いロック
+    race: {
+      bpm: 172, loop: true,
+      tracks: [
+        { inst: 'guitar', seq: 'E5 G5 B5 E6 D6 B5 G5 B5 | C6:2 B5:1 G5:1 E5:2 G5:2 | D6 A5 F#5 D5 F#5 A5 D6 E6 | F#6:3 E6:1 D#6:2 B5:2 | E6:2 B5:1 G5:1 E5:2 G5:1 B5:1 | C6:2 E6:2 G6:2 E6:2 | A5:2 C6:1 E6:1 D6:2 C6:2 | B5:2 D#6:2 F#6:4 | G5:3 A5:1 B5:2 D6:2 | F#5:3 G5:1 A5:2 D6:2 | E6:4 D6:2 B5:2 | C6:4 E6:2 G6:2 | A5:3 G5:1 E5:2 C6:2 | D6:3 E6:1 F#6:2 A5:2 | B5:4 A5:2 F#5:2 | D#6:2 F#6:2 B6:4' },
+        { inst: 'power', seq: power(['Em', 'C', 'D', 'B', 'Em', 'C', 'Am', 'B', 'G', 'D', 'Em', 'C', 'Am', 'D', 'B', 'B']) },
+        { inst: 'ebass', seq: rockBass(['Em', 'C', 'D', 'B', 'Em', 'C', 'Am', 'B', 'G', 'D', 'Em', 'C', 'Am', 'D', 'B', 'B']) },
+        { inst: 'brass', seq: 'E4+G4+B4:2 R:6 | R:8 | R:8 | B3+D#4+F#4:1 R:1 B3+D#4+F#4:1 R:5 | R:8 | R:8 | R:8 | B3+D#4+F#4:2 R:2 B3+D#4+F#4:4 | G4+B4+D5:2 R:6 | R:8 | R:8 | R:8 | R:8 | R:8 | B3+D#4+F#4:2 R:2 B3+D#4+F#4:2 R:2 | B3+D#4+F#4:8', vol: 0.8 },
+        { drum: CRASH + ROCK2.repeat(6) + FILL + CRASH + ROCK2.repeat(6) + FILL2 },
       ],
     },
     // 発走前のファンファーレ（書き下ろし）
@@ -126,14 +184,15 @@
         { drum: '................................t.t.t.t.t.t.t.t.ttttttttx.......' },
       ],
     },
-    // 勝ったとき
+    // 勝ったとき：ギターとブラスで駆け上がる
     victory: {
-      bpm: 132, loop: false,
+      bpm: 150, loop: false,
       tracks: [
-        { inst: 'brass', seq: 'C5:1 E5:1 G5:1 C6:3 R:1 G5:1 | C6:2 D6:2 E6:4 | C6+E6+G6:8' },
-        { inst: 'pad', seq: 'C4+E4+G4:8 | F3+A3+C4:4 G3+B3+D4:4 | C4+E4+G4:8' },
-        { inst: 'bass', seq: 'C3:4 G2:4 | F2:4 G2:4 | C2:8' },
-        { drum: 'k...s...k.k.s...x...............' },
+        { inst: 'guitar', seq: 'C5 E5 G5 C6 E6:2 D6:2 | C6:2 A5:2 B5:2 D6:2 | C6:8' },
+        { inst: 'brass', seq: 'C5+E5+G5:2 R:2 C5+E5+G5:1 R:1 D5+F5+A5:2 | F5+A5+C6:4 G5+B5+D6:4 | C5+E5+G5+C6:8' },
+        { inst: 'power', seq: 'C3+G3*8 | F2+C3*4 G2+D3*4 | C3+G3:8' },
+        { inst: 'ebass', seq: 'C2:4 C2:2 D2:2 | F1:4 G1:4 | C2:8' },
+        { drum: 'c.h.S.h.k.k.S.h.' + 'k.k.S.k.SSSSllll' + 'c...............' },
       ],
     },
   };
@@ -142,10 +201,12 @@
   // 「音:長さ」を [{f:[周波数], len}] に
   function parse(seq) {
     const out = [];
-    for (const tok of seq.replace(/\|/g, ' ').split(/\s+/).filter(Boolean)) {
+    for (const tok0 of seq.replace(/\|/g, ' ').split(/\s+/).filter(Boolean)) {
+      // 「音:長さ*回数」でくり返し
+      const [tok, rep] = tok0.split('*');
       const [n, l] = tok.split(':');
       const len = l ? +l : 1;
-      out.push({ f: n === 'R' ? [] : n.split('+').map(freq).filter(Boolean), len });
+      for (let i = 0; i < (rep ? +rep : 1); i++) out.push({ f: n === 'R' ? [] : n.split('+').map(freq).filter(Boolean), len });
     }
     return out;
   }
