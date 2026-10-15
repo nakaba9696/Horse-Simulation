@@ -226,7 +226,7 @@
           s = ((s % L) + L) % L;
           const dirSign = course.dir === '左' ? -1 : 1;
           // 直線（下）のゴール位置から、進行方向と逆にたどる
-          const goalX = a / 2 - Math.min(a, sim.straight) + a / 2 * 0.2;
+          const goalX = Math.min(a, sim.straight) - a / 2;
           let u = s; let x, y;
           const seg1 = a / 2 + goalX; // ゴールから下の直線の端まで
           if (u <= seg1) { x = goalX - u; y = r; }

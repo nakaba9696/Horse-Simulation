@@ -13,7 +13,7 @@
     const st = Math.min(a, straight || a);
     const sign = dir === '左' ? -1 : 1; // 左回り＝曲がるときに左へ向く
     // ゴールは下の直線の上。ゴールから逆にたどって、下の直線の残り・コーナー・向こう正面・コーナー・下の直線
-    const goalX = a / 2 - st + a / 2 * 0.2;
+    const goalX = st - a / 2; // ゴールから直線の入り口まで（seg1）がちょうど st になる
     const seg1 = a / 2 + goalX;
     // s：ゴールからさかのぼった距離（周回）。x,y は上から見た位置（右回りの向き）、curv は進む向きに対する曲がり（左へ曲がるなら負）
     const at = function (s) {
