@@ -45,7 +45,7 @@
         <button class="btn" data-act="editor">競走馬エディット</button>
         <button class="btn" data-act="sound">${HS.Audio && HS.Audio.settings.bgm + HS.Audio.settings.se > 0 ? '🔊 音：あり' : '🔇 音：なし'}</button>
       </div>
-      <p class="small muted mt">実在の名馬と実在のレースで、馬主として・生産者として名馬の系譜をつくる競馬シミュレーション。</p>
+      <p class="small muted mt">実在の名馬と実在のレースに、騎手として乗る。馬主・生産者として名馬の系譜をつくる遊び方も選べる。</p>
     </div>`;
   };
 
@@ -177,17 +177,16 @@
   function infoTab(h, wIdx) {
     const mine = h.owner === 'P';
     const known = mine || h.hist;
-    const stats = H.STATS.map(k => {
-      const v = H.estimate(h, wIdx, k);
-      const pct = v == null ? 0 : U.clamp(v / 110 * 100, 2, 100);
-      return `<div class="stat"><span class="lb">${H.STAT_LABEL[k]}</span><div class="bar"><i style="width:${pct}%"></i></div><span class="gr">${v == null ? '?' : U.grade(v)}</span></div>`;
-    }).join('');
-    const unc = Math.max(0.12, 1 - (h.starts || 0) * 0.12 - (h.trainWeeks || 0) * 0.008);
+    // 能力は数値で見せる（持ち主の決定 2026-10-15）。自分の馬と史実馬だけ
+    const cur = H.cur(h, wIdx);
+    const statRow = (label, v) => `<div class="stat"><span class="lb">${label}</span><div class="bar"><i style="width:${v == null ? 0 : U.clamp(v / 110 * 100, 2, 100)}%"></i></div><span class="gr">${v == null ? '?' : Math.round(v)}</span></div>`;
+    const stats = H.STATS.map(k => statRow(H.STAT_LABEL[k], known ? cur[k] : null)).join('')
+      + statRow('道悪', known ? (h.apt.heavy != null ? h.apt.heavy : 50) : null) + statRow('健康', known ? (h.health != null ? h.health : 70) : null);
     const growthWord = h.growth;
     const peakNote = (() => { const g = H.growthFactor(h, wIdx); if (g >= 0.995) return 'いまが充実期'; const age = H.ageAt(h, wIdx); const p = H.PEAK[h.growth] || H.PEAK['普通']; return age < p[0] ? 'まだ成長途上' : '衰えが見え始めた'; })();
     return `
       ${h.loc === 'stable' && mine ? `<div class="comment mt">${e(H.comment(h, wIdx))}</div>` : ''}
-      <h2 class="sec">能力<span class="r">${known ? (unc > 0.5 ? '見立て（まだ当てにならない）' : unc > 0.25 ? '見立て' : '見立て（ほぼ確か）') : ''}</span></h2>
+      <h2 class="sec">能力<span class="r">${known ? 'いまの値' : ''}</span></h2>
       <div class="panel"><div class="stats">${stats}</div></div>
       <h2 class="sec">適性</h2>
       <div class="apt">
