@@ -150,6 +150,7 @@
       if (h.injury || h.parked || age < 2 || (age === 2 && g.month < 4)) continue;
       if (!W.toStable(h.id)) { if (h.auto == null) h.auto = true; W.news(`${h.name}が入厩した。`, 'info'); }
     }
+    if (HS.Season) HS.Season.applyReserves();
   };
   // 引退：自分の手を離れる（種牡馬・繁殖牝馬になっても持ち馬にはしない）
   J.retire = function (id) {

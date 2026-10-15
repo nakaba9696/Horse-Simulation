@@ -313,3 +313,18 @@ html[data-theme="navy"] .mgr { background: linear-gradient(180deg, #1d3a63, #102
 .gbar i { width: 100%; background: linear-gradient(180deg, #7fe0a0, #2f7a4c); border-radius: 3px 3px 0 0; }
 .gbar.now i { background: linear-gradient(180deg, #ffe08a, #d39a1c); } .gbar.now span { color: var(--gold2); font-weight: 700; }
 html[data-theme="green"] .apt > div { background: #0e2a1a; border: 1px solid #245c3a; }
+/* 出走表の脚質の矢印 */
+.ka { display: inline-flex; gap: 2px; }
+.ka i { width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 11px solid rgba(255,255,255,.18); }
+.ka i.on { border-left-color: #ffd34d; filter: drop-shadow(0 0 3px rgba(255,211,77,.7)); }
+/* パドック */
+.paddock { position: relative; border: 2px solid var(--gold); border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+.pd-cv { width: 100%; display: block; aspect-ratio: 720 / 250; }
+.pd-nav { position: absolute; top: 38%; border: 0; background: rgba(0,0,0,.45); color: #fff; font-size: 22px; width: 40px; height: 52px; border-radius: 8px; cursor: pointer; }
+.pd-nav.l { left: 6px; } .pd-nav.r { right: 6px; }
+.pd-band { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 10px; background: linear-gradient(180deg, #1c5a37, #0f2b1c); color: #fff; font-size: 13px; border-top: 2px solid var(--gold); }
+html[data-theme="navy"] .pd-band { background: linear-gradient(180deg, #1d3a63, #10223a); }
+.pd-band .nm { font-size: 17px; } .pd-band .nm.me { color: #ff8a7a; }
+.pd-band .md { padding: 1px 8px; border-radius: 999px; background: rgba(255,255,255,.12); } .pd-band .md.good { color: #9ff0b8; } .pd-band .md.bad { color: #ff9a7a; }
+html[data-theme="green"] .entry-head { background: linear-gradient(90deg, #14472b, #1f6a40); }
+html[data-theme="green"] .tenkai { background: #0e2a1a; }

@@ -413,8 +413,19 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・調子の
   x.lastRaceW = W.wIdx() - 30; assert(T.condLevel(x, W.wIdx()) === 0, '休みすぎにならない');
   const fh = T.fhBoth(x, W.wIdx());
   assert(fh.turf >= 30 && fh.turf <= 70 && fh.dirt >= 30 && fh.dirt <= 70, JSON.stringify(fh));
+  // 出走の予約：先の重賞を押さえると、その週に出走登録になる
+  G.gameOver = null; G.broke = 0; G.player.money = 1e9;
+  const y = W.all().find(m => m.owner !== 'P' && m.loc === 'stable' && G.year - m.born === 4 && !m.injury);
+  y.owner = 'P'; y.auto = false; y.fatigue = 0;
+  const target = W.upcomingGraded(T.weeksLeft(G)).find(r => r.inWeeks >= 2 && !T.reserve(y.id, r));
+  assert(target, '予約できる重賞が無い');
+  assert(T.reserves(y.id).length === 1, '予約が残っていない');
+  for (let i = 0; i < target.inWeeks; i++) W.finishWeek({});
+  const ent = W.entryOf(y.id);
+  assert((ent && ent.raceKey === target.key) || G.news.some(n => n.text.includes('予約していた')), `予約が出走登録にならない（${target.key}）`);
+  assert(T.reserves(y.id).length === 0, '使った予約が残る');
   const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
-  return `冠 ${tl.join('・')}・フリーハンデ 芝${fh.turf} ダ${fh.dirt}`;
+  return `予約 ${target.short || target.name}・冠 ${tl.join('・')}・フリーハンデ 芝${fh.turf} ダ${fh.dirt}`;
 });
 
 // ---------- 騎手のゲーム ----------

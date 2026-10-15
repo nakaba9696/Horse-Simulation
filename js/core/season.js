@@ -109,6 +109,41 @@
     } else HS.World.news(`資金がマイナスです。来月の末までに立て直さないと、シーズンが終わります。`, 'warn');
   };
 
+  // ---------- 出走の予約（その年の12月4週まで、重賞を先に押さえておく） ----------
+  T.weeksLeft = G => (12 - G.month) * 4 + (4 - G.week) + 1;
+  T.reserves = id => (HS.World.get().reserve || []).filter(x => !id || x.id === id);
+  T.reserve = function (id, race) {
+    const W = HS.World, G = W.get();
+    const h = W.horse(id);
+    if (!h || h.owner !== 'P') return '持ち馬ではない';
+    if (!race.graded || race.year !== G.year) return 'その年の重賞だけ予約できる';
+    const why = HS.Races.ineligible(Object.assign({}, h, { injury: null }), race, race.year);
+    if (why) return why;
+    G.reserve = G.reserve || [];
+    if (G.reserve.some(x => x.id === id && x.y === race.year && x.m === race.month && x.w === race.week)) return 'その週はもう予約している';
+    G.reserve.push({ id, key: race.key, y: race.year, m: race.month, w: race.week, label: HS.Races.label(race) });
+    G.reserve.sort((a, b) => (a.y - b.y) || (a.m - b.m) || (a.w - b.w));
+    return null;
+  };
+  T.unreserve = function (id, key) { const G = HS.World.get(); G.reserve = (G.reserve || []).filter(x => !(x.id === id && x.key === key)); };
+  // 週の初めに、今週の予約を出走登録に変える。過ぎた予約・手を離れた馬の予約は消す
+  T.applyReserves = function () {
+    const W = HS.World, G = W.get();
+    if (!G.reserve || !G.reserve.length) return;
+    const now = (G.year * 12 + G.month) * 5 + G.week;
+    const keep = [];
+    for (const x of G.reserve) {
+      const h = W.horse(x.id);
+      if (!h || h.owner !== 'P') continue;
+      const t = (x.y * 12 + x.m) * 5 + x.w;
+      if (t > now) { keep.push(x); continue; }
+      if (t < now) continue;
+      const err = W.enter(x.id, x.key);
+      if (err) W.news(`${h.name}は予約していた${x.label}に出られない（${err}）。`, 'warn');
+    }
+    G.reserve = keep;
+  };
+
   // ---------- 天気（馬場から決まる。週と競馬場ごと） ----------
   T.weather = function (seed, year, month, week, course, ground) {
     const rng = U.hashRng(`w:${seed}:${year}:${month}:${week}:${course}`);

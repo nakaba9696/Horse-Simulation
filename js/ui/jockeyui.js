@@ -101,6 +101,7 @@
       <h2 class="sec">今週の騎乗<span class="r">${G.month}月${G.week}週</span></h2>
       ${rides.length ? `<div class="list">${rides.map(({ card, runner }) => rideCard(card, runner, true)).join('')}</div>`
         : `<div class="panel empty">今週は乗るレースがありません。${W.mine('stable').length ? '<br><a href="#" data-act="tab" data-tab="stable">厩舎で出るレースを決める（おまかせなら自動で選ぶ）</a>' : ''}</div>`}
+      ${T.reserves().length ? `<h2 class="sec">出走の予約<span class="r">${T.reserves().length}件</span></h2><div class="panel"><table class="t">${T.reserves().map(x => { const h = W.horse(x.id); return h ? `<tr><td class="small muted">${x.m}月${x.w}週</td><td><b>${e(x.label)}</b></td><td>${e(h.name)}</td><td><button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(x.key)}">取消</button></td></tr>` : ''; }).join('')}</table></div>` : ''}
       <h2 class="sec">お手馬<span class="r">${T.ownCount()} / ${T.MAX_OWN}頭・毎月 ${U.money(W.monthlyCost())}</span></h2>
       ${W.mine().length ? `<div class="list">${W.mine().map(h => `<div class="card" data-act="horse" data-id="${h.id}">${UI.thumb(h)}<div class="grow"><div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${h.auto ? '<span class="chip">おまかせ</span>' : ''}${h.loc === 'stable' ? UI.condMark(h) : ''}</div><div class="sub">${UI.age(h)}・${h.loc === 'stable' ? '入厩中' : '牧場'}・${h.starts || 0}戦${h.wins || 0}勝・${U.money(h.prize || 0)}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}${UI.numStats(h, W.wIdx())}</div></div>`).join('')}</div>` : '<div class="panel empty">まだお手馬がいません。</div>'}
       <h2 class="sec">これからのG1</h2>
@@ -141,6 +142,15 @@
     if (!(await App.confirm(`${e(h.name)}を引退させますか？（手もとを離れます）`, '引退させる'))) return;
     J.retire(d.id); App.save(); App.back();
   };
+  // 出走の予約（12月4週まで）
+  App.act.reserve = d => {
+    const G = W.get();
+    const race = W.upcomingGraded(T.weeksLeft(G)).find(r => r.key === d.key);
+    const err = race ? T.reserve(d.id, race) : 'レースが見つからない';
+    if (err) App.toast(err); else { App.toast(`${R.label(race)}（${race.month}月${race.week}週）を予約した`); App.save(); }
+    App.render();
+  };
+  App.act.unreserve = d => { T.unreserve(d.id, d.key); App.save(); App.render(); };
   const toFarm0 = App.act['to-farm'], toStable0 = App.act['to-stable'];
   App.act['to-farm'] = d => { const h = W.horse(d.id); if (isJ() && h) h.parked = true; toFarm0(d); };
   App.act['to-stable'] = d => { const h = W.horse(d.id); if (isJ() && h) h.parked = false; toStable0(d); };
@@ -281,19 +291,75 @@
       App.toast('エラー：' + err.message);
     } finally { busy = false; }
   };
-  // パドック：出馬表と自分の馬。自分で乗るか、おまかせか
+  // パドック：1頭ずつ横から歩く姿（←→で切り替え）と、下の帯（馬番・馬名・性齢・斤量・騎手・単勝・気配）。出走表と、自分で乗るか・おまかせか
+  UI.mood = (h, wIdx) => {
+    const lv = T.condLevel(h, wIdx), mind = H.cur(h, wIdx).mind || 60;
+    const rr = U.hashRng(`pd:${h.id}:${wIdx}`).next();
+    if (lv >= 6) return { text: '覇気がない', cls: 'bad', jitter: 0, slow: 0.7 };
+    if (mind < 55 && rr < 0.5) return { text: 'イレ込んでいる', cls: 'bad', jitter: 1, slow: 1.35 };
+    if (lv === 2) return { text: '気合十分', cls: 'good', jitter: 0.25, slow: 1.1 };
+    if (lv <= 1) return { text: '太め残り', cls: '', jitter: 0, slow: 0.85 };
+    if (lv >= 4) return { text: '少し硬い', cls: '', jitter: 0.1, slow: 0.9 };
+    return { text: '落ち着いている', cls: 'good', jitter: 0, slow: 1 };
+  };
   function paddock(card, runner) {
     if (HS.Audio) HS.Audio.bgm('paddock');
     return new Promise(res => {
       const h = runner.horse;
+      const wIdx = W.prepareWeek().wIdx;
+      const rows = card.runners.slice().sort((a, b) => a.num - b.num);
+      let sel = rows.indexOf(runner); if (sel < 0) sel = 0;
       const tip = h.style === '逃げ' ? 'ハナを切って、そのまま粘らせてください。' : h.style === '先行' ? '好位につけて、直線で抜け出してください。' : h.style === '差し' ? '中団で脚をためて、直線勝負でお願いします。' : '後ろで脚をためて、最後に外から。';
       const kireTip = (h.kire || 4) >= 6 ? '切れる脚があるので、仕掛けは我慢してください。' : (h.kire || 4) <= 3 ? 'エンジンのかかりが遅いので、早めに動いてください。' : '';
-      const bg = App.modal(`${UI.entryTable(card)}
+      const bg = App.modal(`<div class="paddock"><canvas class="pd-cv" width="720" height="250"></canvas>
+          <button class="pd-nav l" data-d="-1" aria-label="前の馬">◀</button><button class="pd-nav r" data-d="1" aria-label="次の馬">▶</button>
+          <div class="pd-band"></div></div>
+        ${UI.entryTable(card)}
         <div class="panel mt offer"><div class="row"><b>${e(h.name)}</b><span class="small muted">${e(J.trainerOf(h))}調教師より</span></div>
-          <div class="comment">「${tip}${kireTip}」</div>${UI.numStats(h, W.prepareWeek().wIdx, { surface: card.race.surface })}</div>
-        <div class="btns mt"><button class="btn gold" data-x="ride">自分で乗る</button><button class="btn" data-x="auto">おまかせで乗る</button></div>`, { noClose: true });
-      bg.querySelector('[data-x=ride]').onclick = () => { App.closeModal(); res('ride'); };
-      bg.querySelector('[data-x=auto]').onclick = () => { App.closeModal(); res('auto'); };
+          <div class="comment">「${tip}${kireTip}」</div>${UI.numStats(h, wIdx, { surface: card.race.surface })}</div>
+        <div class="btns mt"><button class="btn gold" data-x="ride">ゲートイン（自分で乗る）</button><button class="btn" data-x="auto">おまかせで乗る</button></div>`, { noClose: true });
+      const cv = bg.querySelector('.pd-cv'), ctx = cv.getContext('2d'), band = bg.querySelector('.pd-band');
+      const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+      cv.width = 720 * dpr; cv.height = 250 * dpr; ctx.scale(dpr, dpr);
+      let alive = true, t0 = performance.now(), x0 = -80;
+      const show = () => {
+        const x = rows[sel], m = UI.mood(x.horse, wIdx), me = x === runner;
+        band.innerHTML = `${UI.waku(x.frame, x.num)}<b class="nm ${me ? 'me' : ''}">${e(x.horse.name)}</b><span>${x.horse.gelding ? 'セ' : x.horse.sex}${W.get().year - x.horse.born}</span><span>${x.weight}kg</span><span>${e(x.jockey ? x.jockey.name : '')}</span><span>単勝 <b>${x.odds}</b>（${x.pop}番人気）</span><span class="md ${m.cls}">${m.text}</span>${me ? UI.condMark(x.horse, wIdx) : ''}`;
+        x0 = -80; t0 = performance.now();
+      };
+      const move = d => { sel = (sel + d + rows.length) % rows.length; show(); };
+      bg.querySelectorAll('.pd-nav').forEach(b => { b.onclick = () => move(+b.dataset.d); });
+      const key = ev => { if (ev.key === 'ArrowLeft') move(-1); else if (ev.key === 'ArrowRight') move(1); };
+      window.addEventListener('keydown', key);
+      const draw = now => {
+        if (!alive) return;
+        const t = (now - t0) / 1000, x = rows[sel], m = UI.mood(x.horse, wIdx);
+        // 地面・柵・植え込み
+        ctx.fillStyle = '#8fc4e8'; ctx.fillRect(0, 0, 720, 90);
+        ctx.fillStyle = '#5c8f4a'; for (let i = 0; i < 12; i++) { ctx.beginPath(); ctx.arc(30 + i * 62, 92, 34, Math.PI, 0); ctx.fill(); }
+        ctx.fillStyle = '#c9b48a'; ctx.fillRect(0, 90, 720, 160);
+        ctx.fillStyle = '#b39c6e'; ctx.fillRect(0, 210, 720, 40);
+        ctx.strokeStyle = '#f2f2f2'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 112); ctx.lineTo(720, 112); ctx.moveTo(0, 128); ctx.lineTo(720, 128); ctx.stroke();
+        for (let i = 0; i < 13; i++) { ctx.fillStyle = '#f2f2f2'; ctx.fillRect(i * 60, 104, 5, 34); }
+        // 歩く馬（気配で歩き方が変わる：イレ込むと首を振って小走り、覇気がないとゆっくり）
+        const sp = 70 * m.slow;
+        const px = (x0 + 480 + t * sp) % 880 - 80;
+        const jit = m.jitter ? Math.sin(t * 9) * 3 * m.jitter : 0;
+        const ph = (t * 0.9 * m.slow) % 1;
+        A.horse(ctx, px, 196 + jit, 1.25, ph, { coat: x.horse.coat, marks: A.marks(x.horse.name || x.horse.id), jockey: false, shadow: true });
+        // 引く人
+        ctx.fillStyle = '#2a3a5a'; ctx.fillRect(px + 70, 150, 12, 34); ctx.fillStyle = '#e8c8a0'; ctx.beginPath(); ctx.arc(px + 76, 143, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#2a3a5a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(px + 72, 186); ctx.lineTo(px + 70 + Math.sin(t * 5) * 5, 208); ctx.moveTo(px + 80, 186); ctx.lineTo(px + 82 - Math.sin(t * 5) * 5, 208); ctx.stroke();
+        ctx.strokeStyle = '#3a2a18'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px + 72, 160); ctx.lineTo(px + 52, 150); ctx.stroke();
+        // 馬番のゼッケン
+        ctx.fillStyle = HS.DATA.frameColors[(x.frame - 1) % 8]; ctx.fillRect(px - 14, 158, 26, 20);
+        ctx.fillStyle = HS.DATA.frameText[(x.frame - 1) % 8]; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(x.num), px - 1, 169);
+        requestAnimationFrame(draw);
+      };
+      show(); requestAnimationFrame(draw);
+      const done = how => { alive = false; window.removeEventListener('keydown', key); App.closeModal(); res(how); };
+      bg.querySelector('[data-x=ride]').onclick = () => done('ride');
+      bg.querySelector('[data-x=auto]').onclick = () => done('auto');
     });
   }
   // ---------- レース前の画面：出走表（脚質・人気・近走）・展開予想・コース図 ----------
@@ -313,6 +379,8 @@
       <circle cx="${sx}" cy="${sy}" r="5" fill="#ffd34d" stroke="#000"/><text x="${sx}" y="${+sy - 8}" fill="#ffd34d" font-size="9" text-anchor="middle">スタート</text>
       <text x="6" y="12" fill="#c8d3e2" font-size="9">${course.dir}回り・直線 ${geo.straight}m・坂 ${geo.slope}</text></svg>`;
   };
+  // 脚質の矢印（逃げ・先行・差し・追込の4つ。光っているのがこの馬の脚質）
+  UI.kyakuArrows = st => `<span class="ka" title="${e(st)}">${['逃げ', '先行', '差し', '追込'].map(k => `<i class="${k === st ? 'on' : ''}"></i>`).join('')}</span>`;
   UI.entryTable = function (card) {
     const { race, runners } = card;
     const G = W.get();
@@ -324,14 +392,14 @@
     const recent = h => (h.results || []).slice(-3).map(r => `<span class="${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos > 9 ? '×' : r.pos}</span>`).join('') || '<span class="muted">新</span>';
     return `<div class="entry">
       <div class="entry-head"><div>${UI.gradeTag(race)} <b class="serif" style="font-size:20px">${e(race.short || race.name)}</b></div>
-        <div class="small">${G.year}年${race.month}月 ${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　馬場：${race.ground}　${runners.length}頭</div></div>
+        <div class="small">${G.year}年${race.month}月 ${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　${(w => `${T.weatherIcon(w)}${w}`)(T.weather(G.seed, G.year, G.month, G.week, race.course, race.ground))}・${race.ground}　${runners.length}頭</div></div>
       <div class="entry-top">${UI.courseSvg(race)}
         <div class="tenkai"><div class="small muted">展開予想</div><div class="big">${pace}</div><div class="small">${favor}</div>
           <div class="kyaku-cnt">${Object.entries(cnt).map(([k, v]) => `<span class="kyaku ${STYLE_CLS[k]}">${k[0]}</span>${v}`).join(' ')}</div></div></div>
       <div class="tblwrap mt"><table class="t entry-t"><tr><th>枠</th><th>馬名</th><th>脚質</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th>騎手</th><th>人気</th><th>近走</th></tr>
       ${rows.map(x => { const me = x.rider === 'P' || x.mine; return `<tr class="${me ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td>
         <td class="nm">${e(x.horse.name)}${x.horse.hist ? ' <span class="chip hist">史</span>' : ''}</td>
-        <td><span class="kyaku ${STYLE_CLS[x.horse.style] || ''}">${e(x.horse.style)}</span></td>
+        <td>${UI.kyakuArrows(x.horse.style)}<div class="small muted">${e(x.horse.style)}</div></td>
         <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td>
         <td class="small">${x.allowance ? J.allowanceMark(x.allowance) : ''}${e(x.jockey ? x.jockey.name : '')}</td>
         <td class="num">${x.pop}<div class="small muted">${x.odds}</div></td><td class="recent">${recent(x.horse)}</td></tr>`; }).join('')}

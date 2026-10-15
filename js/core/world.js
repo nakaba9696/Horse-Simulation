@@ -73,7 +73,7 @@
       horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, edits,
       records: { g1: {}, graded: {}, awards: {}, pts: {}, course: {}, hall: [], player: { starts: 0, wins: 0, earn: 0, g1: [] } },
       news: [], entries: {}, rides: {}, mode: opts.mode === 'jockey' ? 'jockey' : 'owner', lastWeek: null, market: { gen: [], genMares: [], month: 0 },
-      farmLevel: 1, stats: {}, settings: { animSpeed: 1, showHistNote: true }, broke: 0, gameOver: null,
+      farmLevel: 1, stats: {}, settings: { animSpeed: 1, showHistNote: true }, broke: 0, gameOver: null, reserve: [],
     };
     rng = new U.RNG(seed);
     P.build(G.pedExtra);
@@ -1067,7 +1067,7 @@
     g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, course: {}, hall: [], player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
-    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
+    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
     for (const h of Object.values(g.horses)) {
       h.bonus = h.bonus || {}; h.results = h.results || []; h.gradedWins = h.gradedWins || []; h.coat = h.coat || '鹿毛';
       // 能力の形が変わる前のセーブ（瞬発力・パワー・賢さ・気性 → 気性・坂・脚の切れ）

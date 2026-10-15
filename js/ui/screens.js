@@ -237,7 +237,9 @@
       const distOk = r.dist >= h.distMin && r.dist <= h.distMax;
       return (surfOk ? '' : '<span class="small" style="color:var(--warn)">馬場△</span> ') + (distOk ? '' : '<span class="small" style="color:var(--warn)">距離△</span>');
     };
-    const upcoming = W.upcomingGraded(16).filter(r => r.inWeeks > 0 && !R.ineligible(Object.assign({}, h, { injury: null }), r, r.year)).slice(0, 10);
+    const jm = G.mode === 'jockey' && HS.Season;
+    const upcoming = W.upcomingGraded(jm ? HS.Season.weeksLeft(G) : 16).filter(r => r.inWeeks > 0 && !R.ineligible(Object.assign({}, h, { injury: null }), r, r.year)).slice(0, jm ? 60 : 10);
+    const rsv = jm ? HS.Season.reserves(h.id) : [];
     return `
       <div class="comment mt">${e(H.comment(h, wIdx))}</div>
       <h2 class="sec">今週の調教<span class="r">${h.lastTrain && h.lastTrain.time ? '前回 ' + e(h.lastTrain.time) : ''}</span></h2>
@@ -258,8 +260,9 @@
             <td>${on ? `<button class="btn sm" data-act="unenter" data-id="${h.id}">取消</button>` : `<button class="btn sm gold" data-act="enter" data-id="${h.id}" data-race="${r.key}">出走</button>`}</td></tr>`;
         }).join('')}</table></div>` : '<div class="panel empty">今週は出られるレースがありません。</div>'}
       ${ent ? `<div class="panel mt"><div class="row"><span>騎手</span><select class="grow" data-act-change="jockey" data-id="${h.id}">${W.ridersForPlayer(G.year).map(j => `<option ${j.name === ent.jockey ? 'selected' : ''} value="${e(j.name)}">${e(j.name)}（腕 ${U.grade(j.skill)}・${j.region === '外国' ? '短期免許' : j.region}）</option>`).join('')}</select></div></div>` : ''}
-      <h2 class="sec">この先の重賞（出られるもの）</h2>
-      <div class="panel"><table class="t">${upcoming.map(r => `<tr><td class="small muted">${r.inWeeks}週後</td><td>${UI.gradeTag(r)}</td><td><b>${e(R.label(r))}</b></td><td class="small">${r.course}${r.surface}${r.dist}m</td></tr>`).join('') || '<tr><td class="muted">なし</td></tr>'}</table></div>`;
+      <h2 class="sec">この先の重賞（出られるもの）${jm ? '<span class="r">12月4週まで予約できる</span>' : ''}</h2>
+      <div class="panel"><table class="t">${upcoming.map(r => { const on = rsv.some(x => x.key === r.key); const busy = !on && rsv.some(x => x.y === r.year && x.m === r.month && x.w === r.week);
+        return `<tr class="${on ? 'lead-me' : ''}"><td class="small muted">${r.month}月${r.week}週<br>${r.inWeeks}週後</td><td>${UI.gradeTag(r)}</td><td><b>${e(R.label(r))}</b></td><td class="small">${r.course}${r.surface}${r.dist}m</td>${jm ? `<td>${on ? `<button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(r.key)}">予約取消</button>` : busy ? '' : `<button class="btn sm gold" data-act="reserve" data-id="${h.id}" data-key="${e(r.key)}">予約</button>`}</td>` : ''}</tr>`; }).join('') || '<tr><td class="muted">なし</td></tr>'}</table></div>`;
   }
   function resultsTab(h) {
     const rs = h.results.slice().reverse();
