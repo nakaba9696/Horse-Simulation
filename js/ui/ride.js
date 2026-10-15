@@ -20,7 +20,7 @@
       const course = HS.DATA.courses[race.course] || HS.DATA.courses['東京'];
       el.innerHTML = `
         <div class="ride">
-          <div class="ride-stage"><canvas class="ride-canvas"></canvas>
+          <div class="ride-stage"><canvas class="ride-3d"></canvas><canvas class="ride-canvas"></canvas>
             <div class="ride-msg"></div></div>
           <div class="ride-pad">
             <div class="ride-lanes"><button class="rb lane" data-c="left" aria-label="内へ">◀<small>内へ</small></button><button class="rb lane" data-c="right" aria-label="外へ">▶<small>外へ</small></button></div>
@@ -30,7 +30,7 @@
           </div>
           <div class="ride-help small muted">ゲームパッド：A 追う・B ムチ・LB/RB 抑える・十字キー 進路　キーボード：Z 追う・X ムチ・Shift 抑える・←→ 進路</div>
         </div>`;
-      const cv = el.querySelector('canvas');
+      const cv = el.querySelector('.ride-canvas');
       const narrow = (el.clientWidth || 960) < 600;
       const VW = narrow ? 640 : 960, VH = narrow ? 600 : 540;
       cv.style.aspectRatio = `${VW} / ${VH}`;
@@ -41,6 +41,21 @@
       const msgEl = el.querySelector('.ride-msg');
       const AU = HS.Audio;
       const meta = sim.st.map(s => ({ silks: HS.RaceView.silksOf(s.h), cap: FC()[(s.r.frame - 1) % 8], capText: FT()[(s.r.frame - 1) % 8] }));
+      // 3D（WebGL が使えるとき）。HUD は上の 2D の canvas に重ねる
+      let r3 = null;
+      const cv3 = el.querySelector('.ride-3d');
+      if (HS.Race3D && HS.Race3D.supported() && !RD.no3d) {
+        try {
+          cv3.style.aspectRatio = `${VW} / ${VH}`;
+          r3 = HS.Race3D.create(cv3, {
+            D: sim.D, surface: race.surface, ground: race.ground, track: sim.track,
+            course: { name: race.course, dir: course.dir, lap: sim.geo.lap, straight: sim.geo.straight, slope: sim.geo.slope },
+            horses: sim.st.map((s, j) => ({ num: s.r.num, frame: s.r.frame, cap: meta[j].cap, silks: meta[j].silks, coat: s.h.coat, name: s.h.name, mine: !!s.me })),
+          });
+          r3.resize(VW, VH, dpr);
+        } catch (err) { console.warn('3D を使えないので 2D で描く', err); r3 = null; }
+      }
+      if (!r3) cv3.style.display = 'none';
       let flash = null; // 画面の真ん中に出す短い言葉
       const say = (text, cls) => { flash = { text, cls, t: performance.now() }; };
 
@@ -131,7 +146,8 @@
           track: sim.track, me: sim.me, horses: lerpView(k), phase: clock < 0 ? 'gate' : me.done ? 'finish' : 'race',
         };
         ctx.clearRect(0, 0, VW, VH);
-        if (HS.RideCam) HS.RideCam.draw(ctx, VW, VH, view); else fallback(view);
+        if (r3) { view.horses.forEach((h, j) => { if (sim.st[j].me && sim.ctl) h.push = sim.ctl.push; }); r3.render(view, clock < 0 ? 'gate' : 'ride'); }
+        else if (HS.RideCam) HS.RideCam.draw(ctx, VW, VH, view); else fallback(view);
         hud(view);
         if (sim.over && !result) {
           result = S.finish(sim);
@@ -144,6 +160,7 @@
       }
       function finish() {
         done = true;
+        if (r3) { r3.dispose(); r3 = null; }
         window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp);
         resolve(result);
       }

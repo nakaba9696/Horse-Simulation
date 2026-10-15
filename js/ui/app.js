@@ -294,7 +294,7 @@
         await Promise.race([AU.playOnce('fanfare'), new Promise(res => { bg.querySelector('[data-x=skipfan]').onclick = () => { AU.stopBgm(); res(); }; })]);
       }
       if (AU) { AU.bgm('race'); AU.raceStart(); }
-      await HS.RaceView.play(bg.querySelector('.rv-holder'), r, {
+      await (HS.Watch3D ? HS.Watch3D.play : HS.RaceView.play)(bg.querySelector('.rv-holder'), r, {
         speed: G.settings.animSpeed || 1, onSpeed: s => { G.settings.animSpeed = s; },
         onStart: () => AU && AU.se('gate'),
         onTick: (remain, straight, running, finished) => AU && AU.raceUpdate(remain, straight, running, finished),
