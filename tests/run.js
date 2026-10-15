@@ -413,19 +413,43 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・調子の
   x.lastRaceW = W.wIdx() - 30; assert(T.condLevel(x, W.wIdx()) === 0, '休みすぎにならない');
   const fh = T.fhBoth(x, W.wIdx());
   assert(fh.turf >= 30 && fh.turf <= 70 && fh.dirt >= 30 && fh.dirt <= 70, JSON.stringify(fh));
-  // 出走の予約：先の重賞を押さえると、その週に出走登録になる
+  // 出走の予約：1年先までの重賞を押さえると、その週に出走登録になる
   G.gameOver = null; G.broke = 0; G.player.money = 1e9;
   const y = W.all().find(m => m.owner !== 'P' && m.loc === 'stable' && G.year - m.born === 4 && !m.injury);
   y.owner = 'P'; y.auto = false; y.fatigue = 0;
   const target = W.upcomingGraded(T.weeksLeft(G)).find(r => r.inWeeks >= 2 && !T.reserve(y.id, r));
   assert(target, '予約できる重賞が無い');
   assert(T.reserves(y.id).length === 1, '予約が残っていない');
+  const nextYear = W.upcomingGraded(T.weeksLeft()).filter(r => r.year > G.year && r.inWeeks > target.inWeeks);
+  assert(nextYear.length && nextYear.some(r => !T.reserve(y.id, r)), '来年の重賞を予約できない');
+  const extra = T.reserves(y.id).find(x => x.key !== target.key); T.unreserve(y.id, extra.key);
   for (let i = 0; i < target.inWeeks; i++) W.finishWeek({});
   const ent = W.entryOf(y.id);
   assert((ent && ent.raceKey === target.key) || G.news.some(n => n.text.includes('予約していた')), `予約が出走登録にならない（${target.key}）`);
   assert(T.reserves(y.id).length === 0, '使った予約が残る');
   const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
   return `予約 ${target.short || target.name}・冠 ${tl.join('・')}・フリーハンデ 芝${fh.turf} ダ${fh.dirt}`;
+});
+
+check('season: デビュー前の馬も、新馬戦と重賞を1年先まで予約できる', () => {
+  const T = HS.Season;
+  W.newGame({ year: 2004, seed: 8, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get(); G.player.money = 1e9;
+  const it = W.marketHistoric().find(x => G.year - x.horse.born === 2);
+  assert(!W.buy(it), '買えない');
+  const h = W.horse(it.horse.id);
+  const g = W.upcomingGraded(T.weeksLeft()).filter(r => !T.staticIneligible(h, r, r.year));
+  assert(g.length > 5 && g.some(r => r.year > G.year), `予約できる重賞 ${g.length}`);
+  const dw = T.debutWeeks(h);
+  assert(dw.length > 10, 'デビュー戦の週が無い');
+  const wk = dw[2];
+  assert(!T.reserveDebut(h.id, wk.y, wk.m, wk.w), '新馬戦を予約できない');
+  let guard = 0;
+  while (!(G.year === wk.y && G.month === wk.m && G.week === wk.w) && guard++ < 60) W.finishWeek({});
+  const ent = W.entryOf(h.id);
+  const race = ent && W.raceByKey(ent.raceKey);
+  assert((race && race.cls === 'newcomer') || G.news.some(n => n.text.includes('予約していた')), `新馬戦に登録されない（${h.loc}）`);
+  return `${h.name}：${wk.y}年${wk.m}月${wk.w}週 ${race ? race.name + ' ' + race.course + race.surface + race.dist : '（ニュースで知らせた）'}`;
 });
 
 // ---------- 騎手のゲーム ----------

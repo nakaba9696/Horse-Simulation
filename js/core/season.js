@@ -109,21 +109,64 @@
     } else HS.World.news(`資金がマイナスです。来月の末までに立て直さないと、シーズンが終わります。`, 'warn');
   };
 
-  // ---------- 出走の予約（その年の12月4週まで、重賞を先に押さえておく） ----------
-  T.weeksLeft = G => (12 - G.month) * 4 + (4 - G.week) + 1;
+  // ---------- 出走の予約（1年先＝52週先まで、重賞を先に押さえておく。入厩前の馬も） ----------
+  T.RESERVE_WEEKS = 52;
+  T.weeksLeft = () => T.RESERVE_WEEKS;
   T.reserves = id => (HS.World.get().reserve || []).filter(x => !id || x.id === id);
   T.reserve = function (id, race) {
     const W = HS.World, G = W.get();
     const h = W.horse(id);
     if (!h || h.owner !== 'P') return '持ち馬ではない';
-    if (!race.graded || race.year !== G.year) return 'その年の重賞だけ予約できる';
-    const why = HS.Races.ineligible(Object.assign({}, h, { injury: null }), race, race.year);
+    if (!race.graded) return '予約できるのは重賞だけ';
+    const why = T.staticIneligible(h, race, race.year);
     if (why) return why;
     G.reserve = G.reserve || [];
     if (G.reserve.some(x => x.id === id && x.y === race.year && x.m === race.month && x.w === race.week)) return 'その週はもう予約している';
     G.reserve.push({ id, key: race.key, y: race.year, m: race.month, w: race.week, label: HS.Races.label(race) });
     G.reserve.sort((a, b) => (a.y - b.y) || (a.m - b.m) || (a.w - b.w));
     return null;
+  };
+  // 予約のときは、変わらない条件（年齢・性・せん馬）だけを見る。勝ち星などの条件は、その週に出走登録するときに確かめる
+  T.staticIneligible = function (h, race, year) {
+    const age = year - h.born;
+    if (race.age === '2' && age !== 2) return '年齢';
+    if (race.age === '3' && age !== 3) return '年齢';
+    if (race.age === '3+' && age < 3) return '年齢';
+    if (race.age === '4+' && age < 4) return '年齢';
+    if (age < 2) return '年齢';
+    if (age === 2 && race.month < 6) return 'デビュー前'; // 2歳の競走は6月から
+    if (race.sex === '牝' && h.sex !== '牝') return '牝馬限定';
+    if (race.noGelding && h.gelding) return 'せん馬は出られない';
+    return null;
+  };
+  // デビュー戦（新馬戦）の予約。その週の新馬戦から、馬場と距離の合うものを選んで登録する
+  T.debutWeeks = function (h) {
+    const G = HS.World.get(), out = [];
+    let y = G.year, m = G.month, w = G.week;
+    for (let i = 0; i < T.RESERVE_WEEKS; i++) {
+      w++; if (w > 4) { w = 1; m++; if (m > 12) { m = 1; y++; } }
+      if (y - h.born === 2 && m >= 6) out.push({ y, m, w });
+    }
+    return out;
+  };
+  T.reserveDebut = function (id, y, m, w) {
+    const W = HS.World, G = W.get(), h = W.horse(id);
+    if (!h || h.owner !== 'P') return '持ち馬ではない';
+    if ((h.starts || 0) > 0) return 'もうデビューしている';
+    if (!T.debutWeeks(h).some(x => x.y === y && x.m === m && x.w === w)) return 'その週は予約できない';
+    G.reserve = (G.reserve || []).filter(x => !(x.id === id && x.debut));
+    if (G.reserve.some(x => x.id === id && x.y === y && x.m === m && x.w === w)) return 'その週はもう予約している';
+    G.reserve.push({ id, key: `debut:${y}-${m}-${w}`, y, m, w, label: '新馬戦', debut: true });
+    G.reserve.sort((a, b) => (a.y - b.y) || (a.m - b.m) || (a.w - b.w));
+    return null;
+  };
+  T.debutRace = function (h) {
+    const W = HS.World, G = W.get(), R = HS.Races;
+    const list = W.weekRaces().filter(r => r.cls === 'newcomer' && !R.ineligible(h, r, G.year));
+    const mid = (h.distMin + h.distMax) / 2;
+    const score = r => ((r.surface === 'ダ' ? h.apt.dirt : h.apt.turf) || 50) * 3 - Math.abs(r.dist - Math.min(mid, 1800)) / 20;
+    list.sort((a, b) => score(b) - score(a));
+    return list[0] || null;
   };
   T.unreserve = function (id, key) { const G = HS.World.get(); G.reserve = (G.reserve || []).filter(x => !(x.id === id && x.key === key)); };
   // 週の初めに、今週の予約を出走登録に変える。過ぎた予約・手を離れた馬の予約は消す
@@ -138,7 +181,9 @@
       const t = (x.y * 12 + x.m) * 5 + x.w;
       if (t > now) { keep.push(x); continue; }
       if (t < now) continue;
-      const err = W.enter(x.id, x.key);
+      let key = x.key;
+      if (x.debut) { const r = T.debutRace(h); if (!r) { W.news(`${h.name}の予約していた新馬戦が、この週にはない。`, 'warn'); continue; } key = r.key; }
+      const err = W.enter(x.id, key);
       if (err) W.news(`${h.name}は予約していた${x.label}に出られない（${err}）。`, 'warn');
     }
     G.reserve = keep;
