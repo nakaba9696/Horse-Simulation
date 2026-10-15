@@ -174,9 +174,11 @@
       }
       const P = S.strideOf(s.v), dt = sim.t - c.lastPush;
       let gain, beat = null;
-      if (dt < P * 0.6) { gain = 0.03; beat = 'fast'; } // 連打しすぎるとリズムが崩れる
-      else if (Math.abs(dt - P) < 0.1) { gain = 0.22; beat = 'good'; }
-      else { gain = 0.1; beat = 'ok'; }
+      if (dt < P * 0.6) { gain = 0.03; beat = 'fast'; c.streak = 0; } // 連打しすぎるとリズムが崩れる
+      else if (Math.abs(dt - P) < 0.1) { gain = 0.22; beat = 'good'; c.streak = (c.streak || 0) + 1; }
+      else { gain = 0.1; beat = 'ok'; c.streak = 0; }
+      // 拍子に3回続けて合うと、もうひと伸び
+      if (c.streak >= 3) beat = 'dash';
       c.push = Math.min(1, c.push + gain); c.lastPush = sim.t; c.pushes++;
       return beat;
     },
@@ -223,7 +225,9 @@
           else target = pace * (1 + U.clamp((leaderX - s.x - s.gap) * 0.0012, -0.02, 0.02));
           // 抑える：少し下げて、脚をためる（スタミナの減りが小さい）
           if (c.hold) { target *= prog < 0.15 ? 0.985 : 0.993; costMul *= 0.85; }
-          if (c.push > 0) target = Math.max(target, s.vc * (1 + c.push * (0.012 + s.kickS * 2.2)));
+          // 拍子が続かなくなったら、ひと伸びは終わる
+          if (c.streak && sim.t - c.lastPush > S.strideOf(s.v) * 1.6) c.streak = 0;
+          if (c.push > 0) target = Math.max(target, s.vc * (1 + c.push * (0.012 + s.kickS * 2.0) + (c.streak >= 3 ? 0.06 * s.kickS : 0)));
           if (t < c.whipUntil) { target *= 1 + 0.6 * s.kickS * S.whipEff(c); costMul *= 1.3; }
           // 掛かる馬は、抑えないと行きたがる。抑えれば折り合うが、少し脚を使う
           c.kakariNow = s.kakari && prog < 0.5;

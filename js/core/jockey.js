@@ -66,7 +66,10 @@
         if (race.graded && rep / 100 < gradeNeed - 0.2) w *= 0.05;
         // 史実馬は主戦騎手がいるので、評判が高くないと回ってこない
         if (x.horse.hist && W.histJockey(x.horse, g.year)) w *= rep >= 80 ? 0.5 : rep >= 60 ? 0.08 : 0.01;
-        if (w > 0.02) cands.push({ c, x, w, strength });
+        // お手馬（前に乗って結果を出した馬）は、また依頼が来る
+        const mt = !x.horse.filler && j.mounts && j.mounts[x.horse.name];
+        if (mt && mt.best <= 3) w = Math.max(w, 4); else if (mt && mt.rides >= 2) w = Math.max(w, 0.8);
+        if (w > 0.02) cands.push({ c, x, w, strength, regular: !!(mt && mt.best <= 3) });
       });
     }
     const n = Math.min(cands.length, 3 + Math.floor(rep / 9));
@@ -77,7 +80,7 @@
       cands.splice(cands.indexOf(pick), 1);
       if (usedHorse.has(pick.x.horse.id)) { i--; continue; }
       usedHorse.add(pick.x.horse.id);
-      list.push({ raceKey: pick.c.race.key, horseId: pick.x.horse.id, trainer: J.trainerOf(pick.x.horse), strength: pick.strength });
+      list.push({ raceKey: pick.c.race.key, horseId: pick.x.horse.id, trainer: J.trainerOf(pick.x.horse), strength: pick.strength, regular: pick.regular });
     }
     list.sort((a, b) => (W.raceByKey(a.raceKey) || {}).key > (W.raceByKey(b.raceKey) || {}).key ? 1 : -1);
     J._offers = { key, list };
@@ -104,8 +107,9 @@
     for (const res of sim.results) {
       const nm = res.jockey && res.jockey.name; if (!nm || nm === '騎手未定') continue;
       if (race.region === '海外') continue; // リーディングは国内だけ
-      const t = tab[nm] = tab[nm] || [0, 0, 0, 0]; // 騎乗・1着・2着・3着
+      const t = tab[nm] = tab[nm] || [0, 0, 0, 0, 0]; // 騎乗・1着・2着・3着・騎手の取り分（万円）
       t[0]++; if (res.pos <= 3) t[res.pos]++;
+      if (res.pos <= 5 && W.racePrize) t[4] = (t[4] || 0) + Math.round(W.racePrize(race, res.pos) * 0.05);
     }
     if (!J.isMode()) return;
     const me = sim.results.find(x => x.rider === 'P' || (x.jockey && x.jockey.player));
@@ -125,6 +129,8 @@
     let d = 0.12 + (me.pos === 1 ? 3 : me.pos === 2 ? 1 : me.pos === 3 ? 0.5 : 0) * gradeW + (pop - me.pos) * 0.12;
     j.rep = U.clamp(j.rep + d * (1 - j.rep / 120), 0, 100);
     j.skill = U.clamp(j.skill + 0.05 + (me.pos === 1 ? 0.15 : 0), 0, 96);
+    // お手馬の記録
+    if (!me.horse.filler) { j.mounts = j.mounts || {}; const mt = j.mounts[me.horse.name] = j.mounts[me.horse.name] || { rides: 0, wins: 0, best: 99 }; mt.rides++; if (me.pos === 1) mt.wins++; mt.best = Math.min(mt.best, me.pos); mt.last = y; }
     j.history.unshift({ y, m: race.month, w: race.week, race: race.short || race.name, grade: R.gradeBadge(race), horse: me.horse.name, pos: me.pos, n, pop });
     if (j.history.length > 300) j.history.length = 300;
     if (me.pos === 1) {
@@ -147,6 +153,15 @@
   J.yearEnd = function (year) {
     const l = J.leading(year);
     if (l[0]) W.news(`${year}年のリーディングジョッキーは${l[0].name}（${l[0].wins}勝）。`, 'info');
+    // 騎手の年度表彰：最多勝利・最高勝率（30騎乗以上）・最多賞金
+    const tab = (G().records.jockeys || {})[year] || {};
+    const rows = Object.entries(tab).map(([name, t]) => ({ name, rides: t[0], wins: t[1], prize: t[4] || 0 }));
+    const best = (f, ok) => rows.filter(ok || (() => true)).sort((a, b) => f(b) - f(a))[0];
+    const aw = {};
+    const a1 = best(x => x.wins * 1000 - x.rides), a2 = best(x => x.wins / Math.max(1, x.rides), x => x.rides >= 30), a3 = best(x => x.prize);
+    if (a1) aw['最多勝利騎手'] = a1.name; if (a2) aw['最高勝率騎手'] = a2.name; if (a3) aw['最多賞金獲得騎手'] = a3.name;
+    const g = G(); g.records.jawards = g.records.jawards || {}; g.records.jawards[year] = aw;
+    if (J.isMode()) for (const [k, v] of Object.entries(aw)) if (v === J.me().name) W.news(`${year}年の${k}に選ばれた。`, 'g1');
     if (J.isMode()) {
       const k = J.myRank(year), j = J.me();
       const yr = j.years[year];

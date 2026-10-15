@@ -51,6 +51,7 @@
         const b = S.ctl.push(sim);
         if (b === 'good' && !sim.ctl.pushes) say('好スタート！', 'good');
         else if (b === 'late') say('出遅れ……', 'bad');
+        else if (b === 'dash') { beatFx = { t: performance.now(), good: true }; if (sim.ctl.streak === 3) say('伸びる！', 'good'); }
         else if (b === 'good') beatFx = { t: performance.now(), good: true };
         else if (b === 'fast') beatFx = { t: performance.now(), good: false };
         if (AU) AU.se('click');

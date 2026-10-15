@@ -45,7 +45,7 @@
         <button class="btn" data-act="editor">競走馬エディット</button>
         <button class="btn" data-act="sound">${HS.Audio && HS.Audio.settings.bgm + HS.Audio.settings.se > 0 ? '🔊 音：あり' : '🔇 音：なし'}</button>
       </div>
-      <p class="small muted mt">実在の名馬と実在のレースに、騎手として乗る。馬主・生産者として名馬の系譜をつくる遊び方も選べる。</p>
+      <p class="small muted mt">実在の名馬と実在のレースに、騎手として乗る。新人騎手から始めて、リーディングと大レースを目指す。</p>
     </div>`;
   };
 

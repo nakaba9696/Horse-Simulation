@@ -74,7 +74,7 @@
       <canvas class="thumb" width="168" height="112" data-art="thumbdata" data-coat="${e(h.coat || '鹿毛')}" data-key="${e(h.name)}"></canvas>
       <div class="grow">
         <div class="small">${UI.gradeTag(race)} <b>${e(R.label(race))}</b>　${race.course} ${UI.surf(race.surface)} ${race.dist}m</div>
-        <div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}<span class="small muted">${h.gelding ? 'セ' : h.sex}${W.get().year - h.born}・${e(h.style)}・切れ${h.kire || 4}</span></div>
+        <div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${(J.me().mounts || {})[h.name] && !h.filler ? `<span class="chip mine">お手馬</span>` : ''}<span class="small muted">${h.gelding ? 'セ' : h.sex}${W.get().year - h.born}・${e(h.style)}・切れ${h.kire || 4}</span></div>
         <div class="small muted">${e(trainer)}厩舎・${x.pop ? `${x.pop}番人気（${x.odds}倍）` : ''}・斤量 ${(() => { const al = x.allowance || (accepted ? 0 : J.allowance(race)); const w = x.allowance ? x.weight : x.weight - al; return al ? `${w}kg（${J.allowanceMark(al)}${al}kg減）` : `${w}kg`; })()}</div>
         ${UI.numStats(h, wIdx, { surface: race.surface })}
         ${(h.skills || []).length ? `<div class="skills">${UI.skillChips(h)}</div>` : ''}
@@ -104,7 +104,7 @@
   S.jrecord = function (st) {
     const G = W.get(), j = J.me();
     const tab = st.jtab || 'me';
-    const tabs = [['me', 'わたしの成績'], ['lead', 'リーディング'], ['hist', '騎乗の記録']];
+    const tabs = [['me', 'わたしの成績'], ['lead', 'リーディング'], ['awards', '騎手の表彰'], ['mounts', 'お手馬'], ['hist', '騎乗の記録']];
     let body = '';
     if (tab === 'me') {
       const ys = Object.keys(j.years).map(Number).sort((a, b) => b - a);
@@ -122,6 +122,13 @@
       body = `<div class="btns">${years.slice(0, 8).map(yy => `<button class="btn sm ${yy === y ? 'gold' : ''}" data-act="jlead-year" data-y="${yy}">${yy}年</button>`).join('')}</div>
         <div class="tblwrap mt"><table class="t"><tr><th>順位</th><th>騎手</th><th>1着</th><th>2着</th><th>3着</th><th>騎乗</th><th>勝率</th></tr>
         ${top.map(x => `<tr class="${x.me ? 'lead-me' : ''}"><td class="num">${l.indexOf(x) + 1}</td><td>${x.me ? '<b>' + e(x.name) + '</b>（あなた）' : e(x.name)}</td><td class="num"><b>${x.wins}</b></td><td class="num">${x.w2}</td><td class="num">${x.w3}</td><td class="num">${x.rides}</td><td class="num">${x.rides ? (x.wins / x.rides * 100).toFixed(1) : '0.0'}%</td></tr>`).join('')}</table></div>`;
+    } else if (tab === 'awards') {
+      const aw = G.records.jawards || {};
+      const ys = Object.keys(aw).map(Number).sort((a, b) => b - a);
+      body = ys.length ? ys.map(y => `<h2 class="sec">${y}年</h2><div class="panel"><dl class="kv">${Object.entries(aw[y]).map(([k, v]) => `<dt>${k}</dt><dd>${v === j.name ? '★ <b>' + e(v) + '</b>（あなた）' : e(v)}</dd>`).join('')}</dl></div>`).join('') : '<div class="panel empty">年が明けると、前の年の騎手の表彰が発表されます。</div>';
+    } else if (tab === 'mounts') {
+      const ms = Object.entries(j.mounts || {}).sort((a, b) => b[1].wins - a[1].wins || a[1].best - b[1].best || b[1].rides - a[1].rides);
+      body = ms.length ? `<div class="small muted">勝った馬・3着までに来た馬は、その馬が出るレースでまた依頼が来やすい。</div><div class="tblwrap mt"><table class="t"><tr><th>馬</th><th>騎乗</th><th>1着</th><th>最高</th><th>最後</th></tr>${ms.slice(0, 60).map(([n, m]) => `<tr><td>${m.best <= 3 ? '<b>' + e(n) + '</b>' : e(n)}</td><td class="num">${m.rides}</td><td class="num">${m.wins}</td><td class="num">${m.best}着</td><td class="num">${m.last || ''}</td></tr>`).join('')}</table></div>` : '<div class="panel empty">まだお手馬はいません。</div>';
     } else {
       body = j.history.length ? `<div class="tblwrap"><table class="t"><tr><th>日付</th><th>レース</th><th>馬</th><th>人気</th><th>着順</th></tr>${j.history.slice(0, 80).map(r => `<tr><td class="small">${r.y}/${r.m}-${r.w}</td><td class="small">${r.grade ? `<span class="grade ${r.grade}">${r.grade}</span> ` : ''}${e(r.race)}</td><td>${e(r.horse)}</td><td class="num">${r.pop}</td><td class="num ${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos}着</td></tr>`).join('')}</table></div>` : '<div class="panel empty">まだ騎乗していません。</div>';
     }
@@ -131,9 +138,9 @@
   // ---------- 新しく始める（騎手か、馬主・生産者か） ----------
   const newgame0 = S.newgame;
   S.newgame = function (st) {
-    const mode = st.mode || 'jockey';
-    const pick = `<div class="btns" style="margin-top:20px"><button class="btn ${mode === 'jockey' ? 'gold' : ''}" data-act="ng-mode" data-m="jockey">騎手として始める</button><button class="btn ${mode === 'owner' ? 'gold' : ''}" data-act="ng-mode" data-m="owner">馬主・生産者として始める</button></div>`;
-    if (mode !== 'jockey') return pick + newgame0(st);
+    // 馬主・生産者の遊び方は選べなくした（持ち主の決定 2026-10-15。前のセーブは「つづきから」で遊べる）
+    void newgame0;
+    const pick = '';
     const years = []; for (let y = 1960; y <= 2025; y++) years.push(y);
     return pick + `<div class="panel gold" style="margin-top:12px">
       <h3 class="serif" style="margin:0 0 12px;color:var(--gold2);font-size:22px">新人騎手としてデビューする</h3>
