@@ -338,3 +338,5 @@ html[data-theme="green"] .tenkai { background: #0e2a1a; }
 @media (max-width: 600px) { .t.shop .sire { display: none; } .t.shop .fhv { min-width: 34px; padding: 1px 3px; } .t.shop td, .t.shop th { padding-left: 3px; padding-right: 3px; } }
 .sexm { white-space: nowrap; display: inline-block; padding: 0 7px; border-radius: 4px; font-size: 12px; font-weight: 700; color: #fff; }
 .sexm.m { background: #2f5fa8; } .sexm.f { background: #b0406e; }
+.gcurve { width: 280px; max-width: 100%; height: auto; display: block; }
+.grade.DC { background: linear-gradient(90deg, #6a2bb8, #c99a2e); }

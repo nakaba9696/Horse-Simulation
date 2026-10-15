@@ -35,8 +35,9 @@
   T.cond = (h, wIdx) => T.COND[T.condLevel(h, wIdx)];
 
   // ---------- フリーハンデ（芝・ダートの総合の強さを斤量 kg で）と国内の順位 ----------
-  T.fh = function (h, wIdx, surface) {
-    const c0 = H.cur(h, wIdx);
+  T.fh = (h, wIdx, surface) => T.fhOf(H.cur(h, wIdx), surface);
+  // 能力の値（いまの値でも、伸びきった値でも）からフリーハンデを出す
+  T.fhOf = function (c0, surface) {
     const c = Object.assign({}, c0, H.onSurface(c0, surface));
     const w = surface === 'ダ' ? { spd: 0.42, sta: 0.20, guts: 0.15, mind: 0.11, slope: 0.12 } : { spd: 0.45, sta: 0.22, guts: 0.16, mind: 0.12, slope: 0.05 };
     let a = 0; for (const k in w) a += (c[k] || 0) * w[k];
@@ -71,6 +72,7 @@
     { id: 'tenno', label: '天皇賞の春秋制覇', test: ws => has(ws, '天皇賞・春') && has(ws, '天皇賞・秋') },
     { id: 'world', label: '海外G1制覇', test: ws => ws.some(w => w.region === '海外' && w.grade === 'G1') },
     { id: 'g1five', label: 'G1五勝', test: ws => ws.filter(w => w.grade === 'G1').length >= 5 },
+    { id: 'dc', label: 'ドリームクラシック制覇', test: ws => ws.some(w => w.r === 'ドリームクラシック') },
   ];
   T.titles = function (h) {
     const ws = won(h), got = {};
@@ -187,6 +189,50 @@
       if (err) W.news(`${h.name}は予約していた${x.label}に出られない（${err}）。`, 'warn');
     }
     G.reserve = keep;
+  };
+
+  // ---------- ドリームクラシック（DC）：年末、その年の強い馬だけが招待されて走る特別なレース ----------
+  // 12月1週に、入厩している3歳以上の馬からフリーハンデの上位16頭を招待する。その年にG1を勝った自分の馬も招待される。
+  // 12月4週（有馬記念と同じ週の最後）に東京芝2400mで走る。ほかのレースに出た馬も続けて出られる
+  T.DC_NAME = 'ドリームクラシック';
+  T.DC_FIELD = 16;
+  T.dcRace = function (year) {
+    const G = HS.World.get(), R = HS.Races;
+    const arima = R.gradedOf(year, 12, 4).find(r => r.name === '有馬記念');
+    return {
+      name: T.DC_NAME, short: T.DC_NAME, grade: 'DC', region: 'JRA', course: '東京', surface: '芝', dist: 2400, month: 12, week: 4, age: '3+', weight: '定量',
+      key: `${year}-12-4-DC`, graded: true, invite: true, year, prize: arima ? arima.prize : 20000,
+      ground: R.ground(G.seed, year, 12, 4, '東京'),
+    };
+  };
+  T.dcInvite = function () {
+    const W = HS.World, G = W.get();
+    if (G.mode !== 'jockey' || (G.dc && G.dc.y === G.year)) return;
+    const wIdx = W.wIdx();
+    const pool = W.all().filter(h => h.loc === 'stable' && !h.injury && G.year - h.born >= 3)
+      .map(h => ({ h, v: Math.max(T.fh(h, wIdx, '芝'), T.fh(h, wIdx, 'ダ')) })).sort((a, b) => b.v - a.v);
+    const ids = pool.slice(0, T.DC_FIELD).map(x => x.h.id);
+    // その年にG1を勝った自分の馬は、上位に入っていなくても招待する（下から入れ替える）
+    const g1 = pool.filter(x => x.h.owner === 'P' && !ids.includes(x.h.id) && (x.h.gradedWins || []).some(g => g.y === G.year && g.grade === 'G1'));
+    for (const x of g1) {
+      let k = ids.length - 1;
+      while (k >= 0 && W.horse(ids[k]).owner === 'P') k--;
+      if (k >= 0 && ids.length >= T.DC_FIELD) ids[k] = x.h.id; else ids.push(x.h.id);
+    }
+    G.dc = { y: G.year, ids };
+    W.news(`${T.DC_NAME}（12月4週・東京芝2400m）の招待馬${ids.length}頭が決まった。`, 'g1');
+    for (const id of ids) { const h = W.horse(id); if (h.owner === 'P') W.news(`${h.name}が${T.DC_NAME}に招待された！`, 'g1'); }
+  };
+  // その週の特別なレースを足す（W.weekRaces から呼ぶ）
+  T.addSpecial = function (list, year, month, week) {
+    const G = HS.World.get();
+    if (G.mode === 'jockey' && month === 12 && week === 4 && G.dc && G.dc.y === year) list.push(T.dcRace(year));
+  };
+  T.dcField = function (race) {
+    const W = HS.World, G = W.get();
+    if (!G.dc || G.dc.y !== race.year) return [];
+    return G.dc.ids.map(id => W.horse(id)).filter(h => h && h.loc === 'stable' && !h.injury)
+      .map(h => h.owner === 'P' ? { horse: h, jockeyName: W.bestFreeJockey(race.key, h.id), mine: true } : { horse: h });
   };
 
   // ---------- 天気（馬場から決まる。週と競馬場ごと） ----------

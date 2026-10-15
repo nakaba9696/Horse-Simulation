@@ -98,6 +98,7 @@
 
   // 出走できるか。理由の文字列（できないとき）か null を返す
   R.ineligible = function (horse, race, year) {
+    if (race.invite) return '招待馬だけ';
     const age = year - horse.born;
     if (race.age === '2' && age !== 2) return '年齢';
     if (race.age === '3' && age !== 3) return '年齢';

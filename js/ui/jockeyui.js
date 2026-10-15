@@ -46,21 +46,40 @@
   UI.condTag = h => isJ() ? UI.condMark(h) : condTag0(h);
   UI.titleChips = h => (h.titles || []).map(l => `<span class="chip crown">👑 ${e(l)}</span>`).join('');
   UI.costOf = h => Math.round((h.loc === 'stable' ? 60 : h.loc === 'farm' ? 15 : 0) * U.priceIndex(W.get().year));
+  // 成長の山を曲線で。横は年齢（1〜9歳）、縦は力の出し具合。●がいまの位置
+  UI.growthCurve = function (h) {
+    const G = W.get();
+    const W0 = 280, H0 = 96, L = 8, R0 = 8, T0 = 10, B = 20, a0 = 1.5, a1 = 8.5;
+    const X = a => L + (a - a0) / (a1 - a0) * (W0 - L - R0);
+    const Y = g => T0 + (1 - U.clamp((g - 0.6) / 0.42, 0, 1)) * (H0 - T0 - B);
+    const pts = [];
+    for (let y = h.born + 1; y <= h.born + 9; y++) for (let m = 1; m <= 12; m++) {
+      const age = y - h.born + (m - 1) / 12;
+      if (age < a0 || age > a1) continue;
+      pts.push([X(age), Y(H.growthFactor(h, H.weekIndex(y, m, 1)))]);
+    }
+    const line = pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ');
+    const area = `${X(a0).toFixed(1)},${H0 - B} ${line} ${X(a1).toFixed(1)},${H0 - B}`;
+    const nowA = G.year - h.born + (G.month - 1) / 12 + (G.week - 1) / 48;
+    const nx = X(U.clamp(nowA, a0, a1)), ny = Y(H.growthFactor(h, W.wIdx()));
+    const ticks = [2, 3, 4, 5, 6, 7, 8].map(a => `<line x1="${X(a)}" y1="${T0}" x2="${X(a)}" y2="${H0 - B}" stroke="rgba(255,255,255,.08)"/><text x="${X(a)}" y="${H0 - 6}" fill="#a9c4b0" font-size="10" text-anchor="middle">${a}歳</text>`).join('');
+    return `<svg class="gcurve" viewBox="0 0 ${W0} ${H0}" role="img" aria-label="成長の山">${ticks}
+      <polygon points="${area}" fill="rgba(127,224,160,.18)"/><polyline points="${line}" fill="none" stroke="#7fe0a0" stroke-width="2.5" stroke-linejoin="round"/>
+      ${nowA >= a0 && nowA <= a1 ? `<line x1="${nx}" y1="${T0}" x2="${nx}" y2="${H0 - B}" stroke="#ffd34d" stroke-dasharray="3 3"/><circle cx="${nx}" cy="${ny}" r="5.5" fill="#ffd34d" stroke="#3a2a00" stroke-width="1.5"/><text x="${U.clamp(nx, 20, W0 - 20)}" y="${T0 - 1}" fill="#ffd34d" font-size="10" text-anchor="middle">いま</text>` : ''}</svg>`;
+  };
   // 馬の画面の上：フリーハンデ・国内の順位・調子・冠・成長の山・お金
   UI.grPanel = function (h, wIdx) {
     if (!isJ()) return '';
     const mine = h.owner === 'P';
     const fh = T.fhBoth(h, wIdx), rk = h.loc === 'stable' ? T.rank(h, wIdx) : null;
-    const ages = [2, 3, 4, 5, 6, 7, 8];
-    const nowAge = W.get().year - h.born;
-    const bars = ages.map(a => { const g = H.growthFactor(h, H.weekIndex(h.born + a, 6, 1)); return `<div class="gbar ${a === nowAge ? 'now' : ''}"><i style="height:${Math.round(U.clamp((g - 0.6) / 0.4, 0.05, 1) * 100)}%"></i><span>${a}</span></div>`; }).join('');
+    const bars = UI.growthCurve(h);
     return `<div class="panel gr mt">
       <div class="grrow"><div><div class="small muted">フリーハンデ</div><b class="fh"><span class="turf">芝 ${fh.turf.toFixed(1)}</span><span class="dirt">ダ ${fh.dirt.toFixed(1)}</span></b></div>
         <div><div class="small muted">国内の順位</div><b>${rk && rk.pos ? `${rk.pos}位 <small class="muted">/ ${rk.n}頭</small>` : '－'}</b></div>
         <div><div class="small muted">調子</div>${UI.condMark(h, wIdx)}</div>
         <div><div class="small muted">成績</div><b>${h.starts || 0}戦${h.wins || 0}勝</b></div></div>
       ${(h.titles || []).length ? `<div class="mt">${UI.titleChips(h)}</div>` : ''}
-      <div class="grrow mt"><div class="growth"><div class="small muted">成長の山（年齢）</div><div class="gbars">${bars}</div></div>
+      <div class="grrow mt"><div class="growth"><div class="small muted">成長の山（年齢）・●がいま</div>${bars}</div>
         ${!mine ? (() => { const hi = W.marketHistoric().findIndex(x => x.horse.id === h.id), fi = hi < 0 ? W.marketForeign().findIndex(x => x.horse.id === h.id) : -1; if (hi < 0 && fi < 0) return ''; const it = hi >= 0 ? W.marketHistoric()[hi] : W.marketForeign()[fi]; return `<div class="small"><div>馬の店の値段 <b>${U.money(it.price)}</b></div><button class="btn sm gold mt" data-act="buy" data-kind="${hi >= 0 ? 'hist' : 'fhist'}" data-i="${hi >= 0 ? hi : fi}">買う</button></div>`; })() : ''}
         ${mine ? `<div class="small"><div>総獲得賞金 <b>${U.money(h.prize || 0)}</b></div><div>値段 <b>${U.money(W.sellPrice(h))}</b></div><div>毎月の費用 <b>${U.money(UI.costOf(h))}</b></div></div>` : ''}</div>
     </div>`;
@@ -99,6 +118,7 @@
         <div class="mgr-foot small">今年 ${yr.rides}戦${yr.wins}勝（2着${yr.w2}・3着${yr.w3}）・通算 ${j.total.rides}戦${j.total.wins}勝・評判 ${J.repLabel(j.rep)}・騎乗技術 ${Math.round(j.skill)}</div>
       </div>
       ${!W.mine().length && !over ? `<div class="panel gold mt">📌 <a href="#" data-act="tab" data-tab="market">馬の店でデビュー前の史実馬を買おう</a>（2歳の4月から自動で入厩し、レースに出られる）。お手馬は${T.MAX_OWN}頭まで。毎月の費用がかかり、資金がマイナスのまま2か月続くとシーズンが終わる。</div>` : ''}
+      ${G.dc && G.dc.y === G.year && G.month === 12 ? `<h2 class="sec">${T.DC_NAME}<span class="r">12月4週・東京芝2400m・招待${G.dc.ids.length}頭</span></h2><div class="panel small">${G.dc.ids.map(id => W.horse(id)).filter(Boolean).map(h => h.owner === 'P' ? `<b class="dc-me">★${e(h.name)}</b>` : e(h.name)).join('・')}${G.dc.ids.some(id => (W.horse(id) || {}).owner === 'P') ? '' : '<div class="muted mt">自分の馬は招待されなかった。フリーハンデの上位16頭か、その年にG1を勝つと招待される。</div>'}</div>` : ''}
       <h2 class="sec">今週の騎乗<span class="r">${G.month}月${G.week}週</span></h2>
       ${rides.length ? `<div class="list">${rides.map(({ card, runner }) => rideCard(card, runner, true)).join('')}</div>`
         : `<div class="panel empty">今週は乗るレースがありません。${W.mine('stable').length ? '<br><a href="#" data-act="tab" data-tab="stable">厩舎で出るレースを決める（おまかせなら自動で選ぶ）</a>' : ''}</div>`}

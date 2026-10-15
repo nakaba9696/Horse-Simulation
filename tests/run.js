@@ -452,6 +452,33 @@ check('season: デビュー前の馬も、新馬戦と重賞を1年先まで予�
   return `${h.name}：${wk.y}年${wk.m}月${wk.w}週 ${race ? race.name + ' ' + race.course + race.surface + race.dist : '（ニュースで知らせた）'}`;
 });
 
+check('season: 年末のドリームクラシックに強い馬が招待され、12月4週に走る', () => {
+  const T = HS.Season;
+  W.newGame({ year: 2005, seed: 12, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get();
+  // 強い現役馬を1頭、自分の馬にする（G1を勝った扱い）
+  const star = W.all().filter(h => h.loc === 'stable' && G.year - h.born >= 3 && h.hist).sort((a, b) => b.gradedWins.length - a.gradedWins.length)[0];
+  star.owner = 'P';
+  let guard = 0;
+  while (!(G.month === 11 && G.week === 4) && guard++ < 60) W.finishWeek({});
+  star.gradedWins.push({ y: 2005, race: '天皇賞（秋）', short: '天皇賞・秋', grade: 'G1' }); star.injury = null; star.loc = 'stable';
+  while (!(G.month === 12 && G.week === 1) && guard++ < 60) W.finishWeek({});
+  assert(G.dc && G.dc.y === 2005 && G.dc.ids.length >= T.DC_FIELD, '招待馬が決まらない');
+  assert(G.dc.ids.includes(star.id) || star.injury, 'G1を勝った自分の馬が招待されない');
+  const ok = !star.injury;
+  while (!(G.month === 12 && G.week === 4) && guard++ < 70) W.finishWeek({});
+  const card = W.cards().find(c => c.race.invite);
+  assert(card && card.runners.length >= 10, `ドリームクラシックの出走表が無い（${card && card.runners.length}）`);
+  assert(!card.runners.some(x => x.horse.filler) || card.runners.filter(x => !x.horse.filler).length >= 10, '招待馬が少ない');
+  const rep = W.finishWeek({});
+  const r = rep.races.find(x => x.race.invite);
+  assert(r && r.sim.results.length === card.runners.length, '走っていない');
+  const w = r.sim.results[0].horse;
+  assert(w.gradedWins.some(g => g.short === T.DC_NAME), '勝ち鞍に残らない');
+  const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
+  return `${card.runners.length}頭・勝ったのは${w.name}${ok ? '' : '（自分の馬は出られなかった）'}`;
+});
+
 // ---------- 騎手のゲーム ----------
 check('jockey: 史実馬を買って自分で乗り、成績と賞金とリーディングが付く', () => {
   const J = HS.Jockey, S = HS.Sim;

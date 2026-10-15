@@ -41,12 +41,15 @@
     if (!v) { const h = H.fromHistoric(d, 'x'); v = { pot: h.pot, kire: h.kire, health: h.health, turf: h.apt.turf, dirt: h.apt.dirt, heavy: h.apt.heavy, skills: h.skills }; infoCache.set(d.name, v); }
     return v;
   }
+  // 伸びきったときのフリーハンデ（芝とダートの高いほう）
+  const fhOf = d => { const p = info(d).pot, t = HS.Season.fhOf(p, '芝'), x = HS.Season.fhOf(p, 'ダ'); return t >= x ? { v: t, s: '芝' } : { v: x, s: 'ダ' }; };
   const order = arr => v => { const i = arr.indexOf(v); return i < 0 ? 99 : i; };
   // 一覧の列。dir：最初に押したときの向き（1＝小さい順、-1＝大きい順）
   const COLS = [
     { k: 'name', label: '馬名', val: d => d.name, str: true, dir: 1 },
     { k: 'born', label: '生年', val: d => d.born, dir: 1 },
     { k: 'rating', label: '評価', val: d => d.rating, dir: -1, heat: true },
+    { k: 'fh', label: 'フリーハンデ', val: d => fhOf(d).v, dir: -1, title: '伸びきったときのフリーハンデ（芝とダートの高いほう）', show: d => `${fhOf(d).v.toFixed(1)} ${fhOf(d).s}` },
     ...H.STATS.map(k => ({ k, label: H.STAT_SHORT[k], val: d => Math.round(info(d).pot[k]), dir: -1, heat: true, title: H.STAT_LABEL[k] })),
     { k: 'heavy', label: '道悪', val: d => Math.round(info(d).heavy), dir: -1, heat: true, title: '大きいほど重い馬場が得意' },
     { k: 'health', label: '健康', val: d => Math.round(info(d).health), dir: -1, heat: true, title: '大きいほど故障しにくく、疲れが早く取れる' },
