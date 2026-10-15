@@ -71,7 +71,7 @@
       },
       difficulty: opts.difficulty || 'normal',
       horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, edits,
-      records: { g1: {}, graded: {}, awards: {}, pts: {}, player: { starts: 0, wins: 0, earn: 0, g1: [] } },
+      records: { g1: {}, graded: {}, awards: {}, pts: {}, course: {}, player: { starts: 0, wins: 0, earn: 0, g1: [] } },
       news: [], entries: {}, rides: {}, mode: opts.mode === 'jockey' ? 'jockey' : 'owner', lastWeek: null, market: { gen: [], genMares: [], month: 0 },
       farmLevel: 1, stats: {}, settings: { animSpeed: 1, showHistNote: true },
     };
@@ -514,6 +514,7 @@
       const sim = played[race.key] || S.run(race, runners, wIdx, new U.RNG(card.seed), { frames: watch });
       if (HS.Jockey) HS.Jockey.record(race, sim, runners);
       W.applyResults(race, sim, runners, wIdx);
+      W.noteRecord(race, sim);
       report.races.push({ race, sim, runners, hasMine, watch, ridden: !!played[race.key], ride: card.ride });
     }
     G.entries = {}; G.rides = {};
@@ -529,6 +530,17 @@
     G.lastWeek = { date: report.date, races: report.races.map(r => W.slimResult(r)) };
     W._week = null;
     return report;
+  };
+  // コースレコード（このゲームの中で出た、競馬場・芝ダ・距離ごとの一番速い時計）
+  W.recKey = race => `${race.course}|${race.surface}|${race.dist}`;
+  W.courseRecord = race => (G.records.course || {})[W.recKey(race)] || null;
+  W.noteRecord = function (race, sim) {
+    const w = sim.results[0]; if (!w || !(w.time > 0)) return;
+    G.records.course = G.records.course || {};
+    const key = W.recKey(race), old = G.records.course[key];
+    if (old && old.t <= w.time) return;
+    G.records.course[key] = { t: Math.round(w.time * 10) / 10, name: w.horse.name, year: race.year, race: R.label(race), mine: w.rider === 'P' || w.horse.owner === 'P' };
+    if (old && (w.rider === 'P' || w.horse.owner === 'P')) news(`${w.horse.name}が${race.course}${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}mのコースレコードを塗り替えた（${U.time(w.time)}）。`, 'good');
   };
   // 騎乗せずに1週進める（馬主のゲームと、テスト）
   W.advance = () => W.finishWeek({});
@@ -1050,7 +1062,7 @@
   // 古いセーブを今の形にそろえる
   W.migrate = function (g) {
     g.settings = Object.assign({ animSpeed: 1, showHistNote: true }, g.settings || {});
-    g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
+    g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, course: {}, player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
     g.erased = g.erased || []; g.rides = g.rides || {}; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};

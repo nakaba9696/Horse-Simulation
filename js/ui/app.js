@@ -212,6 +212,11 @@
 
   const change = App.change = {};
   change.jockey = (el) => { const id = el.dataset.id; const ent = W.entryOf(id); if (!ent) return; W.enter(id, ent.raceKey, el.value); App.save(); };
+  // 画面の色（深緑と金／紺と金）。この端末に覚えておく
+  App.THEME_KEY = 'hs-theme';
+  App.theme = () => { try { return localStorage.getItem(App.THEME_KEY) || 'green'; } catch (e) { return 'green'; } };
+  App.applyTheme = t => { document.documentElement.dataset.theme = t || App.theme(); };
+  change.theme = (el) => { try { localStorage.setItem(App.THEME_KEY, el.value); } catch (e) { /* 覚えられなくても切り替える */ } App.applyTheme(el.value); };
   change.volume = (el) => { const AU = HS.Audio; AU.settings[el.dataset.k] = (+el.value) / 100; AU.saveSettings(); AU.applyVolume(); if (el.dataset.k === 'se') AU.se('click'); };
   change.setting = (el) => { const G = W.get(); const k = el.dataset.k; G.settings[k] = k === 'watch' ? +el.value : el.value === '1'; App.save(); };
 
@@ -380,6 +385,7 @@
 
   // 起動
   window.addEventListener('DOMContentLoaded', () => {
+    App.applyTheme();
     if (HS.Edits) HS.Edits.apply(HS.Edits.loadLocal());
     W.index();
     App.render();

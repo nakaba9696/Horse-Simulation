@@ -1,4 +1,4 @@
-/* ターフの系譜：紺と金の画面 */
+/* ターフの系譜：深緑と金の画面（メニューで紺と金に切り替えられる。html の data-theme） */
 :root {
   color-scheme: dark;
   --bg: #0b1726; --bg2: #10223a; --panel: #142a45; --panel2: #1a3556; --line: #2b4a72;
@@ -202,6 +202,8 @@ input[type=range] { accent-color: var(--gold); min-width: 0; }
 /* 特殊能力・解説 */
 .chip.skill { background: #1f4f3a; color: #d6f5e4; margin: 0 4px 4px 0; }
 .chip.skill.bad { background: #5a2626; color: #ffd9d9; }
+.chip.skill.trig { background: linear-gradient(90deg, #1b8fc4, #4fc3ee); color: #fff; font-weight: 700; }
+.chip.skill.trig.bad { background: linear-gradient(90deg, #6e2a1e, #a8452f); color: #ffe3da; }
 .skills { display: flex; flex-wrap: wrap; }
 .skillpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 4px 10px; }
 .skillpick .bad, .ed-table .sk .bad { color: #ff9a9a; }
@@ -213,17 +215,21 @@ input[type=range] { accent-color: var(--gold); min-width: 0; }
 .ride-msg { position: absolute; left: 0; right: 0; top: 30%; display: flex; justify-content: center; gap: 8px; pointer-events: none; }
 .ride-msg span { background: rgba(8,18,32,0.82); color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; }
 .ride-msg span.bad { color: #ff9a7a; } .ride-msg span.good { color: #9ff0b8; }
-.ride-pad { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1.4fr; gap: 8px; align-items: stretch; }
-.ride-lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.rb { border: 2px solid #34507a; background: #13263f; color: #fff; border-radius: 12px; font-size: 18px; font-weight: 900; padding: 14px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 64px; touch-action: none; }
-.rb small { font-size: 10px; font-weight: 400; color: #9fb2c8; margin-top: 2px; }
-.rb.on { background: #2a4d7a; border-color: #ffd34d; }
-.rb.push { background: #1e5a3a; border-color: #3f9a64; }
-.rb.push.on { background: #2f8a58; }
-.rb.whip { background: #6a2a22; border-color: #b0503f; }
+.ride-pad { display: grid; grid-template-columns: 1.5fr 0.6fr 1.3fr; gap: 8px; align-items: stretch; }
+.pad-l { display: grid; grid-template-rows: 1.2fr 1fr; gap: 6px; }
+.pad-row { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 6px; }
+.pad-r { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.rb { border: 2px solid #3c6a4a; background: #12301f; color: #fff; border-radius: 12px; font-size: 18px; font-weight: 900; padding: 10px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 56px; touch-action: none; }
+.rb small { font-size: 10px; font-weight: 400; color: #b9d3bf; margin-top: 2px; }
+.rb.on { background: #2a5a3a; border-color: #ffd34d; }
+.rb.up { background: #1e5a3a; border-color: #4fb27a; font-size: 22px; }
+.rb.up.on { background: #2f8a58; }
+.rb.down { background: #1f3f5a; border-color: #4f86b2; }
+.rb.whip { background: #6a2a22; border-color: #b0503f; font-size: 16px; }
 .rb.whip.on { background: #9a3a2c; }
-.rb.hold { background: #2a3a5a; }
-.ride-pad .ride-close { grid-column: 1 / -1; }
+.rb.swap { background: #3a3420; border-color: #9a8540; font-size: 13px; }
+.ride-pad .ride-pose { grid-column: 1 / 2; }
+.ride-pad .ride-close { grid-column: 2 / -1; }
 .ride-help { text-align: center; }
 @media (max-width: 600px) { .ride-help { display: none; } .rb { min-height: 72px; } }
 /* 騎手の画面 */
@@ -252,3 +258,22 @@ input[type=range] { accent-color: var(--gold); min-width: 0; }
 .entry-t td.recent span { display: inline-block; width: 1.1em; text-align: center; font-weight: 700; }
 .entry-t td.recent .pos1 { color: #ffd34d; } .entry-t td.recent .pos2 { color: #c8d3e2; } .entry-t td.recent .pos3 { color: #e0a060; }
 @media (max-width: 600px) { .entry-top { grid-template-columns: 1fr; } }
+.ride-pad .ride-close:only-child { grid-column: 1 / -1; }
+
+/* ---------- 深緑と金（html[data-theme="green"]）：太い深緑の縁、金の見出し、黄土の札 ---------- */
+html[data-theme="green"] {
+  --bg: #0a1f14; --bg2: #0f2b1c; --panel: #123323; --panel2: #18402c; --line: #2f6b47;
+  --gold: #d9b24a; --gold2: #f5d77c; --muted: #a9c4b0; --male: #24506a; --female: #6a2d4c;
+}
+html[data-theme="green"] body { background: radial-gradient(1200px 600px at 50% -200px, #1f5a39 0%, var(--bg) 60%) fixed, var(--bg); }
+html[data-theme="green"] .hdr { background: linear-gradient(180deg, rgba(10,31,20,.98) 70%, rgba(10,31,20,0)); }
+html[data-theme="green"] .nav { background: linear-gradient(180deg, #145a33, #0a2a18); border-top: 3px solid var(--gold); }
+html[data-theme="green"] .panel { border: 2px solid #2f7a4c; box-shadow: inset 0 0 0 1px rgba(245,215,124,.12), var(--shadow); }
+html[data-theme="green"] .panel.gold { border-color: var(--gold); }
+html[data-theme="green"] .hinfo { background: linear-gradient(180deg, #1c5a37, #123323); border: 2px solid var(--gold); }
+html[data-theme="green"] h2.sec { color: var(--gold2); text-shadow: 0 1px 0 #3a2a00, 0 0 6px rgba(245,215,124,.25); }
+html[data-theme="green"] .tabs button, html[data-theme="green"] .rv-speed button, html[data-theme="green"] .rv-skip { background: #12301f; }
+html[data-theme="green"] .modal { background: linear-gradient(180deg, #1a4a30, #0f2b1c); border-width: 2px; }
+html[data-theme="green"] .toast { background: #0a1f14; }
+html[data-theme="green"] .field input, html[data-theme="green"] .field select, html[data-theme="green"] textarea, html[data-theme="green"] .filters select, html[data-theme="green"] .row > select { background: #0a2216; }
+html[data-theme="green"] .ride-canvas, html[data-theme="green"] .course-svg { background: #0a2216; }

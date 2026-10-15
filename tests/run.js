@@ -311,6 +311,85 @@ check('sim: 特殊能力の効き目が極端でない', () => {
   return out.join(' ');
 });
 
+check('skills: 発動する特殊能力は能力値から決まり、数に上限があり、効き目が極端でない', () => {
+  const K = HS.Skills, S = HS.Sim;
+  const rng = new U.RNG(5);
+  let total = 0, n = 0;
+  for (let i = 0; i < 300; i++) {
+    const h = H.makeFiller(rng, { level: 60 + (i % 40), surface: '芝', dist: 2000, born: 2000 });
+    const ids = K.of(h);
+    const p = K.stats(h);
+    assert(ids.length <= K.cap(p), `${ids.length} 個は上限 ${K.cap(p)} を超える`);
+    ids.forEach(id => assert(K.BY[id] && K.BY[id].learn(p), `${id} の条件を満たしていない`));
+    assert(JSON.stringify(K.of(h)) === JSON.stringify(ids), '同じ馬で結果が変わる');
+    total += ids.length; n++;
+  }
+  assert(total / n > 0.5, '特殊能力を持つ馬が少なすぎる');
+  // 1つだけ持たせて、同じ相手と走らせる
+  const setup0 = K.setup, out = [];
+  const winWith = (id, N) => {
+    K.setup = sim => { setup0(sim); sim.st.forEach(s => { s.trig = []; }); if (id) sim.st[0].trig = [id]; };
+    const r = fieldTest('東京', 2000, () => {}, N, 31);
+    K.setup = setup0;
+    return r.win;
+  };
+  const base = winWith(null, 160);
+  for (const id of ['isshun', 'chokusen', 'hanno', 'sessen']) {
+    const w = winWith(id, 160);
+    assert(w < 0.5 && w - base < 0.12, `${K.label(id)} の勝率 ${w}（なし ${base}）`);
+    out.push(`${K.label(id)}${Math.round(w * 100)}%`);
+  }
+  // 発動したら記録に残る
+  let fired = 0;
+  K.setup = sim => { setup0(sim); sim.st[0].trig = ['startdash']; };
+  const r2 = new U.RNG(3);
+  for (let k = 0; k < 20; k++) {
+    const field = []; for (let i = 0; i < 10; i++) field.push({ horse: H.makeFiller(r2, { level: 80, surface: '芝', dist: 1600, born: 2000 }), jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 });
+    const sim = S.create({ dist: 1600, surface: '芝', course: '東京', ground: '良', year: 2004 }, field, H.weekIndex(2004, 5, 1), r2, {});
+    while (!S.step(sim)) { /* 進める */ }
+    if (sim.skillFx.some(f => f.i === 0 && f.id === 'startdash')) fired++;
+  }
+  K.setup = setup0;
+  assert(fired > 5, `スタートダッシュが発動しない（${fired}/20）`);
+  return `平均 ${(total / n).toFixed(1)}個・なし${Math.round(base * 100)}% ${out.join(' ')}`;
+});
+
+check('ride: しごく・引くの段は手を止めても保たれ、追い通すと負ける。ムチは左右と持ち替え', () => {
+  const S = HS.Sim;
+  const play = (policy, N) => {
+    const rng = new U.RNG(9); let pos = 0;
+    for (let k = 0; k < N; k++) {
+      const field = []; for (let i = 0; i < 12; i++) { const h = H.makeFiller(rng, { level: 82, surface: '芝', dist: 2000, born: 2000 }); h.name = 'h' + i; field.push({ horse: h, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1, rider: i === 0 ? 'P' : undefined }); }
+      const sim = S.create({ dist: 2000, surface: '芝', course: '東京', ground: '良', year: 2004 }, field, H.weekIndex(2004, 5, 1), new U.RNG(rng.int(1, 1e9)), { frames: true, ride: true });
+      let next = 0;
+      while (!S.step(sim)) {
+        const c = sim.ctl, R = sim.D - sim.st[0].x;
+        if (!c.started) S.ctl.up(sim);
+        if (policy === 'all' && sim.t >= next) { S.ctl.up(sim); next = sim.t + 0.15; }
+        if (policy === 'late' && R < sim.straight + 350 && c.gear < 1 && sim.t >= next) { S.ctl.up(sim); next = sim.t + 0.2; }
+      }
+      pos += S.finish(sim).results.findIndex(r => r.horse.name === 'h0') + 1;
+    }
+    return pos / N;
+  };
+  const all = play('all', 40), late = play('late', 40), none = play('none', 40);
+  assert(late < all && late < none, `直線でしごく ${late}・追い通す ${all}・何もしない ${none}`);
+  // 段は保たれる
+  const rng = new U.RNG(4);
+  const field = []; for (let i = 0; i < 8; i++) field.push({ horse: H.makeFiller(rng, { level: 80, surface: '芝', dist: 1600, born: 2000 }), jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1, rider: i === 0 ? 'P' : undefined });
+  const sim = S.create({ dist: 1600, surface: '芝', course: '東京', ground: '良', year: 2004 }, field, H.weekIndex(2004, 5, 1), rng, { frames: true, ride: true });
+  S.ctl.up(sim); for (let i = 0; i < 20; i++) S.step(sim);
+  S.ctl.up(sim); S.step(sim); S.ctl.up(sim);
+  const g = sim.ctl.gear; for (let i = 0; i < 50; i++) S.step(sim);
+  assert(g > 0 && sim.ctl.gear === g, '手を止めると段が戻る');
+  S.ctl.down(sim); assert(sim.ctl.gear < g, '引いても下がらない');
+  assert(sim.ctl.hand === 'R' && S.ctl.whip(sim, 'L') === 'swap' && sim.ctl.hand === 'L', '反対の手のムチで持ち替えない');
+  for (let i = 0; i < 5; i++) S.step(sim);
+  const w = S.ctl.whip(sim, 'L');
+  assert(w && w !== 'swap' && sim.ctl.whips === 1, `ムチが入らない（${w}）`);
+  return `平均着順 直線でしごく ${late.toFixed(1)}・追い通す ${all.toFixed(1)}・何もしない ${none.toFixed(1)}`;
+});
+
 // ---------- 騎手のゲーム ----------
 check('jockey: 史実馬を買って自分で乗り、成績と賞金とリーディングが付く', () => {
   const J = HS.Jockey, S = HS.Sim;
@@ -334,9 +413,9 @@ check('jockey: 史実馬を買って自分で乗り、成績と賞金とリー�
       let next = 0;
       while (!S.step(sim)) {
         const s = sim.st[sim.me], R = sim.D - s.x;
-        if (!sim.ctl.started) S.ctl.push(sim);
-        S.ctl.hold(sim, R > sim.straight + 450);
-        if (R < sim.straight + 350 && sim.t >= next) { S.ctl.push(sim); next = sim.t + S.strideOf(s.v); }
+        if (!sim.ctl.started) S.ctl.up(sim);
+        if (R < sim.straight + 350 && sim.ctl.gear < 1 && sim.t >= next) { S.ctl.up(sim); next = sim.t + 0.2; }
+        if (R < 250 && sim.t >= next + 0.3) { S.ctl.whip(sim, 'R'); next = sim.t + 0.3; }
         if (sim.ctl.blockedNow && sim.ctl.lane < 4) S.ctl.lane(sim, 1);
       }
       played[card.race.key] = S.finish(sim);

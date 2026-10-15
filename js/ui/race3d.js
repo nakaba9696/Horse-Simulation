@@ -1,7 +1,7 @@
 // レースの3D：Three.js（lib/three.min.js、r128。グローバルの THREE）で、コース・馬・騎手を立体で描く
 // 使い方：
 //   const r3 = HS.Race3D.create(canvas, setup)  // setup = { D, surface, ground, course, track, horses:[{num,frame,cap,silks,coat,name,mine}] }
-//   r3.render(view, cam, orbit)   // view = { t, horses:[{x,lane,v,push?,whip?（ムチを入れてからの秒）}], me, phase:'gate'|'race'|'finish' }、cam = 'ride'|'tv'|'gate'
+//   r3.render(view, cam, orbit)   // view = { t, horses:[{x,lane,v,push?,whip?（ムチを入れてからの秒）,pose?（ガッツポーズからの秒）}], me, phase:'gate'|'race'|'finish' }、cam = 'ride'|'tv'|'gate'
 //   orbit = { yaw, pitch, zoom }（カメラの回転。yaw は左右の回り込み[rad]、pitch は上下[-0.3〜1.2]、zoom は距離の倍率）
 //   r3.resize(w, h, dpr) / r3.dispose() / r3.info()
 //   HS.Race3D.supported()  // WebGL が使えるか
@@ -429,7 +429,7 @@
 
   // 馬の形を動かす。ph＝走りの位相 0〜1、sp＝走りの大きさ（0＝立つ）、push＝騎手の追い 0〜1
   const LEGS = [[5, 6, -0.35, true], [7, 8, -0.45, true], [9, 10, 0.0, false], [11, 12, -0.1, false]];
-  function poseHorse(H, ph, sp, push, t, seed, whip) {
+  function poseHorse(H, ph, sp, push, t, seed, whip, pose) {
     const b = H.bones;
     if (sp <= 0) {
       b[1].position.y = 1.25; b[1].rotation.z = 0;
@@ -468,6 +468,13 @@
       const w = Math.sin(whip / 0.5 * Math.PI);
       b[14].rotation.z = -1.25 * w + 0.25 * (1 - w);
       b[13].rotation.z -= 0.1 * w;
+    }
+    // ガッツポーズ：ゴールのあと、上体を起こして腕を突き上げる（pose＝始めてからの秒）
+    if (pose != null && pose >= 0 && pose < 2.6) {
+      const w = clamp(pose / 0.25, 0, 1) * clamp((2.6 - pose) / 0.4, 0, 1);
+      b[13].rotation.z = b[13].rotation.z * (1 - w) + 0.22 * w;
+      b[13].position.x *= 1 - w;
+      b[14].rotation.z = b[14].rotation.z * (1 - w) - 2.5 * w + 0.12 * w * Math.sin(pose * 9);
     }
   }
 
@@ -939,7 +946,7 @@
         const ph = ((x / STRIDE + Hh.num * 0.137) % 1 + 1) % 1;
         const sp = moving ? clamp(v / 16, 0.35, 1.15) : 0;
         const push = st.push != null ? st.push : (moving ? clamp((v - 15.2) / 2, 0, 1) : 0);
-        poseHorse(Hh, ph, sp, push, t, Hh.seed, st.whip);
+        poseHorse(Hh, ph, sp, push, t, Hh.seed, st.whip, st.pose);
         // 影
         tmpO.position.set(p.x, f.e + 0.03, -p.y);
         tmpO.rotation.set(0, yawOf(f), 0);

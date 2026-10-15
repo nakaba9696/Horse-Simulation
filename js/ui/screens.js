@@ -198,7 +198,7 @@
         <div>健康<b>${(h.health ?? 70) >= 85 ? '丈夫' : (h.health ?? 70) >= 65 ? 'ふつう' : '弱い'}</b></div>
         ${h.loc === 'stable' ? `<div>状態<b>${h.injury ? '故障中' : UI.condTag(h)}</b></div>` : ''}
       </div>
-      ${known && (h.skills || []).length ? `<h2 class="sec">特殊能力</h2><div class="panel skills">${UI.skillChips(h)}</div>` : ''}
+      ${known && UI.hasSkills(h) ? `<h2 class="sec">特殊能力</h2><div class="panel skills">${UI.skillChips(h)}</div>` : ''}
       ${h.gradedWins.length ? `<h2 class="sec">重賞の勝ち鞍</h2><div class="panel">${h.gradedWins.map(g => `<div>${g.y}年 ${UI.gradeTag({ grade: g.grade, region: g.region, year: g.y })} ${e(g.short || g.race)}${g.hist ? ' <span class="small muted">（開始前）</span>' : ''}</div>`).join('')}</div>` : ''}
       ${h.hist && W.get().settings.showHistNote ? histNote(h) : ''}`;
   }
@@ -209,11 +209,15 @@
     return `<h3>${e(d.name)}</h3><div class="small muted">${d.born}年生 ${d.sex}・${e(d.coat || '')}　父 ${e(d.sire || '?')}　母 ${e(d.dam || '?')}</div>
       ${d.text ? `<div class="panel mt horse-text">${e(d.text)}</div>` : ''}
       <div class="apt mt"><div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div><div>脚質<b>${h.style}・${H.kireLabel(h.kire)}</b></div><div>成長型<b>${h.growth}</b></div></div>
-      ${(h.skills || []).length ? `<div class="skills mt">${UI.skillChips(h)}</div>` : ''}
+      ${UI.hasSkills(h) ? `<div class="skills mt">${UI.skillChips(h)}</div>` : ''}
       ${(d.wins || []).length ? `<div class="small muted mt">史実の主な勝ち鞍：${d.wins.map(e).join('、')}</div>` : ''}
       <div class="btns mt"><button class="btn" data-act="close">閉じる</button></div>`;
   };
-  UI.skillChips = h => (h.skills || []).filter(x => H.SKILLS[x]).map(x => `<span class="chip skill ${H.SKILLS[x].bad ? 'bad' : ''}" title="${e(H.SKILLS[x].note)}">${e(H.SKILLS[x].label)}</span>`).join('');
+  // 特殊能力の札。手書きのもの（出るだけで効く）と、能力値から決まる発動型（⚡。得は水色・損は赤茶）
+  UI.trigSkills = h => HS.Skills && !h.filler ? HS.Skills.of(h, W.wIdx ? W.wIdx() : null) : [];
+  UI.hasSkills = h => (h.skills || []).length > 0 || UI.trigSkills(h).length > 0;
+  UI.skillChips = h => (h.skills || []).filter(x => H.SKILLS[x]).map(x => `<span class="chip skill ${H.SKILLS[x].bad ? 'bad' : ''}" title="${e(H.SKILLS[x].note)}">${e(H.SKILLS[x].label)}</span>`).join('')
+    + UI.trigSkills(h).map(id => { const k = HS.Skills.BY[id]; return `<span class="chip skill trig ${k.bad ? 'bad' : ''}" title="${e(k.note)}">⚡${e(k.label)}</span>`; }).join('');
   function histNote(h) {
     const d = W.histByName.get(h.name);
     if (!d) return '';
@@ -364,7 +368,7 @@
         return `<div class="card">${UI.thumb(h)}<div class="grow"><div class="row"><span class="nm">${e(h.name)}</span><span class="chip hist">${tab === 'foreign' ? '海外' : '史実'}</span></div>
           <div class="sub">${G.year - h.born}歳 ${h.gelding ? 'セ' : h.sex}・${e(h.coat || '')}${h.country && tab === 'foreign' ? '・' + e(h.country) : ''}・父 ${e(h.sire || '?')}・母 ${e(h.dam || '?')}</div>
           ${G.settings.showHistNote && d ? `<div class="small muted">${d.note ? e(d.note) : ''}${(d.wins || []).length ? '（史実の重賞 ' + d.wins.length + '勝）' : ''}</div>` : ''}
-          ${(h.skills || []).length ? `<div class="skills mt">${UI.skillChips(h)}</div>` : ''}
+          ${UI.hasSkills(h) ? `<div class="skills mt">${UI.skillChips(h)}</div>` : ''}
           ${G.settings.showHistNote && d && d.text ? `<button class="btn sm mt" data-act="htext" data-name="${e(h.name)}">解説を読む</button>` : ''}</div>
           <div class="center"><div class="small" style="color:var(--gold2);font-weight:900">${U.money(it.price)}</div><button class="btn sm gold" data-act="buy" data-kind="${tab === 'hist' ? 'hist' : 'fhist'}" data-i="${i}">買う</button></div></div>`;
       }).join('')}</div>${all.length > lim ? `<div class="center mt"><button class="btn" data-act="mmore">もっと見る（残り${all.length - lim}頭）</button></div>` : ''}`
@@ -465,6 +469,7 @@
         <div class="row mt"><label class="grow" for="vol-se">効果音の音量</label><input id="vol-se" type="range" min="0" max="100" value="${Math.round(HS.Audio.settings.se * 100)}" data-act-change="volume" data-k="se"></div>
         <div class="small muted">音は画面にさわったあとで鳴り始めます。0 にすると消えます。</div></div>
       <div class="panel"><b>設定</b>
+        <div class="row mt"><span class="grow">画面の色</span><select data-act-change="theme"><option value="green" ${HS.App.theme() !== 'navy' ? 'selected' : ''}>深緑と金</option><option value="navy" ${HS.App.theme() === 'navy' ? 'selected' : ''}>紺と金</option></select></div>
         <div class="row mt"><span class="grow">自分の馬のレースを</span><select data-act-change="setting" data-k="watch"><option value="1" ${G.settings.watch !== 0 ? 'selected' : ''}>映像で見る</option><option value="0" ${G.settings.watch === 0 ? 'selected' : ''}>結果だけ見る</option></select></div>
         <div class="row mt"><span class="grow">史実メモ（史実の勝ち鞍など）</span><select data-act-change="setting" data-k="showHistNote"><option value="1" ${G.settings.showHistNote ? 'selected' : ''}>表示する</option><option value="0" ${!G.settings.showHistNote ? 'selected' : ''}>隠す</option></select></div>
       </div>

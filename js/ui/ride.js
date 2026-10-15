@@ -1,14 +1,19 @@
-// 騎乗の画面：後ろから追う映像（js/ui/ridecam.js）に、残り距離・順位・スタミナ・追いの拍子を重ね、
-// タッチのボタン・ゲームパッド・キーボードで「抑える・追う・ムチ・進路」を操作する
+// 騎乗の画面：自分の馬の映像（3D は js/ui/race3d.js、使えなければ js/ui/ridecam.js）に計器を重ね、
+// タッチのボタン・ゲームパッド・キーボードで「しごく・引く・進路・左右のムチ・持ち替え」を操作する。
+// 計器の置き方：左上に順位と残り、上の真ん中に地点のペース、右上にコースレコードと時計、右に縦長の馬群レーダーと照準の馬、
+// 左下にスタミナ（8つ）・速さ・脚質の矢印・気性。特殊能力が発動したら、右上に札と集中線
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
-  const U = HS.U, S = HS.Sim, R = HS.Races;
+  const U = HS.U, S = HS.Sim;
   const RD = HS.Ride = {};
   RD.speed = 1; // 確かめ用に速く進める倍率
   const FC = () => HS.DATA.frameColors, FT = () => HS.DATA.frameText;
+  const FONT = '"Noto Sans JP", sans-serif';
 
-  // ゲームパッドのボタン（標準の並び）：A＝追う、B＝ムチ、LB/LT/RB/RT＝抑える、十字キー・左スティック＝進路
-  const PAD = { push: [0], whip: [1, 2], hold: [4, 5, 6, 7], left: [14], right: [15] };
+  // ゲームパッド（標準の並び）：十字の上＝しごく・下＝引く・左右＝進路、B＝右ムチ、X＝左ムチ、A＝持ち替え、Y＝ガッツポーズ、
+  // LT・RT＝左右を向く、LB・RB＝レーダーの照準、Back＝視点
+  const PAD = { up: [12], down: [13], left: [14], right: [15], whipR: [1], whipL: [2], swap: [0], pose: [3], lookL: [6], lookR: [7], tgtPrev: [4], tgtNext: [5], view: [8] };
+  const STYLES = ['逃げ', '先行', '差し', '追込'];
 
   // card：W.cards() の1レース。戻り値：S.finish の結果（Promise）
   RD.ride = function (el, card, opts) {
@@ -23,12 +28,17 @@
           <div class="ride-stage"><canvas class="ride-3d"></canvas><canvas class="ride-canvas"></canvas>
             <div class="ride-msg"></div><button class="cam-btn" aria-label="視点を変える">🎥 視点</button></div>
           <div class="ride-pad">
-            <div class="ride-lanes"><button class="rb lane" data-c="left" aria-label="内へ">◀<small>内へ</small></button><button class="rb lane" data-c="right" aria-label="外へ">▶<small>外へ</small></button></div>
-            <button class="rb hold" data-c="hold">抑える<small>押している間</small></button>
-            <button class="rb whip" data-c="whip">ムチ</button>
-            <button class="rb push" data-c="push">追う<small>拍子に合わせて</small></button>
+            <div class="pad-l">
+              <button class="rb up" data-c="up">▲<small>しごく（連打）</small></button>
+              <div class="pad-row"><button class="rb lane" data-c="left" aria-label="左へ">◀</button><button class="rb down" data-c="down">▼<small>引く</small></button><button class="rb lane" data-c="right" aria-label="右へ">▶</button></div>
+            </div>
+            <button class="rb swap" data-c="swap">持ち替え</button>
+            <div class="pad-r">
+              <button class="rb whip" data-c="whipL">左ムチ</button>
+              <button class="rb whip" data-c="whipR">右ムチ</button>
+            </div>
           </div>
-          <div class="ride-help small muted">ゲームパッド：A 追う・B ムチ・LB/RB 抑える・十字キー 進路・右スティック カメラ・Y 視点　キーボード：Z 追う・X ムチ・Shift 抑える・←→ 進路・Q/E カメラ・V 視点　画面をドラッグでカメラを回す（2回タップで戻す）</div>
+          <div class="ride-help small muted">十字キー：↑しごく（連打が速いほど速く）・↓引く・←→進路　B 右ムチ・X 左ムチ（続けて打つと風車ムチ）・A 持ち替え　LT/RT 左右を見る・LB/RB 照準・Back 視点・Y ガッツポーズ<br>キーボード：↑↓←→・X 右ムチ・Z 左ムチ・C 持ち替え・Q/E 左右を見る・A/S 照準・V 視点・G ガッツポーズ　画面をドラッグでカメラを回す（2回タップで戻す）</div>
         </div>`;
       const cv = el.querySelector('.ride-canvas');
       const narrow = (el.clientWidth || 960) < 600;
@@ -41,7 +51,8 @@
       const msgEl = el.querySelector('.ride-msg');
       const AU = HS.Audio;
       const meta = sim.st.map(s => ({ silks: HS.RaceView.silksOf(s.h), cap: FC()[(s.r.frame - 1) % 8], capText: FT()[(s.r.frame - 1) % 8] }));
-      // 3D（WebGL が使えるとき）。HUD は上の 2D の canvas に重ねる
+      const record = HS.World.courseRecord ? HS.World.courseRecord(race) : null;
+      // 3D（WebGL が使えるとき）。計器は上の 2D の canvas に重ねる
       let r3 = null;
       const cv3 = el.querySelector('.ride-3d');
       if (HS.Race3D && HS.Race3D.supported() && !RD.no3d) {
@@ -57,58 +68,54 @@
       }
       if (!r3) cv3.style.display = 'none';
       let flash = null; // 画面の真ん中に出す短い言葉
-      let banner = null, side = [], fxSeen = 0, paceShown = false;
+      let skillTag = null, pace = null, side = [], fxSeen = 0, paceShown = false;
       const say = (text, cls) => { flash = { text, cls, t: performance.now() }; };
 
       // ---------- 操作 ----------
-      let holdTouch = false, holdKey = false, holdPad = false;
-      const setHold = () => S.ctl.hold(sim, holdTouch || holdKey || holdPad);
-      const doPush = () => {
-        const b = S.ctl.push(sim);
-        if (b === 'good' && !sim.ctl.pushes) say('好スタート！', 'good');
+      let whipAt = -9, poseAt = null;
+      const doUp = () => {
+        const b = S.ctl.up(sim);
+        if (b === 'good' && sim.ctl.pushes === 0) say('好スタート！', 'good');
         else if (b === 'late') say('出遅れ……', 'bad');
-        else if (b === 'dash') { beatFx = { t: performance.now(), good: true }; if (sim.ctl.streak === 3) say('伸びる！', 'good'); }
-        else if (b === 'good') beatFx = { t: performance.now(), good: true };
-        else if (b === 'fast') beatFx = { t: performance.now(), good: false };
         if (AU) AU.se('click');
       };
-      const doWhip = () => {
-        const b = S.ctl.whip(sim);
+      const doDown = () => { S.ctl.down(sim); if (AU) AU.se('click'); };
+      const doWhip = side => {
+        const b = S.ctl.whip(sim, side);
         if (b == null) return say(sim.ctl && !sim.ctl.started ? 'まだゲートの中' : '', '');
+        if (b === 'swap') { say(`${sim.ctl.hand === 'R' ? '右' : '左'}手に持ち替え`, ''); return; }
         whipAt = sim.t;
-        if (b === 'yore') say('よれた！', 'bad'); else if (b === 'tired') say('ムチが効かない', 'bad'); else say(`ムチ ${sim.ctl.whips}発目`, 'whip');
+        if (b === 'yore') say('よれた！', 'bad');
+        else if (b === 'tired') say('ムチが効かない', 'bad');
+        else if (b === 'windmill') say('風車ムチ！', 'whip');
         if (AU) AU.se('whip');
       };
-      let whipAt = -9;
+      const doSwap = () => { if (S.ctl.swap(sim)) say(`${sim.ctl.hand === 'R' ? '右' : '左'}手に持ち替え`, ''); };
       const doLane = d => S.ctl.lane(sim, d);
-      let beatFx = null;
+      const doPose = () => { if (me.done && poseAt == null) { poseAt = sim.t; if (AU) AU.se('skill'); } };
+      // 照準（レーダーで見る馬）
+      let target = sim.me;
+      const orderNow = () => sim.st.slice().sort((a, b) => (a.done && b.done) ? a.finishT - b.finishT : a.done ? -1 : b.done ? 1 : b.x - a.x);
+      const moveTarget = d => { const o = orderNow(); const k = o.findIndex(s => s.i === target); target = o[(k + d + o.length) % o.length].i; };
+      const ACT = { up: doUp, down: doDown, left: () => doLane(-1), right: () => doLane(1), whipL: () => doWhip('L'), whipR: () => doWhip('R'), swap: doSwap };
       el.querySelectorAll('.rb').forEach(b => {
         const c = b.dataset.c;
-        const down = ev => { ev.preventDefault(); b.classList.add('on'); if (c === 'hold') { holdTouch = true; setHold(); } else if (c === 'push') doPush(); else if (c === 'whip') doWhip(); else if (c === 'left') doLane(-1); else if (c === 'right') doLane(1); };
-        const up = ev => { ev.preventDefault(); b.classList.remove('on'); if (c === 'hold') { holdTouch = false; setHold(); } };
+        const down = ev => { ev.preventDefault(); b.classList.add('on'); if (ACT[c]) ACT[c](); };
+        const up = ev => { ev.preventDefault(); b.classList.remove('on'); };
         b.addEventListener('pointerdown', down); b.addEventListener('pointerup', up); b.addEventListener('pointerleave', up); b.addEventListener('pointercancel', up);
       });
-      const keyDown = ev => {
-        if (ev.repeat) return;
-        const k = ev.key;
-        if (k === 'z' || k === 'Z' || k === ' ') { doPush(); ev.preventDefault(); }
-        else if (k === 'x' || k === 'X') { doWhip(); ev.preventDefault(); }
-        else if (k === 'Shift' || k === 'c' || k === 'C') { holdKey = true; setHold(); }
-        else if (k === 'ArrowLeft') { doLane(-1); ev.preventDefault(); }
-        else if (k === 'ArrowRight') { doLane(1); ev.preventDefault(); }
-      };
-      // ---------- カメラの回転（3D のとき） ----------
+      // ---------- カメラ：視点は3つ（騎手の後ろ・高い後ろ・中継）。ドラッグで回し、左右を見るボタンで横を向く ----------
       const orbit = { yaw: 0, pitch: 0, zoom: 1 };
-      const VIEWS = [['後ろから', 0, 0, 1], ['横から', Math.PI / 2, 0.05, 1.1], ['前から', Math.PI, 0.1, 1.2], ['反対の横から', -Math.PI / 2, 0.05, 1.1], ['上から', 0, 0.95, 1.5]];
-      let viewI = 0;
-      const setView = i => { viewI = (i + VIEWS.length) % VIEWS.length; const v = VIEWS[viewI]; orbit.yaw = v[1]; orbit.pitch = v[2]; orbit.zoom = v[3]; say(v[0], ''); };
+      const VIEWS = [['騎手の後ろ', 'ride', 0, 0, 1], ['高い後ろ', 'ride', 0, 0.42, 1.7], ['中継', 'tv', 0, 0, 1]];
+      let viewI = 0, look = 0, lookNow = 0; const lookKeys = { q: false, e: false }; let padLook = 0;
+      const setView = i => { viewI = (i + VIEWS.length) % VIEWS.length; const v = VIEWS[viewI]; orbit.yaw = v[2]; orbit.pitch = v[3]; orbit.zoom = v[4]; say(v[0], ''); };
       el.querySelector('.cam-btn').onclick = ev => { ev.stopPropagation(); setView(viewI + 1); };
       const stage = el.querySelector('.ride-stage');
       let drag = null, lastTap = 0;
       stage.addEventListener('pointerdown', ev => {
         if (ev.target.closest('.cam-btn')) return;
         const now = performance.now();
-        if (now - lastTap < 300) { setView(0); lastTap = 0; return; }
+        if (now - lastTap < 300) { if (me.done) doPose(); else setView(viewI); lastTap = 0; return; }
         lastTap = now; drag = { x: ev.clientX, y: ev.clientY, id: ev.pointerId };
       });
       stage.addEventListener('pointermove', ev => {
@@ -119,30 +126,38 @@
       const endDrag = () => { drag = null; };
       stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag); stage.addEventListener('pointerleave', endDrag);
       let camRate = { yaw: 0, pitch: 0 };
-      const camKeys = { q: -1, Q: -1, e: 1, E: 1 };
-      window.addEventListener('keydown', RD._camKeyDown = ev => { if (camKeys[ev.key]) camRate.key = camKeys[ev.key]; else if (ev.key === 'v' || ev.key === 'V') setView(viewI + 1); else if (ev.key === 'r' || ev.key === 'R') setView(0); });
-      window.addEventListener('keyup', RD._camKeyUp = ev => { if (camKeys[ev.key]) camRate.key = 0; });
-      const keyUp = ev => { if (ev.key === 'Shift' || ev.key === 'c' || ev.key === 'C') { holdKey = false; setHold(); } };
+      const KEYS = { ArrowUp: doUp, ArrowDown: doDown, ArrowLeft: () => doLane(-1), ArrowRight: () => doLane(1), x: () => doWhip('R'), z: () => doWhip('L'), c: doSwap, ' ': doUp, v: () => setView(viewI + 1), r: () => setView(viewI), a: () => moveTarget(-1), s: () => moveTarget(1), g: doPose };
+      const keyDown = ev => {
+        const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+        if (k === 'q' || k === 'e') { lookKeys[k] = true; return; }
+        if (ev.repeat) return;
+        if (KEYS[k]) { KEYS[k](); ev.preventDefault(); }
+      };
+      const keyUp = ev => { const k = ev.key.toLowerCase(); if (k === 'q' || k === 'e') lookKeys[k] = false; };
       window.addEventListener('keydown', keyDown); window.addEventListener('keyup', keyUp);
       const padPrev = {};
       const pollPad = () => {
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
         const p = pads && Array.from(pads).find(x => x && x.connected);
-        if (!p) return;
+        if (!p) { padLook = 0; return; }
         const pressed = list => list.some(i => p.buttons[i] && (p.buttons[i].pressed || p.buttons[i].value > 0.5));
         const edge = (name, now) => { const was = padPrev[name]; padPrev[name] = now; return now && !was; };
-        if (edge('push', pressed(PAD.push))) doPush();
-        if (edge('whip', pressed(PAD.whip))) doWhip();
-        const ax = p.axes && p.axes[0] || 0;
+        const ax = p.axes && p.axes[0] || 0, ay = p.axes && p.axes[1] || 0;
+        if (edge('up', pressed(PAD.up) || ay < -0.6)) doUp();
+        if (edge('down', pressed(PAD.down) || ay > 0.6)) doDown();
         if (edge('left', pressed(PAD.left) || ax < -0.6)) doLane(-1);
         if (edge('right', pressed(PAD.right) || ax > 0.6)) doLane(1);
-        const h = pressed(PAD.hold);
-        if (h !== holdPad) { holdPad = h; setHold(); }
-        // 右スティックでカメラ、Y で視点の切り替え、右スティックを押し込むと元に戻す
+        if (edge('whipR', pressed(PAD.whipR))) doWhip('R');
+        if (edge('whipL', pressed(PAD.whipL))) doWhip('L');
+        if (edge('swap', pressed(PAD.swap))) doSwap();
+        if (edge('pose', pressed(PAD.pose))) doPose();
+        if (edge('tgtPrev', pressed(PAD.tgtPrev))) moveTarget(-1);
+        if (edge('tgtNext', pressed(PAD.tgtNext))) moveTarget(1);
+        if (edge('view', pressed(PAD.view))) setView(viewI + 1);
+        if (edge('camreset', pressed([11]))) setView(viewI);
+        padLook = (pressed(PAD.lookR) ? 1 : 0) - (pressed(PAD.lookL) ? 1 : 0);
         const rx = p.axes && p.axes[2] || 0, ry = p.axes && p.axes[3] || 0;
         camRate.yaw = Math.abs(rx) > 0.15 ? rx : 0; camRate.pitch = Math.abs(ry) > 0.15 ? ry : 0;
-        if (edge('view', pressed([3]))) setView(viewI + 1);
-        if (edge('camreset', pressed([11]))) setView(0);
       };
 
       // ---------- 進める ----------
@@ -150,12 +165,12 @@
       let clock = -COUNT; // 発走からの秒（負はゲートの中）
       let acc = 0, last = null, done = false, result = null;
       let prev = sim.st.map(s => [s.x, s.lane, s.v]);
-      let finishedAt = null;
+      let finishedAt = null, myPos = null;
       if (AU) { AU.bgm('race'); }
       const lerpView = k => sim.st.map((s, j) => ({
         x: prev[j][0] + (s.x - prev[j][0]) * k, lane: prev[j][1] + (s.lane - prev[j][1]) * k, v: s.v,
         num: s.r.num, frame: s.r.frame, cap: meta[j].cap, silks: meta[j].silks, coat: s.h.coat, name: s.h.name, mine: !!s.me,
-        whip: s.me ? sim.t - whipAt : null,
+        whip: s.me ? sim.t - whipAt : null, pose: s.me && poseAt != null ? sim.t + acc - poseAt : null,
       }));
 
       function frame(ts) {
@@ -164,8 +179,10 @@
         const realDt = Math.min(0.1, (ts - last) / 1000);
         const dt = realDt * RD.speed; last = ts;
         pollPad();
-        orbit.yaw -= ((camRate.yaw || 0) + (camRate.key || 0)) * 2.2 * realDt;
+        orbit.yaw -= (camRate.yaw || 0) * 2.2 * realDt;
         orbit.pitch = U.clamp(orbit.pitch + (camRate.pitch || 0) * 1.4 * realDt, -0.3, 1.2);
+        look = padLook || ((lookKeys.e ? 1 : 0) - (lookKeys.q ? 1 : 0));
+        lookNow += (look * Math.PI / 2 - lookNow) * Math.min(1, realDt * 8);
         if (clock < 0) {
           const before = clock; clock += dt;
           if (before < 0 && clock >= 0) { if (AU) { AU.se('gate'); AU.raceStart(); } say('スタート！', 'go'); }
@@ -176,8 +193,8 @@
           clock = sim.t + acc;
           if (me.done && finishedAt == null) {
             finishedAt = sim.t;
-            const pos = sim.st.filter(s => s.done && s.finishT <= me.finishT).length;
-            say(pos === 1 ? '1着！' : `${pos}着`, pos === 1 ? 'good' : '');
+            myPos = sim.st.filter(s => s.done && s.finishT <= me.finishT).length;
+            if (myPos !== 1) say(`${myPos}着`, '');
           }
           if (AU) { const lead = Math.max(...sim.st.map(s => s.x)); AU.raceUpdate(sim.D - lead, sim.D - lead < sim.straight, sim.st.filter(s => !s.done).length, sim.st.filter(s => s.done).length); }
         }
@@ -188,15 +205,19 @@
           track: sim.track, me: sim.me, horses: lerpView(k), phase: clock < 0 ? 'gate' : me.done ? 'finish' : 'race',
         };
         ctx.clearRect(0, 0, VW, VH);
-        if (r3) { view.horses.forEach((h, j) => { if (sim.st[j].me && sim.ctl) h.push = sim.ctl.push; }); r3.render(view, clock < 0 ? 'gate' : 'ride', orbit); }
-        else if (HS.RideCam) HS.RideCam.draw(ctx, VW, VH, view); else fallback(view);
+        const camMode = clock < 0 ? 'gate' : VIEWS[viewI][1];
+        if (r3) {
+          view.horses.forEach((h, j) => { if (sim.st[j].me && sim.ctl) h.push = U.clamp(sim.ctl.gear + (me.spurting ? 0.4 : 0), 0, 1); });
+          r3.render(view, camMode, { yaw: orbit.yaw + lookNow, pitch: orbit.pitch, zoom: orbit.zoom });
+        } else if (HS.RideCam) HS.RideCam.draw(ctx, VW, VH, view); else fallback(view);
         hud(view);
         if (sim.over && !result) {
           result = S.finish(sim);
           if (AU) { AU.raceEnd(); AU.stopBgm(); }
           const bar = el.querySelector('.ride-pad');
-          bar.innerHTML = '<button class="btn gold ride-close">結果を見る</button>';
+          bar.innerHTML = (myPos === 1 ? '<button class="btn ride-pose">ガッツポーズ</button>' : '') + '<button class="btn gold ride-close">結果を見る</button>';
           bar.querySelector('.ride-close').onclick = () => finish();
+          const pb = bar.querySelector('.ride-pose'); if (pb) pb.onclick = () => { poseAt = null; doPose(); };
         }
         requestAnimationFrame(frame);
       }
@@ -204,147 +225,185 @@
         done = true;
         if (r3) { r3.dispose(); r3 = null; }
         window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp);
-        window.removeEventListener('keydown', RD._camKeyDown); window.removeEventListener('keyup', RD._camKeyUp);
         resolve(result);
       }
 
-      // ---------- 画面の上の表示 ----------
+      // ---------- 計器 ----------
       function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+      function panel(x, y, w, h) { ctx.fillStyle = 'rgba(6,28,18,0.78)'; rr(x, y, w, h, 6); ctx.fill(); ctx.strokeStyle = 'rgba(214,178,74,0.85)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+      function txt(s, x, y, font, col, align, base) { ctx.font = font; ctx.fillStyle = col; ctx.textAlign = align || 'left'; ctx.textBaseline = base || 'alphabetic'; ctx.fillText(s, x, y); }
+      function outlined(s, x, y, font, col, align) { ctx.font = font; ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic'; ctx.strokeStyle = 'rgba(0,0,0,0.75)'; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.strokeText(s, x, y); ctx.fillStyle = col; ctx.fillText(s, x, y); }
       function hud(view) {
         const c = sim.ctl;
-        const order = sim.st.slice().sort((a, b) => (a.done && b.done) ? a.finishT - b.finishT : a.done ? -1 : b.done ? 1 : b.x - a.x);
+        const order = orderNow();
         const rank = order.indexOf(me) + 1;
         const rem = Math.max(0, Math.ceil((sim.D - me.x) / 10) * 10);
-        // 左上：残り・順位・時計
-        ctx.fillStyle = 'rgba(8,18,32,0.8)'; rr(10, 10, 160, 74, 8); ctx.fill();
-        ctx.fillStyle = '#ffd34d'; ctx.font = 'bold 22px "Noto Sans JP", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.fillText(clock < 0 ? `発走まで ${Math.ceil(-clock)}` : me.done ? 'ゴール' : `残り ${rem}m`, 20, 16);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 16px "Noto Sans JP", sans-serif';
-        ctx.fillText(`${rank}番手 / ${sim.st.length}頭`, 20, 46);
-        ctx.font = '13px monospace'; ctx.textAlign = 'right'; ctx.fillText(clock > 0 ? U.time(Math.min(clock, me.done ? me.finishT : 999)) : '', 162, 64);
-        // 右上：ミニマップ
-        miniMap(view);
-        radar(view);
-        // 左下：スタミナ・追いの強さ・ムチ
-        const bx = 12, by = VH - 92;
-        ctx.fillStyle = 'rgba(8,18,32,0.82)'; rr(bx, by, 230, 80, 8); ctx.fill();
-        const E = U.clamp(me.E, 0, 1);
-        ctx.fillStyle = '#c8d3e2'; ctx.font = '12px "Noto Sans JP", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.fillText('スタミナ', bx + 10, by + 16);
-        ctx.fillStyle = '#25384f'; ctx.fillRect(bx + 72, by + 9, 146, 14);
-        ctx.fillStyle = E > 0.45 ? '#4cc27a' : E > 0.2 ? '#ffd34d' : '#ff6a4d'; ctx.fillRect(bx + 72, by + 9, 146 * E, 14);
-        ctx.fillStyle = '#c8d3e2'; ctx.fillText('追い', bx + 10, by + 40);
-        ctx.fillStyle = '#25384f'; ctx.fillRect(bx + 72, by + 33, 146, 14);
-        ctx.fillStyle = '#5bc2e7'; ctx.fillRect(bx + 72, by + 33, 146 * c.push, 14);
-        ctx.fillStyle = '#c8d3e2'; ctx.fillText(`ムチ ${c.whips}`, bx + 10, by + 64);
-        // 拍子：歩幅に合わせて光る輪。合わせて「追う」を押すとよく伸びる
-        const P = S.strideOf(me.v), ph = clock > 0 ? ((sim.t + acc) % P) / P : 0;
-        const cx = bx + 196, cy = by + 62, rad = 9 + 6 * (1 - ph);
-        ctx.strokeStyle = ph < 0.18 ? '#ffd34d' : 'rgba(255,211,77,0.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.stroke();
-        if (beatFx && performance.now() - beatFx.t < 300) { ctx.fillStyle = beatFx.good ? 'rgba(76,194,122,0.85)' : 'rgba(255,106,77,0.85)'; ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI * 2); ctx.fill(); }
-        ctx.fillStyle = '#c8d3e2'; ctx.textAlign = 'right'; ctx.fillText('拍子', cx - 20, cy);
+        // 左上：順位／頭数（大きく）と残り
+        outlined(String(rank), 18, 58, `900 54px ${FONT}`, '#ffd34d');
+        const rw = (ctx.measureText(String(rank)).width);
+        outlined(`/ ${sim.st.length}`, 24 + rw, 58, `bold 24px ${FONT}`, '#fff');
+        outlined(clock < 0 ? `発走まで ${Math.ceil(-clock)}` : me.done ? 'ゴール' : `残り ${rem}m`, 20, 88, `bold 20px ${FONT}`, '#fff');
+        // 右上：コースレコードと時計
+        const tw = 196, tx = VW - tw - 10;
+        panel(tx, 10, tw, 50);
+        txt('レコード', tx + 10, 30, `12px ${FONT}`, '#cfe3c9');
+        txt(record ? U.time(record.t) : '－', tx + tw - 10, 30, `bold 14px monospace`, '#ffd34d', 'right');
+        txt('タイム', tx + 10, 51, `12px ${FONT}`, '#cfe3c9');
+        const now = clock > 0 ? Math.min(clock, me.done ? me.finishT : 999) : 0;
+        txt(U.time(now), tx + tw - 10, 51, `bold 16px monospace`, record && me.done && me.finishT < record.t ? '#ff7a6a' : '#fff', 'right');
+        // 右：縦長の馬群レーダーと照準の馬
+        radar(view, order);
+        // 左下：スタミナ・速さ・脚質・気性
+        meters(c, order, rank);
         // 状態の言葉
         const notes = [];
         if (c.blockedNow) notes.push(['前が壁', 'bad']);
-        if (c.kakariNow && !c.hold) notes.push(['掛かっている', 'bad']);
-        else if (c.kakariNow) notes.push(['なだめている', '']);
+        if (c.kakariNow) notes.push(['掛かっている', 'bad']);
+        else if (c.behind && c.tension < 50 && !me.spurting) notes.push(['折り合っている', 'good']);
         if (me.spurting && !me.done && sim.D - me.x < 1000) notes.push(['追い出した', 'good']);
         if (c.wide) notes.push(['外を回っている', '']);
-        if (c.hold && !c.kakariNow) notes.push(['ためている', 'good']);
+        if (c.gear < -0.05 && !c.kakariNow) notes.push(['ためている', 'good']);
         if (me.E <= 0) notes.push(['バテた', 'bad']);
         msgEl.innerHTML = notes.map(([t, k]) => `<span class="${k}">${t}</span>`).join('');
-        tensionGauge(c);
-        // スキルの発動・ペースの目安（新しく起きたものを出す）
+        // 特殊能力の発動（自分の馬は右上に札と集中線、近くの馬は小さな字幕）
         while (fxSeen < sim.skillFx.length) {
           const f = sim.skillFx[fxSeen++];
-          const sk = HS.Horse.SKILLS[f.id]; if (!sk) continue;
-          if (f.i === sim.me) { banner = { text: `スキル発動！ ${sk.label}`, bad: !!sk.bad, t: performance.now() }; if (AU) AU.se('skill'); }
-          else { const o = sim.st[f.i]; if (Math.abs(o.x - me.x) < 40) side.unshift({ text: `${o.r.num} ${o.h.name}の${sk.label}`, t: performance.now() }); }
+          const label = HS.Skills ? HS.Skills.label(f.id) : f.id, bad = HS.Skills ? HS.Skills.isBad(f.id) : false;
+          if (f.i === sim.me) { skillTag = { text: label, bad, t: performance.now() }; if (AU) AU.se('skill'); }
+          else { const o = sim.st[f.i]; if (Math.abs(o.x - me.x) < 40) side.unshift({ text: `${o.r.num} ${o.h.name}「${label}」`, bad, t: performance.now() }); }
         }
-        if (sim.check && !paceShown) { paceShown = true; banner = { text: `${sim.check.at}m通過 ${sim.check.t.toFixed(1)}　${sim.check.verdict}`, pace: true, t: performance.now() }; }
-        if (banner && performance.now() - banner.t < 2200) {
-          const a = Math.min(1, (2200 - (performance.now() - banner.t)) / 400);
+        if (skillTag) drawSkill(skillTag);
+        // 上の真ん中：決まった地点を通ったときのペースとラップ
+        if (sim.check && !paceShown) { paceShown = true; pace = { text: `${sim.check.at}m通過　${sim.check.t.toFixed(1)}`, verdict: sim.check.verdict, t: performance.now() }; }
+        if (pace && performance.now() - pace.t < 3200) {
+          const a = Math.min(1, (3200 - (performance.now() - pace.t)) / 400);
           ctx.globalAlpha = a;
-          const bw = Math.min(VW - 40, 420), bx = VW / 2 - bw / 2, by = VH * 0.17;
-          const grd = ctx.createLinearGradient(bx, 0, bx + bw, 0);
-          const col = banner.pace ? ['#1d4fb8', '#3d8bfd'] : banner.bad ? ['#7a1f1f', '#c0392b'] : ['#9a6a00', '#ffd34d'];
-          grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(0.15, col[0]); grd.addColorStop(0.5, col[1]); grd.addColorStop(0.85, col[0]); grd.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.fillStyle = grd; ctx.fillRect(bx, by, bw, 40);
-          ctx.fillStyle = '#fff'; ctx.font = 'bold 20px "Noto Sans JP", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 4; ctx.strokeText(banner.text, VW / 2, by + 20); ctx.fillText(banner.text, VW / 2, by + 20);
+          const bw = 300, bx = VW / 2 - bw / 2, by = 12;
+          panel(bx, by, bw, 46);
+          txt(pace.verdict, VW / 2, by + 22, `900 20px ${FONT}`, pace.verdict === 'ハイペース' ? '#ff8a6a' : pace.verdict === 'スローペース' ? '#7fc8ff' : '#ffe9a6', 'center', 'middle');
+          txt(pace.text, VW / 2, by + 39, `12px ${FONT}`, '#fff', 'center', 'middle');
           ctx.globalAlpha = 1;
         }
-        // ほかの馬のスキル（近くの馬だけ、右の小さな字幕）
         side = side.filter(x => performance.now() - x.t < 2500).slice(0, 3);
-        side.forEach((x, k) => { ctx.fillStyle = 'rgba(8,18,32,0.75)'; ctx.fillRect(VW - 250, 150 + k * 22, 240, 20); ctx.fillStyle = '#ffe9a6'; ctx.font = '12px "Noto Sans JP", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(x.text, VW - 244, 160 + k * 22, 230); });
+        side.forEach((x, k) => {
+          ctx.fillStyle = x.bad ? 'rgba(110,40,30,0.85)' : 'rgba(30,110,150,0.85)'; ctx.fillRect(VW - 330, 128 + k * 22, 230, 20);
+          txt(x.text, VW - 324, 138 + k * 22, `12px ${FONT}`, '#fff', 'left', 'middle');
+        });
+        // 1着でゴールしたら大きく
+        if (myPos === 1 && finishedAt != null) {
+          const a = U.clamp((sim.t - finishedAt) / 0.4, 0, 1);
+          ctx.globalAlpha = a;
+          outlined('1着', VW / 2, VH * 0.36, `900 ${Math.round(64 + 20 * (1 - a))}px "Noto Serif JP", serif`, '#ffd34d', 'center');
+          txt(`${U.time(me.finishT)}　上がり ${me.t600 != null ? (me.finishT - me.t600).toFixed(1) : '－'}`, VW / 2, VH * 0.36 + 34, `bold 16px ${FONT}`, '#fff', 'center');
+          if (poseAt == null) txt('Y／G／2回タップ：ガッツポーズ', VW / 2, VH * 0.36 + 58, `12px ${FONT}`, '#ffe9a6', 'center');
+          ctx.globalAlpha = 1;
+        }
         // 真ん中の言葉
-        if (flash && performance.now() - flash.t < 1400) {
+        if (flash && flash.text && performance.now() - flash.t < 1400) {
           const a = 1 - (performance.now() - flash.t) / 1400;
           ctx.globalAlpha = Math.min(1, a * 2);
-          ctx.fillStyle = flash.cls === 'bad' ? '#ff8a6a' : flash.cls === 'good' ? '#ffe680' : '#fff';
-          ctx.font = 'bold 40px "Noto Serif JP", serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 6; ctx.strokeText(flash.text, VW / 2, VH * 0.38); ctx.fillText(flash.text, VW / 2, VH * 0.38);
+          outlined(flash.text, VW / 2, VH * 0.5, `bold 34px "Noto Serif JP", serif`, flash.cls === 'bad' ? '#ff8a6a' : flash.cls === 'good' || flash.cls === 'whip' ? '#ffe680' : '#fff', 'center');
           ctx.globalAlpha = 1;
         }
       }
-      // 気性レーダー：テンションの針。抑えると下がり、放っておくと上がる。赤に入ると掛かる
-      function tensionGauge(c) {
-        const cx = 216, cy = VH - 104, r = 34;
-        ctx.fillStyle = 'rgba(8,18,32,0.82)'; rr(cx - 46, cy - 46, 92, 56, 8); ctx.fill();
-        const seg = (a0, a1, col) => { ctx.strokeStyle = col; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI + a0 * Math.PI, Math.PI + a1 * Math.PI); ctx.stroke(); };
-        seg(0, 0.35, '#4cc27a'); seg(0.35, 0.75, '#ffd34d'); seg(0.75, 1, '#ff5a4d');
+      // 発動の札：得なものは水色、損なものは赤茶。小さな馬の印と、画面の集中線
+      function drawSkill(tag) {
+        const age = performance.now() - tag.t;
+        if (age > 2200) return;
+        if (age < 650) {
+          const k = 1 - age / 650;
+          ctx.save(); ctx.globalAlpha = 0.5 * k; ctx.strokeStyle = tag.bad ? '#ffb199' : '#e6fbff'; ctx.lineWidth = 2;
+          const cx = VW / 2, cy = VH * 0.48;
+          for (let i = 0; i < 36; i++) {
+            const a = i / 36 * Math.PI * 2 + (i % 3) * 0.05, r0 = Math.min(VW, VH) * (0.32 + 0.08 * ((i * 7) % 5) / 5), r1 = Math.max(VW, VH);
+            ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.stroke();
+          }
+          ctx.restore();
+        }
+        const a = Math.min(1, (2200 - age) / 300), slide = Math.min(1, age / 160);
+        ctx.globalAlpha = a;
+        const w = 230, x = VW - 10 - w * slide, y = 70;
+        const g = ctx.createLinearGradient(x, 0, x + w, 0);
+        if (tag.bad) { g.addColorStop(0, '#6e2a1e'); g.addColorStop(1, '#a8452f'); } else { g.addColorStop(0, '#1b8fc4'); g.addColorStop(1, '#6fd6ff'); }
+        ctx.fillStyle = g; rr(x, y, w, 40, 6); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+        horseIcon(x + 22, y + 21, tag.bad ? '#ffd9cf' : '#fff');
+        outlined(tag.text, x + 44, y + 27, `900 18px ${FONT}`, '#fff');
+        ctx.globalAlpha = 1;
+      }
+      function horseIcon(x, y, col) {
+        ctx.save(); ctx.translate(x, y); ctx.fillStyle = col;
+        ctx.beginPath(); ctx.ellipse(0, 0, 9, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(6, -2); ctx.lineTo(13, -9); ctx.lineTo(15, -7); ctx.lineTo(9, 1); ctx.fill();
+        ctx.lineWidth = 1.6; ctx.strokeStyle = col;
+        [[-6, 1, -10, 9], [-3, 2, -1, 9], [5, 2, 8, 9], [7, 1, 12, 7]].forEach(([a, b, c, d]) => { ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); });
+        ctx.restore();
+      }
+      // 左下の計器
+      function meters(c, order, rank) {
+        const w = 250, h = 112, x = 10, y = VH - h - 10;
+        panel(x, y, w, h);
+        // スタミナ：8つのブロック。使うたびに1つずつ消える
+        txt('スタミナ', x + 10, y + 20, `12px ${FONT}`, '#cfe3c9');
+        const nB = me.E <= 0 ? 0 : Math.ceil(U.clamp(me.E, 0, 1) * 8);
+        for (let i = 0; i < 8; i++) {
+          ctx.fillStyle = i < nB ? (nB <= 2 ? '#ff6a4d' : nB <= 4 ? '#ffd34d' : '#57d17f') : 'rgba(255,255,255,0.12)';
+          ctx.fillRect(x + 70 + i * 21, y + 9, 17, 14);
+        }
+        // 速さ：今の速さを青い棒で（巡航の速さが真ん中）
+        txt('速さ', x + 10, y + 42, `12px ${FONT}`, '#cfe3c9');
+        const nV = Math.round(U.clamp((me.v / me.vc - 0.9) / 0.2, 0, 1) * 16);
+        for (let i = 0; i < 16; i++) { ctx.fillStyle = i < nV ? (i >= 12 ? '#7fe0ff' : '#3a8fe0') : 'rgba(255,255,255,0.12)'; ctx.fillRect(x + 70 + i * 10.5, y + 32, 8, 12); }
+        // 手綱の段（しごく▲・引く▼）とムチの手
+        const gTxt = c.gear > 0.05 ? '▲'.repeat(Math.ceil(c.gear * 4)) : c.gear < -0.05 ? '▼'.repeat(Math.ceil(-c.gear * 4)) : '－';
+        txt(`手綱 ${gTxt}`, x + 10, y + 64, `12px ${FONT}`, c.gear > 0.05 ? '#ffd34d' : c.gear < -0.05 ? '#7fc8ff' : '#cfe3c9');
+        txt(`ムチ ${c.hand === 'R' ? '右' : '左'}手${c.whips ? '・' + c.whips : ''}`, x + 120, y + 64, `12px ${FONT}`, '#cfe3c9');
+        // 脚質の矢印：光っているのがこの馬の得意な位置。白い枠が今の位置
+        txt('脚質', x + 10, y + 92, `12px ${FONT}`, '#cfe3c9');
+        const nowK = Math.min(3, Math.floor((rank - 1) / Math.max(1, sim.st.length) * 4));
+        STYLES.forEach((st, i) => {
+          const ax = x + 52 + i * 34, ay = y + 82, lit = me.h.style === st;
+          ctx.fillStyle = lit ? '#ffd34d' : 'rgba(255,255,255,0.18)';
+          ctx.beginPath(); ctx.moveTo(ax + 26, ay + 8); ctx.lineTo(ax + 4, ay); ctx.lineTo(ax + 4, ay + 16); ctx.closePath(); ctx.fill();
+          if (i === nowK) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(ax + 1, ay - 2, 28, 20); }
+          txt(st[0], ax + 11, ay + 12, `bold 10px ${FONT}`, lit ? '#3a2a00' : '#cfe3c9', 'center', 'middle');
+        });
+        // 気性：針と色（青＝落ち着き、緑、黄、赤＝掛かり）
+        const cx = x + w - 30, cy = y + 96, r = 20;
+        const seg = (a0, a1, col) => { ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI + a0 * Math.PI, Math.PI + a1 * Math.PI); ctx.stroke(); };
+        seg(0, 0.35, '#3d8bfd'); seg(0.35, 0.55, '#4cc27a'); seg(0.55, 0.75, '#ffd34d'); seg(0.75, 1, '#ff5a4d');
         const v = U.clamp(c.tension / 100, 0, 1), ang = Math.PI + v * Math.PI;
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(ang) * (r + 4), cy + Math.sin(ang) * (r + 4)); ctx.stroke();
-        ctx.fillStyle = '#c8d3e2'; ctx.font = '11px "Noto Sans JP", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-        ctx.fillText(c.tension >= 75 ? '気性：掛かり' : c.tension < 35 ? '気性：落ち着き' : '気性', cx, cy + 1);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(ang) * (r + 3), cy + Math.sin(ang) * (r + 3)); ctx.stroke();
+        txt('気性', cx, cy - r - 6, `11px ${FONT}`, '#cfe3c9', 'center');
       }
-      // 馬群レーダー：自分のまわり（前 30m・後ろ 15m）の馬の位置を上から。内ラチは回る向きの側
-      function radar(view) {
-        const w = 112, h = 150, bx = VW - w - 10, by = VH - h - 12;
-        const AHEAD = 30, BEHIND = 15, LANES = 9;
-        ctx.fillStyle = 'rgba(8,18,32,0.82)'; rr(bx, by, w, h, 8); ctx.fill();
-        ctx.strokeStyle = 'rgba(201,164,58,0.8)'; ctx.lineWidth = 1; ctx.stroke();
+      // 縦長の馬群レーダー：上が前。先頭から最後方までを1本に。紫が自分、白い輪が照準。内ラチは回る向きの側
+      function radar(view, order) {
+        const w = 74, h = Math.min(300, VH * 0.52), bx = VW - w - 10, by = 132;
+        panel(bx, by, w, h + 30);
+        const live = view.horses;
+        let top = -1e9, bot = 1e9;
+        live.forEach(hh => { top = Math.max(top, hh.x); bot = Math.min(bot, hh.x); });
+        const span = Math.max(40, top - bot + 6);
+        const LANES = 10;
         const inner = course.dir === '左' ? 'left' : 'right';
-        const laneX = l => inner === 'right' ? bx + w - 10 - l / LANES * (w - 20) : bx + 10 + l / LANES * (w - 20);
-        const relY = d => by + 14 + (AHEAD - d) / (AHEAD + BEHIND) * (h - 28);
-        // 内ラチと、自分の前後の目安の線
-        ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 2; ctx.beginPath(); const rx = laneX(-0.4); ctx.moveTo(rx, by + 8); ctx.lineTo(rx, by + h - 8); ctx.stroke();
-        ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
-        for (const d of [20, 10, -10]) { const y = relY(d); ctx.beginPath(); ctx.moveTo(bx + 6, y); ctx.lineTo(bx + w - 6, y); ctx.stroke(); }
-        const meH = view.horses[view.me];
-        const c = sim.ctl;
-        view.horses.forEach((hh, j) => {
-          const d = hh.x - meH.x;
-          if (d > AHEAD || d < -BEHIND) return;
-          const x = laneX(hh.lane), y = relY(d);
-          const isMe = j === view.me;
-          const block = !isMe && d > 0 && d < 2.6 && Math.abs(hh.lane - meH.lane) < 0.85;
-          ctx.fillStyle = isMe ? '#ffd34d' : hh.cap;
-          ctx.fillRect(x - 4, y - 6, 8, 12);
-          ctx.strokeStyle = isMe ? '#000' : block ? '#ff4d4d' : 'rgba(0,0,0,0.6)'; ctx.lineWidth = isMe || block ? 2 : 1; ctx.strokeRect(x - 4, y - 6, 8, 12);
+        const laneX = l => { const k = U.clamp(l, -0.4, LANES) / LANES * (w - 18); return inner === 'right' ? bx + w - 9 - k : bx + 9 + k; };
+        const yOf = x => by + 10 + (top + 3 - x) / span * (h - 14);
+        ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 2; ctx.beginPath(); const rx = laneX(-0.4); ctx.moveTo(rx, by + 6); ctx.lineTo(rx, by + h); ctx.stroke();
+        live.forEach((hh, j) => {
+          const x = laneX(hh.lane), y = yOf(hh.x), isMe = j === view.me;
+          ctx.fillStyle = isMe ? '#b45cff' : hh.cap;
+          ctx.fillRect(x - 3.5, y - 5, 7, 10);
+          ctx.strokeStyle = isMe ? '#fff' : 'rgba(0,0,0,0.6)'; ctx.lineWidth = isMe ? 1.5 : 1; ctx.strokeRect(x - 3.5, y - 5, 7, 10);
+          if (j === target && !isMe) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.stroke(); }
         });
-        // 進もうとしている進路
-        if (c) { const tx = laneX(c.lane); ctx.strokeStyle = 'rgba(255,211,77,0.7)'; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(tx, relY(0) - 10); ctx.lineTo(tx, relY(AHEAD)); ctx.stroke(); ctx.setLineDash([]); }
-        ctx.fillStyle = '#c8d3e2'; ctx.font = '11px "Noto Sans JP", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('馬群レーダー', bx + w / 2, by + 2);
+        const tg = sim.st[target];
+        const k = order.indexOf(tg) + 1;
+        txt(`${tg.r.num}番 ${k}位`, bx + w / 2, by + h + 12, `bold 11px ${FONT}`, target === sim.me ? '#d9a8ff' : '#fff', 'center', 'middle');
+        ctx.font = `10px ${FONT}`;
+        txt(tg.h.name.length > 7 ? tg.h.name.slice(0, 7) + '…' : tg.h.name, bx + w / 2, by + h + 25, `10px ${FONT}`, '#cfe3c9', 'center', 'middle');
+        txt('馬群レーダー', bx + w / 2, by - 6, `11px ${FONT}`, '#fff', 'center');
       }
-      function miniMap(view) {
-        const tr = sim.track; if (!tr) return;
-        const bw = 200, bh = 104, bx = VW - bw - 10, by = 10;
-        ctx.fillStyle = 'rgba(8,18,32,0.8)'; rr(bx, by, bw, bh, 8); ctx.fill();
-        const sc = Math.min((bw - 24) / (tr.a + 2 * tr.r), (bh - 20) / (2 * tr.r));
-        const cx = bx + bw / 2, cy = by + bh / 2;
-        const pt = s => { const p = tr.at(s); return [cx + p.x * sc, cy + p.y * sc]; };
-        ctx.strokeStyle = race.surface === 'ダ' ? '#b88a57' : '#59a84f'; ctx.lineWidth = 6; ctx.beginPath();
-        for (let s = 0; s <= tr.L; s += tr.L / 72) { const [x, y] = pt(s); s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
-        ctx.closePath(); ctx.stroke();
-        const [gx, gy] = pt(0); ctx.fillStyle = '#fff'; ctx.fillRect(gx - 1, gy - 6, 2, 12);
-        view.horses.forEach(h => {
-          const [x, y] = pt(Math.max(0, sim.D - h.x));
-          ctx.fillStyle = h.mine ? '#ffd34d' : h.cap; ctx.beginPath(); ctx.arc(x, y, h.mine ? 4.5 : 2.6, 0, Math.PI * 2); ctx.fill();
-          if (h.mine) { ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke(); }
-        });
-      }
-      // 映像のファイルが無いときの簡単な絵（上から見た図を大きく）
+      // 映像が使えないときの簡単な絵（上から見た図を大きく）
       function fallback(view) {
         ctx.fillStyle = view.surface === 'ダ' ? '#8a6a45' : '#2f6b2a'; ctx.fillRect(0, 0, VW, VH);
         const meH = view.horses[view.me];
