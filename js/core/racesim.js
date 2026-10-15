@@ -87,8 +87,15 @@
   S.DS = 0.78; // スタミナの持ちの全体の倍率
   S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0.01, z: 0.0015, top: 1.6 };
 
-  // 本体。runners: [{horse, jockey, weight, num, frame}]
+  // 本体。runners: [{horse, jockey, weight, num, frame, rider?}]。rider==='P' の馬はプレイヤーが乗る（opts.ride のとき操作を受け付ける）
+  // S.create で始め、S.step で 0.1 秒ずつ進め、S.finish で結果を出す。S.run はそれを一度に行う
   S.run = function (race, runners, wIdx, rng, opts) {
+    const sim = S.create(race, runners, wIdx, rng, opts);
+    while (!S.step(sim)) { /* 進める */ }
+    return S.finish(sim);
+  };
+
+  S.create = function (race, runners, wIdx, rng, opts) {
     opts = opts || {};
     const course = HS.DATA.courses[race.course] || HS.DATA.courses['東京'];
     const surfKey = race.surface === 'ダ' ? 'dirt' : 'turf';
@@ -96,12 +103,8 @@
     const D = race.dist;
     const v0 = S.baseSpeed(D, race.surface, race.ground, geo.speed) * U.eraSpeed(race.year);
     const straight = Math.min(geo.straight, D * 0.6);
-    const slope = geo.slope;
     const nNige = runners.filter(r => r.horse.style === '逃げ').length;
     const paceF = 1 + (nNige >= 2 ? 0.006 : nNige === 0 ? -0.01 : 0) + rng.normal(0, 0.004);
-    const events = [];
-    const say = (t, text, kind) => events.push({ t, text, kind: kind || '' });
-
     const st = runners.map((r, i) => {
       const h = r.horse;
       const pw = S.power(h, race, wIdx, Object.assign({ paceF }, r));
@@ -132,31 +135,115 @@
       };
     });
     const medVc = st.map(s => s.vc).sort((a, b) => a - b)[Math.floor(st.length / 2)];
-    const pace = medVc * paceF;
-    const frames = [];
-    let t = 0, step = 0, finished = 0, winnerT = null;
-    let lastLeader = null, saidStraight = false, saidMid = false, saidCorner = false, said400 = false, said200 = false;
-    say(0, 'スタートしました！', 'start');
-    for (const s of st) if (s.late) say(0.6, `${s.h.name}、出遅れた！`, 'trouble');
+    const sim = {
+      race, runners, wIdx, rng, opts, geo, D, straight, slope: geo.slope, paceF, pace: medVc * paceF, st,
+      events: [], frames: [], t: 0, step: 0, finished: 0, winnerT: null, over: false,
+      talk: { lastLeader: null, straight: false, mid: false, corner: false, f400: false, f200: false },
+      track: HS.Track ? HS.Track.make(geo.lap, geo.straight, course.dir) : null,
+      me: -1, ctl: null,
+    };
+    // プレイヤーが乗る馬（操作を受け付けるのは opts.ride のときだけ。ほかは騎手の腕で自動に乗る）
+    const meIdx = runners.findIndex(r => r.rider === 'P');
+    if (meIdx >= 0) {
+      sim.me = meIdx;
+      const s = st[meIdx]; s.me = true;
+      if (opts.ride) {
+        sim.ctl = { started: false, hold: false, push: 0, lastPush: -9, pushes: 0, whips: 0, whipUntil: -1, lane: Math.min(3, s.lane), blockedNow: false, wide: false, kakariNow: false };
+        s.delay = 99; s.late = false; // スタートはプレイヤーの合図で
+      }
+    }
+    S.say(sim, 0, 'スタートしました！', 'start');
+    for (const s of st) if (s.late) S.say(sim, 0.6, `${s.h.name}、出遅れた！`, 'trouble');
+    return sim;
+  };
+  S.say = (sim, t, text, kind) => sim.events.push({ t, text, kind: kind || '' });
 
-    while (finished < st.length && t < 400) {
-      t += DT; step++;
-      const order = st.filter(s => !s.done).sort((a, b) => b.x - a.x);
-      // 隊列の先頭（大逃げの馬は追いかけず、2番手以下の集団で隊列を作る）
-      const pack = order.find(o => !o.oonige) || order[0];
-      const leaderX = pack ? pack.x : D;
-      for (const s of st) {
-        if (s.done) continue;
-        if (t < s.delay) continue;
-        const R = D - s.x;
-        let target;
+  // ---------- プレイヤーの操作 ----------
+  // 歩幅の周期（秒）。この拍子に合わせて追うと、よく伸びる
+  S.strideOf = v => U.clamp(7.4 / Math.max(10, v || 16), 0.38, 0.7);
+  S.ctl = {
+    // 追う（タップ）。スタート前後ならスタートの合図
+    push(sim) {
+      const c = sim.ctl; if (!c || sim.over) return null;
+      const s = sim.st[sim.me];
+      if (!c.started) {
+        c.started = true;
+        if (sim.t < 0.05) { s.delay = 0.05; return 'good'; }
+        s.delay = sim.t; if (sim.t > 0.5) { s.late = true; S.say(sim, sim.t, `${s.h.name}、出遅れた！`, 'trouble'); return 'late'; }
+        return sim.t < 0.25 ? 'good' : 'ok';
+      }
+      const P = S.strideOf(s.v), dt = sim.t - c.lastPush;
+      let gain, beat = null;
+      if (dt < P * 0.6) { gain = 0.03; beat = 'fast'; } // 連打しすぎるとリズムが崩れる
+      else if (Math.abs(dt - P) < 0.1) { gain = 0.22; beat = 'good'; }
+      else { gain = 0.1; beat = 'ok'; }
+      c.push = Math.min(1, c.push + gain); c.lastPush = sim.t; c.pushes++;
+      return beat;
+    },
+    // ムチ：強く伸びるが脚を使う。何度も打つと効かなくなる
+    whip(sim) {
+      const c = sim.ctl; if (!c || !c.started || sim.over) return null;
+      const s = sim.st[sim.me];
+      c.whips++; c.whipUntil = sim.t + 1.2;
+      // 気性の荒い馬はムチでよれる
+      if (sim.rng.chance(Math.max(0, (70 - s.mind) / 100) * 0.4)) { c.lane = U.clamp(c.lane + (sim.rng.chance(0.5) ? 1 : -1), 0, 12); return 'yore'; }
+      return c.whips > 8 ? 'tired' : 'ok';
+    },
+    hold(sim, on) { if (sim.ctl) sim.ctl.hold = !!on; },
+    lane(sim, d) { const c = sim.ctl; if (c) c.lane = U.clamp(Math.round(c.lane + d), 0, 12); },
+  };
+  S.whipEff = c => Math.max(0.25, 1 - 0.1 * Math.max(0, c.whips - 1));
+
+  // 0.1 秒進める。終わったら true
+  S.step = function (sim) {
+    if (sim.over) return true;
+    const { D, st, straight, slope, pace, opts, rng } = sim;
+    sim.t += DT; sim.step++;
+    const t = sim.t;
+    const order = st.filter(s => !s.done).sort((a, b) => b.x - a.x);
+    // 隊列の先頭（大逃げの馬は追いかけず、2番手以下の集団で隊列を作る）
+    const pack = order.find(o => !o.oonige) || order[0];
+    const leaderX = pack ? pack.x : D;
+    const c = sim.ctl;
+    for (const s of st) {
+      if (s.done) continue;
+      if (s.me && c && !c.started && t >= 0.9) { c.started = true; s.delay = 0.9; s.late = true; S.say(sim, t, `${s.h.name}、出遅れた！`, 'trouble'); }
+      if (t < s.delay) continue;
+      const R = D - s.x;
+      const prog = s.x / D;
+      let target;
+      let costMul = 1;
+      if (s.me && c) {
+        // プレイヤーの操作：何もしなければ馬なり、抑えると脚をためる、追うと伸びる、ムチでもうひと伸び
+        c.push = Math.max(0, c.push - 0.25 * DT);
+        if (s.E <= 0) target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu);
+        else {
+          // 馬なり：その馬の脚質どおりの位置を保つ
+          if (prog < 0.22) target = pace * s.styleMult * (s.nino && prog < 0.08 ? 1.02 : 1);
+          else target = pace * (1 + U.clamp((leaderX - s.x - s.gap) * 0.0012, -0.02, 0.02));
+          // 抑える：少し下げて、脚をためる（スタミナの減りが小さい）
+          if (c.hold) { target *= prog < 0.15 ? 0.985 : 0.993; costMul *= 0.85; }
+          if (c.push > 0) target = Math.max(target, s.vc * (1 + c.push * (0.012 + s.kickS * 2.2)));
+          if (t < c.whipUntil) { target *= 1 + 0.6 * s.kickS * S.whipEff(c); costMul *= 1.3; }
+          // 掛かる馬は、抑えないと行きたがる。抑えれば折り合うが、少し脚を使う
+          c.kakariNow = s.kakari && prog < 0.5;
+          if (c.kakariNow) { if (c.hold) costMul *= 1.1; else { target *= 1.012; costMul *= 1.3; } }
+          if (R < 250 && c.push > 0.3) {
+            const rival = st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5);
+            if (rival) target *= 1 + 0.004 * (s.guts - 70) / 30 + (s.narabu ? 0.004 : 0);
+          }
+        }
+        // 前に馬がいて進路が無い
+        const ahead = st.find(o => o !== s && !o.done && o.x > s.x && o.x - s.x < 2.6 && Math.abs(o.lane - s.lane) < 0.85);
+        c.blockedNow = !!ahead;
+        if (ahead) target = Math.min(target, ahead.v - 0.05);
+      } else {
         if (!s.spurting && R <= s.spurtR) {
           s.spurting = true;
           // 残りの脚が足りないなら仕掛けを遅らせる
           const need = R / s.Ds * 0.9 * Math.pow(1 + s.kickS, 3);
           if (need > s.E * 1.15 && R > 260) s.spurting = false;
         }
-        const prog = s.x / D;
         if (s.E <= 0) {
           target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu);
         } else if (s.spurting) {
@@ -183,41 +270,52 @@
           target = pace * (1 + U.clamp(err * 0.0012, -0.02, 0.02));
           if (s.kakari && prog < 0.5) target *= 1.012;
         }
-        // 坂：ゴール前の上りで脚を使う。坂が弱いほど大きく減る
-        const onHill = R < 320 && R > 60 && slope !== '平';
-        if (onHill) target *= 1 - ({ '急': 0.008, '中': 0.005, '小': 0.003 }[slope] || 0) * (1 - s.slopeP / 120);
-        // 不利（差し・追込が直線で詰まる）
-        if (s.spurting && !s.blockedOnce && st.length >= 10 && (s.h.style === '差し' || s.h.style === '追込')) {
-          s.blockedOnce = true;
-          const jk = s.r.jockey ? s.r.jockey.skill : 70;
-          if (rng.chance(0.1 * (1 - s.mind / 160) * (1.2 - jk / 150))) { s.blocked = rng.float(1.0, 2.4); say(t, `${s.h.name}、前が壁になった！`, 'trouble'); }
-        }
-        if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
-        // 加減速の上限
-        const acc = s.v < 10 ? 3.6 : s.acc + s.slopeP * 0.0015;
-        const dv = U.clamp(target - s.v, -1.4 * DT, acc * DT);
-        const vPrev = s.v;
-        s.v = Math.max(0, s.v + dv);
-        // スタミナの消耗（自分の巡航より速いほど重い）
-        const ratio = s.v / s.vc;
-        let cost = (s.v * DT) / s.Ds * 0.9 * ratio * ratio * ratio * (s.kakari && prog < 0.5 ? 1.3 : 1);
-        if (s.spurting) cost *= s.spurtCost;
-        if (onHill) cost *= 1 + ({ '急': 2.2, '中': 1.4, '小': 0.8 }[slope] || 0) * U.clamp(1 - s.slopeP / 100, 0, 0.6);
-        s.E -= cost;
-        const xPrev = s.x;
-        s.x += (vPrev + s.v) / 2 * DT;
-        if (s.t600 == null && s.x >= D - 600) s.t600 = t - DT + (D - 600 - xPrev) / Math.max(0.1, s.x - xPrev) * DT;
-        if (s.x >= D) {
-          s.finishT = t - DT + (D - xPrev) / Math.max(0.1, s.x - xPrev) * DT;
-          s.done = true; finished++;
-          if (winnerT == null) { winnerT = s.finishT; }
-        }
+        if (s.kakari && prog < 0.5) costMul *= 1.3;
       }
-      // 進路（描画用）：前から順に、近くの馬と重ならない一番内の位置。映像を出さないレースでは省く
-      if (opts.frames) {
+      // 坂：ゴール前の上りで脚を使う。坂が弱いほど大きく減る
+      const onHill = R < 320 && R > 60 && slope !== '平';
+      if (onHill) target *= 1 - ({ '急': 0.008, '中': 0.005, '小': 0.003 }[slope] || 0) * (1 - s.slopeP / 120);
+      // 不利（差し・追込が直線で詰まる）。プレイヤーの馬は自分の進路取りしだい
+      if (!(s.me && c) && s.spurting && !s.blockedOnce && st.length >= 10 && (s.h.style === '差し' || s.h.style === '追込')) {
+        s.blockedOnce = true;
+        const jk = s.r.jockey ? s.r.jockey.skill : 70;
+        if (rng.chance(0.1 * (1 - s.mind / 160) * (1.2 - jk / 150))) { s.blocked = rng.float(1.0, 2.4); S.say(sim, t, `${s.h.name}、前が壁になった！`, 'trouble'); }
+      }
+      if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
+      // 加減速の上限
+      const acc = s.v < 10 ? 3.6 : s.acc + s.slopeP * 0.0015;
+      const dv = U.clamp(target - s.v, -1.4 * DT, acc * DT);
+      const vPrev = s.v;
+      s.v = Math.max(0, s.v + dv);
+      // スタミナの消耗（自分の巡航より速いほど重い）
+      const ratio = s.v / s.vc;
+      let cost = (s.v * DT) / s.Ds * 0.9 * ratio * ratio * ratio * costMul;
+      if (s.spurting) cost *= s.spurtCost;
+      if (onHill) cost *= 1 + ({ '急': 2.2, '中': 1.4, '小': 0.8 }[slope] || 0) * U.clamp(1 - s.slopeP / 100, 0, 0.6);
+      // 早くから追い通すと、馬がもたない
+      if (s.me && c && R > 600) cost *= 1 + 8 * Math.max(0, ratio - 1);
+      s.E -= cost;
+      const xPrev = s.x;
+      let dx = (vPrev + s.v) / 2 * DT;
+      // コーナーで外を回ると、そのぶん遠回りになる（プレイヤーの馬）
+      if (s.me && c && sim.track) { const corner = HS.Track.cornerAt(sim.track, R) !== 0; c.wide = corner && s.lane > 1.5; if (corner) dx *= 1 - 0.005 * Math.max(0, s.lane - 0.5); }
+      s.x += dx;
+      if (s.t600 == null && s.x >= D - 600) s.t600 = t - DT + (D - 600 - xPrev) / Math.max(0.1, s.x - xPrev) * DT;
+      if (s.x >= D) {
+        s.finishT = t - DT + (D - xPrev) / Math.max(0.1, s.x - xPrev) * DT;
+        s.done = true; sim.finished++;
+        if (sim.winnerT == null) sim.winnerT = s.finishT;
+      }
+    }
+    // 進路（描画用）：前から順に、近くの馬と重ならない一番内の位置。映像を出さないレースでは省く
+    if (opts.frames) {
       const live = st.slice().sort((a, b) => b.x - a.x);
       const placed = [];
+      // プレイヤーの馬は自分で選んだ進路にいる
+      const me = c ? st[sim.me] : null;
+      if (me) { me.laneT = c.lane; me.lane += U.clamp(c.lane - me.lane, -1.0 * DT, 1.0 * DT); placed.push({ x: me.x, laneT: me.lane }); }
       for (const s of live) {
+        if (s === me) continue;
         let want = 0;
         const inStraight = D - s.x < straight;
         if (inStraight && (s.h.style === '差し' || s.h.style === '追込')) want = 2 + (s.i % 4);
@@ -229,38 +327,48 @@
         s.laneT = lane; placed.push(s);
         s.lane += (s.laneT - s.lane) * 0.08;
       }
-      }
-      // 実況（映像を出すときだけ）
-      if (opts.frames && step % 5 === 0) {
-        const ord = st.slice().sort((a, b) => b.x - a.x);
-        const lead = ord[0];
-        if (t > 6 && t < 14 && !lastLeader) { lastLeader = lead; say(t, `ハナを切ったのは${lead.h.name}。`, 'lead'); }
-        const R = D - lead.x;
-        if (!saidMid && lead.x > D * 0.5 && D >= 1600) {
-          saidMid = true;
-          const names = ord.slice(0, 3).map(s => s.h.name).join('、');
-          say(t, `中間点、前は${names}。`, 'mid');
-          const pl = ord.findIndex(s => s.h.owner === 'P');
-          if (pl >= 0) say(t + 1.5, `${ord[pl].h.name}は${pl + 1}番手あたり。`, 'mine');
-        }
-        if (!saidCorner && R <= straight + 350) { saidCorner = true; say(t, '3コーナーから4コーナーへ。各馬が動き出す！', 'corner'); }
-        if (!saidStraight && R <= straight) { saidStraight = true; say(t, `最後の直線！ 先頭は${lead.h.name}！`, 'straight'); }
-        if (lastLeader && lead !== lastLeader && R < straight && R > 30) { say(t, `${lead.h.name}が先頭に立つ！`, 'lead'); }
-        if (!said400 && R <= 400 && R > 0) { said400 = true; const second = ord[1]; if (second && lead.x - second.x > 6) say(t, `${lead.h.name}、リードは${Math.round((lead.x - second.x) / LEN)}馬身！`, 'mid'); else if (second) say(t, `${lead.h.name}と${second.h.name}の叩き合い！`, 'duel'); }
-        if (!said200 && R <= 200 && R > 0) {
-          said200 = true;
-          const closer = ord.slice(1, 6).sort((a, b) => b.v - a.v)[0];
-          if (closer && closer.v > lead.v + 0.4) say(t, `外から${closer.h.name}が猛然と追い込む！`, 'duel');
-        }
-        lastLeader = lastLeader ? lead : lastLeader;
-      }
-      if (opts.frames && step % REC_EVERY === 0) frames.push({ t, p: st.map(s => [Math.round(s.x * 10) / 10, Math.round(s.lane * 100) / 100, Math.round(s.v * 100) / 100]) });
-      if (winnerT != null && t > winnerT + 25) break; // 残りはまとめて止める
     }
+    // 実況（映像を出すときだけ）
+    if (opts.frames && sim.step % 5 === 0) S.commentary(sim);
+    if (opts.frames && sim.step % REC_EVERY === 0) sim.frames.push({ t, p: st.map(s => [Math.round(s.x * 10) / 10, Math.round(s.lane * 100) / 100, Math.round(s.v * 100) / 100]) });
+    if (sim.finished >= st.length || t >= 400 || (sim.winnerT != null && t > sim.winnerT + 25)) sim.over = true; // 残りはまとめて止める
+    // 操作して乗るときは、自分がゴールして少ししたら終える
+    if (c && st[sim.me].done && t > st[sim.me].finishT + 4) sim.over = true;
+    return sim.over;
+  };
+
+  S.commentary = function (sim) {
+    const { st, D, straight, t } = sim; const k = sim.talk;
+    const ord = st.slice().sort((a, b) => b.x - a.x);
+    const lead = ord[0];
+    if (t > 6 && t < 14 && !k.lastLeader) { k.lastLeader = lead; S.say(sim, t, `ハナを切ったのは${lead.h.name}。`, 'lead'); }
+    const R = D - lead.x;
+    if (!k.mid && lead.x > D * 0.5 && D >= 1600) {
+      k.mid = true;
+      const names = ord.slice(0, 3).map(s => s.h.name).join('、');
+      S.say(sim, t, `中間点、前は${names}。`, 'mid');
+      const pl = ord.findIndex(s => s.h.owner === 'P' || s.me);
+      if (pl >= 0) S.say(sim, t + 1.5, `${ord[pl].h.name}は${pl + 1}番手あたり。`, 'mine');
+    }
+    if (!k.corner && R <= straight + 350) { k.corner = true; S.say(sim, t, '3コーナーから4コーナーへ。各馬が動き出す！', 'corner'); }
+    if (!k.straight && R <= straight) { k.straight = true; S.say(sim, t, `最後の直線！ 先頭は${lead.h.name}！`, 'straight'); }
+    if (k.lastLeader && lead !== k.lastLeader && R < straight && R > 30) { S.say(sim, t, `${lead.h.name}が先頭に立つ！`, 'lead'); }
+    if (!k.f400 && R <= 400 && R > 0) { k.f400 = true; const second = ord[1]; if (second && lead.x - second.x > 6) S.say(sim, t, `${lead.h.name}、リードは${Math.round((lead.x - second.x) / LEN)}馬身！`, 'mid'); else if (second) S.say(sim, t, `${lead.h.name}と${second.h.name}の叩き合い！`, 'duel'); }
+    if (!k.f200 && R <= 200 && R > 0) {
+      k.f200 = true;
+      const closer = ord.slice(1, 6).sort((a, b) => b.v - a.v)[0];
+      if (closer && closer.v > lead.v + 0.4) S.say(sim, t, `外から${closer.h.name}が猛然と追い込む！`, 'duel');
+    }
+    k.lastLeader = k.lastLeader ? lead : k.lastLeader;
+  };
+
+  // 結果をまとめる
+  S.finish = function (sim) {
+    const { st, D, opts, events } = sim;
+    const t = sim.t;
     // まだゴールしていない馬（大差）を片づける
     for (const s of st) if (!s.done) { s.finishT = t + (D - s.x) / Math.max(5, s.v); s.done = true; }
-    if (opts.frames) frames.push({ t: t + DT, p: st.map(s => [Math.min(D + 30, s.x), s.lane, s.v]) });
-
+    if (opts.frames) sim.frames.push({ t: t + DT, p: st.map(s => [Math.min(D + 30, s.x), s.lane, s.v]) });
     const ranked = st.slice().sort((a, b) => a.finishT - b.finishT);
     const winner = ranked[0];
     const results = ranked.map((s, k) => {
@@ -269,7 +377,7 @@
       return {
         pos: k + 1, num: s.r.num, frame: s.r.frame, horse: s.h, jockey: s.r.jockey, weight: s.r.weight,
         time: s.finishT, margin: k === 0 ? '' : U.margin(lengths), lengths, last3f: s.t600 != null ? s.finishT - s.t600 : null,
-        late: s.late, blocked: s.blockedOnce && s.blocked !== 0, power: s.A, endE: s.E,
+        late: s.late, blocked: s.blockedOnce && s.blocked !== 0, power: s.A, endE: s.E, rider: s.r.rider || null,
       };
     });
     const win = results[0];
@@ -277,8 +385,8 @@
     let finishText = `${win.horse.name}、1着でゴールイン！`;
     if (second && second.lengths < 0.1) finishText = `${win.horse.name}と${second.horse.name}、並んでゴール！ 写真判定……${win.horse.name}がハナ差で制した！`;
     else if (second && second.lengths >= 5) finishText = `${win.horse.name}、圧勝！ ${second.margin}馬身突き放してゴール！`;
-    say(winner.finishT, finishText, 'finish');
+    S.say(sim, winner.finishT, finishText, 'finish');
     events.sort((a, b) => a.t - b.t);
-    return { results, events, frames: opts.frames ? frames : null, D, straight, lap: geo.lap, winnerTime: win.time };
+    return { results, events, frames: opts.frames ? sim.frames : null, D, straight: sim.straight, lap: sim.geo.lap, winnerTime: win.time };
   };
 })();
