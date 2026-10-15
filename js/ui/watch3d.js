@@ -34,7 +34,7 @@
           course: { name: race.course, dir: course.dir, lap: geo.lap, straight: geo.straight, slope: geo.slope },
           horses: meta.map(m => ({ num: m.x.num, frame: m.x.frame, cap: m.cap, silks: m.silks, coat: m.x.horse.coat, name: m.x.horse.name, mine: !!(m.x.mine || m.x.rider === 'P') })),
         });
-        r3.resize(VW, VH, dpr);
+        r3.resize(cv3.clientWidth || VW, cv3.clientHeight || VH, dpr);
       } catch (err) { console.warn(err); el.innerHTML = ''; return HS.RaceView.play(el, data, opts).then(resolve); }
       let speed = opts.speed || 1, cam = 'tv';
       el.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { speed = +b.dataset.sp; el.querySelectorAll('[data-sp]').forEach(x => x.classList.toggle('on', x === b)); if (opts.onSpeed) opts.onSpeed(speed); });
