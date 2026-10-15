@@ -40,8 +40,10 @@
   J.repLabel = rep => rep >= 85 ? 'トップジョッキー' : rep >= 65 ? '一流' : rep >= 45 ? '中堅' : rep >= 25 ? '若手の有望株' : '駆け出し';
 
   // 今週の騎乗依頼（決まった週の内容から、評判に合わせて選ぶ）
+  // 騎乗依頼は使わない（持ち主の決定 2026-10-15：買った馬だけで走る）。前の版の名残として残す
+  J.useOffers = false;
   J.offers = function () {
-    if (!J.isMode()) return [];
+    if (!J.isMode() || !J.useOffers) return [];
     const wk = W.prepareWeek();
     const g = G();
     const key = `${wk.key}:offers`;
@@ -138,6 +140,23 @@
       W.news(`${me.horse.name}に騎乗し${R.label(race)}${race.grade ? '（' + R.gradeBadge(race) + '）' : ''}を勝った。通算${j.total.wins}勝。`, race.grade === 'G1' ? 'g1' : 'win');
       if (j.total.wins === 1) W.news('初勝利。ここからが始まりだ。', 'win');
     }
+  };
+  // 週の頭：自分の馬を、2歳の4月から自動で入厩させる。調教とレース選びはおまかせ（自分でも決められる）
+  J.weekStart = function () {
+    if (!J.isMode()) return;
+    const g = G();
+    for (const h of W.mine('farm')) {
+      const age = g.year - h.born;
+      if (h.injury || h.parked || age < 2 || (age === 2 && g.month < 4)) continue;
+      if (!W.toStable(h.id)) { if (h.auto == null) h.auto = true; W.news(`${h.name}が入厩した。`, 'info'); }
+    }
+  };
+  // 引退：自分の手を離れる（種牡馬・繁殖牝馬になっても持ち馬にはしない）
+  J.retire = function (id) {
+    const h = W.horse(id); if (!h) return { err: '持ち馬ではない' };
+    const r = W.retire(id);
+    if (!r.err && W.horse(id)) { W.horse(id).owner = 'AI'; W.dirty(); }
+    return r;
   };
   // 毎週、評判は少しずつ落ち着く（乗らないと忘れられる）
   J.weekly = function () { if (!J.isMode()) return; const j = J.me(); j.rep = Math.max(0, j.rep - 0.08); };

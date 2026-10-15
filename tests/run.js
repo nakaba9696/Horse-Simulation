@@ -312,23 +312,24 @@ check('sim: 特殊能力の効き目が極端でない', () => {
 });
 
 // ---------- 騎手のゲーム ----------
-check('jockey: 騎乗依頼を受けて乗り、成績と評判とリーディングが付く', () => {
+check('jockey: 史実馬を買って自分で乗り、成績と賞金とリーディングが付く', () => {
   const J = HS.Jockey, S = HS.Sim;
   W.newGame({ year: 2000, seed: 77, mode: 'jockey', jockeyName: 'テスト騎手', region: '栗東' });
   const G = W.get();
   assert(G.mode === 'jockey' && G.jockey && W.mine().length === 0, '騎手のゲームになっていない');
-  let ridden = 0, offersSeen = 0;
-  const weeks = QUICK ? 30 : 60;
+  assert(J.offers().length === 0, '騎乗依頼は使わない');
+  // デビュー前の史実馬を、買えるだけ（2歳を優先）
+  const m0 = G.player.money;
+  const market = W.marketHistoric().filter(it => G.year - it.horse.born === 2).sort((a, b) => a.price - b.price);
+  for (const it of market) if (it.price <= G.player.money && W.mine().length < 2) assert(!W.buy(it), '買えない');
+  assert(W.mine().length >= 1 && G.player.money < m0, `買えていない（資金 ${m0}・いちばん安い ${market[0] && market[0].price}）`);
+  let ridden = 0;
+  const weeks = 48;
   for (let i = 0; i < weeks; i++) {
-    const offers = J.offers();
-    offersSeen += offers.length;
-    assert(JSON.stringify(J.offers()) === JSON.stringify(offers), '依頼が呼ぶたびに変わる');
-    for (const o of offers) if (!G.rides[o.raceKey]) assert(!J.accept(o.raceKey, o.horseId), '依頼を受けられない');
-    // 1レースは操作して乗る（決まった乗り方の手）
     const played = {};
     const mine = J.myRides();
-    if (mine.length) {
-      const { card } = mine[0];
+    mine.forEach(({ card }, k) => {
+      if (k > 0) return; // 1レースは操作して乗り、ほかはおまかせ
       const sim = W.startSim(card, { ride: true });
       let next = 0;
       while (!S.step(sim)) {
@@ -339,18 +340,18 @@ check('jockey: 騎乗依頼を受けて乗り、成績と評判とリーディ�
         if (sim.ctl.blockedNow && sim.ctl.lane < 4) S.ctl.lane(sim, 1);
       }
       played[card.race.key] = S.finish(sim);
-    }
+    });
     ridden += mine.length;
     W.finishWeek(played);
   }
   const j = G.jockey;
-  assert(offersSeen > 0 && ridden > 0, `依頼 ${offersSeen}・騎乗 ${ridden}`);
-  assert(j.total.rides === ridden, `騎乗数が合わない ${j.total.rides} / ${ridden}`);
+  assert(ridden > 0 && j.total.rides === ridden, `騎乗数 ${j.total.rides} / ${ridden}`);
+  assert(W.mine('stable').length + W.mine('farm').length > 0, '持ち馬がいない');
   const lead = J.leading(2000);
   assert(lead.length > 50 && lead.some(x => x.me), 'リーディングの表が無い');
   const s1 = W.serialize(); W.load(s1); const s2 = W.serialize();
   assert(s1 === s2, 'セーブの往復で中身が変わる');
-  return `${weeks}週で依頼 ${offersSeen}・騎乗 ${ridden}・${j.total.wins}勝・評判 ${j.rep.toFixed(0)}・リーディング ${J.myRank(2000)}位`;
+  return `${weeks}週で騎乗 ${ridden}・${j.total.wins}勝・持ち馬 ${W.mine().map(h => h.name).join('・')}・資金 ${U.money(G.player.money)}`;
 });
 
 console.log(results.join('\n'));

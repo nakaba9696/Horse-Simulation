@@ -85,9 +85,10 @@
     // 騎手のゲーム：持ち馬は無く、騎乗依頼を受けて乗る
     if (G.mode === 'jockey') {
       G.jockey = HS.Jockey.init(Object.assign({}, opts, { year: G.year }));
-      G.player.money = Math.round(300 * U.priceIndex(G.year) / 10) * 10;
+      // 騎手のゲームは、自分で買った馬に自分で乗る（持ち主の決定 2026-10-15）。最初は史実馬を1頭買えるくらい
+      G.player.money = Math.round(8000 * U.priceIndex(G.year) / 10) * 10;
       W.refreshMarket(true);
-      news(`${G.jockey.region}所属の新人騎手、${G.jockey.name}がデビューした。まずは今週の騎乗依頼を見てみよう。`, 'info');
+      news(`${G.jockey.region}所属の新人騎手、${G.jockey.name}がデビューした。まずは市場でデビュー前の史実馬を買おう。`, 'info');
       return G;
     }
     // 最初の持ち馬：繁殖牝馬2頭・1歳と2歳を1頭ずつ
@@ -377,7 +378,9 @@
   // 2. W.cards：プレイヤーの騎乗（G.rides）を当てた出走表と人気
   // 3. W.finishWeek：レースを走らせ（騎乗したレースは played の結果を使う）、結果・調教・暦を進める
   W.prepareWeek = function () {
-    const key = `${G.year}-${G.month}-${G.week}:${G.rngState}`;
+    // 出走登録・おまかせ・入厩が変わったら作り直す
+    const mineSig = W.mine().map(h => `${h.id}${h.loc}${h.auto ? 1 : 0}${h.skipW === W.wIdx() ? 's' : ''}${h.injury ? 'i' : ''}`).join(',');
+    const key = `${G.year}-${G.month}-${G.week}:${G.rngState}:${JSON.stringify(G.entries)}:${mineSig}`;
     if (W._week && W._week.key === key) return W._week;
     const r = new U.RNG(G.rngState);
     const wIdx = W.wIdx();
@@ -396,7 +399,7 @@
     }
     // プレイヤーの「おまかせ」の馬
     for (const h of W.mine('stable')) {
-      if (!h.auto || W.entryOf(h.id) || h.injury) continue;
+      if (!h.auto || W.entryOf(h.id) || h.injury || h.skipW === wIdx) continue;
       const rc = W.aiChoose(h, races, wIdx, r);
       if (rc && rc.region !== '海外') (field[rc.key] = field[rc.key] || []).push({ horse: h, jockeyName: W.bestFreeJockey(rc.key, h.id), mine: true, auto: true });
     }
@@ -480,7 +483,8 @@
     const out = wk.cards.map(c => {
       const runners = c.runners.map(x => Object.assign({}, x));
       const hid = rides[c.race.key];
-      const me = hid ? runners.find(x => x.horse.id === hid) : null;
+      // 騎手のゲームでは、自分の馬には自分が乗る（同じレースに2頭いれば1頭目）
+      const me = hid ? runners.find(x => x.horse.id === hid) : (G.mode === 'jockey' ? runners.find(x => x.mine) : null);
       if (me && HS.Jockey) { me.jockey = HS.Jockey.playerJockey(); me.rider = 'P'; me.allowance = HS.Jockey.allowance(c.race); me.weight = me.weight - me.allowance; }
       W.setOdds(runners, c.race, wk.wIdx, new U.RNG(c.seed ^ 0x2545f491));
       return Object.assign({}, c, { runners, ride: !!me });
@@ -520,6 +524,7 @@
     const y0 = G.year;
     W.nextWeek(report);
     if (HS.Jockey && G.year !== y0) HS.Jockey.yearEnd(y0);
+    if (HS.Jockey) HS.Jockey.weekStart();
     G.rngState = Math.floor(rng.next() * 4294967296);
     G.lastWeek = { date: report.date, races: report.races.map(r => W.slimResult(r)) };
     W._week = null;
@@ -544,7 +549,7 @@
   W.setOdds = function (runners, race, wIdx, r) {
     r = r || rng;
     const est = runners.map(x => S.power(x.horse, race, wIdx, x).total + r.normal(0, 1.8) + (x.horse.hist && x.horse.gradedWins.length ? 1.5 : 0));
-    const ex = est.map(e => Math.exp(0.22 * (e - Math.max(...est))));
+    const ex = est.map(e => Math.exp(0.17 * (e - Math.max(...est))));
     const tot = U.sum(ex);
     const ps = ex.map(e => e / tot);
     runners.forEach((x, i) => { x.odds = U.clamp(Math.round(0.8 / ps[i] * 10) / 10, 1.1, 999.9); });
@@ -689,14 +694,13 @@
   };
 
   W.monthlyCost = function () {
-    if (G.mode === 'jockey') return 0;
     let c = 0;
     for (const h of W.mine()) {
       if (h.loc === 'stable') c += 60;
       else if (h.loc === 'farm') c += 15;
       else if (h.loc === 'mare') c += 15;
     }
-    c += G.farmLevel * 50;
+    if (G.mode !== 'jockey') c += G.farmLevel * 50;
     return Math.round(c * IDX());
   };
   W.monthEnd = function (report) {
@@ -713,7 +717,7 @@
     // 2歳の4月：入厩の案内
     if (G.month === 4) {
       const n = W.mine('farm').filter(h => G.year - h.born === 2).length;
-      if (n) news(`2歳馬が${n}頭、入厩できるようになった。名前を付けて厩舎へ送ろう。`, 'info');
+      if (n && G.mode !== 'jockey') news(`2歳馬が${n}頭、入厩できるようになった。名前を付けて厩舎へ送ろう。`, 'info');
     }
     // AI の2歳史実馬のデビュー準備
     for (const h of W.all()) {

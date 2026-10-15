@@ -57,6 +57,7 @@
       }
       if (!r3) cv3.style.display = 'none';
       let flash = null; // 画面の真ん中に出す短い言葉
+      let banner = null, side = [], fxSeen = 0, paceShown = false;
       const say = (text, cls) => { flash = { text, cls, t: performance.now() }; };
 
       // ---------- 操作 ----------
@@ -71,7 +72,14 @@
         else if (b === 'fast') beatFx = { t: performance.now(), good: false };
         if (AU) AU.se('click');
       };
-      const doWhip = () => { const b = S.ctl.whip(sim); if (b === 'yore') say('よれた！', 'bad'); else if (b === 'tired') say('ムチが効かない', 'bad'); if (AU) AU.se('tab'); };
+      const doWhip = () => {
+        const b = S.ctl.whip(sim);
+        if (b == null) return say(sim.ctl && !sim.ctl.started ? 'まだゲートの中' : '', '');
+        whipAt = sim.t;
+        if (b === 'yore') say('よれた！', 'bad'); else if (b === 'tired') say('ムチが効かない', 'bad'); else say(`ムチ ${sim.ctl.whips}発目`, 'whip');
+        if (AU) AU.se('whip');
+      };
+      let whipAt = -9;
       const doLane = d => S.ctl.lane(sim, d);
       let beatFx = null;
       el.querySelectorAll('.rb').forEach(b => {
@@ -147,6 +155,7 @@
       const lerpView = k => sim.st.map((s, j) => ({
         x: prev[j][0] + (s.x - prev[j][0]) * k, lane: prev[j][1] + (s.lane - prev[j][1]) * k, v: s.v,
         num: s.r.num, frame: s.r.frame, cap: meta[j].cap, silks: meta[j].silks, coat: s.h.coat, name: s.h.name, mine: !!s.me,
+        whip: s.me ? sim.t - whipAt : null,
       }));
 
       function frame(ts) {
@@ -239,10 +248,35 @@
         if (c.blockedNow) notes.push(['前が壁', 'bad']);
         if (c.kakariNow && !c.hold) notes.push(['掛かっている', 'bad']);
         else if (c.kakariNow) notes.push(['なだめている', '']);
+        if (me.spurting && !me.done && sim.D - me.x < 1000) notes.push(['追い出した', 'good']);
         if (c.wide) notes.push(['外を回っている', '']);
         if (c.hold && !c.kakariNow) notes.push(['ためている', 'good']);
         if (me.E <= 0) notes.push(['バテた', 'bad']);
         msgEl.innerHTML = notes.map(([t, k]) => `<span class="${k}">${t}</span>`).join('');
+        tensionGauge(c);
+        // スキルの発動・ペースの目安（新しく起きたものを出す）
+        while (fxSeen < sim.skillFx.length) {
+          const f = sim.skillFx[fxSeen++];
+          const sk = HS.Horse.SKILLS[f.id]; if (!sk) continue;
+          if (f.i === sim.me) { banner = { text: `スキル発動！ ${sk.label}`, bad: !!sk.bad, t: performance.now() }; if (AU) AU.se('skill'); }
+          else { const o = sim.st[f.i]; if (Math.abs(o.x - me.x) < 40) side.unshift({ text: `${o.r.num} ${o.h.name}の${sk.label}`, t: performance.now() }); }
+        }
+        if (sim.check && !paceShown) { paceShown = true; banner = { text: `${sim.check.at}m通過 ${sim.check.t.toFixed(1)}　${sim.check.verdict}`, pace: true, t: performance.now() }; }
+        if (banner && performance.now() - banner.t < 2200) {
+          const a = Math.min(1, (2200 - (performance.now() - banner.t)) / 400);
+          ctx.globalAlpha = a;
+          const bw = Math.min(VW - 40, 420), bx = VW / 2 - bw / 2, by = VH * 0.17;
+          const grd = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+          const col = banner.pace ? ['#1d4fb8', '#3d8bfd'] : banner.bad ? ['#7a1f1f', '#c0392b'] : ['#9a6a00', '#ffd34d'];
+          grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(0.15, col[0]); grd.addColorStop(0.5, col[1]); grd.addColorStop(0.85, col[0]); grd.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = grd; ctx.fillRect(bx, by, bw, 40);
+          ctx.fillStyle = '#fff'; ctx.font = 'bold 20px "Noto Sans JP", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 4; ctx.strokeText(banner.text, VW / 2, by + 20); ctx.fillText(banner.text, VW / 2, by + 20);
+          ctx.globalAlpha = 1;
+        }
+        // ほかの馬のスキル（近くの馬だけ、右の小さな字幕）
+        side = side.filter(x => performance.now() - x.t < 2500).slice(0, 3);
+        side.forEach((x, k) => { ctx.fillStyle = 'rgba(8,18,32,0.75)'; ctx.fillRect(VW - 250, 150 + k * 22, 240, 20); ctx.fillStyle = '#ffe9a6'; ctx.font = '12px "Noto Sans JP", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(x.text, VW - 244, 160 + k * 22, 230); });
         // 真ん中の言葉
         if (flash && performance.now() - flash.t < 1400) {
           const a = 1 - (performance.now() - flash.t) / 1400;
@@ -252,6 +286,17 @@
           ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 6; ctx.strokeText(flash.text, VW / 2, VH * 0.38); ctx.fillText(flash.text, VW / 2, VH * 0.38);
           ctx.globalAlpha = 1;
         }
+      }
+      // 気性レーダー：テンションの針。抑えると下がり、放っておくと上がる。赤に入ると掛かる
+      function tensionGauge(c) {
+        const cx = 216, cy = VH - 104, r = 34;
+        ctx.fillStyle = 'rgba(8,18,32,0.82)'; rr(cx - 46, cy - 46, 92, 56, 8); ctx.fill();
+        const seg = (a0, a1, col) => { ctx.strokeStyle = col; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI + a0 * Math.PI, Math.PI + a1 * Math.PI); ctx.stroke(); };
+        seg(0, 0.35, '#4cc27a'); seg(0.35, 0.75, '#ffd34d'); seg(0.75, 1, '#ff5a4d');
+        const v = U.clamp(c.tension / 100, 0, 1), ang = Math.PI + v * Math.PI;
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(ang) * (r + 4), cy + Math.sin(ang) * (r + 4)); ctx.stroke();
+        ctx.fillStyle = '#c8d3e2'; ctx.font = '11px "Noto Sans JP", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText(c.tension >= 75 ? '気性：掛かり' : c.tension < 35 ? '気性：落ち着き' : '気性', cx, cy + 1);
       }
       // 馬群レーダー：自分のまわり（前 30m・後ろ 15m）の馬の位置を上から。内ラチは回る向きの側
       function radar(view) {

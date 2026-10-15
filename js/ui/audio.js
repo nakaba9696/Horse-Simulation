@@ -290,6 +290,8 @@
     else if (name === 'error') blip(180, 120, 0.25, 'sawtooth', 0.08);
     else if (name === 'week') { blip(500, 760, 0.12, 'triangle', 0.18); }
     else if (name === 'birth') { ['C6', 'E6', 'G6', 'C7'].forEach((n, i) => tone(seBus, freq(n), t + i * 0.08, 0.25, 'bell', 1.2)); }
+    else if (name === 'whip') { noise(seBus, t, 0.05, 'highpass', 3000, 0.5); noise(seBus, t + 0.01, 0.08, 'bandpass', 1800, 0.35, 2); }
+    else if (name === 'skill') { ['E6', 'B6', 'E7'].forEach((n, i) => tone(seBus, freq(n), t + i * 0.05, 0.18, 'bell', 1.4)); }
     else if (name === 'gate') { tone(seBus, 1568, t, 0.05, 'bell', 2.5); tone(seBus, 2093, t, 0.05, 'bell', 1.5); noise(seBus, t, 0.25, 'bandpass', 900, 0.35, 1.5); }
   };
 

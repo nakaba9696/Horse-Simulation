@@ -141,14 +141,20 @@
       talk: { lastLeader: null, straight: false, mid: false, corner: false, f400: false, f200: false },
       track: HS.Track ? HS.Track.make(geo.lap, geo.straight, course.dir) : null,
       me: -1, ctl: null,
+      checkAt: D >= 2400 ? 1200 : D >= 1600 ? 1000 : 600, check: null, skillFx: [],
     };
+    // このレースで効く特殊能力（直線で見せる）
+    for (const s of st) {
+      s.passive = (s.h.skills || []).filter(id => S.skillAdj(Object.assign({}, s.h, { skills: [id] }), race, wIdx, Object.assign({ paceF }, s.r)) > 0);
+      if (s.late && H.has(s.h, 'deokure')) sim.skillFx.push({ t: 0.6, i: s.i, id: 'deokure' });
+    }
     // プレイヤーが乗る馬（操作を受け付けるのは opts.ride のときだけ。ほかは騎手の腕で自動に乗る）
     const meIdx = runners.findIndex(r => r.rider === 'P');
     if (meIdx >= 0) {
       sim.me = meIdx;
       const s = st[meIdx]; s.me = true;
       if (opts.ride) {
-        sim.ctl = { started: false, hold: false, push: 0, lastPush: -9, pushes: 0, whips: 0, whipUntil: -1, lane: Math.min(3, s.lane), blockedNow: false, wide: false, kakariNow: false };
+        sim.ctl = { tension: U.clamp(30 + (75 - st[meIdx].mind) * 0.4 + (st[meIdx].kakari ? 15 : 0), 10, 70), started: false, hold: false, push: 0, lastPush: -9, pushes: 0, whips: 0, whipUntil: -1, lane: Math.min(3, s.lane), blockedNow: false, wide: false, kakariNow: false };
         s.delay = 99; s.late = false; // スタートはプレイヤーの合図で
       }
     }
@@ -157,6 +163,15 @@
     return sim;
   };
   S.say = (sim, t, text, kind) => sim.events.push({ t, text, kind: kind || '' });
+  // 特殊能力の発動を記録する（同じ馬・同じ能力は1回だけ）。spurt は仕掛けの合図で、能力ではない
+  S.fire = function (sim, s, id) {
+    s.fired = s.fired || {};
+    if (s.fired[id]) return;
+    s.fired[id] = true;
+    if (id === 'spurt') return;
+    sim.skillFx.push({ t: sim.t, i: s.i, id });
+    if (sim.opts.frames && (s.me || s.h.owner === 'P' || s.h.hist)) S.say(sim, sim.t, `${s.h.name}の${(H.SKILLS[id] || { label: id }).label}！`, 'skill');
+  };
 
   // ---------- プレイヤーの操作 ----------
   // 歩幅の周期（秒）。この拍子に合わせて追うと、よく伸びる
@@ -192,7 +207,7 @@
       return c.whips > 8 ? 'tired' : 'ok';
     },
     hold(sim, on) { if (sim.ctl) sim.ctl.hold = !!on; },
-    lane(sim, d) { const c = sim.ctl; if (c) c.lane = U.clamp(Math.round(c.lane + d), 0, 12); },
+    lane(sim, d) { const c = sim.ctl; if (c) { c.lane = U.clamp(Math.round(c.lane + d), 0, 12); c.laneT = sim.t; } },
   };
   S.whipEff = c => Math.max(0.25, 1 - 0.1 * Math.max(0, c.whips - 1));
 
@@ -208,7 +223,8 @@
     const leaderX = pack ? pack.x : D;
     const c = sim.ctl;
     for (const s of st) {
-      if (s.done) continue;
+      // ゴールした馬は止まらず、少しずつ速さを落として流す（描画のため。着順・時計は変わらない）
+      if (s.done) { s.v = Math.max(6, s.v - 0.9 * DT); s.x += s.v * DT; continue; }
       if (s.me && c && !c.started && t >= 0.9) { c.started = true; s.delay = 0.9; s.late = true; S.say(sim, t, `${s.h.name}、出遅れた！`, 'trouble'); }
       if (t < s.delay) continue;
       const R = D - s.x;
@@ -216,27 +232,44 @@
       let target;
       let costMul = 1;
       if (s.me && c) {
-        // プレイヤーの操作：何もしなければ馬なり、抑えると脚をためる、追うと伸びる、ムチでもうひと伸び
+        // プレイヤーの操作：何もしなければ馬なり（自分の仕掛けどころで勝手に伸びる）、抑えると脚をためる、追うともっと伸びる、ムチでもうひと伸び
         c.push = Math.max(0, c.push - 0.25 * DT);
+        // 追い出し：自然の仕掛けどころに来るか、直線の手前で追えば、そこからは追い続けなくても伸びる
+        if (!s.spurting && (R <= s.spurtR || (c.push > 0.35 && R < straight + 500))) { s.spurting = true; S.fire(sim, s, 'spurt'); if (H.has(s.h, 'longspurt')) S.fire(sim, s, 'longspurt'); }
+        if (s.spurting && c.hold && R > 200) s.spurting = false; // 抑えたら仕掛け直し
+        // 気性（テンション）：抑えると落ち着き、放っておくと行きたがる。高すぎると掛かる
+        if (!s.spurting) {
+          const ner = (0.3 + Math.max(0, 75 - s.mind) * 0.03 + (s.kakari ? 1.2 : 0)) * (prog < 0.65 ? 1 : 0.4);
+          const near = st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 3 && Math.abs(o.lane - s.lane) < 1.6);
+          c.tension = U.clamp(c.tension + (c.hold ? -5.5 : ner + (near ? 0.4 : 0)) * DT, 0, 100);
+        } else c.tension = Math.max(0, c.tension - 3 * DT);
+        const kakariNow = c.tension > 75 && !s.spurting;
+        if (kakariNow && !c.kakariNow && H.has(s.h, 'kakari')) S.fire(sim, s, 'kakari');
+        c.kakariNow = kakariNow;
         if (s.E <= 0) target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu);
         else {
-          // 馬なり：その馬の脚質どおりの位置を保つ
-          if (prog < 0.22) target = pace * s.styleMult * (s.nino && prog < 0.08 ? 1.02 : 1);
+          if (s.spurting) {
+            // 馬なりの伸び（おまかせと同じ。追えばさらに伸びる）
+            const ratioE = Math.cbrt(Math.max(0, s.E) * s.Ds / (0.9 * Math.max(R, 30) * s.spurtCost));
+            target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * S.KIRE.top);
+          } else if (prog < 0.22) target = pace * s.styleMult * (s.nino && prog < 0.08 ? 1.02 : 1);
           else target = pace * (1 + U.clamp((leaderX - s.x - s.gap) * 0.0012, -0.02, 0.02));
           // 抑える：少し下げて、脚をためる（スタミナの減りが小さい）
-          if (c.hold) { target *= prog < 0.15 ? 0.985 : 0.993; costMul *= 0.85; }
+          if (c.hold) { target *= prog < 0.15 ? 0.985 : 0.993; costMul *= 0.9; }
           // 拍子が続かなくなったら、ひと伸びは終わる
           if (c.streak && sim.t - c.lastPush > S.strideOf(s.v) * 1.6) c.streak = 0;
           if (c.push > 0) target = Math.max(target, s.vc * (1 + c.push * (0.012 + s.kickS * 2.0) + (c.streak >= 3 ? 0.06 * s.kickS : 0)));
           if (t < c.whipUntil) { target *= 1 + 0.6 * s.kickS * S.whipEff(c); costMul *= 1.3; }
-          // 掛かる馬は、抑えないと行きたがる。抑えれば折り合うが、少し脚を使う
-          c.kakariNow = s.kakari && prog < 0.5;
-          if (c.kakariNow) { if (c.hold) costMul *= 1.1; else { target *= 1.012; costMul *= 1.3; } }
-          if (R < 250 && c.push > 0.3) {
+          // 掛かると行きたがって脚を使う。落ち着いていれば脚がもつ
+          if (kakariNow) { target *= 1.012; costMul *= 1.35; }
+          else if (c.tension < 35 && !s.spurting) costMul *= 0.94;
+          if (R < 250 && (c.push > 0.3 || s.spurting)) {
             const rival = st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5);
-            if (rival) target *= 1 + 0.004 * (s.guts - 70) / 30 + (s.narabu ? 0.004 : 0);
+            if (rival) { target *= 1 + 0.004 * (s.guts - 70) / 30 + (s.narabu ? 0.004 : 0); if (s.narabu) S.fire(sim, s, 'narabu'); }
           }
         }
+        // 進路を触らずにいると、空いていれば少しずつ内ラチへ寄る（馬はラチ沿いを走りたがる）
+        if (c.lane > 0 && t - (c.laneT || 0) > 3 && t - (c.driftT || 0) > 1.2 && !st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 3.2 && o.lane < s.lane - 0.2 && o.lane > c.lane - 1.9)) { c.lane -= 1; c.driftT = t; }
         // 前に馬がいて進路が無い
         const ahead = st.find(o => o !== s && !o.done && o.x > s.x && o.x - s.x < 2.6 && Math.abs(o.lane - s.lane) < 0.85);
         c.blockedNow = !!ahead;
@@ -247,6 +280,7 @@
           // 残りの脚が足りないなら仕掛けを遅らせる
           const need = R / s.Ds * 0.9 * Math.pow(1 + s.kickS, 3);
           if (need > s.E * 1.15 && R > 260) s.spurting = false;
+          else if (H.has(s.h, 'longspurt')) S.fire(sim, s, 'longspurt');
         }
         if (s.E <= 0) {
           target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu);
@@ -259,20 +293,21 @@
           // 叩き合い（根性）
           if (R < (s.narabu ? 350 : 250)) {
             const rival = st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5);
-            if (rival) target *= 1 + 0.004 * (s.guts - 70) / 30 + (s.narabu ? 0.004 : 0);
+            if (rival) { target *= 1 + 0.004 * (s.guts - 70) / 30 + (s.narabu ? 0.004 : 0); if (s.narabu) S.fire(sim, s, 'narabu'); }
           }
           // ソラを使う：抜け出すと気を抜く
-          if (s.sora && R < 200 && order[0] === s && order[1] && s.x - order[1].x > 2) target *= 0.985;
+          if (s.sora && R < 200 && order[0] === s && order[1] && s.x - order[1].x > 2) { target *= 0.985; S.fire(sim, s, 'sora'); }
         } else if (prog < 0.22) {
           target = pace * s.styleMult * (s.nino && prog < 0.08 ? 1.02 : 1) * (s.oonige ? S.OONIGE.early : 1);
         } else if (s.oonige) {
           target = pace * (s.x - leaderX < S.OONIGE.lead * straight * 2000 / D ? S.OONIGE.mid : 1);
+          if (s.x - leaderX > 10) S.fire(sim, s, 'oonige');
         } else {
           // 隊列を保つ：先頭からの目標の差に寄せる
           const gapNow = leaderX - s.x;
           const err = gapNow - s.gap;
           target = pace * (1 + U.clamp(err * 0.0012, -0.02, 0.02));
-          if (s.kakari && prog < 0.5) target *= 1.012;
+          if (s.kakari && prog < 0.5) { target *= 1.012; if (prog > 0.1 && H.has(s.h, 'kakari')) S.fire(sim, s, 'kakari'); }
         }
         if (s.kakari && prog < 0.5) costMul *= 1.3;
       }
@@ -310,6 +345,18 @@
         s.done = true; sim.finished++;
         if (sim.winnerT == null) sim.winnerT = s.finishT;
       }
+    }
+    // スキルの発動（見せるため）：直線に入ったら、このレースで効いている特殊能力
+    for (const s of st) {
+      if (s.done || !s.passive) continue;
+      if (!s.passiveShown && D - s.x <= straight) { s.passiveShown = true; for (const id of s.passive) S.fire(sim, s, id); }
+      if (s.nino && t > 1.5 && t < 2) S.fire(sim, s, 'nino');
+    }
+    // ペースの目安：先頭がチェックポイントを過ぎたとき
+    if (!sim.check && order[0] && order[0].x >= sim.checkAt) {
+      const verdict = sim.paceF > 1.003 ? 'ハイペース' : sim.paceF < 0.995 ? 'スローペース' : '平均ペース';
+      sim.check = { t, at: sim.checkAt, verdict };
+      if (opts.frames) S.say(sim, t, `${sim.checkAt}m通過は${t.toFixed(1)}秒。${verdict}です。`, 'pace');
     }
     // 進路（描画用）：前から順に、近くの馬と重ならない一番内の位置。映像を出さないレースでは省く
     if (opts.frames) {
@@ -372,7 +419,7 @@
     const t = sim.t;
     // まだゴールしていない馬（大差）を片づける
     for (const s of st) if (!s.done) { s.finishT = t + (D - s.x) / Math.max(5, s.v); s.done = true; }
-    if (opts.frames) sim.frames.push({ t: t + DT, p: st.map(s => [Math.min(D + 30, s.x), s.lane, s.v]) });
+    if (opts.frames) sim.frames.push({ t: t + DT, p: st.map(s => [s.x, s.lane, s.v]) });
     const ranked = st.slice().sort((a, b) => a.finishT - b.finishT);
     const winner = ranked[0];
     const results = ranked.map((s, k) => {

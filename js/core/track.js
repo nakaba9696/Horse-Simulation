@@ -7,9 +7,12 @@
   // lap＝1周の長さ、straight＝最後の直線、dir＝'左'|'右'（回る向き）
   T.make = function (lap, straight, dir) {
     const L = lap || 2000;
-    let a = Math.max(straight || 400, L * 0.22);
+    // 実際のコースのように、ゴールの先にも直線を残す（ゴール板はスタンドの前、直線の途中）
+    const minR = L * 0.06;
+    const runout = Math.min(170, Math.max(90, L * 0.07));
+    let a = Math.max((straight || 400) + runout, L * 0.22);
     let r = (L - 2 * a) / (2 * Math.PI);
-    if (r < L * 0.06) { a = L * 0.28; r = (L - 2 * a) / (2 * Math.PI); }
+    if (r < minR) { r = minR; a = (L - 2 * Math.PI * r) / 2; } // 回りが小さすぎるときは、ゴールの先の直線を短くする
     const st = Math.min(a, straight || a);
     const sign = dir === '左' ? -1 : 1; // 左回り＝曲がるときに左へ向く
     // ゴールは下の直線の上。ゴールから逆にたどって、下の直線の残り・コーナー・向こう正面・コーナー・下の直線

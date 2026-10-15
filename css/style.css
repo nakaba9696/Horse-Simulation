@@ -231,8 +231,8 @@ input[type=range] { accent-color: var(--gold); min-width: 0; }
 .jcard .big { font-family: "Noto Serif JP", serif; font-size: 22px; font-weight: 900; color: var(--gold2); }
 .repbar { height: 10px; border-radius: 5px; background: #25384f; overflow: hidden; }
 .repbar > i { display: block; height: 100%; background: linear-gradient(90deg, #3d8bfd, #4cc27a 50%, #ffd34d 80%, #ff7a3d); }
-.offer .nums { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted); }
-.offer .nums b { color: var(--text); font-variant-numeric: tabular-nums; }
+.nums { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted); }
+.nums b { color: var(--text); font-variant-numeric: tabular-nums; }
 .lead-me td { background: rgba(255, 211, 77, 0.12); }
 /* 3D の上に HUD を重ねる */
 .ride-stage .ride-3d { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 10px; display: block; }
@@ -240,3 +240,15 @@ input[type=range] { accent-color: var(--gold); min-width: 0; }
 .ride-stage .ride-3d + .ride-canvas { background: transparent; }
 .ride-stage .cam-btn { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); background: rgba(8,18,32,0.75); color: #fff; border: 1px solid #c9a43a; border-radius: 999px; padding: 4px 12px; font-size: 13px; z-index: 2; }
 .ride-stage { touch-action: none; }
+/* レース前の出走表 */
+.entry-head { background: linear-gradient(90deg, #13294a, #1d3e6e); border: 1px solid #c9a43a; border-radius: 10px; padding: 8px 12px; }
+.entry-top { display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; margin-top: 8px; align-items: stretch; }
+.course-svg { width: 100%; background: #0c1a2c; border-radius: 8px; }
+.tenkai { background: #0f2034; border-radius: 8px; padding: 8px 10px; }
+.tenkai .big { font-family: "Noto Serif JP", serif; font-weight: 900; font-size: 20px; color: var(--gold2); }
+.kyaku { display: inline-block; min-width: 2.2em; text-align: center; border-radius: 4px; padding: 1px 4px; font-size: 11px; font-weight: 900; color: #fff; }
+.kyaku.nige { background: #c0392b; } .kyaku.sen { background: #d9771e; } .kyaku.sashi { background: #2c9a48; } .kyaku.oi { background: #2a63d4; }
+.kyaku-cnt { margin-top: 6px; font-size: 13px; } .kyaku-cnt .kyaku { min-width: 1.6em; margin-right: 2px; }
+.entry-t td.recent span { display: inline-block; width: 1.1em; text-align: center; font-weight: 700; }
+.entry-t td.recent .pos1 { color: #ffd34d; } .entry-t td.recent .pos2 { color: #c8d3e2; } .entry-t td.recent .pos3 { color: #e0a060; }
+@media (max-width: 600px) { .entry-top { grid-template-columns: 1fr; } }
