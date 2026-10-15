@@ -1,7 +1,8 @@
 // レースの3D：Three.js（lib/three.min.js、r128。グローバルの THREE）で、コース・馬・騎手を立体で描く
 // 使い方：
 //   const r3 = HS.Race3D.create(canvas, setup)  // setup = { D, surface, ground, course, track, horses:[{num,frame,cap,silks,coat,name,mine}] }
-//   r3.render(view, cam)   // view = { t, horses:[{x,lane,v,push?}], me, phase:'gate'|'race'|'finish' }、cam = 'ride'|'tv'|'gate'
+//   r3.render(view, cam, orbit)   // view = { t, horses:[{x,lane,v,push?}], me, phase:'gate'|'race'|'finish' }、cam = 'ride'|'tv'|'gate'
+//   orbit = { yaw, pitch, zoom }（カメラの回転。yaw は左右の回り込み[rad]、pitch は上下[-0.3〜1.2]、zoom は距離の倍率）
 //   r3.resize(w, h, dpr) / r3.dispose() / r3.info()
 //   HS.Race3D.supported()  // WebGL が使えるか
 //   render の戻り値：{ horses: [{ i, sx, sy, k, z }] }（画面に出た馬の頭の上の位置・1mあたりの画素・奥行き。名前の札などを重ねるとき用）
@@ -894,7 +895,7 @@
       if (Math.abs(camera.fov - f) > 0.01) { camera.fov = f; camera.updateProjectionMatrix(); }
     }
 
-    function render(view, camMode) {
+    function render(view, camMode, orbit) {
       view = view || {};
       camMode = camMode || 'ride';
       const t = view.t || 0;
@@ -992,6 +993,21 @@
         cp = W3(fc, mem.camU, fc.e + camH + bob);
         lk = W3(fl, mem.camU * 0.55 + me.u * 0.45, fl.e + 1.0);
         hfovMin = 68; base = 50;
+      }
+      // カメラの回転：見ている中心（騎乗なら自分の馬）のまわりを回り込む
+      if (orbit && camMode !== 'gate' && (Math.abs(orbit.yaw || 0) > 1e-3 || Math.abs(orbit.pitch || 0) > 1e-3 || Math.abs((orbit.zoom || 1) - 1) > 1e-3)) {
+        const fm = frame(D - (me.x - BODY));
+        const piv = camMode === 'ride' ? W3(fm, me.u, fm.e + 1.5) : lk.clone();
+        const off = cp.clone().sub(piv);
+        const flat = Math.hypot(off.x, off.z) * (orbit.zoom || 1);
+        const ang0 = Math.atan2(off.x, off.z) + (orbit.yaw || 0);
+        const el0 = Math.atan2(off.y, Math.hypot(off.x, off.z));
+        const el = clamp(el0 + (orbit.pitch || 0), -0.05, 1.35);
+        const r = Math.hypot(flat, off.y * (orbit.zoom || 1));
+        cp = new THREE.Vector3(piv.x + Math.sin(ang0) * Math.cos(el) * r, Math.max(piv.y - 1.2, piv.y + Math.sin(el) * r), piv.z + Math.cos(ang0) * Math.cos(el) * r);
+        // 回り込むほど、自分の馬を見る
+        const w = clamp(Math.abs(orbit.yaw || 0) / 0.7 + Math.abs(orbit.pitch || 0) / 0.8, 0, 1);
+        lk = lk.clone().lerp(piv, w);
       }
       setFov(base);
       if (!mem.cam || camMode === 'ride') {

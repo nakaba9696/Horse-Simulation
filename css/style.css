@@ -238,3 +238,5 @@ input[type=range] { accent-color: var(--gold); min-width: 0; }
 .ride-stage .ride-3d { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 10px; display: block; }
 .ride-stage .ride-canvas { position: relative; background: transparent; }
 .ride-stage .ride-3d + .ride-canvas { background: transparent; }
+.ride-stage .cam-btn { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); background: rgba(8,18,32,0.75); color: #fff; border: 1px solid #c9a43a; border-radius: 999px; padding: 4px 12px; font-size: 13px; z-index: 2; }
+.ride-stage { touch-action: none; }

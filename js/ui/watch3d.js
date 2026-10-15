@@ -37,6 +37,13 @@
         r3.resize(cv3.clientWidth || VW, cv3.clientHeight || VH, dpr);
       } catch (err) { console.warn(err); el.innerHTML = ''; return HS.RaceView.play(el, data, opts).then(resolve); }
       let speed = opts.speed || 1, cam = 'tv';
+      // 画面をドラッグでカメラを回す（2回タップで戻す）
+      const orbit = { yaw: 0, pitch: 0, zoom: 1 };
+      const stage = el.querySelector('.ride-stage');
+      let drag = null, lastTap = 0;
+      stage.addEventListener('pointerdown', ev => { const now = performance.now(); if (now - lastTap < 300) { orbit.yaw = 0; orbit.pitch = 0; lastTap = 0; return; } lastTap = now; drag = { x: ev.clientX, y: ev.clientY, id: ev.pointerId }; });
+      stage.addEventListener('pointermove', ev => { if (!drag || ev.pointerId !== drag.id) return; orbit.yaw -= (ev.clientX - drag.x) * 0.009; orbit.pitch = U.clamp(orbit.pitch + (ev.clientY - drag.y) * 0.006, -0.3, 1.2); drag.x = ev.clientX; drag.y = ev.clientY; });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => stage.addEventListener(n, () => { drag = null; }));
       el.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { speed = +b.dataset.sp; el.querySelectorAll('[data-sp]').forEach(x => x.classList.toggle('on', x === b)); if (opts.onSpeed) opts.onSpeed(speed); });
       el.querySelectorAll('[data-cam]').forEach(b => b.onclick = () => { cam = b.dataset.cam; el.querySelectorAll('[data-cam]').forEach(x => x.classList.toggle('on', x === b)); });
       const winT = results[0].time, tEnd = frames[frames.length - 1].t;
@@ -112,7 +119,7 @@
         const P = posAt(Math.max(0, T));
         const lead = Math.max(...P.map(p => p[0]));
         if (opts.onTick) opts.onTick(sim.D - lead, sim.D - lead < sim.straight, T > 0 && T < winT, T >= winT);
-        r3.render({ t: T, me: focus, phase: T < 0 ? 'gate' : T > winT ? 'finish' : 'race', horses: P.map(p => ({ x: p[0], lane: p[1], v: p[2] })) }, T < 0 ? 'gate' : cam);
+        r3.render({ t: T, me: focus, phase: T < 0 ? 'gate' : T > winT ? 'finish' : 'race', horses: P.map(p => ({ x: p[0], lane: p[1], v: p[2] })) }, T < 0 ? 'gate' : cam, orbit);
         hud(P);
         if (T > Math.min(tEnd, winT + 6) && !shownEnd) {
           shownEnd = true;

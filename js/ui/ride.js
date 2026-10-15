@@ -21,14 +21,14 @@
       el.innerHTML = `
         <div class="ride">
           <div class="ride-stage"><canvas class="ride-3d"></canvas><canvas class="ride-canvas"></canvas>
-            <div class="ride-msg"></div></div>
+            <div class="ride-msg"></div><button class="cam-btn" aria-label="視点を変える">🎥 視点</button></div>
           <div class="ride-pad">
             <div class="ride-lanes"><button class="rb lane" data-c="left" aria-label="内へ">◀<small>内へ</small></button><button class="rb lane" data-c="right" aria-label="外へ">▶<small>外へ</small></button></div>
             <button class="rb hold" data-c="hold">抑える<small>押している間</small></button>
             <button class="rb whip" data-c="whip">ムチ</button>
             <button class="rb push" data-c="push">追う<small>拍子に合わせて</small></button>
           </div>
-          <div class="ride-help small muted">ゲームパッド：A 追う・B ムチ・LB/RB 抑える・十字キー 進路　キーボード：Z 追う・X ムチ・Shift 抑える・←→ 進路</div>
+          <div class="ride-help small muted">ゲームパッド：A 追う・B ムチ・LB/RB 抑える・十字キー 進路・右スティック カメラ・Y 視点　キーボード：Z 追う・X ムチ・Shift 抑える・←→ 進路・Q/E カメラ・V 視点　画面をドラッグでカメラを回す（2回タップで戻す）</div>
         </div>`;
       const cv = el.querySelector('.ride-canvas');
       const narrow = (el.clientWidth || 960) < 600;
@@ -89,6 +89,31 @@
         else if (k === 'ArrowLeft') { doLane(-1); ev.preventDefault(); }
         else if (k === 'ArrowRight') { doLane(1); ev.preventDefault(); }
       };
+      // ---------- カメラの回転（3D のとき） ----------
+      const orbit = { yaw: 0, pitch: 0, zoom: 1 };
+      const VIEWS = [['後ろから', 0, 0, 1], ['横から', Math.PI / 2, 0.05, 1.1], ['前から', Math.PI, 0.1, 1.2], ['反対の横から', -Math.PI / 2, 0.05, 1.1], ['上から', 0, 0.95, 1.5]];
+      let viewI = 0;
+      const setView = i => { viewI = (i + VIEWS.length) % VIEWS.length; const v = VIEWS[viewI]; orbit.yaw = v[1]; orbit.pitch = v[2]; orbit.zoom = v[3]; say(v[0], ''); };
+      el.querySelector('.cam-btn').onclick = ev => { ev.stopPropagation(); setView(viewI + 1); };
+      const stage = el.querySelector('.ride-stage');
+      let drag = null, lastTap = 0;
+      stage.addEventListener('pointerdown', ev => {
+        if (ev.target.closest('.cam-btn')) return;
+        const now = performance.now();
+        if (now - lastTap < 300) { setView(0); lastTap = 0; return; }
+        lastTap = now; drag = { x: ev.clientX, y: ev.clientY, id: ev.pointerId };
+      });
+      stage.addEventListener('pointermove', ev => {
+        if (!drag || ev.pointerId !== drag.id) return;
+        orbit.yaw -= (ev.clientX - drag.x) * 0.009; orbit.pitch = U.clamp(orbit.pitch + (ev.clientY - drag.y) * 0.006, -0.3, 1.2);
+        drag.x = ev.clientX; drag.y = ev.clientY;
+      });
+      const endDrag = () => { drag = null; };
+      stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag); stage.addEventListener('pointerleave', endDrag);
+      let camRate = { yaw: 0, pitch: 0 };
+      const camKeys = { q: -1, Q: -1, e: 1, E: 1 };
+      window.addEventListener('keydown', RD._camKeyDown = ev => { if (camKeys[ev.key]) camRate.key = camKeys[ev.key]; else if (ev.key === 'v' || ev.key === 'V') setView(viewI + 1); else if (ev.key === 'r' || ev.key === 'R') setView(0); });
+      window.addEventListener('keyup', RD._camKeyUp = ev => { if (camKeys[ev.key]) camRate.key = 0; });
       const keyUp = ev => { if (ev.key === 'Shift' || ev.key === 'c' || ev.key === 'C') { holdKey = false; setHold(); } };
       window.addEventListener('keydown', keyDown); window.addEventListener('keyup', keyUp);
       const padPrev = {};
@@ -105,6 +130,11 @@
         if (edge('right', pressed(PAD.right) || ax > 0.6)) doLane(1);
         const h = pressed(PAD.hold);
         if (h !== holdPad) { holdPad = h; setHold(); }
+        // 右スティックでカメラ、Y で視点の切り替え、右スティックを押し込むと元に戻す
+        const rx = p.axes && p.axes[2] || 0, ry = p.axes && p.axes[3] || 0;
+        camRate.yaw = Math.abs(rx) > 0.15 ? rx : 0; camRate.pitch = Math.abs(ry) > 0.15 ? ry : 0;
+        if (edge('view', pressed([3]))) setView(viewI + 1);
+        if (edge('camreset', pressed([11]))) setView(0);
       };
 
       // ---------- 進める ----------
@@ -122,8 +152,11 @@
       function frame(ts) {
         if (done) return;
         if (last == null) last = ts;
-        const dt = Math.min(0.1, (ts - last) / 1000) * RD.speed; last = ts;
+        const realDt = Math.min(0.1, (ts - last) / 1000);
+        const dt = realDt * RD.speed; last = ts;
         pollPad();
+        orbit.yaw -= ((camRate.yaw || 0) + (camRate.key || 0)) * 2.2 * realDt;
+        orbit.pitch = U.clamp(orbit.pitch + (camRate.pitch || 0) * 1.4 * realDt, -0.3, 1.2);
         if (clock < 0) {
           const before = clock; clock += dt;
           if (before < 0 && clock >= 0) { if (AU) { AU.se('gate'); AU.raceStart(); } say('スタート！', 'go'); }
@@ -146,7 +179,7 @@
           track: sim.track, me: sim.me, horses: lerpView(k), phase: clock < 0 ? 'gate' : me.done ? 'finish' : 'race',
         };
         ctx.clearRect(0, 0, VW, VH);
-        if (r3) { view.horses.forEach((h, j) => { if (sim.st[j].me && sim.ctl) h.push = sim.ctl.push; }); r3.render(view, clock < 0 ? 'gate' : 'ride'); }
+        if (r3) { view.horses.forEach((h, j) => { if (sim.st[j].me && sim.ctl) h.push = sim.ctl.push; }); r3.render(view, clock < 0 ? 'gate' : 'ride', orbit); }
         else if (HS.RideCam) HS.RideCam.draw(ctx, VW, VH, view); else fallback(view);
         hud(view);
         if (sim.over && !result) {
@@ -162,6 +195,7 @@
         done = true;
         if (r3) { r3.dispose(); r3 = null; }
         window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp);
+        window.removeEventListener('keydown', RD._camKeyDown); window.removeEventListener('keyup', RD._camKeyUp);
         resolve(result);
       }
 
@@ -181,6 +215,7 @@
         ctx.font = '13px monospace'; ctx.textAlign = 'right'; ctx.fillText(clock > 0 ? U.time(Math.min(clock, me.done ? me.finishT : 999)) : '', 162, 64);
         // 右上：ミニマップ
         miniMap(view);
+        radar(view);
         // 左下：スタミナ・追いの強さ・ムチ
         const bx = 12, by = VH - 92;
         ctx.fillStyle = 'rgba(8,18,32,0.82)'; rr(bx, by, 230, 80, 8); ctx.fill();
@@ -217,6 +252,35 @@
           ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 6; ctx.strokeText(flash.text, VW / 2, VH * 0.38); ctx.fillText(flash.text, VW / 2, VH * 0.38);
           ctx.globalAlpha = 1;
         }
+      }
+      // 馬群レーダー：自分のまわり（前 30m・後ろ 15m）の馬の位置を上から。内ラチは回る向きの側
+      function radar(view) {
+        const w = 112, h = 150, bx = VW - w - 10, by = VH - h - 12;
+        const AHEAD = 30, BEHIND = 15, LANES = 9;
+        ctx.fillStyle = 'rgba(8,18,32,0.82)'; rr(bx, by, w, h, 8); ctx.fill();
+        ctx.strokeStyle = 'rgba(201,164,58,0.8)'; ctx.lineWidth = 1; ctx.stroke();
+        const inner = course.dir === '左' ? 'left' : 'right';
+        const laneX = l => inner === 'right' ? bx + w - 10 - l / LANES * (w - 20) : bx + 10 + l / LANES * (w - 20);
+        const relY = d => by + 14 + (AHEAD - d) / (AHEAD + BEHIND) * (h - 28);
+        // 内ラチと、自分の前後の目安の線
+        ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 2; ctx.beginPath(); const rx = laneX(-0.4); ctx.moveTo(rx, by + 8); ctx.lineTo(rx, by + h - 8); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+        for (const d of [20, 10, -10]) { const y = relY(d); ctx.beginPath(); ctx.moveTo(bx + 6, y); ctx.lineTo(bx + w - 6, y); ctx.stroke(); }
+        const meH = view.horses[view.me];
+        const c = sim.ctl;
+        view.horses.forEach((hh, j) => {
+          const d = hh.x - meH.x;
+          if (d > AHEAD || d < -BEHIND) return;
+          const x = laneX(hh.lane), y = relY(d);
+          const isMe = j === view.me;
+          const block = !isMe && d > 0 && d < 2.6 && Math.abs(hh.lane - meH.lane) < 0.85;
+          ctx.fillStyle = isMe ? '#ffd34d' : hh.cap;
+          ctx.fillRect(x - 4, y - 6, 8, 12);
+          ctx.strokeStyle = isMe ? '#000' : block ? '#ff4d4d' : 'rgba(0,0,0,0.6)'; ctx.lineWidth = isMe || block ? 2 : 1; ctx.strokeRect(x - 4, y - 6, 8, 12);
+        });
+        // 進もうとしている進路
+        if (c) { const tx = laneX(c.lane); ctx.strokeStyle = 'rgba(255,211,77,0.7)'; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(tx, relY(0) - 10); ctx.lineTo(tx, relY(AHEAD)); ctx.stroke(); ctx.setLineDash([]); }
+        ctx.fillStyle = '#c8d3e2'; ctx.font = '11px "Noto Sans JP", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('馬群レーダー', bx + w / 2, by + 2);
       }
       function miniMap(view) {
         const tr = sim.track; if (!tr) return;
