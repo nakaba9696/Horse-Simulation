@@ -431,8 +431,8 @@
     return `<h3>${UI.gradeTag(race)} ${e(race.short || race.name)}</h3>
       <div class="small muted">${G.year}年${race.month}月 ${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　馬場：${race.ground}　${runners.length}頭</div>
       <div class="tblwrap mt card-sheet"><table class="t"><tr><th>枠番</th><th></th><th>馬名</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th class="hide-sm">騎手</th><th>人気</th><th>単勝</th></tr>
-      ${rows.map(x => `<tr class="${x.mine ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td><td><canvas class="silks" width="52" height="52" data-art="silks" data-key="${e(x.horse.name)}" data-mine="${x.mine ? 1 : 0}"></canvas></td><td class="nm">${e(x.horse.name)} ${x.horse.hist ? '<span class="chip hist">史</span>' : ''}<div class="small muted">${x.horse.sire ? '父 ' + e(x.horse.sire) : x.horse.foreign ? '外国馬' : ''}<span class="show-sm">　${e(x.jockey ? x.jockey.name : '')}</span></div></td>
-        <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td><td class="small hide-sm">${e(x.jockey ? x.jockey.name : '')}</td><td class="num">${x.pop}</td><td class="num">${x.odds}</td></tr>`).join('')}
+      ${rows.map(x => `<tr class="${x.mine || x.rider === 'P' ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td><td><canvas class="silks" width="52" height="52" data-art="silks" data-key="${e(x.horse.name)}" data-mine="${x.mine ? 1 : 0}"></canvas></td><td class="nm">${e(x.horse.name)} ${x.horse.hist ? '<span class="chip hist">史</span>' : ''}<div class="small muted">${x.horse.sire ? '父 ' + e(x.horse.sire) : x.horse.foreign ? '外国馬' : ''}<span class="show-sm">　${e(x.jockey ? x.jockey.name : '')}</span></div></td>
+        <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td><td class="small hide-sm">${x.allowance && HS.Jockey ? HS.Jockey.allowanceMark(x.allowance) : ''}${e(x.jockey ? x.jockey.name : '')}</td><td class="num">${x.pop}</td><td class="num">${x.odds}</td></tr>`).join('')}
       </table></div>`;
   };
 

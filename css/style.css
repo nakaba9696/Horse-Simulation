@@ -206,3 +206,31 @@ input[type=range] { accent-color: var(--gold); min-width: 0; }
 .skillpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 4px 10px; }
 .skillpick .bad, .ed-table .sk .bad { color: #ff9a9a; }
 .horse-text { line-height: 1.8; font-size: 14px; }
+/* 騎乗の画面 */
+.ride { display: flex; flex-direction: column; gap: 8px; user-select: none; -webkit-user-select: none; touch-action: none; }
+.ride-stage { position: relative; }
+.ride-canvas { width: 100%; display: block; border-radius: 10px; background: #0c1a2c; }
+.ride-msg { position: absolute; left: 0; right: 0; top: 30%; display: flex; justify-content: center; gap: 8px; pointer-events: none; }
+.ride-msg span { background: rgba(8,18,32,0.82); color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.ride-msg span.bad { color: #ff9a7a; } .ride-msg span.good { color: #9ff0b8; }
+.ride-pad { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1.4fr; gap: 8px; align-items: stretch; }
+.ride-lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.rb { border: 2px solid #34507a; background: #13263f; color: #fff; border-radius: 12px; font-size: 18px; font-weight: 900; padding: 14px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 64px; touch-action: none; }
+.rb small { font-size: 10px; font-weight: 400; color: #9fb2c8; margin-top: 2px; }
+.rb.on { background: #2a4d7a; border-color: #ffd34d; }
+.rb.push { background: #1e5a3a; border-color: #3f9a64; }
+.rb.push.on { background: #2f8a58; }
+.rb.whip { background: #6a2a22; border-color: #b0503f; }
+.rb.whip.on { background: #9a3a2c; }
+.rb.hold { background: #2a3a5a; }
+.ride-pad .ride-close { grid-column: 1 / -1; }
+.ride-help { text-align: center; }
+@media (max-width: 600px) { .ride-help { display: none; } .rb { min-height: 72px; } }
+/* 騎手の画面 */
+.jcard { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
+.jcard .big { font-family: "Noto Serif JP", serif; font-size: 22px; font-weight: 900; color: var(--gold2); }
+.repbar { height: 10px; border-radius: 5px; background: #25384f; overflow: hidden; }
+.repbar > i { display: block; height: 100%; background: linear-gradient(90deg, #3d8bfd, #4cc27a 50%, #ffd34d 80%, #ff7a3d); }
+.offer .nums { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted); }
+.offer .nums b { color: var(--text); font-variant-numeric: tabular-nums; }
+.lead-me td { background: rgba(255, 211, 77, 0.12); }

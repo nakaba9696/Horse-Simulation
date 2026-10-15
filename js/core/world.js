@@ -72,7 +72,7 @@
       difficulty: opts.difficulty || 'normal',
       horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, edits,
       records: { g1: {}, graded: {}, awards: {}, pts: {}, player: { starts: 0, wins: 0, earn: 0, g1: [] } },
-      news: [], entries: {}, lastWeek: null, market: { gen: [], genMares: [], month: 0 },
+      news: [], entries: {}, rides: {}, mode: opts.mode === 'jockey' ? 'jockey' : 'owner', lastWeek: null, market: { gen: [], genMares: [], month: 0 },
       farmLevel: 1, stats: {}, settings: { animSpeed: 1, showHistNote: true },
     };
     rng = new U.RNG(seed);
@@ -81,6 +81,14 @@
     for (let b = G.year - 9; b < G.year; b++) for (const d of W.histByBorn.get(b) || []) {
       if ((d.retire || d.born + 5) < G.year && b < G.year - 2) continue;
       W.spawnHistoric(d, true);
+    }
+    // 騎手のゲーム：持ち馬は無く、騎乗依頼を受けて乗る
+    if (G.mode === 'jockey') {
+      G.jockey = HS.Jockey.init(Object.assign({}, opts, { year: G.year }));
+      G.player.money = Math.round(300 * U.priceIndex(G.year) / 10) * 10;
+      W.refreshMarket(true);
+      news(`${G.jockey.region}所属の新人騎手、${G.jockey.name}がデビューした。まずは今週の騎乗依頼を見てみよう。`, 'info');
+      return G;
     }
     // 最初の持ち馬：繁殖牝馬2頭・1歳と2歳を1頭ずつ
     for (let i = 0; i < 2; i++) { const m = W.makeGenMare(rng, 52 + rng.int(0, 10)); m.owner = 'P'; m.loc = 'mare'; G.horses[m.id] = m; }
@@ -364,94 +372,90 @@
   };
 
   // ---------- 週を進める ----------
-  W.advance = function () {
-    rng = new U.RNG(G.rngState);
+  // ---------- 週の流れ ----------
+  // 1. W.prepareWeek：今週のレースの出走表（出走馬・騎手・枠）を作る。G は変えない（同じ状態なら何度呼んでも同じ）
+  // 2. W.cards：プレイヤーの騎乗（G.rides）を当てた出走表と人気
+  // 3. W.finishWeek：レースを走らせ（騎乗したレースは played の結果を使う）、結果・調教・暦を進める
+  W.prepareWeek = function () {
+    const key = `${G.year}-${G.month}-${G.week}:${G.rngState}`;
+    if (W._week && W._week.key === key) return W._week;
+    const r = new U.RNG(G.rngState);
     const wIdx = W.wIdx();
-    const report = { date: W.dateLabel(G.year, G.month, G.week), y: G.year, m: G.month, w: G.week, races: [], events: [] };
     const races = W.weekRaces();
-    // 1. 出走馬を集める
+    // 出走馬を集める
     const field = {};
     for (const [k, arr] of Object.entries(G.entries)) {
       const race = W.raceByKey(k); if (!race) continue;
-      field[k] = arr.map(e => ({ horse: G.horses[e.horseId], jockey: W.jockey(e.jockey), mine: true })).filter(x => x.horse && x.horse.loc === 'stable' && !x.horse.injury);
+      field[k] = arr.map(e => ({ horse: G.horses[e.horseId], jockeyName: e.jockey, mine: true })).filter(x => x.horse && x.horse.loc === 'stable' && !x.horse.injury);
     }
     const aiHorses = W.all().filter(h => h.owner !== 'P' && h.loc === 'stable');
     for (const h of aiHorses) {
-      const rc = W.aiChoose(h, races, wIdx, rng);
+      const rc = W.aiChoose(h, races, wIdx, r);
       if (!rc) continue;
-      (field[rc.key] = field[rc.key] || []).push({ horse: h, jockey: null });
+      (field[rc.key] = field[rc.key] || []).push({ horse: h });
     }
     // プレイヤーの「おまかせ」の馬
     for (const h of W.mine('stable')) {
       if (!h.auto || W.entryOf(h.id) || h.injury) continue;
-      const rc = W.aiChoose(h, races, wIdx, rng);
-      if (rc && rc.region !== '海外') (field[rc.key] = field[rc.key] || []).push({ horse: h, jockey: W.jockey(W.bestFreeJockey(rc.key, h.id)), mine: true, auto: true });
+      const rc = W.aiChoose(h, races, wIdx, r);
+      if (rc && rc.region !== '海外') (field[rc.key] = field[rc.key] || []).push({ horse: h, jockeyName: W.bestFreeJockey(rc.key, h.id), mine: true, auto: true });
     }
-    // 2. レースを走らせる（G1 は出走が無くても実施）
+    // レースごとの出走表（G1 は出走が無くても実施）。レースごとに乱数の種を分ける
+    const cards = [];
     for (const race of races) {
       const entr = field[race.key] || [];
       if (!entr.length && !(race.graded && race.grade === 'G1')) continue;
-      const res = W.runRace(race, entr, wIdx);
-      if (res) report.races.push(res);
+      const seed = r.int(1, 2147483646);
+      const card = W.buildField(race, entr, wIdx, new U.RNG(seed));
+      if (card) { card.seed = seed; cards.push(card); }
     }
-    G.entries = {};
-    // 3. 調教と回復
-    W.weeklyCare(wIdx, report);
-    // 4. 暦を進める
-    W.nextWeek(report);
-    G.rngState = Math.floor(rng.next() * 4294967296);
-    G.lastWeek = { date: report.date, races: report.races.map(r => W.slimResult(r)) };
-    return report;
+    W._week = { key, wIdx, cards, finSeed: r.int(1, 2147483646), cardsKey: null, cardsOut: null };
+    return W._week;
   };
 
-  // 1レースを行う
-  W.runRace = function (race, entr, wIdx) {
+  // 出走表を作る（頭数合わせ・騎手・枠）。r はこのレースの乱数
+  W.buildField = function (race, entr, wIdx, r) {
     const year = G.year;
     // 出走取消・重複の整理
     const seen = new Set();
     entr = entr.filter(e => e.horse && !seen.has(e.horse.id) && seen.add(e.horse.id));
     // 地方：JRA 所属は7頭まで
     const max = R.maxField(race);
-    entr.sort((a, b) => R.priority(b.horse, race, year, rng) - R.priority(a.horse, race, year, rng));
+    entr.sort((a, b) => R.priority(b.horse, race, year, r) - R.priority(a.horse, race, year, r));
     const limit = race.region === '地方' ? Math.min(max, 7) : max;
-    const excluded = entr.slice(limit);
+    const excluded = entr.slice(limit).filter(e => e.mine).map(e => e.horse.id);
     entr = entr.slice(0, limit);
-    for (const e of excluded) if (e.mine) news(`${e.horse.name}は${R.label(race)}を除外された（賞金が足りない）。`, 'warn');
     if (!entr.length && !(race.graded && race.grade === 'G1')) return null;
     // 頭数をそろえる
     const lvl = W.fillerLevel(race, year);
-    const want = race.graded ? Math.max(entr.length, Math.min(max, rng.int(max - 4, max))) : Math.max(entr.length, rng.int(Math.min(10, max), max));
-    const used = W.usedNames();
-    const runners = entr.map(e => ({ horse: e.horse, jockey: e.jockey, mine: !!e.mine }));
-    const ageOf = race.age === '2' ? 2 : race.age === '3' ? 3 : 3 + rng.int(0, 3);
+    const want = race.graded ? Math.max(entr.length, Math.min(max, r.int(max - 4, max))) : Math.max(entr.length, r.int(Math.min(10, max), max));
+    const used = new Set(W.usedNames());
+    const runners = entr.map(e => ({ horse: e.horse, jockey: e.jockeyName ? W.jockey(e.jockeyName) : null, mine: !!e.mine }));
     while (runners.length < want) {
-      const born = year - (race.age === '2' ? 2 : race.age === '3' ? 3 : 3 + rng.int(0, 3));
-      const foreign = race.region === '海外' && rng.chance(0.85);
-      const sire = W.pickSire(rng, born - 1);
-      const f = H.makeFiller(rng, { level: lvl + rng.normal(0, 1.5), surface: race.surface, dist: race.dist, born, sex: race.sex === '牝' ? '牝' : undefined, foreign, sireName: foreign ? null : sire && sire.name });
-      f.name = H.makeName(rng, used, foreign);
+      const born = year - (race.age === '2' ? 2 : race.age === '3' ? 3 : 3 + r.int(0, 3));
+      const foreign = race.region === '海外' && r.chance(0.85);
+      const sire = W.pickSire(r, born - 1);
+      const f = H.makeFiller(r, { level: lvl + r.normal(0, 1.5), surface: race.surface, dist: race.dist, born, sex: race.sex === '牝' ? '牝' : undefined, foreign, sireName: foreign ? null : sire && sire.name });
+      f.name = H.makeName(r, used, foreign);
       f.local = race.region === '地方' && !foreign;
       runners.push({ horse: f, jockey: null });
     }
-    void ageOf;
     // 騎手：プレイヤーの指名 → 史実馬の主戦 → 残りを強い馬から
     const taken = new Set(runners.filter(x => x.jockey).map(x => x.jockey.name));
     for (const x of runners) {
       if (x.jockey || !x.horse.hist) continue;
       const nm = W.histJockey(x.horse, year);
       if (!nm || taken.has(nm)) continue;
-      const jj = W.jockey(nm);
       if (!(HS.DATA.jockeys || []).some(j => j.name === nm && j.from <= year && year <= (j.to || 9999))) continue;
-      x.jockey = jj; taken.add(nm);
+      x.jockey = W.jockey(nm); taken.add(nm);
     }
     const pools = { JRA: W.jockeysOf(year, W.JRA), foreign: W.jockeysOf(year, ['外国']), local: W.jockeysOf(year, ['地方']) };
     for (const k of Object.keys(pools)) pools[k] = pools[k].filter(j => !taken.has(j.name));
     const take = (pool, strong) => {
       if (!pool.length) return { name: '騎手未定', skill: 60 };
       // 強い馬ほど上位の騎手に乗ってもらいやすい
-      const k = strong ? Math.min(pool.length - 1, rng.int(0, 3)) : rng.int(0, pool.length - 1);
-      const j = pool.splice(k, 1)[0];
-      return j;
+      const k = strong ? Math.min(pool.length - 1, r.int(0, 3)) : r.int(0, pool.length - 1);
+      return pool.splice(k, 1)[0];
     };
     const byPower = runners.filter(x => !x.jockey).sort((a, b) => H.overall(H.cur(b.horse, wIdx)) - H.overall(H.cur(a.horse, wIdx)));
     byPower.forEach((x, i) => {
@@ -461,19 +465,68 @@
       else x.jockey = take(pools.JRA.length ? pools.JRA : pools.foreign, strong);
     });
     // 枠順
-    rng.shuffle(runners);
+    r.shuffle(runners);
     const n = runners.length;
     runners.forEach((x, i) => { x.num = i + 1; x.frame = W.frameOf(i + 1, n); x.weight = S.weightFor(x.horse, race, year); });
-    // 人気
-    W.setOdds(runners, race, wIdx);
-    // 遠征
-    for (const x of runners) if (x.mine && race.region === '海外') { const c = W.travelCost(race); G.player.money -= c; news(`${x.horse.name}の${R.label(race)}遠征費 ${U.money(c)}`, 'money'); x.horse.fatigue = Math.min(100, (x.horse.fatigue || 0) + 10); }
-    const hasMine = runners.some(x => x.mine);
-    const watch = hasMine || race.grade === 'G1';
-    const sim = S.run(race, runners, wIdx, rng, { frames: watch });
-    W.applyResults(race, sim, runners, wIdx);
-    return { race, sim, runners, hasMine, watch };
+    return { race, runners, excluded };
   };
+
+  // プレイヤーの騎乗を当てた出走表（人気つき）。騎乗が変わるまで使い回す
+  W.cards = function () {
+    const wk = W.prepareWeek();
+    const rides = G.rides || {};
+    const rk = JSON.stringify(rides);
+    if (wk.cardsKey === rk && wk.cardsOut) return wk.cardsOut;
+    const out = wk.cards.map(c => {
+      const runners = c.runners.map(x => Object.assign({}, x));
+      const hid = rides[c.race.key];
+      const me = hid ? runners.find(x => x.horse.id === hid) : null;
+      if (me && HS.Jockey) { me.jockey = HS.Jockey.playerJockey(); me.rider = 'P'; me.allowance = HS.Jockey.allowance(c.race); me.weight = me.weight - me.allowance; }
+      W.setOdds(runners, c.race, wk.wIdx, new U.RNG(c.seed ^ 0x2545f491));
+      return Object.assign({}, c, { runners, ride: !!me });
+    });
+    wk.cardsKey = rk; wk.cardsOut = out;
+    return out;
+  };
+  W.cardOf = key => W.cards().find(c => c.race.key === key);
+  // レースの模擬を始める（騎乗するときは ride: true）。乱数はレースごとの種から
+  W.startSim = (card, opts) => S.create(card.race, card.runners, W.prepareWeek().wIdx, new U.RNG(card.seed), Object.assign({ frames: true }, opts || {}));
+
+  // played：{ raceKey: S.finish の結果 }（プレイヤーが乗ったレース）
+  W.finishWeek = function (played) {
+    played = played || {};
+    const wk = W.prepareWeek();
+    const cards = W.cards();
+    const wIdx = wk.wIdx;
+    rng = new U.RNG(wk.finSeed);
+    const report = { date: W.dateLabel(G.year, G.month, G.week), y: G.year, m: G.month, w: G.week, races: [], events: [] };
+    for (const card of cards) {
+      const { race, runners } = card;
+      for (const id of card.excluded) { const h = G.horses[id]; if (h) news(`${h.name}は${R.label(race)}を除外された（賞金が足りない）。`, 'warn'); }
+      // 遠征
+      for (const x of runners) if (x.mine && race.region === '海外') { const c = W.travelCost(race); G.player.money -= c; news(`${x.horse.name}の${R.label(race)}遠征費 ${U.money(c)}`, 'money'); x.horse.fatigue = Math.min(100, (x.horse.fatigue || 0) + 10); }
+      const hasMine = runners.some(x => x.mine) || card.ride;
+      const watch = hasMine || race.grade === 'G1';
+      const sim = played[race.key] || S.run(race, runners, wIdx, new U.RNG(card.seed), { frames: watch });
+      if (HS.Jockey) HS.Jockey.record(race, sim, runners);
+      W.applyResults(race, sim, runners, wIdx);
+      report.races.push({ race, sim, runners, hasMine, watch, ridden: !!played[race.key], ride: card.ride });
+    }
+    G.entries = {}; G.rides = {};
+    if (HS.Jockey) HS.Jockey.weekly();
+    // 調教と回復
+    W.weeklyCare(wIdx, report);
+    // 暦を進める
+    const y0 = G.year;
+    W.nextWeek(report);
+    if (HS.Jockey && G.year !== y0) HS.Jockey.yearEnd(y0);
+    G.rngState = Math.floor(rng.next() * 4294967296);
+    G.lastWeek = { date: report.date, races: report.races.map(r => W.slimResult(r)) };
+    W._week = null;
+    return report;
+  };
+  // 騎乗せずに1週進める（馬主のゲームと、テスト）
+  W.advance = () => W.finishWeek({});
 
   W.frameOf = function (num, n) {
     if (n <= 8) return num;
@@ -488,8 +541,9 @@
     return 8;
   };
 
-  W.setOdds = function (runners, race, wIdx) {
-    const est = runners.map(x => S.power(x.horse, race, wIdx, x).total + rng.normal(0, 1.8) + (x.horse.hist && x.horse.gradedWins.length ? 1.5 : 0));
+  W.setOdds = function (runners, race, wIdx, r) {
+    r = r || rng;
+    const est = runners.map(x => S.power(x.horse, race, wIdx, x).total + r.normal(0, 1.8) + (x.horse.hist && x.horse.gradedWins.length ? 1.5 : 0));
     const ex = est.map(e => Math.exp(0.22 * (e - Math.max(...est))));
     const tot = U.sum(ex);
     const ps = ex.map(e => e / tot);
@@ -499,6 +553,8 @@
   };
 
   // 結果を記録に反映する
+  // 着順ごとの賞金（万円）
+  W.racePrize = (race, pos) => Math.round((race.prize || 500) * ([1, 0.4, 0.25, 0.15, 0.1][pos - 1] || 0));
   W.applyResults = function (race, sim, runners, wIdx) {
     const year = G.year;
     const pr = race.prize || 500;
@@ -506,7 +562,7 @@
     for (const res of sim.results) {
       const h = res.horse;
       const x = runners.find(r => r.horse === h);
-      res.odds = x.odds; res.pop = x.pop; res.mine = !!x.mine;
+      res.odds = x.odds; res.pop = x.pop; res.mine = !!(x.mine || x.rider === 'P');
       if (h.filler) {
         // 重賞を勝った・G1で3着以内の「その場限りの馬」は名を残して走り続ける
         if (race.graded && (res.pos === 1 || (race.grade === 'G1' && res.pos <= 3)) && race.region === 'JRA') W.promote(h, race, res, wIdx);
@@ -633,6 +689,7 @@
   };
 
   W.monthlyCost = function () {
+    if (G.mode === 'jockey') return 0;
     let c = 0;
     for (const h of W.mine()) {
       if (h.loc === 'stable') c += 60;
@@ -992,7 +1049,7 @@
     g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
-    g.erased = g.erased || []; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
+    g.erased = g.erased || []; g.rides = g.rides || {}; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
     for (const h of Object.values(g.horses)) {
       h.bonus = h.bonus || {}; h.results = h.results || []; h.gradedWins = h.gradedWins || []; h.coat = h.coat || '鹿毛';
       // 能力の形が変わる前のセーブ（瞬発力・パワー・賢さ・気性 → 気性・坂・脚の切れ）

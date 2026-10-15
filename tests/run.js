@@ -311,6 +311,48 @@ check('sim: 特殊能力の効き目が極端でない', () => {
   return out.join(' ');
 });
 
+// ---------- 騎手のゲーム ----------
+check('jockey: 騎乗依頼を受けて乗り、成績と評判とリーディングが付く', () => {
+  const J = HS.Jockey, S = HS.Sim;
+  W.newGame({ year: 2000, seed: 77, mode: 'jockey', jockeyName: 'テスト騎手', region: '栗東' });
+  const G = W.get();
+  assert(G.mode === 'jockey' && G.jockey && W.mine().length === 0, '騎手のゲームになっていない');
+  let ridden = 0, offersSeen = 0;
+  const weeks = QUICK ? 30 : 60;
+  for (let i = 0; i < weeks; i++) {
+    const offers = J.offers();
+    offersSeen += offers.length;
+    assert(JSON.stringify(J.offers()) === JSON.stringify(offers), '依頼が呼ぶたびに変わる');
+    for (const o of offers) if (!G.rides[o.raceKey]) assert(!J.accept(o.raceKey, o.horseId), '依頼を受けられない');
+    // 1レースは操作して乗る（決まった乗り方の手）
+    const played = {};
+    const mine = J.myRides();
+    if (mine.length) {
+      const { card } = mine[0];
+      const sim = W.startSim(card, { ride: true });
+      let next = 0;
+      while (!S.step(sim)) {
+        const s = sim.st[sim.me], R = sim.D - s.x;
+        if (!sim.ctl.started) S.ctl.push(sim);
+        S.ctl.hold(sim, R > sim.straight + 450);
+        if (R < sim.straight + 350 && sim.t >= next) { S.ctl.push(sim); next = sim.t + S.strideOf(s.v); }
+        if (sim.ctl.blockedNow && sim.ctl.lane < 4) S.ctl.lane(sim, 1);
+      }
+      played[card.race.key] = S.finish(sim);
+    }
+    ridden += mine.length;
+    W.finishWeek(played);
+  }
+  const j = G.jockey;
+  assert(offersSeen > 0 && ridden > 0, `依頼 ${offersSeen}・騎乗 ${ridden}`);
+  assert(j.total.rides === ridden, `騎乗数が合わない ${j.total.rides} / ${ridden}`);
+  const lead = J.leading(2000);
+  assert(lead.length > 50 && lead.some(x => x.me), 'リーディングの表が無い');
+  const s1 = W.serialize(); W.load(s1); const s2 = W.serialize();
+  assert(s1 === s2, 'セーブの往復で中身が変わる');
+  return `${weeks}週で依頼 ${offersSeen}・騎乗 ${ridden}・${j.total.wins}勝・評判 ${j.rep.toFixed(0)}・リーディング ${J.myRank(2000)}位`;
+});
+
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
 process.exit(failures ? 1 : 0);
