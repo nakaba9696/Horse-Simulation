@@ -71,9 +71,9 @@
       },
       difficulty: opts.difficulty || 'normal',
       horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, edits,
-      records: { g1: {}, graded: {}, awards: {}, pts: {}, course: {}, player: { starts: 0, wins: 0, earn: 0, g1: [] } },
+      records: { g1: {}, graded: {}, awards: {}, pts: {}, course: {}, hall: [], player: { starts: 0, wins: 0, earn: 0, g1: [] } },
       news: [], entries: {}, rides: {}, mode: opts.mode === 'jockey' ? 'jockey' : 'owner', lastWeek: null, market: { gen: [], genMares: [], month: 0 },
-      farmLevel: 1, stats: {}, settings: { animSpeed: 1, showHistNote: true },
+      farmLevel: 1, stats: {}, settings: { animSpeed: 1, showHistNote: true }, broke: 0, gameOver: null,
     };
     rng = new U.RNG(seed);
     P.build(G.pedExtra);
@@ -593,7 +593,7 @@
       h.prize = (h.prize || 0) + money;
       if (res.pos === 1) h.earn = (h.earn || 0) + pr;
       if (res.pos === 2 && race.graded) h.earn = (h.earn || 0) + Math.round(pr * 0.4);
-      if (race.graded && res.pos === 1) h.gradedWins.push({ y: year, race: race.name, short: race.short, grade: race.grade, region: race.region });
+      if (race.graded && res.pos === 1) { h.gradedWins.push({ y: year, race: race.name, short: race.short, grade: race.grade, region: race.region }); if (h.owner === 'P' && HS.Season) HS.Season.onWin(h, race, year); }
       if (race.trialFor && res.pos <= (race.trialTop || 2)) { h.rights = h.rights || {}; h.rights[race.trialFor] = year; }
       h.results.push({ y: year, m: race.month, w: race.week, race: race.short || race.name, grade: R.gradeBadge(race), course: race.course, surface: race.surface, dist: race.dist, ground: race.ground, pos: res.pos, n: sim.results.length, time: Math.round(res.time * 10) / 10, margin: res.margin, last3f: res.last3f ? Math.round(res.last3f * 10) / 10 : null, jockey: res.jockey && res.jockey.name, pop: res.pop });
       // AI の馬は最近の成績だけ残す（セーブを小さく）
@@ -719,7 +719,8 @@
     const c = W.monthlyCost();
     G.player.money -= c;
     report.events.push(`今月の経費 ${U.money(c)}（預託料・牧場の維持費）`);
-    if (G.player.money < 0) news(`資金がマイナスです（${U.money(G.player.money)}）。馬を売るなどして立て直そう。`, 'warn');
+    if (G.mode === 'jockey' && HS.Season) HS.Season.monthEnd();
+    else if (G.player.money < 0) news(`資金がマイナスです（${U.money(G.player.money)}）。馬を売るなどして立て直そう。`, 'warn');
   };
   W.monthStart = function (report) {
     // 3月1週：出産
@@ -975,6 +976,7 @@
     const n = item.kind === 'hmare' || item.kind === 'gmare' ? W.mine('mare').length : 0;
     if ((item.kind === 'hmare' || item.kind === 'gmare') && n >= W.farmCap()) return '繁殖牝馬の枠がいっぱい（牧場を拡張しよう）';
     if (G.player.money < item.price) return '資金が足りない';
+    if (G.mode === 'jockey' && HS.Season && !HS.Season.canBuy()) return `お手馬は${HS.Season.MAX_OWN}頭まで`;
     if (item.kind === 'hist') {
       const h = G.horses[item.horse.id];
       if (!h || h.owner === 'P') return '売り切れ';
@@ -1062,10 +1064,10 @@
   // 古いセーブを今の形にそろえる
   W.migrate = function (g) {
     g.settings = Object.assign({ animSpeed: 1, showHistNote: true }, g.settings || {});
-    g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, course: {}, player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
+    g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, course: {}, hall: [], player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
-    g.erased = g.erased || []; g.rides = g.rides || {}; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
+    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
     for (const h of Object.values(g.horses)) {
       h.bonus = h.bonus || {}; h.results = h.results || []; h.gradedWins = h.gradedWins || []; h.coat = h.coat || '鹿毛';
       // 能力の形が変わる前のセーブ（瞬発力・パワー・賢さ・気性 → 気性・坂・脚の切れ）

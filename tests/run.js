@@ -390,6 +390,33 @@ check('ride: しごく・引くの段は手を止めても保たれ、追い通�
   return `平均着順 直線でしごく ${late.toFixed(1)}・追い通す ${all.toFixed(1)}・何もしない ${none.toFixed(1)}`;
 });
 
+check('season: お手馬10頭まで・資金切れで終わり・冠・調子の8段階・フリーハンデ', () => {
+  const T = HS.Season;
+  W.newGame({ year: 2003, seed: 5, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get();
+  G.player.money = 1e9;
+  const market = W.marketHistoric().sort((a, b) => a.price - b.price);
+  let bought = 0, refused = null;
+  for (const it of market) { const r = W.buy(it); if (!r) bought++; else if (/頭まで/.test(r)) { refused = r; break; } }
+  assert(bought === T.MAX_OWN && refused, `買えた数 ${bought}・断り ${refused}`);
+  // 資金切れ：マイナスの月末が2回続くと終わり
+  G.player.money = -1; T.monthEnd(); assert(!G.gameOver && G.broke === 1, '1か月目で終わった');
+  T.monthEnd(); assert(G.gameOver, '2か月続いても終わらない');
+  // 冠
+  const h = { gradedWins: [{ y: 2005, short: '皐月賞', grade: 'G1' }, { y: 2005, short: '日本ダービー', grade: 'G1' }, { y: 2005, short: '菊花賞', grade: 'G1' }, { y: 2006, short: '宝塚記念', grade: 'G1' }, { y: 2006, short: '有馬記念', grade: 'G1' }] };
+  const tl = T.titles(h).map(t => t.label);
+  assert(tl.includes('三冠') && tl.includes('グランプリ制覇') && !tl.includes('二冠') && tl.includes('G1五勝'), tl.join('・'));
+  // 調子とフリーハンデ
+  const x = W.mine()[0];
+  x.fatigue = 70; assert(T.condLevel(x, W.wIdx()) === 7, '使いすぎにならない');
+  x.fatigue = 0; x.cond = 30; x.lastRaceW = W.wIdx() - 3; assert(T.condLevel(x, W.wIdx()) === 2, '絶好調にならない');
+  x.lastRaceW = W.wIdx() - 30; assert(T.condLevel(x, W.wIdx()) === 0, '休みすぎにならない');
+  const fh = T.fhBoth(x, W.wIdx());
+  assert(fh.turf >= 30 && fh.turf <= 70 && fh.dirt >= 30 && fh.dirt <= 70, JSON.stringify(fh));
+  const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
+  return `冠 ${tl.join('・')}・フリーハンデ 芝${fh.turf} ダ${fh.dirt}`;
+});
+
 // ---------- 騎手のゲーム ----------
 check('jockey: 史実馬を買って自分で乗り、成績と賞金とリーディングが付く', () => {
   const J = HS.Jockey, S = HS.Sim;

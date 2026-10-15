@@ -272,8 +272,44 @@ html[data-theme="green"] .panel { border: 2px solid #2f7a4c; box-shadow: inset 0
 html[data-theme="green"] .panel.gold { border-color: var(--gold); }
 html[data-theme="green"] .hinfo { background: linear-gradient(180deg, #1c5a37, #123323); border: 2px solid var(--gold); }
 html[data-theme="green"] h2.sec { color: var(--gold2); text-shadow: 0 1px 0 #3a2a00, 0 0 6px rgba(245,215,124,.25); }
-html[data-theme="green"] .tabs button, html[data-theme="green"] .rv-speed button, html[data-theme="green"] .rv-skip { background: #12301f; }
+html[data-theme="green"] .tabs button:not(.on), html[data-theme="green"] .rv-speed button, html[data-theme="green"] .rv-skip { background: #12301f; }
 html[data-theme="green"] .modal { background: linear-gradient(180deg, #1a4a30, #0f2b1c); border-width: 2px; }
 html[data-theme="green"] .toast { background: #0a1f14; }
 html[data-theme="green"] .field input, html[data-theme="green"] .field select, html[data-theme="green"] textarea, html[data-theme="green"] .filters select, html[data-theme="green"] .row > select { background: #0a2216; }
 html[data-theme="green"] .ride-canvas, html[data-theme="green"] .course-svg { background: #0a2216; }
+
+/* ---------- 管理画面（騎手のゲームのホーム） ---------- */
+.mgr { border: 3px solid var(--gold); border-radius: 12px; background: linear-gradient(180deg, #1c5a37, #0f2b1c); box-shadow: inset 0 0 0 2px #0a2216, var(--shadow); overflow: hidden; }
+html[data-theme="navy"] .mgr { background: linear-gradient(180deg, #1d3a63, #10223a); box-shadow: inset 0 0 0 2px #0b1726, var(--shadow); }
+.mgr-top { display: grid; grid-template-columns: 1.6fr 1fr 1.2fr; gap: 8px; padding: 10px 12px; background: linear-gradient(180deg, #2a5fae, #1b3f7a); color: #fff; border-bottom: 2px solid var(--gold); }
+.mgr-top .small { color: #cfe0ff; font-size: 11px; }
+.mgr-top b { font-size: 17px; } .mgr-top .nm { font-family: "Noto Serif JP", serif; font-size: 20px; }
+.mgr-top .c { text-align: center; } .mgr-top .r { text-align: right; } .mgr-top b.neg { color: #ff9a9a; }
+.mgr-mid { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 12px; }
+.mgr .plaque { padding: 6px 14px; border-radius: 8px; background: linear-gradient(180deg, #f6e7b8, #d9b75a); color: #2b1d05; text-align: center; box-shadow: 0 3px 0 #7a5a10; }
+.mgr .plaque .y { font-size: 12px; font-weight: 700; } .mgr .plaque .mw { font-family: "Noto Serif JP", serif; font-weight: 900; font-size: 24px; line-height: 1.1; } .mgr .plaque small { font-size: 13px; }
+.mgr .wx { display: flex; align-items: center; gap: 8px; color: #fff; } .mgr .wx .ic { font-size: 30px; } .mgr .wx .small { color: var(--muted); }
+.mgr .go { border: 2px solid #f5d77c; border-radius: 10px; padding: 10px 18px; font-size: 18px; font-weight: 900; color: #fff; background: linear-gradient(180deg, #2f7a4c, #1a4a2e); cursor: pointer; min-width: 120px; }
+.mgr .go small { display: block; font-size: 11px; font-weight: 700; }
+.mgr .go.on { background: linear-gradient(180deg, #e0443a, #a5221a); animation: goblink 1.1s ease-in-out infinite; }
+.mgr .go:disabled { opacity: .5; animation: none; }
+@keyframes goblink { 50% { box-shadow: 0 0 0 4px rgba(255,120,100,.45); } }
+.mgr-cmds { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 0 12px 12px; }
+.mgr-cmds button { border: 2px solid #3f8a5c; border-radius: 10px; background: linear-gradient(180deg, #e9d79a, #c8a64a); color: #2b1d05; padding: 8px 2px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; box-shadow: 0 3px 0 #6b5212; }
+.mgr-cmds button:active { transform: translateY(2px); box-shadow: 0 1px 0 #6b5212; }
+.mgr-cmds .ic { font-size: 24px; } .mgr-cmds b { font-size: 14px; } .mgr-cmds small { font-size: 10px; color: #5a4210; }
+.mgr-foot { margin: 0 12px 10px; padding: 4px 12px; border-radius: 999px; background: #2f7a4c; color: #fff; text-align: center; }
+.panel.over { border: 2px solid #e0443a; } .panel.over .big { font-size: 22px; font-weight: 900; color: #ff8a7a; }
+@media (max-width: 600px) { .mgr-cmds { grid-template-columns: repeat(3, 1fr); } .mgr-mid { grid-template-columns: auto 1fr; } .mgr .go { grid-column: 1 / -1; } .mgr-top { grid-template-columns: 1fr 1fr; } .mgr-top .c { text-align: right; } .mgr-top .r { grid-column: 1 / -1; text-align: left; } }
+/* 調子の8色・冠・フリーハンデ・成長の山 */
+.cmark { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; }
+.cmark i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px rgba(255,255,255,.25); }
+.chip.crown { background: linear-gradient(90deg, #8a6a10, #d9b24a); color: #fff; margin: 0 4px 4px 0; }
+.panel.gr .grrow { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end; }
+.fh span { display: inline-block; padding: 1px 8px; border-radius: 4px; margin-right: 4px; color: #fff; }
+.fh .turf { background: #2f8a7a; } .fh .dirt { background: #a77a2c; }
+.gbars { display: flex; gap: 4px; align-items: flex-end; height: 54px; }
+.gbar { width: 20px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; font-size: 10px; color: var(--muted); }
+.gbar i { width: 100%; background: linear-gradient(180deg, #7fe0a0, #2f7a4c); border-radius: 3px 3px 0 0; }
+.gbar.now i { background: linear-gradient(180deg, #ffe08a, #d39a1c); } .gbar.now span { color: var(--gold2); font-weight: 700; }
+html[data-theme="green"] .apt > div { background: #0e2a1a; border: 1px solid #245c3a; }

@@ -33,7 +33,9 @@
     const surfPen = 0; // 芝・ダートの違いは能力（芝スピードなど）に入っている
     const gl = { '良': 0, '稍重': 1, '重': 2, '不良': 3 }[race.ground] || 0;
     const groundAdj = gl * ((horse.apt.heavy || 50) - 55) / 45 * 1.3;
-    const condAdj = (horse.cond || 0) / 100 * 3 - (horse.fatigue || 0) * 0.05;
+    // 休み明け（12週以上あいた）は少し割り引く（鉄砲駆けの馬は別に足す）
+    const layoff = horse.lastRaceW != null && wIdx != null && wIdx - horse.lastRaceW >= 12 ? 1.2 : 0;
+    const condAdj = (horse.cond || 0) / 100 * 3 - (horse.fatigue || 0) * 0.05 - layoff;
     const jockAdj = ctx && ctx.jockey ? (ctx.jockey.skill - 75) * 0.06 : 0;
     const wtAdj = ctx && ctx.weight ? -(ctx.weight - 56) * 1.4 : 0;
     const skillAdj = S.skillAdj(horse, race, wIdx, ctx);

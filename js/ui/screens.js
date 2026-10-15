@@ -185,6 +185,7 @@
     const growthWord = h.growth;
     const peakNote = (() => { const g = H.growthFactor(h, wIdx); if (g >= 0.995) return 'いまが充実期'; const age = H.ageAt(h, wIdx); const p = H.PEAK[h.growth] || H.PEAK['普通']; return age < p[0] ? 'まだ成長途上' : '衰えが見え始めた'; })();
     return `
+      ${known && UI.grPanel ? UI.grPanel(h, wIdx) : ''}
       ${h.loc === 'stable' && mine ? `<div class="comment mt">${e(H.comment(h, wIdx))}</div>` : ''}
       <h2 class="sec">能力<span class="r">${known ? 'いまの値' : ''}</span></h2>
       <div class="panel"><div class="stats">${stats}</div></div>
