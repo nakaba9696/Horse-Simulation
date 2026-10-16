@@ -10,22 +10,26 @@
   // ---------- 顔の絵（画像ファイルは使わず SVG で描く。髪型・髪の色・目・服を馬主ごとに） ----------
   // mood：normal・smile・happy・sad
   let fid = 0;
-  // 持ち主が作った顔の絵（assets/owners_<id>.js。HS.ASSETS['owner_<id>_<表情>']）。x・y は顔の中心（絵の幅・高さに対する％）、w は丸い枠に入れる幅（％）
-  const PHOTO_POS = { takenouchi: [48, 14], saginomiya: [52, 23], makino: [50, 19], kirishima: [48, 17], sengoku: [51, 15], hanabusa: [47, 19], takarada: [53, 17] };
-  const PHOTO_MOOD = { normal: 'base', smile: 'smile', happy: 'joy', sad: 'sad' };
-  UI.ownerPhoto = (o, mood) => { const A0 = HS.ASSETS || {}; return A0['owner_' + o.id + '_' + (PHOTO_MOOD[mood] || 'base')] || A0['owner_' + o.id + '_base'] || null; };
-  UI.ownerFace = function (o, mood, size) {
-    const src = UI.ownerPhoto(o, mood || 'normal');
-    if (src) {
-      const sz = size || 64;
-      // 大きい絵（ご褒美の場面・一人ずつの画面）は胸から上、小さいときは顔のあたりを丸い枠に切り抜く
-      if (sz >= 160) return `<div class="oface photo big" role="img" aria-label="${e(o.name)}" style="width:${sz}px;height:${Math.round(sz * 1.25)}px;background-image:url('${src}')"></div>`;
-      const [x, y] = PHOTO_POS[o.id] || [50, 12], bw = sz / 0.32, bh = bw * 1.25;
-      return `<div class="oface photo" role="img" aria-label="${e(o.name)}" style="width:${sz}px;height:${sz}px;background-image:url('${src}');background-size:${bw.toFixed(1)}px ${bh.toFixed(1)}px;background-position:${(sz / 2 - x / 100 * bw).toFixed(1)}px ${(sz / 2 - y / 100 * bh).toFixed(1)}px"></div>`;
-    }
-    return UI.ownerFaceSvg(o, mood, size);
+  // 持ち主が作った絵（assets/owners_<id>.js。HS.ASSETS.owner_<id>_<base|smile|joy|sad>）。札では顔を丸い枠に切り抜き、opts.big で胸から上
+  const PMOOD = { normal: 'base', smile: 'smile', happy: 'joy', sad: 'sad' };
+  UI.ownerPortrait = function (o, mood) {
+    const A0 = HS.ASSETS || {};
+    return A0[`owner_${o.id}_${PMOOD[mood] || 'base'}`] || A0[`owner_${o.id}_base`] || null;
   };
-  // 絵が無いときの顔（SVG で描く）
+  UI.ownerFace = function (o, mood, size, opts) {
+    opts = opts || {};
+    const src = o.portrait && UI.ownerPortrait(o, mood || 'normal');
+    if (!src) return UI.ownerFaceSvg(o, mood, size);
+    const sz = size || 64;
+    if (opts.big) {
+      const w = Math.round(sz * 1.2), h = Math.round(w * 1.25);
+      return `<span class="oface oport big" style="width:${w}px;height:${h}px" role="img" aria-label="${e(o.name)}"><img src="${src}" alt="" draggable="false"></span>`;
+    }
+    const p = o.portrait, iw = sz / (p.w / 100), ih = iw * 1.25;
+    const left = sz / 2 - p.x / 100 * iw, top = sz / 2 - p.y / 100 * ih;
+    return `<span class="oface oport" style="width:${sz}px;height:${sz}px" role="img" aria-label="${e(o.name)}"><img src="${src}" alt="" draggable="false" style="width:${iw.toFixed(1)}px;height:${ih.toFixed(1)}px;left:${left.toFixed(1)}px;top:${top.toFixed(1)}px"></span>`;
+  };
+  // 絵が読めないときの顔（SVG）
   UI.ownerFaceSvg = function (o, mood, size) {
     const f = o.face || {};
     mood = mood || 'normal';
@@ -231,7 +235,7 @@
     const log = s.log.filter(x => x.oid === o.id).slice(0, 12);
     const T = HS.Season;
     return `<div class="own-hero" style="--oc:${o.silks.base};--oc2:${o.silks.sub}">
-        <div class="own-face big">${UI.ownerFace(o, st.tier >= 2 ? 'happy' : 'smile', 168)}</div>
+        <div class="own-face big">${UI.ownerFace(o, st.tier >= 2 ? 'happy' : 'smile', 180, { big: true })}</div>
         <div class="grow">
           <div class="small muted">${e(o.kana)}・${o.age}歳</div>
           <div class="own-name">${e(o.name)} ${tierChip(o.id)}</div>
@@ -275,7 +279,7 @@
       const lines = O.sceneLines(q.oid, q.kind, { horse: q.horse || '' });
       if (HS.Audio && HS.Audio.se) HS.Audio.se('coin');
       const bg = App.modal(`<div class="own-scene" style="--oc:${o.silks.base};--oc2:${o.silks.sub}">
-          <div class="own-scene-face">${UI.ownerFace(o, 'happy', 200)}</div>
+          <div class="own-scene-face">${UI.ownerFace(o, 'happy', 220, { big: true })}</div>
           <div class="own-scene-body">
             <div class="own-kicker">${e(KICK[q.kind] || '')}</div>
             <div class="own-name">${e(o.name)}<small>${e(o.title)}</small></div>

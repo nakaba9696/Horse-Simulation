@@ -22,6 +22,11 @@ module.exports = function (check, assert, HS) {
         const set = (o.lines[sc] || {})[k] || [];
         assert(set.length >= 1 && set.some(t => !/^\[/.test(t)), `${o.name} の ${sc}.${k} に、印の無い文が無い`);
       }
+      // 持ち主が作った絵：顔の位置があり、assets/owners_<id>.js に4つの表情がある
+      assert(o.portrait && o.portrait.x > 0 && o.portrait.y > 0 && o.portrait.w > 0, `${o.name} の絵の顔の位置が無い`);
+      const af = require('path').join(__dirname, '..', 'assets', `owners_${o.id}.js`);
+      const at = require('fs').existsSync(af) ? require('fs').readFileSync(af, 'utf8') : '';
+      for (const m of ['base', 'smile', 'joy', 'sad']) assert(at.includes(`owner_${o.id}_${m}`), `${o.name} の絵 owner_${o.id}_${m} が無い`);
       for (const k of ['up1', 'up2', 'up3', 'gift', 'bond', 'award']) assert((o.scenes[k] || []).length >= 2, `${o.name} の場面 ${k} が無い`);
       const all = JSON.stringify([o.lines, o.scenes, o.intro]);
       for (const m of all.matchAll(/\{(\w+)\}/g)) assert(['me', 'horse', 'race'].includes(m[1]), `${o.name} の文に知らない差し込み {${m[1]}}`);

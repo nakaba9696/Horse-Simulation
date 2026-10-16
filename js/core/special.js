@@ -76,8 +76,8 @@
     { id: 'us3', label: '米国の三冠馬', note: 'ケンタッキーダービー・プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['ケンタッキーダービー', 'プリークネスS']), member: d => dn(d, 'ケンタッキーダービー') && dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
     { id: 'us2', label: '米国の名馬', note: 'プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['プリークネスS']), member: d => dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
     { id: 'aus', label: '豪州の英雄', note: 'コックスプレートを勝ってメルボルンカップへ', finals: ['メルボルンカップ'], legs: sameYear(['コックスプレート']), member: d => dn(d, 'コックスプレート') && dn(d, 'メルボルンカップ') },
-    { id: 'gf', label: '伝説級の名馬', note: 'グランドフィナーレを勝って、次の年のグランドフィナーレへ', finals: ['グランドフィナーレ'], top: true,
-      legs: (h, race) => won(h, 'グランドフィナーレ', y => y === race.year - 1) || won(h, 'ドリームクラシック', y => y === race.year - 1), member: () => true },
+    { id: 'gf', label: '伝説級の名馬', note: 'グランドフィナーレを勝って、次の年の同じ距離のグランドフィナーレへ', finals: null, top: true, // 距離ごとの GF（dream.js）。距離の合う名馬だけ出る
+      legs: (h, race) => race.grade === 'GF' && HS.Season.gfWonPrev(h, race), fit: (d, race) => HS.Season.gfFits(d, race), member: () => true },
     { id: 'g1five', label: 'G1を5勝した名馬', note: 'G1を4勝して、次のG1へ', finals: null, legs: (h, race) => race.grade === 'G1' && gw(h).length && (h.gradedWins || []).filter(g => g.grade === 'G1').length === 4, member: d => g1Count(d) >= 5 },
     { id: 'unbeaten', label: '無敗の名馬', note: `デビューから無敗で${SP.STREAK - 1}連勝して、次のレースへ`, finals: null, legs: h => (h.starts || 0) === (h.wins || 0) && (h.wins || 0) === SP.STREAK - 1, member: d => SP.unbeatenOf(d) >= SP.STREAK },
   ];
@@ -144,7 +144,7 @@
     const G = W.get(), un = G.unlocked || [];
     const out = [];
     // 条件の組み合わせのグループを先に（強い順）、大レースのグループはそのあと（強い順）
-    for (const g of SP.GROUPS) if (SP.reach(h, g, race)) for (const d of SP.members(g)) if (!un.includes(d.name) && !out.some(x => x.d === d)) out.push({ d, g });
+    for (const g of SP.GROUPS) if (SP.reach(h, g, race)) for (const d of SP.members(g)) if (!un.includes(d.name) && !out.some(x => x.d === d) && (!g.fit || g.fit(d, race))) out.push({ d, g });
     const key = x => (x.g.race ? 1000 : 0) - (x.d.rating || 0);
     return out.sort((a, b) => key(a) - key(b));
   };
