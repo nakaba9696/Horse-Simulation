@@ -669,6 +669,49 @@ check('jockey: 史実馬を買って自分で乗り、成績と賞金とリー�
   return `${weeks}週で騎乗 ${ridden}・${j.total.wins}勝・持ち馬 ${W.mine().map(h => h.name).join('・')}・資金 ${U.money(G.player.money)}`;
 });
 
+check('look: 毛色の表に抜けがない・芦毛は年を取ると白い・馬具の馬は史実馬にいる・馬の形の三角形の数', () => {
+  const vm = require('vm'), fs = require('fs'), path = require('path');
+  globalThis.THREE = require('../lib/three.min.js');
+  for (const f of ['js/ui/art.js', 'js/ui/race3d.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), { filename: f });
+  const A = HS.Art, KEYS = ['body', 'top', 'belly', 'mane', 'tail', 'points', 'muzzle', 'hoof'];
+  const hex = c => /^#[0-9a-f]{6}$/i.test(c);
+  const coats = new Set(H.COATS);
+  for (const h of D.historic) if (h.coat) coats.add(h.coat);
+  for (const c of coats) {
+    assert(A.COAT_LOOK[c], `毛色の表に無い：${c}`);
+    for (const age of [2, 5, 10]) { const L = A.coatLook(c, age); for (const k of KEYS) assert(hex(L[k]), `${c} の ${k} が色でない：${L[k]}`); }
+  }
+  const lum = c => parseInt(c.slice(1, 3), 16) + parseInt(c.slice(3, 5), 16) + parseInt(c.slice(5, 7), 16);
+  assert(lum(A.coatLook('芦毛', 2).body) < lum(A.coatLook('芦毛', 8).body), '芦毛が年を取っても白くならない');
+  assert(A.coat('鹿毛').length === 4 && A.COAT['栗毛'], '2D の毛色の形が変わった');
+  const names = new Set(D.historic.map(h => h.name));
+  const GK = ['shadowRoll', 'blinkers', 'hood', 'cheekPieces', 'rollColor', 'color', 'cheekColor'];
+  const g = D.gear || {};
+  for (const [n, v] of Object.entries(g)) {
+    assert(names.has(n), `馬具の馬が史実馬にいない：${n}`);
+    for (const [k, x] of Object.entries(v)) { assert(GK.includes(k), `${n} の馬具の項目 ${k} を知らない`); if (/Color$|^color$/.test(k)) assert(hex(x), `${n} の ${k} が色でない`); }
+    assert(v.shadowRoll || v.blinkers || v.hood || v.cheekPieces, `${n} に馬具が無い`);
+  }
+  assert(g['ナリタブライアン'] && g['ナリタブライアン'].shadowRoll, 'ナリタブライアンのシャドーロール');
+  for (const k of Object.keys(HS.Race3D.GEAR)) assert(GK.includes(k), `描く馬具 ${k} が表の項目に無い`);
+  // 馬の形：三角形の数の上限と、骨の重み
+  const out = [];
+  for (const [q, max] of [[1, 4500], [0, 2500]]) {
+    const geo = HS.Race3D.horseGeometry(q), tri = geo.index.count / 3;
+    assert(tri <= max, `馬の形（${q ? '近く' : '遠く'}）の三角形 ${tri} が ${max} を超える`);
+    const si = geo.attributes.skinIndex.array, sw = geo.attributes.skinWeight.array;
+    for (let i = 0; i < si.length; i += 4) {
+      assert(si[i] < HS.Race3D.BONES && si[i + 1] < HS.Race3D.BONES, '骨の番号が範囲の外');
+      assert(Math.abs(sw[i] + sw[i + 1] + sw[i + 2] + sw[i + 3] - 1) < 1e-4, '骨の重みの和が1でない');
+    }
+    const pos = geo.attributes.position.array;
+    for (let i = 0; i < pos.length; i++) assert(isFinite(pos[i]), '形に NaN がある');
+    out.push(`${q ? '近く' : '遠く'} ${tri}`);
+    geo.dispose();
+  }
+  return `毛色 ${coats.size}・馬具 ${Object.keys(g).length}頭・三角形 ${out.join(' / ')}`;
+});
+
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
 process.exit(failures ? 1 : 0);

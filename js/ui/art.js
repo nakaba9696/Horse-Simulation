@@ -4,22 +4,48 @@
   const U = HS.U;
   const A = HS.Art = {};
 
-  // 毛色ごとの色 [体, 体の影, たてがみ・尾, 脚先]
-  A.COAT = {
-    '鹿毛': ['#8a4f24', '#5e3415', '#1a120d', '#1a120d'],
-    '黒鹿毛': ['#4b2a17', '#2e190c', '#120c08', '#120c08'],
-    '青鹿毛': ['#2c1c14', '#1a100a', '#0b0807', '#0b0807'],
-    '青毛': ['#191717', '#0d0c0c', '#050505', '#050505'],
-    '栗毛': ['#b4602a', '#87421a', '#c9783c', '#9c5326'],
-    '栃栗毛': ['#7a3a1a', '#55260f', '#4a2410', '#55260f'],
-    '芦毛': ['#c3c6ca', '#8d9196', '#7a7f86', '#5d6166'],
-    '白毛': ['#f4f3ef', '#cfccc4', '#e2dfd8', '#d8d4cc'],
-    '粕毛': ['#a07a62', '#7a5a46', '#3a2a20', '#3a2a20'],
-    '月毛': ['#d8b57a', '#b08f58', '#efe0bd', '#c4a06a'],
-    '河原毛': ['#c9a96e', '#9f8250', '#2a2018', '#2a2018'],
-    '佐目毛': ['#efe4cc', '#cdbf9f', '#f2ead8', '#e6dac0'],
+  // 毛色の表（2D の絵・肖像・3D のレースで同じものを使う）
+  //   body 体 / top 背の濃い所 / belly 腹 / mane たてがみ / tail 尾 / points 脚先（膝・飛節から下）/ muzzle 鼻先 / hoof 蹄
+  //   tan 明るく抜ける所（黒鹿毛・青鹿毛の鼻先・腹・肘）/ gloss 毛づやの光り 0〜1 / pointsSoft 脚先へゆるやかに変わる
+  //   芦毛は young（若い）と old（年を取って白い）の間を年齢で動き、まだら（dapple）は若いうちに出る
+  A.COAT_LOOK = {
+    '鹿毛': { body: '#7d4322', top: '#5a2e15', belly: '#8f5531', mane: '#16100c', tail: '#16100c', points: '#17110d', muzzle: '#3b2519', hoof: '#26211d', gloss: 0.55 },
+    '黒鹿毛': { body: '#432617', top: '#2c180d', belly: '#55331e', mane: '#0f0b09', tail: '#0f0b09', points: '#110c0a', muzzle: '#6a4128', hoof: '#201c19', tan: '#6e4328', gloss: 0.6 },
+    '青鹿毛': { body: '#261913', top: '#170f0b', belly: '#2e1f17', mane: '#0a0807', tail: '#0a0807', points: '#0b0908', muzzle: '#4a3020', hoof: '#1c1916', tan: '#47301f', gloss: 0.65 },
+    '青毛': { body: '#161516', top: '#0d0c0d', belly: '#1a1919', mane: '#070707', tail: '#070707', points: '#090909', muzzle: '#222020', hoof: '#1a1817', gloss: 0.8 },
+    '栗毛': { body: '#a9592a', top: '#8b4620', belly: '#b86a3a', mane: '#b8692f', tail: '#a85d2a', points: '#97501f', muzzle: '#8a4b2c', hoof: '#3a3027', gloss: 0.55, pointsSoft: true },
+    '栃栗毛': { body: '#5f2f18', top: '#4a2312', belly: '#6c3820', mane: '#7c4a2a', tail: '#6e3f22', points: '#552a16', muzzle: '#4f2a18', hoof: '#2e2620', gloss: 0.55, pointsSoft: true },
+    '芦毛': {
+      grey: true,
+      young: { body: '#6c6e72', top: '#55575b', belly: '#7a7c80', mane: '#3e4044', tail: '#45474b', points: '#35373a', muzzle: '#2e2e30', hoof: '#26231f', dappleCol: '#a7aaae' },
+      old: { body: '#d8d9d6', top: '#c6c8c6', belly: '#e2e2de', mane: '#c4c4c0', tail: '#b9bab6', points: '#a9abab', muzzle: '#3a393a', hoof: '#2e2a26', dappleCol: '#ecebe6' },
+      gloss: 0.35,
+    },
+    '白毛': { body: '#f3f1ec', top: '#e4e1da', belly: '#f6f4ef', mane: '#f0ede6', tail: '#ece8e0', points: '#ebe7df', muzzle: '#d9b4aa', hoof: '#cbbca3', gloss: 0.3, pointsSoft: true },
+    '粕毛': { body: '#8c6c5c', top: '#6e5040', belly: '#977a6a', mane: '#1c1410', tail: '#1c1410', points: '#1c1410', muzzle: '#4a3020', hoof: '#26211d', roan: 1, gloss: 0.35 },
+    '月毛': { body: '#d6b06a', top: '#c39b56', belly: '#e0bd7c', mane: '#f1e5c7', tail: '#ece0c0', points: '#c9a35e', muzzle: '#8d6a50', hoof: '#6b5a48', gloss: 0.5, pointsSoft: true },
+    '河原毛': { body: '#c9a465', top: '#a8844a', belly: '#d4b278', mane: '#1d1712', tail: '#1d1712', points: '#1d1712', muzzle: '#3a2c20', hoof: '#26211d', gloss: 0.45 },
+    '佐目毛': { body: '#efe3c8', top: '#e3d5b6', belly: '#f3e9d3', mane: '#f5eedf', tail: '#f2eadb', points: '#ebdfc4', muzzle: '#dcb7a6', hoof: '#cbbca3', gloss: 0.3, pointsSoft: true },
   };
-  A.coat = c => A.COAT[c] || A.COAT['鹿毛'];
+  const mixHex = (a, b, t) => {
+    const p = x => [parseInt(x.slice(1, 3), 16), parseInt(x.slice(3, 5), 16), parseInt(x.slice(5, 7), 16)];
+    const A = p(a), B = p(b);
+    return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
+  };
+  // 毛色の色（age＝満年齢。芦毛は2歳で濃く、年を取るほど白い。わからなければ4歳）
+  A.coatLook = function (c, age) {
+    const L = A.COAT_LOOK[c] || A.COAT_LOOK['鹿毛'];
+    if (!L.grey) return L;
+    const a = age == null || !isFinite(age) ? 4 : age;
+    const w = Math.max(0, Math.min(1, (a - 1.5) / 7));
+    const out = { gloss: L.gloss, grey: true, dapple: 0.9 * Math.max(0, 1 - Math.abs(w - 0.35) / 0.45), pointsSoft: true };
+    for (const k of Object.keys(L.young)) out[k] = mixHex(L.young[k], L.old[k], w);
+    return out;
+  };
+  // 毛色ごとの色 [体, 体の影, たてがみ・尾, 脚先]（上の表から作る。2D の絵で使う）
+  A.coat = (c, age) => { const L = A.coatLook(c, age); return [L.body, L.top, L.mane, L.points]; };
+  A.COAT = {};
+  for (const k of Object.keys(A.COAT_LOOK)) A.COAT[k] = A.coat(k);
 
   // 馬ごとの白徴（流星・白い靴下）を名前から決める
   A.marks = function (key) {

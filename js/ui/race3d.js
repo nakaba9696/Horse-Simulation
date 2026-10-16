@@ -5,10 +5,11 @@
 //   orbit = { yaw, pitch, zoom }（カメラの回転。yaw は左右の回り込み[rad]、pitch は上下[-0.3〜1.2]、zoom は距離の倍率）
 //   r3.resize(w, h, dpr) / r3.dispose() / r3.info()
 //   HS.Race3D.supported()  // WebGL が使えるか
+//   setup.horses[i] には age（満年齢。芦毛の白さ）・gear（馬具。無ければ data/gear.js から名前で引く）も渡せる
 //   render の戻り値：{ horses: [{ i, sx, sy, k, z }] }（画面に出た馬の頭の上の位置・1mあたりの画素・奥行き。名前の札などを重ねるとき用）
 // 座標：コースの上から見た位置 (x, y)（js/core/track.js。y は上向き）を、3D では (X, Y, Z) = (x, 高さ, -y) にする
 // 乱数は使わない（揺らぎは番号・位置から決まる値で出す）
-// 重さ：馬1頭＝骨つきの形1つ（材質1つ・描く回数1回）。形は全頭で共有し、色・勝負服・ゼッケンは馬ごとの小さな絵（256×256）で変える。
+// 重さ：馬1頭＝骨つきの形1つ（材質1つ・描く回数1回）。形は全頭で共有し（近く・遠くの2つ）、色・勝負服・ゼッケンは馬ごとの小さな絵（256×256）で変える。
 //       景色は材質ごとに1つの形へまとめる。影は丸い影の板（まとめて1回）で代用し、影の計算はしない。
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
@@ -78,6 +79,22 @@
   function marksOf(key) {
     if (HS.Art && HS.Art.marks && HS.U && HS.U.hashRng) return HS.Art.marks(key);
     return { blaze: 'none', socks: [false, false, false, false] };
+  }
+  // 年齢（芦毛の白さに使う）。渡されなければ、いまのセーブの馬を名前で探す
+  function ageOf(h) {
+    if (h.age != null) return h.age;
+    try {
+      const W = HS.World, G = W && W.get && W.get();
+      if (G && G.horses && h.name) {
+        for (const x of Object.values(G.horses)) if (x.name === h.name && x.born != null) return HS.Horse.ageAt(x, W.wIdx());
+      }
+    } catch (e) { /* 見つからなければ既定の年齢 */ }
+    return null;
+  }
+  // 馬具（data/gear.js。渡された h.gear が優先）
+  function gearOf(h) {
+    const d = HS.DATA && HS.DATA.gear;
+    return Object.assign({}, (d && h.name && d[h.name]) || {}, h.gear || {});
   }
   function frameColor(fr) {
     const fc = HS.DATA && HS.DATA.frameColors;
@@ -214,7 +231,7 @@
       }
       this.uv.push(a, b);
       if (col) this.c.push(col.r, col.g, col.b);
-      if (this.k) this.k.push(o.bone || 0);
+      if (this.k) this.k.push(o.bone || 0, o.bone || 0, 0);
     }
     const flip = m.determinant() < 0;
     const cnt = g.index ? g.index.count : P.count;
@@ -238,7 +255,7 @@
       const uv = o.uvs ? o.uvs[i] : (o.uv || [0, 0]);
       this.uv.push(uv[0], uv[1]);
       if (col) this.c.push(col.r, col.g, col.b);
-      if (this.k) this.k.push(o.bone || 0);
+      if (this.k) this.k.push(o.bone || 0, o.bone || 0, 0);
     }
     this.ix.push(base, base + 1, base + 2, base, base + 2, base + 3);
     return this;
@@ -247,6 +264,15 @@
     const m = new THREE.Matrix4().compose(new THREE.Vector3(cx, cy, cz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry || 0, 0)), new THREE.Vector3(1, 1, 1));
     return this.add(new THREE.BoxGeometry(sx, sy, sz), m, o);
   };
+  // できあがった頂点の並びをそのまま足す。skin＝頂点ごとに [骨a, 骨b, bの重み]
+  Builder.prototype.raw = function (pos, nor, uv, skin, idx) {
+    const base = this.p.length / 3;
+    for (let i = 0; i < pos.length; i++) { this.p.push(pos[i]); this.n.push(nor[i]); }
+    for (let i = 0; i < uv.length; i++) this.uv.push(uv[i]);
+    if (this.k) for (let i = 0; i < skin.length; i++) this.k.push(skin[i]);
+    for (let i = 0; i < idx.length; i++) this.ix.push(base + idx[i]);
+    return this;
+  };
   Builder.prototype.build = function () {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3));
@@ -254,8 +280,8 @@
     g.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
     if (this.c) g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3));
     if (this.k) {
-      const n = this.k.length, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
-      for (let i = 0; i < n; i++) { si[i * 4] = this.k[i]; sw[i * 4] = 1; }
+      const n = this.k.length / 3, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) { si[i * 4] = this.k[i * 3]; si[i * 4 + 1] = this.k[i * 3 + 1]; sw[i * 4] = 1 - this.k[i * 3 + 2]; sw[i * 4 + 1] = this.k[i * 3 + 2]; }
       g.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
       g.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4));
     }
@@ -279,204 +305,631 @@
   }
   const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
-  // ---- 馬と騎手の形（全頭で共有。骨1本ごとに固い部品をつける） ----
-  // 骨：0 根元、1 胴、2 首、3 頭、4 尾、5/6 左前（上・下）、7/8 右前、9/10 左後、11/12 右後、13 騎手の上体、14 騎手の腕
-  // 馬の向き：+X が前、+Y が上、+Z が右
-  const BONES = [
-    [-1, 0, 0, 0], [0, 0, 1.25, 0], [1, 0.62, 1.5, 0], [2, 1.02, 1.98, 0], [1, -0.86, 1.45, 0],
-    [1, 0.5, 1.15, -0.14], [5, 0.52, 0.62, -0.14], [1, 0.5, 1.15, 0.14], [7, 0.52, 0.62, 0.14],
-    [1, -0.54, 1.2, -0.16], [9, -0.68, 0.6, -0.16], [1, -0.54, 1.2, 0.16], [11, -0.68, 0.6, 0.16],
-    [1, 0.0, 1.84, 0], [13, 0.42, 2.0, 0],
-  ];
-  // 馬ごとの絵（256×256）の割り付け：上の3段は 32px の色の升、その下に勝負服（128×128）とゼッケン（128×80）
-  const CELL = { coat: 0, dark: 1, mane: 2, points: 3, sockFL: 4, sockFR: 5, sockHL: 6, sockHR: 7, hoof: 8, saddle: 9, pants: 10, boots: 11, skin: 12, cap: 13, sleeve: 14, blaze: 15, goggle: 16, white: 17, eye: 18 };
-  const cellUV = i => [((i % 8) + 0.5) / 8, 1 - (Math.floor(i / 8) * 32 + 16) / 256];
-  const SILK_RECT = [0, 1 - 224 / 256, 0.5, 1 - 96 / 256];
-  const NUM_RECT = [0.5, 1 - 176 / 256, 1, 1 - 96 / 256];
+  // ---- 馬と騎手の形（全頭で共有） ----
+  // 馬の向き：+X が前、+Y が上、+Z が右。地面が y=0。頂点ごとに骨を2本まで混ぜ、関節でなめらかに曲がる
+  // 胴・首・頭・脚・尾・たてがみ・騎手は、断面（楕円）を並べてつないだ形（ロフト）で作る
+  // 三角形の数の目安（騎手・鞍・馬具を含む1頭）：近くの形 4,500 まで・遠くの形 2,500 まで（28m で切り替える）。
+  //   16頭がみな近くにいても 7 万ほどで、スマホでも重くならない。形は全頭で共有し、馬ごとに違うのは小さな絵（256×256）だけ
+  // 骨：0 根元、1 胴、2・3 首、4 頭、5〜7 尾、8〜11 左前・12〜15 右前（肩・肘・膝・球節）、16〜19 左後・20〜23 右後（股・後膝・飛節・球節）
+  //     24 騎手の腰、25 上体、26 頭、27・28 左腕（上・下）、29・30 右腕、31 ムチ、32〜35 馬具（シャドーロール・ブリンカー・メンコ・チークピーシーズ）
+  const FJ = [[0.60, 1.26], [0.47, 0.97], [0.485, 0.53], [0.495, 0.215]];   // 前脚の関節：肩・肘・膝・球節
+  const HJ = [[-0.62, 1.36], [-0.56, 0.98], [-0.74, 0.57], [-0.705, 0.215]]; // 後脚の関節：股・後膝・飛節・球節
+  const FZ = 0.15, HZ = 0.16;
+  const HEAD0 = [1.12, 1.86], HEAD_L = 0.6;              // 頭：うなじから鼻先へ
+  const HD = [0.62, -0.785], HU = [0.785, 0.62];        // 頭の向き（鼻先へ）と、顔の前の向き
+  const GEAR0 = [1.3, 1.63];                            // 馬具の骨の付け根（頭の中。使わない馬具はここへ縮める）
+  const GEAR = { shadowRoll: 32, blinkers: 33, hood: 34, cheekPieces: 35 };
+  const BONES = (() => {
+    const b = [];
+    const put = (i, par, x, y, z) => { b[i] = [par, x, y, z || 0]; };
+    put(0, -1, 0, 0); put(1, 0, 0, 1.25);
+    put(2, 1, 0.68, 1.32); put(3, 2, 0.9, 1.6); put(4, 3, HEAD0[0], HEAD0[1]);
+    put(5, 1, -0.98, 1.5); put(6, 5, -1.16, 1.4); put(7, 6, -1.4, 1.21);
+    for (const [k, sd] of [[8, -1], [12, 1]]) FJ.forEach((j, n) => put(k + n, n ? k + n - 1 : 1, j[0], j[1], sd * FZ));
+    for (const [k, sd] of [[16, -1], [20, 1]]) HJ.forEach((j, n) => put(k + n, n ? k + n - 1 : 1, j[0], j[1], sd * HZ));
+    put(24, 1, 0.0, 1.87); put(25, 24, 0.12, 1.9); put(26, 25, 0.54, 2.07);
+    put(27, 25, 0.43, 2.0, -0.15); put(28, 27, 0.58, 1.86, -0.2); put(29, 25, 0.43, 2.0, 0.15); put(30, 29, 0.58, 1.86, 0.2);
+    put(31, 30, 0.84, 1.81, 0.1);
+    for (let i = 32; i <= 35; i++) put(i, 4, GEAR0[0], GEAR0[1]);
+    return b;
+  })();
 
-  function horseGeometry() {
+  // 胴の断面：[x, 背の高さ, 腹の高さ, 横の半幅, 上ほど細く]
+  const BODY_T = [
+    [0.87, 1.44, 1.12, 0.09, 0.1], [0.81, 1.54, 1.01, 0.17, 0.15], [0.71, 1.6, 0.94, 0.225, 0.22], [0.57, 1.64, 0.895, 0.255, 0.32],
+    [0.41, 1.645, 0.875, 0.27, 0.36], [0.23, 1.6, 0.87, 0.285, 0.26], [0.03, 1.565, 0.885, 0.3, 0.15], [-0.17, 1.565, 0.92, 0.3, 0.1],
+    [-0.35, 1.58, 0.975, 0.29, 0.06], [-0.53, 1.61, 1.035, 0.285, 0.05], [-0.69, 1.62, 1.08, 0.28, 0.08], [-0.83, 1.6, 1.12, 0.25, 0.12],
+    [-0.94, 1.545, 1.16, 0.2, 0.15], [-1.01, 1.47, 1.21, 0.13, 0.2], [-1.045, 1.39, 1.27, 0.06, 0.2],
+  ];
+  // 首の断面：[たてがみの側の点 x, y, のどの側の点 x, y, 半幅, 骨a, 骨b, bの重み]
+  const NECK_T = [
+    [0.47, 1.6, 0.72, 1.05, 0.19, 1, 2, 0], [0.63, 1.655, 0.86, 1.18, 0.185, 1, 2, 0.55], [0.77, 1.72, 0.97, 1.36, 0.16, 2, 3, 0.1],
+    [0.91, 1.8, 1.05, 1.53, 0.135, 2, 3, 0.6], [1.02, 1.875, 1.11, 1.66, 0.115, 3, 4, 0.15], [1.09, 1.925, 1.16, 1.76, 0.105, 3, 4, 0.7],
+    [1.13, 1.95, 1.2, 1.81, 0.1, 4, 4, 0],
+  ];
+  // 頭の断面（うなじ 0 → 鼻先 1）：[t, 前後の半径, 横の半幅, 前へずらす, 前ほど細く]
+  const HEAD_T = [
+    [0, 0.1, 0.08, 0, 0], [0.08, 0.135, 0.095, -0.03, -0.1], [0.2, 0.165, 0.105, -0.055, -0.15], [0.32, 0.15, 0.1, -0.05, 0],
+    [0.44, 0.11, 0.088, -0.015, 0.05], [0.58, 0.088, 0.078, 0, 0.05], [0.72, 0.082, 0.074, 0, 0], [0.85, 0.09, 0.084, -0.008, -0.05],
+    [0.94, 0.076, 0.072, -0.016, 0], [1, 0.04, 0.045, -0.02, 0],
+  ];
+  // 脚の断面（上から）：[x, y, 前後の半径, 横の半幅, 骨a, 骨b, bの重み]（骨は肩・股から 0〜3）
+  const FLEG_T = [
+    [0.62, 1.34, 0.13, 0.085, 0, 0, 0], [0.58, 1.2, 0.15, 0.095, 0, 0, 0], [0.52, 1.07, 0.13, 0.09, 0, 1, 0.3], [0.48, 0.96, 0.11, 0.082, 0, 1, 0.75],
+    [0.47, 0.86, 0.095, 0.075, 1, 1, 0], [0.474, 0.74, 0.075, 0.064, 1, 1, 0], [0.479, 0.62, 0.056, 0.054, 1, 1, 0], [0.483, 0.55, 0.06, 0.058, 1, 2, 0.35],
+    [0.486, 0.5, 0.058, 0.055, 1, 2, 0.8], [0.488, 0.42, 0.048, 0.044, 2, 2, 0], [0.49, 0.31, 0.047, 0.04, 2, 2, 0], [0.493, 0.24, 0.054, 0.05, 2, 3, 0.4],
+    [0.5, 0.19, 0.055, 0.05, 2, 3, 0.85], [0.52, 0.135, 0.044, 0.043, 3, 3, 0], [0.542, 0.085, 0.048, 0.048, 3, 3, 0], [0.556, 0.04, 0.058, 0.054, 3, 3, 0],
+    [0.566, 0.004, 0.064, 0.058, 3, 3, 0],
+  ];
+  const HLEG_T = [
+    [-0.66, 1.42, 0.22, 0.1, 0, 0, 0], [-0.64, 1.28, 0.26, 0.125, 0, 0, 0], [-0.61, 1.14, 0.25, 0.125, 0, 0, 0], [-0.6, 1.02, 0.2, 0.11, 0, 1, 0.4],
+    [-0.62, 0.92, 0.14, 0.09, 0, 1, 0.85], [-0.66, 0.82, 0.105, 0.075, 1, 1, 0], [-0.7, 0.71, 0.08, 0.058, 1, 1, 0], [-0.73, 0.63, 0.07, 0.05, 1, 2, 0.2],
+    [-0.745, 0.575, 0.072, 0.055, 1, 2, 0.5], [-0.74, 0.52, 0.06, 0.05, 1, 2, 0.85], [-0.73, 0.44, 0.05, 0.044, 2, 2, 0], [-0.718, 0.32, 0.048, 0.041, 2, 2, 0],
+    [-0.708, 0.24, 0.055, 0.05, 2, 3, 0.4], [-0.7, 0.19, 0.055, 0.05, 2, 3, 0.85], [-0.682, 0.135, 0.045, 0.043, 3, 3, 0], [-0.662, 0.085, 0.048, 0.048, 3, 3, 0],
+    [-0.648, 0.04, 0.057, 0.054, 3, 3, 0], [-0.638, 0.004, 0.062, 0.057, 3, 3, 0],
+  ];
+  // 尾（付け根から）：[x, y, 上下の半径, 横の半幅, 骨a, 骨b, bの重み]
+  const TAIL_T = [
+    [-0.98, 1.5, 0.055, 0.05, 5, 5, 0], [-1.06, 1.46, 0.05, 0.045, 5, 6, 0.3], [-1.16, 1.4, 0.055, 0.05, 5, 6, 0.8], [-1.28, 1.31, 0.065, 0.06, 6, 6, 0],
+    [-1.4, 1.21, 0.07, 0.068, 6, 7, 0.5], [-1.52, 1.11, 0.068, 0.07, 7, 7, 0], [-1.64, 1.02, 0.055, 0.06, 7, 7, 0], [-1.74, 0.95, 0.03, 0.035, 7, 7, 0],
+  ];
+  // 騎手の背骨（腰から首へ）：[x, y, 背と胸の半径, 横の半幅, 骨a, 骨b, bの重み]
+  const SPINE_T = [
+    [0.0, 1.88, 0.1, 0.14, 24, 24, 0], [0.1, 1.915, 0.095, 0.135, 24, 25, 0.5], [0.22, 1.955, 0.105, 0.15, 25, 25, 0], [0.34, 1.995, 0.115, 0.17, 25, 25, 0],
+    [0.44, 2.03, 0.1, 0.18, 25, 25, 0], [0.51, 2.05, 0.07, 0.12, 25, 25, 0], [0.555, 2.06, 0.04, 0.06, 25, 25, 0],
+  ];
+
+  // 馬ごとの絵（256×256）の割り付け
+  //   上の2段：32px の色の升 16 個 / 体の横から見た絵（毛色・影・まだら）/ ゼッケン / 脚4本（横から見た絵。白い靴下・蹄）
+  //   たてがみと尾の毛の筋 / 勝負服（体のまわり × 背骨の向き）/ 頭（うなじ→鼻先 × 下→顔の前。流星）
+  const CELL = { saddle: 0, pants: 1, boots: 2, skin: 3, cap: 4, sleeve: 5, goggle: 6, white: 7, eye: 8, mane: 9, bridle: 10, roll: 11, gear: 12, dark: 13, bootTop: 14, cheek: 15 };
+  const cellUV = i => [((i % 8) + 0.5) / 8, 1 - (Math.floor(i / 8) * 32 + 16) / 256];
+  const R_BODY = [0, 64, 128, 96], R_NUM = [128, 64, 128, 80], R_HAIR = [224, 144, 32, 112], R_SILK = [0, 160, 128, 64], R_HEAD = [0, 224, 128, 32];
+  const R_LEG = [0, 1, 2, 3].map(k => [128 + k * 24, 144, 24, 112]);
+  const SX0 = -1.3, SX1 = 1.7, SY0 = 0, SY1 = 2.3;   // 体の絵が受け持つ範囲（横から見た x, y）
+  const LEG_XC = [0.5, 0.5, -0.66, -0.66], LEG_HW = 0.35, LEG_H = 1.4; // 脚の絵の範囲
+  function rUV(r, fx, fy) {
+    const ex = 0.5 / r[2], ey = 0.5 / r[3];
+    fx = clamp(fx, ex, 1 - ex); fy = clamp(fy, ey, 1 - ey);
+    return [(r[0] + fx * r[2]) / 256, 1 - (r[1] + (1 - fy) * r[3]) / 256];
+  }
+  const sideUV = P => rUV(R_BODY, (P.x - SX0) / (SX1 - SX0), (P.y - SY0) / (SY1 - SY0));
+  const legUV = (k, P) => rUV(R_LEG[k], (P.x - LEG_XC[k] + LEG_HW) / (2 * LEG_HW), P.y / LEG_H);
+  const mth = (j, m) => 1 - Math.abs(j / m * 2 - 1); // 輪の上の位置（0＝下・後ろ → 1＝上・前。左右は同じ）
+
+  // 楕円の上の点：中心 c、縦の向き u（半径 h）、横の向き s（半幅 w）。th＝0 が -u の側、π が +u の側。k＞0 で +u の側ほど細く、p＜1 で角ばる。off＝外へ
+  function ellPt(c, u, s, h, w, k, p, th, off) {
+    let cy = -Math.cos(th), sz = Math.sin(th);
+    if (p && p !== 1) { cy = Math.sign(cy) * Math.pow(Math.abs(cy), p); sz = Math.sign(sz) * Math.pow(Math.abs(sz), p); }
+    const ww = w * (1 - (k || 0) * cy) + (off || 0);
+    return c.clone().addScaledVector(u, (h + (off || 0)) * cy).addScaledVector(s, ww * sz);
+  }
+  function ell(c, u, s, h, w, m, k, p) {
+    const out = [];
+    for (let j = 0; j < m; j++) out.push(ellPt(c, u, s, h, w, k, p, j / m * TAU));
+    return out;
+  }
+  function arc(c, u, s, h, w, k, p, th0, th1, n, off) {
+    const out = [];
+    for (let j = 0; j < n; j++) out.push(ellPt(c, u, s, h, w, k, p, th0 + (th1 - th0) * j / (n - 1), off));
+    return out;
+  }
+  // 輪（断面の点の並び）をつないだ形。rings[i]＝点の並び、sk[i]＝[骨a, 骨b, bの重み]、uvf(i, j, P)→[u, v]
+  // o.cap0 / o.cap1：始め・終わりをふさぐ（tip0 / tip1 でとがらせる）。o.open：輪を閉じない。o.inside(i)：外向きを決める内側の点
+  function loft(B, rings, sk, uvf, o) {
+    o = o || {};
+    const n = rings.length, m = rings[0].length, pos = [], uv = [], skn = [], idx = [];
+    const cen = i => { const c = new THREE.Vector3(); for (const P of rings[i]) c.add(P); return c.multiplyScalar(1 / m); };
+    for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) {
+      const P = rings[i][j];
+      pos.push(P.x, P.y, P.z);
+      const t = uvf(i, j, P); uv.push(t[0], t[1]);
+      skn.push(sk[i][0], sk[i][1], sk[i][2]);
+    }
+    const jm = o.open ? m - 1 : m;
+    const quads = [];
+    for (let i = 0; i < n - 1; i++) for (let j = 0; j < jm; j++) {
+      const a = i * m + j, b = i * m + (j + 1) % m;
+      quads.push(a, a + m, b, b, a + m, b + m);
+    }
+    // 外向きにそろえる
+    const P = k => new THREE.Vector3(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2]);
+    const triN = (a, b, c) => P(b).sub(P(a)).cross(P(c).sub(P(a)));
+    {
+      const i = Math.max(0, Math.floor((n - 1) / 2)), j = Math.floor(jm / 2);
+      const a = i * m + j, b = i * m + (j + 1) % m;
+      const inside = o.inside ? o.inside(i) : cen(i);
+      if (triN(a, a + m, b).dot(P(a).sub(inside)) < 0) for (let k = 0; k < quads.length; k += 3) { const t = quads[k + 1]; quads[k + 1] = quads[k + 2]; quads[k + 2] = t; }
+    }
+    for (const q of quads) idx.push(q);
+    const cap = (ri, nb, tip) => {
+      const c = cen(ri);
+      if (tip) c.add(tip);
+      const ci = pos.length / 3;
+      pos.push(c.x, c.y, c.z);
+      const t = uvf(ri, 0, c); uv.push(t[0], t[1]);
+      skn.push(sk[ri][0], sk[ri][1], sk[ri][2]);
+      const away = c.clone().sub(cen(nb));
+      const tri = [];
+      for (let j = 0; j < m; j++) tri.push(ci, ri * m + (j + 1) % m, ri * m + j);
+      if (triN(tri[0], tri[1], tri[2]).dot(away) < 0) for (let k = 0; k < tri.length; k += 3) { const t = tri[k + 1]; tri[k + 1] = tri[k + 2]; tri[k + 2] = t; }
+      for (const q of tri) idx.push(q);
+    };
+    if (o.cap0 && n > 1) cap(0, 1, o.tip0);
+    if (o.cap1 && n > 1) cap(n - 1, n - 2, o.tip1);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    B.raw(pos, Array.from(g.attributes.normal.array), uv, skn, idx);
+    g.dispose();
+    return B;
+  }
+  // 点の並びに沿った管（半径 r[i]、断面 m 角）。sk[i] は点ごと
+  function tube(B, pts, r, m, sk, uvf, o) {
+    const rings = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      const T = b.clone().sub(a).normalize();
+      const ref = Math.abs(T.z) < 0.9 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
+      const u = new THREE.Vector3().crossVectors(ref, T).normalize(), s = new THREE.Vector3().crossVectors(T, u).normalize();
+      const rr = Array.isArray(r) ? r[i] : r;
+      rings.push(ell(pts[i], u, s, rr, rr, m));
+    }
+    return loft(B, rings, sk, uvf, o);
+  }
+  const lerpRow = (tab, x, key) => {
+    key = key || 0;
+    let i = 0;
+    while (i < tab.length - 2 && tab[i + 1][key] <= x) i++;
+    const a = tab[i], b = tab[i + 1], t = clamp((x - a[key]) / (b[key] - a[key] || 1), 0, 1);
+    return a.map((v, k) => v + (b[k] - v) * t);
+  };
+  // 頭の断面（t：うなじ 0 → 鼻先 1）
+  const vHU = () => new THREE.Vector3(HU[0], HU[1], 0), vZ = () => new THREE.Vector3(0, 0, 1);
+  function headSec(t) {
+    const r = lerpRow(HEAD_T, t);
+    const c = new THREE.Vector3(HEAD0[0] + HD[0] * t * HEAD_L, HEAD0[1] + HD[1] * t * HEAD_L, 0).addScaledVector(vHU(), r[3]);
+    return { c, h: r[1], w: r[2], k: r[4] };
+  }
+  const headPt = (t, th, off) => { const s = headSec(t); return ellPt(s.c, vHU(), vZ(), s.h, s.w, s.k, 0.9, th, off); };
+  // 胴の断面（x）
+  function bodySec(x) { const r = lerpRow(BODY_T.slice().reverse(), x); return { c: new THREE.Vector3(x, (r[1] + r[2]) / 2, 0), h: (r[1] - r[2]) / 2, w: r[3], k: r[4] }; }
+  const bodyPt = (x, th, off) => { const s = bodySec(x); return ellPt(s.c, new THREE.Vector3(0, 1, 0), vZ(), s.h, s.w, s.k, 0.92, th, off); };
+  // 首の断面
+  const NECK = NECK_T.map(([tx, ty, bx, by, w, a, b, t]) => {
+    const top = new THREE.Vector3(tx, ty, 0), bot = new THREE.Vector3(bx, by, 0);
+    const u = top.clone().sub(bot);
+    return { c: top.clone().add(bot).multiplyScalar(0.5), h: u.length() / 2, u: u.normalize(), w, sk: [a, b, t] };
+  });
+  const neckPt = (i, th, off) => { const s = NECK[i]; return ellPt(s.c, s.u, vZ(), s.h, s.w, 0.28, 0.95, th, off); };
+
+  function horseGeometry(q) {
+    const hi = q > 0;
     const B = new Builder({ skin: true });
-    const C = k => ({ uv: cellUV(CELL[k]) });
-    const cb = (k, bone) => ({ uv: cellUV(CELL[k]), bone });
-    // 胴（樽・胸・尻）
-    blob(B, V3(-0.02, 1.25, 0), 0.7, 0.31, 0.27, 12, 8, cb('coat', 1));
-    blob(B, V3(0.5, 1.31, 0), 0.34, 0.33, 0.25, 10, 7, cb('coat', 1), 0.2);
-    blob(B, V3(-0.55, 1.31, 0), 0.38, 0.33, 0.31, 10, 7, cb('coat', 1), -0.1);
-    // 鞍とゼッケン（番号は両脇。外から見て読めるように貼る）
-    B.box(0.16, 1.585, 0, 0.44, 0.06, 0.36, 0, cb('saddle', 1));
-    for (const sd of [-1, 1]) {
-      const x0 = -0.14, x1 = 0.4, yt = 1.52, yb = 1.1;
-      const top = sd * 0.24, bot = sd * 0.315;
-      const [u0, v0, u1, v1] = NUM_RECT;
-      const a = V3(x0, yb, bot), b = V3(x1, yb, bot), c = V3(x1, yt, top), d = V3(x0, yt, top);
-      if (sd > 0) B.quad(a, b, c, d, { uvs: [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], bone: 1 });
-      else B.quad(b, a, d, c, { uvs: [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], bone: 1 });
-    }
-    // 首・たてがみ
-    limb(B, V3(0.52, 1.36, 0), V3(0.99, 1.95, 0), 0.25, 0.13, 8, cb('coat', 2), 0.72);
+    const X = V3(1, 0, 0), Y = V3(0, 1, 0), Z = V3(0, 0, 1);
+    const cell = k => { const uv = cellUV(CELL[k]); return () => uv; };
+    const rig = b => [b, b, 0];
+    const mBody = hi ? 16 : 10, mNeck = hi ? 12 : 8, mHead = hi ? 12 : 8, mLeg = hi ? 8 : 6, mTail = hi ? 8 : 5;
+
+    // 胴
+    loft(B, BODY_T.map(([x, top, bot, w, k]) => ell(V3(x, (top + bot) / 2, 0), Y, Z, (top - bot) / 2, w, mBody, k, 0.92)),
+      BODY_T.map(() => rig(1)), (i, j, P) => sideUV(P), { cap0: true, cap1: true });
+    // 首
+    loft(B, NECK.map(s => ell(s.c, s.u, Z, s.h, s.w, mNeck, 0.28, 0.95)), NECK.map(s => s.sk), (i, j, P) => sideUV(P), { cap0: true, cap1: true });
+    // 頭
     {
-      const d = V3(0.43, 0.54, 0).normalize(), n = V3(-d.y, d.x, 0);
-      const c = V3(0.755, 1.655, 0).add(n.clone().multiplyScalar(0.165));
-      const g = new THREE.BoxGeometry(0.66, 0.07, 0.05);
-      const m = new THREE.Matrix4().compose(c, new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.atan2(d.y, d.x))), V3(1, 1, 1));
-      B.add(g, m, cb('mane', 2));
+      const ts = hi ? [0, 0.08, 0.2, 0.32, 0.44, 0.58, 0.72, 0.85, 0.94, 1] : [0, 0.2, 0.44, 0.72, 0.9, 1];
+      loft(B, ts.map(t => { const s = headSec(t); return ell(s.c, vHU(), Z, s.h, s.w, mHead, s.k, 0.9); }), ts.map(() => rig(4)),
+        (i, j) => rUV(R_HEAD, ts[i], mth(j, mHead)), { cap0: true, cap1: true });
+      // 耳・目・鼻の穴
+      for (const sd of [-1, 1]) {
+        const base = headPt(0.03, Math.PI - sd * 0.55, -0.02);
+        const dir = vHU().multiplyScalar(0.75).addScaledVector(new THREE.Vector3(-HD[0], -HD[1], 0), 0.55).addScaledVector(Z, sd * 0.2).normalize();
+        const g = new THREE.ConeGeometry(0.042, 0.17, hi ? 6 : 4);
+        g.translate(0, 0.085, 0);
+        const m = new THREE.Matrix4().compose(base, new THREE.Quaternion().setFromUnitVectors(Y, dir), V3(0.62, 1, 1));
+        B.add(g, m, { uv: sideUV(base), bone: 4 });
+        blob(B, headPt(0.21, Math.PI - sd * 1.0, -0.012), 0.027, 0.027, 0.027, hi ? 7 : 5, hi ? 5 : 4, { uv: cellUV(CELL.eye), bone: 4 });
+        if (hi) blob(B, headPt(0.93, Math.PI - sd * 0.78, -0.014), 0.02, 0.026, 0.016, 5, 4, { uv: cellUV(CELL.dark), bone: 4 });
+      }
+      // 前髪
+      const ft = [-0.02, 0.07, 0.15, 0.22];
+      loft(B, ft.map((t, i) => { const s = headSec(Math.max(0, t)); const o = arc(s.c, vHU(), Z, s.h, s.w, s.k, 0.9, Math.PI - 0.38, Math.PI + 0.38, hi ? 4 : 3, 0.02 + (i ? 0 : 0.01)); const n = arc(s.c, vHU(), Z, s.h, s.w, s.k, 0.9, Math.PI + 0.38, Math.PI - 0.38, hi ? 4 : 3, 0.003); return o.concat(n); }),
+        ft.map(() => rig(4)), (i, j) => rUV(R_HAIR, 0.1 + (j % 4) * 0.08, 1 - i / 3), { cap1: true });
     }
-    // 頭（うなじから鼻先へ）・頬・鼻・耳・目・流星
-    limb(B, V3(1.0, 1.99, 0), V3(1.36, 1.57, 0), 0.115, 0.075, 8, cb('coat', 3), 0.72);
-    blob(B, V3(1.07, 1.87, 0), 0.13, 0.12, 0.095, 8, 6, cb('coat', 3));
-    blob(B, V3(1.36, 1.56, 0), 0.085, 0.075, 0.07, 7, 5, cb('dark', 3));
-    for (const sd of [-1, 1]) {
-      const g = new THREE.ConeGeometry(0.035, 0.15, 4);
-      const m = new THREE.Matrix4().compose(V3(0.97, 2.1, sd * 0.055), new THREE.Quaternion().setFromEuler(new THREE.Euler(sd * 0.25, 0, 0.35)), V3(1, 1, 1));
-      B.add(g, m, cb('coat', 3));
-      blob(B, V3(1.11, 1.92, sd * 0.078), 0.022, 0.022, 0.02, 5, 4, cb('eye', 3));
-    }
+    // たてがみ（首の右側に寝る）
     {
-      const d = V3(0.36, -0.42, 0).normalize(), n = V3(-d.y, d.x, 0);
-      const c = V3(1.19, 1.77, 0).add(n.clone().multiplyScalar(0.085));
-      const g = new THREE.BoxGeometry(0.4, 0.012, 0.045);
-      const m = new THREE.Matrix4().compose(c, new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.atan2(d.y, d.x))), V3(1, 1, 1));
-      B.add(g, m, cb('blaze', 3));
+      const n = hi ? 5 : 3;
+      const rings = [], sk = [];
+      for (let i = 1; i < NECK.length; i++) {
+        const lo = Math.PI - 0.72 - 0.08 * hash01(i, 77);
+        const o = [], inn = [];
+        for (let j = 0; j < n; j++) { const th = Math.PI + 0.1 - (Math.PI + 0.1 - lo) * j / (n - 1); o.push(neckPt(i, th, 0.022 - 0.01 * j / (n - 1))); }
+        for (let j = n - 1; j >= 0; j--) { const th = Math.PI + 0.1 - (Math.PI + 0.1 - lo) * j / (n - 1); inn.push(neckPt(i, th, 0.004)); }
+        rings.push(o.concat(inn)); sk.push(NECK[i].sk);
+      }
+      loft(B, rings, sk, (i, j) => rUV(R_HAIR, (j % n) / n * 0.45, i / (rings.length - 1)), { cap0: true, cap1: true });
     }
     // 尾
-    limb(B, V3(-0.86, 1.47, 0), V3(-1.0, 1.24, 0), 0.05, 0.05, 5, cb('mane', 4));
-    limb(B, V3(-1.0, 1.24, 0), V3(-1.12, 0.76, 0), 0.05, 0.085, 6, cb('mane', 4), 0.6);
-    // 脚（前：肘から膝・膝から蹄。後：飛節まで太く）
-    const legs = [[5, 6, -0.14, true, 'sockFL'], [7, 8, 0.14, true, 'sockFR'], [9, 10, -0.16, false, 'sockHL'], [11, 12, 0.16, false, 'sockHR']];
-    for (const [bu, bl, z, front, sock] of legs) {
-      if (front) {
-        limb(B, V3(0.5, 1.2, z), V3(0.52, 0.62, z), 0.1, 0.06, 7, cb('coat', bu));
-        blob(B, V3(0.52, 0.62, z), 0.058, 0.06, 0.055, 6, 4, cb('coat', bl));
-        limb(B, V3(0.52, 0.62, z), V3(0.53, 0.27, z), 0.045, 0.04, 6, cb('points', bl));
-        limb(B, V3(0.53, 0.27, z), V3(0.56, 0.08, z), 0.04, 0.045, 6, cb(sock, bl));
-        limb(B, V3(0.565, 0.08, z), V3(0.57, 0.0, z), 0.055, 0.065, 6, cb('hoof', bl));
-      } else {
-        limb(B, V3(-0.52, 1.28, z), V3(-0.68, 0.6, z), 0.15, 0.07, 7, cb('coat', bu));
-        blob(B, V3(-0.56, 1.06, z * 1.05), 0.17, 0.27, 0.12, 7, 5, cb('coat', bu), -0.25);
-        blob(B, V3(-0.68, 0.6, z), 0.065, 0.065, 0.055, 6, 4, cb('coat', bl));
-        limb(B, V3(-0.68, 0.6, z), V3(-0.62, 0.27, z), 0.05, 0.042, 6, cb('points', bl));
-        limb(B, V3(-0.62, 0.27, z), V3(-0.585, 0.08, z), 0.042, 0.046, 6, cb(sock, bl));
-        limb(B, V3(-0.58, 0.08, z), V3(-0.575, 0.0, z), 0.056, 0.066, 6, cb('hoof', bl));
+    {
+      const rings = [], sk = [];
+      TAIL_T.forEach((r, i) => {
+        const a = TAIL_T[Math.max(0, i - 1)], b = TAIL_T[Math.min(TAIL_T.length - 1, i + 1)];
+        const T = V3(b[0] - a[0], b[1] - a[1], 0).normalize(), u = V3(-T.y, T.x, 0);
+        rings.push(ell(V3(r[0], r[1], 0), u, Z, r[2], r[3], mTail, 0, 0.85)); sk.push([r[4], r[5], r[6]]);
+      });
+      loft(B, rings, sk, (i, j) => rUV(R_HAIR, 0.5 + mth(j, mTail) * 0.5, 1 - i / (rings.length - 1)), { cap0: true, cap1: true, tip1: V3(-0.06, -0.03, 0) });
+    }
+    // 脚
+    [[8, FLEG_T, -1, FZ, 0], [12, FLEG_T, 1, FZ, 1], [16, HLEG_T, -1, HZ, 2], [20, HLEG_T, 1, HZ, 3]].forEach(([b0, tab, sd, z0, k]) => {
+      const rows = hi ? tab : tab.filter((r, i) => i % 2 === 0 || i === tab.length - 1 || i < 2);
+      loft(B, rows.map(([x, y, h, w]) => ell(V3(x, y, sd * (z0 - (y < 0.9 ? 0.012 * (0.9 - y) : 0))), X, Z, h, w, mLeg, -0.08, 1)),
+        rows.map(r => [b0 + r[4], b0 + r[5], r[6]]), (i, j, P) => legUV(k, P), { cap0: true, cap1: true });
+    });
+    // ゼッケン（鞍の下の布。両脇に番号。外から読めるように）
+    {
+      const xs = [], nx = hi ? 6 : 3, nt = hi ? 5 : 3, x0 = -0.2, x1 = 0.3;
+      for (let i = 0; i < nx; i++) xs.push(x0 + (x1 - x0) * i / (nx - 1));
+      for (const sd of [1, -1]) {
+        const ta = sd > 0 ? 0.3 * Math.PI : 1.07 * Math.PI, tb = sd > 0 ? 0.93 * Math.PI : 1.7 * Math.PI;
+        const rings = xs.map(x => { const out = []; for (let j = 0; j < nt; j++) out.push(bodyPt(x, ta + (tb - ta) * j / (nt - 1), 0.012)); return out; });
+        loft(B, rings, xs.map(() => rig(1)), (i, j) => {
+          const fx = i / (nx - 1), fy = j / (nt - 1);
+          return rUV(R_NUM, sd > 0 ? fx : 1 - fx, sd > 0 ? fy : 1 - fy);
+        }, { open: true, inside: i => bodySec(xs[i]).c });
       }
     }
-    // 騎手：脚（白いズボン・黒い長靴。鐙に立つ形で胴につく）
-    for (const sd of [-1, 1]) {
-      limb(B, V3(0.02, 1.84, sd * 0.1), V3(0.36, 1.66, sd * 0.245), 0.085, 0.068, 6, cb('pants', 1));
-      limb(B, V3(0.36, 1.66, sd * 0.245), V3(0.2, 1.37, sd * 0.27), 0.062, 0.05, 6, cb('boots', 1));
-      B.box(0.24, 1.33, sd * 0.27, 0.16, 0.06, 0.07, 0, cb('boots', 1));
-    }
-    // 上体（勝負服）・尻・頭・帽子・ゴーグル
-    blob(B, V3(-0.01, 1.81, 0), 0.11, 0.085, 0.13, 7, 5, cb('pants', 13));
+    // 鞍・腹帯
     {
-      const g = new THREE.BoxGeometry(0.52, 0.24, 0.32);
-      const m = new THREE.Matrix4().compose(V3(0.25, 1.94, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.3)), V3(1, 1, 1));
-      B.add(g, m, { rect: SILK_RECT, bone: 13 });
+      const xs = [-0.05, 0.07, 0.2, 0.33], n = hi ? 5 : 3;
+      loft(B, xs.map(x => arc(bodySec(x).c, Y, Z, bodySec(x).h, bodySec(x).w, bodySec(x).k, 0.92, 0.8 * Math.PI, 1.2 * Math.PI, n, 0.042)
+        .concat(arc(bodySec(x).c, Y, Z, bodySec(x).h, bodySec(x).w, bodySec(x).k, 0.92, 1.2 * Math.PI, 0.8 * Math.PI, n, 0.014))), xs.map(() => rig(1)), cell('saddle'), { cap0: true, cap1: true });
+      const gx = [0.315, 0.36];
+      loft(B, gx.map(x => { const s = bodySec(x); return ell(s.c, Y, Z, s.h + 0.012, s.w + 0.012, mBody, s.k * s.w / (s.w + 0.012), 0.92); }), gx.map(() => rig(1)), cell('goggle'));
     }
-    blob(B, V3(0.58, 2.1, 0), 0.1, 0.105, 0.095, 8, 6, cb('skin', 13));
+    // 頭絡（鼻革・額革・頬革）と手綱
     {
-      const g = new THREE.SphereGeometry(0.118, 9, 6, 0, TAU, 0, Math.PI * 0.62);
-      const m = new THREE.Matrix4().compose(V3(0.575, 2.11, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.55)), V3(1.05, 1, 1.02));
-      B.add(g, m, cb('cap', 13));
-      B.add(new THREE.BoxGeometry(0.11, 0.016, 0.16), new THREE.Matrix4().compose(V3(0.69, 2.165, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.25)), V3(1, 1, 1)), cb('cap', 13));
-      B.box(0.67, 2.1, 0, 0.03, 0.045, 0.15, 0, cb('goggle', 13));
+      const ring2 = (t0, t1, off) => [t0, t1].map(t => { const s = headSec(t); return ell(s.c, vHU(), Z, s.h + off, s.w + off, mHead, s.k * s.w / (s.w + off), 0.9); });
+      loft(B, ring2(0.6, 0.645, 0.008), [rig(4), rig(4)], cell('bridle'));
+      loft(B, ring2(0.1, 0.13, 0.008), [rig(4), rig(4)], cell('bridle'));
+      if (hi) for (const sd of [-1, 1]) {
+        const pts = [0.04, 0.3, 0.56, 0.84].map(t => headPt(t, Math.PI - sd * 1.32, 0.006));
+        tube(B, pts, 0.011, 3, pts.map(() => rig(4)), cell('bridle'));
+      }
+      for (const sd of [-1, 1]) {
+        const a = headPt(0.86, Math.PI - sd * 1.75, 0.01), b = V3(0.86, 1.8, sd * 0.085), n = 5, pts = [];
+        for (let i = 0; i < n; i++) pts.push(a.clone().lerp(b, i / (n - 1)).add(V3(0, 0.03 * Math.sin(i / (n - 1) * Math.PI), 0)));
+        tube(B, pts, 0.008, hi ? 4 : 3, pts.map((p, i) => [4, sd < 0 ? 28 : 30, i / (n - 1)]), cell('bridle'));
+      }
     }
-    // 腕（袖）・手・手綱
+    // 騎手：脚（白いズボン・黒い長靴。鐙に立つ）
     for (const sd of [-1, 1]) {
-      limb(B, V3(0.42, 2.02, sd * 0.15), V3(0.6, 1.8, sd * 0.19), 0.056, 0.046, 6, cb('sleeve', 14));
-      limb(B, V3(0.6, 1.8, sd * 0.19), V3(0.86, 1.72, sd * 0.09), 0.046, 0.04, 6, cb('sleeve', 14));
-      blob(B, V3(0.88, 1.72, sd * 0.085), 0.045, 0.04, 0.04, 5, 4, cb('white', 14));
-      limb(B, V3(0.9, 1.71, sd * 0.08), V3(1.3, 1.62, sd * 0.07), 0.009, 0.009, 3, cb('mane', 14));
+      const hip = V3(0.0, 1.87, sd * 0.1), knee = V3(0.4, 1.7, sd * 0.25), ankle = V3(0.24, 1.36, sd * 0.29);
+      tube(B, [hip, hip.clone().lerp(knee, 0.5), knee], [0.068, 0.06, 0.048], hi ? 7 : 5, [[24, 24, 0], [24, 1, 0.5], [1, 1, 0]], cell('pants'), { cap0: true });
+      blob(B, knee, 0.05, 0.05, 0.05, 6, 4, { uv: cellUV(CELL.pants), bone: 1 });
+      tube(B, [knee, knee.clone().lerp(ankle, 0.3), ankle], [0.055, 0.052, 0.044], hi ? 7 : 5, [rig(1), rig(1), rig(1)], (i) => cellUV(i === 0 ? CELL.bootTop : CELL.boots), { cap1: true });
+      B.box(0.29, 1.335, sd * 0.29, 0.17, 0.06, 0.075, 0, { uv: cellUV(CELL.boots), bone: 1 });
+      // 鐙と鐙革
+      limb(B, V3(0.14, 1.6, sd * 0.25), V3(0.27, 1.34, sd * 0.31), 0.008, 0.008, 3, { uv: cellUV(CELL.bridle), bone: 1 });
+      B.box(0.29, 1.3, sd * 0.29, 0.1, 0.016, 0.1, 0, { uv: cellUV(CELL.goggle), bone: 1 });
+    }
+    // 上体（勝負服）・尻
+    {
+      const rings = [], sk = [];
+      SPINE_T.forEach((r, i) => {
+        const a = SPINE_T[Math.max(0, i - 1)], b = SPINE_T[Math.min(SPINE_T.length - 1, i + 1)];
+        const T = V3(b[0] - a[0], b[1] - a[1], 0).normalize(), u = V3(-T.y, T.x, 0);
+        rings.push(ell(V3(r[0], r[1], 0), u, Z, r[2], r[3], hi ? 12 : 8, 0.05, 0.85)); sk.push([r[4], r[5], r[6]]);
+      });
+      const m = hi ? 12 : 8;
+      loft(B, rings, sk, (i, j) => rUV(R_SILK, mth(j, m), i / (rings.length - 1)), { cap0: true, cap1: true });
+      blob(B, V3(-0.02, 1.86, 0), 0.12, 0.09, 0.15, hi ? 8 : 6, hi ? 6 : 4, { uv: cellUV(CELL.pants), bone: 24 });
+    }
+    // 首・頭・帽子・ゴーグル
+    {
+      limb(B, V3(0.53, 2.05, 0), V3(0.62, 2.11, 0), 0.045, 0.042, hi ? 6 : 4, { uv: cellUV(CELL.skin), bone: 26 });
+      blob(B, V3(0.655, 2.14, 0), 0.098, 0.1, 0.088, hi ? 9 : 6, hi ? 7 : 5, { uv: cellUV(CELL.skin), bone: 26 });
+      const g = new THREE.SphereGeometry(0.122, hi ? 12 : 8, hi ? 7 : 4, 0, TAU, 0, Math.PI * 0.56);
+      B.add(g, new THREE.Matrix4().compose(V3(0.645, 2.155, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.5)), V3(1.06, 1, 1.0)), { uv: cellUV(CELL.cap), bone: 26 });
+      B.add(new THREE.BoxGeometry(0.1, 0.014, 0.17), new THREE.Matrix4().compose(V3(0.76, 2.19, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.28)), V3(1, 1, 1)), { uv: cellUV(CELL.cap), bone: 26 });
+      B.box(0.742, 2.14, 0, 0.03, 0.045, 0.16, 0, { uv: cellUV(CELL.goggle), bone: 26 });
+    }
+    // 腕（袖）・手（手袋）
+    for (const sd of [-1, 1]) {
+      const ua = sd < 0 ? 27 : 29, fa = ua + 1;
+      const sh = V3(0.43, 2.0, sd * 0.15), el = V3(0.58, 1.86, sd * 0.2), hd = V3(0.84, 1.81, sd * 0.1);
+      tube(B, [sh, sh.clone().lerp(el, 0.5), el, el.clone().lerp(hd, 0.5), hd], [0.058, 0.052, 0.046, 0.042, 0.036], hi ? 7 : 5,
+        [[ua, ua, 0], [ua, ua, 0], [ua, fa, 0.5], [fa, fa, 0], [fa, fa, 0]], cell('sleeve'), { cap0: true });
+      blob(B, hd.clone().add(V3(0.02, -0.005, 0)), 0.045, 0.04, 0.04, hi ? 6 : 4, 4, { uv: cellUV(CELL.white), bone: fa });
+    }
+    // ムチ（右手。ふだんは肩の方へ寝かせる）
+    {
+      const a = V3(0.86, 1.81, 0.11), b = V3(0.36, 2.15, 0.27);
+      limb(B, a, b, 0.014, 0.008, 4, { uv: cellUV(CELL.dark), bone: 31 });
+      B.add(new THREE.BoxGeometry(0.06, 0.035, 0.008), new THREE.Matrix4().compose(b, new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.6)), V3(1, 1, 1)), { uv: cellUV(CELL.dark), bone: 31 });
+    }
+    // 馬具（使う馬だけ骨を伸ばして見せる）
+    {
+      // シャドーロール：鼻の上の白いもこもこ
+      const n = hi ? 11 : 7, pts = [], r = [];
+      for (let i = 0; i < n; i++) { const th = Math.PI * (0.46 + 1.08 * i / (n - 1)); pts.push(headPt(0.6, th, 0.056)); r.push(0.062 * (1 + 0.16 * Math.sin(i * 2.7)) * (i === 0 || i === n - 1 ? 0.7 : 1)); }
+      const rings = [];
+      for (let i = 0; i < n; i++) {
+        const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
+        const T = b.clone().sub(a).normalize(), u = new THREE.Vector3().crossVectors(Z, T).normalize();
+        const s = new THREE.Vector3().crossVectors(T, u).normalize(), m = hi ? 8 : 5, ring = [];
+        for (let j = 0; j < m; j++) { const th = j / m * TAU, rr = r[i] * (1 + 0.16 * Math.sin(j * 2.3 + i * 1.7) + 0.08 * Math.sin(j * 5.1 + i * 3.3)); ring.push(pts[i].clone().addScaledVector(u, Math.cos(th) * rr).addScaledVector(s, Math.sin(th) * rr * 1.1)); }
+        rings.push(ring);
+      }
+      loft(B, rings, rings.map(() => rig(GEAR.shadowRoll)), cell('roll'), { cap0: true, cap1: true });
+      // ブリンカー：目のまわりのカップ
+      for (const sd of [-1, 1]) {
+        const eye = headPt(0.21, Math.PI - sd * 1.0, 0.0);
+        const out = eye.clone().sub(headSec(0.21).c).normalize();
+        const fwd = new THREE.Vector3(HD[0], HD[1], 0).multiplyScalar(-0.2).addScaledVector(vHU(), 0.15).addScaledVector(out, 0.9).normalize();
+        const g = new THREE.CylinderGeometry(0.064, 0.048, 0.07, hi ? 10 : 6, 1, false);
+        g.translate(0, 0.02, 0);
+        B.add(g, new THREE.Matrix4().compose(eye.clone().addScaledVector(out, 0.012), new THREE.Quaternion().setFromUnitVectors(Y, fwd), V3(1, 1, 0.85)), { uv: cellUV(CELL.gear), bone: GEAR.blinkers });
+      }
+      // メンコ：耳覆いと、額からうなじを包む布
+      for (const sd of [-1, 1]) {
+        const base = headPt(0.03, Math.PI - sd * 0.55, -0.02);
+        const dir = vHU().multiplyScalar(0.75).addScaledVector(new THREE.Vector3(-HD[0], -HD[1], 0), 0.55).addScaledVector(Z, sd * 0.2).normalize();
+        const g = new THREE.ConeGeometry(0.056, 0.19, hi ? 7 : 5);
+        g.translate(0, 0.088, 0);
+        B.add(g, new THREE.Matrix4().compose(base, new THREE.Quaternion().setFromUnitVectors(Y, dir), V3(0.7, 1, 1)), { uv: cellUV(CELL.gear), bone: GEAR.hood });
+      }
+      const ht = [-0.03, 0.08, 0.18, 0.3, 0.4], na = hi ? 6 : 4;
+      loft(B, ht.map(t => { const s = headSec(Math.max(0, t)); return arc(s.c, vHU(), Z, s.h, s.w, s.k, 0.9, Math.PI * 0.42, Math.PI * 1.58, na, 0.018).concat(arc(s.c, vHU(), Z, s.h, s.w, s.k, 0.9, Math.PI * 1.58, Math.PI * 0.42, na, 0.005)); }),
+        ht.map(() => rig(GEAR.hood)), cell('gear'), { cap0: true, cap1: true });
+      // チークピーシーズ：頬革の上のもこもこ
+      for (const sd of [-1, 1]) {
+        const pts = [0.1, 0.24, 0.38, 0.5].map(t => headPt(t, Math.PI - sd * 1.32, 0.022));
+        tube(B, pts, [0.016, 0.026, 0.026, 0.018], hi ? 6 : 4, pts.map(() => rig(GEAR.cheekPieces)), cell('cheek'), { cap0: true, cap1: true });
+      }
     }
     const g = B.build();
-    g.boundingSphere.radius += 0.6; // 脚が動いても切れないように
+    g.boundingSphere.radius += 0.8; // 脚・首・尾が動いても切れないように
     return g;
   }
 
-  // 馬ごとの絵：毛色・白徴・帽子・勝負服・ゼッケン
+  // 馬ごとの絵：毛色（年齢で白くなる芦毛も）・白徴・帽子・勝負服・ゼッケン・馬具の色
+  const DEF_LOOK = { body: '#7d4322', top: '#5c2f16', belly: '#8f5531', mane: '#16100c', tail: '#16100c', points: '#17110d', muzzle: '#3b2519', hoof: '#26211d', gloss: 0.5 };
+  function coatLook(c, age) {
+    const A = HS.Art;
+    return A && A.coatLook ? A.coatLook(c, age) : DEF_LOOK;
+  }
   function paintHorse(h) {
     const cv = canvasOf(256, 256), g = cv.getContext('2d');
-    const C = coatOf(h.coat), mk = marksOf(h.name || String(h.num)), sk = h.silks || DEF_SILKS;
+    const L = coatLook(h.coat, h.age), mk = marksOf(h.name || String(h.num)), sk = h.silks || DEF_SILKS, gear = h.gear || {};
     const cell = (k, col) => { const i = CELL[k]; g.fillStyle = col; g.fillRect((i % 8) * 32, Math.floor(i / 8) * 32, 32, 32); };
-    const sock = '#f2efe6';
-    cell('coat', C[0]); cell('dark', C[1]); cell('mane', C[2]); cell('points', C[3]);
-    cell('sockFL', mk.socks && mk.socks[0] ? sock : C[3]); cell('sockFR', mk.socks && mk.socks[1] ? sock : C[3]);
-    cell('sockHL', mk.socks && mk.socks[2] ? sock : C[3]); cell('sockHR', mk.socks && mk.socks[3] ? sock : C[3]);
-    cell('hoof', '#1e1b19'); cell('saddle', '#2a1a10'); cell('pants', '#f2f2f0'); cell('boots', '#161616');
-    cell('skin', '#e3bf9c'); cell('cap', h.cap || frameColor(h.frame)); cell('sleeve', sk.sub || sk.base);
-    cell('blaze', mk.blaze && mk.blaze !== 'none' ? '#f4f2ec' : C[0]); cell('goggle', '#20252b'); cell('white', '#f4f4f2'); cell('eye', '#0c0a08');
-    // 勝負服（x 0〜128, y 96〜224）
-    const bx = 0, by = 96, bw = 128, bh = 128;
-    g.fillStyle = sk.base; g.fillRect(bx, by, bw, bh);
-    g.fillStyle = sk.sub || '#ffffff';
-    const p = sk.pattern;
-    g.save(); g.beginPath(); g.rect(bx, by, bw, bh); g.clip(); g.beginPath();
-    if (p === 'hoops') for (let i = 0; i < 4; i++) g.rect(bx, by + (i + 0.25) * bh / 4, bw, bh / 9);
-    else if (p === 'stripes') for (let i = 0; i < 6; i++) g.rect(bx + (i + 0.25) * bw / 6, by, bw / 13, bh);
-    else if (p === 'sash') { g.moveTo(bx + bw * 0.62, by); g.lineTo(bx + bw * 0.86, by); g.lineTo(bx + bw * 0.38, by + bh); g.lineTo(bx + bw * 0.14, by + bh); g.closePath(); }
-    else if (p === 'cross') { const w = bw * 0.14; g.moveTo(bx, by); g.lineTo(bx + w, by); g.lineTo(bx + bw, by + bh); g.lineTo(bx + bw - w, by + bh); g.closePath(); g.moveTo(bx + bw, by); g.lineTo(bx + bw - w, by); g.lineTo(bx, by + bh); g.lineTo(bx + w, by + bh); g.closePath(); }
-    else if (p === 'diamonds') for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if ((i + j) % 2 === 0) { const cx = bx + (i + 0.5) * bw / 4, cy = by + (j + 0.5) * bh / 4; g.moveTo(cx, cy - bh / 8); g.lineTo(cx + bw / 8, cy); g.lineTo(cx, cy + bh / 8); g.lineTo(cx - bw / 8, cy); g.closePath(); }
-    else if (p === 'stars') for (let i = 0; i < 5; i++) { const cx = bx + (0.15 + ((i * 37) % 100) / 140) * bw, cy = by + (0.15 + ((i * 53) % 100) / 140) * bh, r = bw * 0.13; for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.45 : r; if (k) g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); else g.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.closePath(); }
-    else if (p === 'halves') g.rect(bx + bw / 2, by, bw / 2, bh);
-    else if (p === 'yoke') g.rect(bx, by, bw, bh * 0.38);
-    g.fill(); g.restore();
-    // ゼッケン（x 128〜256, y 96〜176）：白地に黒の番号
-    g.fillStyle = '#f4f4f2'; g.fillRect(128, 96, 128, 80);
-    g.strokeStyle = '#2a2a2a'; g.lineWidth = 3; g.strokeRect(131.5, 99.5, 121, 73);
-    g.fillStyle = '#111'; g.font = `bold 58px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText(String(h.num != null ? h.num : ''), 192, 138);
+    cell('saddle', '#1d1a18'); cell('pants', '#f2f2f0'); cell('boots', '#141414'); cell('bootTop', '#8a5a34'); cell('skin', '#e3bf9c');
+    cell('cap', h.cap || frameColor(h.frame)); cell('sleeve', sk.sub || sk.base); cell('goggle', '#2a2f36'); cell('white', '#f4f4f2'); cell('eye', '#0c0a08');
+    cell('mane', L.mane); cell('bridle', '#2a1c12'); cell('roll', gear.rollColor || '#f6f4ee'); cell('gear', gear.color || '#25345e'); cell('dark', '#181210');
+    cell('cheek', gear.cheekColor || gear.rollColor || '#f3f0e6');
+    const rect = (r, fn) => { g.save(); g.beginPath(); g.rect(r[0], r[1], r[2], r[3]); g.clip(); fn(r[0], r[1], r[2], r[3]); g.restore(); };
+    // 体の色：横から見た位置（x, y）で決まる。背は濃く、腹は明るく（毛色による）、まだら・差し毛
+    const paintSide = (r, x0, x1) => rect(r, (rx, ry, rw, rh) => {
+      const py = y => ry + rh - (y - SY0) / (SY1 - SY0) * rh, px = x => rx + (x - x0) / (x1 - x0) * rw;
+      const gr = g.createLinearGradient(0, py(1.7), 0, py(0.85));
+      gr.addColorStop(0, L.top); gr.addColorStop(0.3, L.body); gr.addColorStop(0.75, L.body); gr.addColorStop(1, L.belly);
+      g.fillStyle = gr; g.fillRect(rx, ry, rw, rh);
+      const spot = (x, y, rr, col, a) => { const R = rr / (SY1 - SY0) * rh; const gg = g.createRadialGradient(px(x), py(y), 0, px(x), py(y), R); gg.addColorStop(0, col); gg.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = a; g.fillStyle = gg; g.fillRect(px(x) - R, py(y) - R, R * 2, R * 2); g.globalAlpha = 1; };
+      if (L.tan) { spot(-0.42, 1.08, 0.3, L.tan, 0.75); spot(0.38, 1.0, 0.22, L.tan, 0.6); spot(-0.7, 1.15, 0.2, L.tan, 0.35); }
+      if (L.dapple > 0) for (let i = 0; i < 70; i++) {
+        const x = -1.05 + hash01(i, 91) * 1.9, y = 0.95 + hash01(i, 92) * 0.68;
+        spot(x, y, 0.045 + hash01(i, 93) * 0.04, L.dappleCol, L.dapple * (0.5 + hash01(i, 94) * 0.5));
+      }
+      if (L.roan > 0) { g.fillStyle = 'rgba(235,232,226,' + (0.25 * L.roan) + ')'; for (let i = 0; i < 900; i++) { const x = -1.0 + hash01(i, 95) * 1.8, y = 0.9 + hash01(i, 96) * 0.75; g.fillRect(px(x), py(y), 1, 1); } }
+      // 肩・尻の筋肉の光り
+      spot(0.5, 1.32, 0.2, 'rgba(255,255,255,0.5)', 0.08 + 0.1 * L.gloss); spot(-0.66, 1.42, 0.24, 'rgba(255,255,255,0.5)', 0.08 + 0.1 * L.gloss);
+      // 頭の側（耳）
+      spot(1.1, 2.05, 0.12, L.top, 0.5);
+    });
+    paintSide(R_BODY, SX0, SX1);
+    // 脚：体の続きの色 → 膝・飛節から下は脚先の色 → 白い靴下 → 蹄
+    const sockLen = k => [0.16, 0.24, 0.34, 0.46][Math.floor(hash01(strHash((h.name || '') + k), 5) * 4)];
+    R_LEG.forEach((r, k) => {
+      paintSide(r, LEG_XC[k] - LEG_HW, LEG_XC[k] + LEG_HW);
+      rect(r, (rx, ry, rw, rh) => {
+        const py = y => ry + rh - y / LEG_H * rh;
+        const kn = k < 2 ? 0.53 : 0.58;
+        const gr = g.createLinearGradient(0, py(kn + (L.pointsSoft ? 0.3 : 0.14)), 0, py(kn - 0.02));
+        gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, L.points);
+        g.fillStyle = gr; g.fillRect(rx, py(kn + 0.32), rw, py(kn - 0.02) - py(kn + 0.32));
+        g.fillStyle = L.points; g.fillRect(rx, py(kn - 0.02), rw, py(0) - py(kn - 0.02));
+        const sock = mk.socks && mk.socks[k];
+        if (sock) {
+          const top = sockLen(k);
+          g.fillStyle = '#f2efe8'; g.fillRect(rx, py(top), rw, py(0.075) - py(top));
+          for (let i = 0; i < 6; i++) g.fillRect(rx + i * rw / 6, py(top + 0.02 * hash01(k * 9 + i, 7)), rw / 6, py(top) - py(top + 0.02 * hash01(k * 9 + i, 7)) + 1);
+        }
+        g.fillStyle = sock ? '#b8a68a' : L.hoof; g.fillRect(rx, py(0.078), rw, py(0) - py(0.078) + 1);
+        g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(rx, py(0.082), rw, 2);
+      });
+    });
+    // たてがみ・尾：毛の筋
+    rect(R_HAIR, (rx, ry, rw, rh) => {
+      g.fillStyle = L.mane; g.fillRect(rx, ry, rw / 2, rh);
+      g.fillStyle = L.tail; g.fillRect(rx + rw / 2, ry, rw / 2, rh);
+      for (let i = 0; i < 40; i++) {
+        const x = rx + hash01(i, 81) * rw;
+        g.fillStyle = hash01(i, 82) > 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.22)';
+        g.fillRect(x, ry, 1, rh);
+      }
+    });
+    // 頭：横（u＝うなじ→鼻先）× 回り（v＝下・あご → 顔の前）。鼻先は鼻の色、流星は顔の前
+    rect(R_HEAD, (rx, ry, rw, rh) => {
+      const gr = g.createLinearGradient(rx, 0, rx + rw, 0);
+      gr.addColorStop(0, L.body); gr.addColorStop(0.62, L.body); gr.addColorStop(0.85, L.muzzleMid || L.muzzle); gr.addColorStop(1, L.muzzle);
+      g.fillStyle = gr; g.fillRect(rx, ry, rw, rh);
+      const gv = g.createLinearGradient(0, ry + rh, 0, ry);
+      gv.addColorStop(0, 'rgba(0,0,0,0.12)'); gv.addColorStop(0.5, 'rgba(0,0,0,0)'); gv.addColorStop(1, 'rgba(255,255,255,0.05)');
+      g.fillStyle = gv; g.fillRect(rx, ry, rw, rh);
+      const W = '#f4f2ec', px = t => rx + t * rw, py = v => ry + (1 - v) * rh;
+      g.fillStyle = W;
+      if (mk.blaze === 'star') { g.beginPath(); g.ellipse(px(0.2), py(0.97), rw * 0.05, rh * 0.16, 0, 0, TAU); g.fill(); }
+      else if (mk.blaze === 'stripe') { g.beginPath(); g.moveTo(px(0.16), py(1)); g.lineTo(px(0.16), py(0.86)); g.lineTo(px(0.85), py(0.92)); g.lineTo(px(0.85), py(1)); g.fill(); }
+      else if (mk.blaze === 'blaze') { g.beginPath(); g.moveTo(px(0.12), py(1)); g.lineTo(px(0.14), py(0.8)); g.lineTo(px(0.6), py(0.82)); g.lineTo(px(1), py(0.62)); g.lineTo(px(1), py(1)); g.fill(); }
+    });
+    // 勝負服（横＝体のまわり 0 胸 → 1 背、縦＝腰 → 首）
+    rect(R_SILK, (bx, by, bw, bh) => {
+      g.fillStyle = sk.base; g.fillRect(bx, by, bw, bh);
+      g.fillStyle = sk.sub || '#ffffff';
+      const p = sk.pattern;
+      g.beginPath();
+      if (p === 'hoops') for (let i = 0; i < 4; i++) g.rect(bx, by + (i + 0.3) * bh / 4, bw, bh / 9);
+      else if (p === 'stripes') for (let i = 0; i < 4; i++) g.rect(bx + (i + 0.3) * bw / 4, by, bw / 9, bh);
+      else if (p === 'sash') { g.moveTo(bx + bw * 0.45, by); g.lineTo(bx + bw * 0.75, by); g.lineTo(bx + bw * 0.55, by + bh); g.lineTo(bx + bw * 0.25, by + bh); g.closePath(); }
+      else if (p === 'cross') { const w = bw * 0.12; g.moveTo(bx, by); g.lineTo(bx + w, by); g.lineTo(bx + bw, by + bh); g.lineTo(bx + bw - w, by + bh); g.closePath(); g.moveTo(bx + bw, by); g.lineTo(bx + bw - w, by); g.lineTo(bx, by + bh); g.lineTo(bx + w, by + bh); g.closePath(); }
+      else if (p === 'diamonds') for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) { const cx = bx + (i + 0.5) * bw / 4, cy = by + (j + 0.5) * bh / 2; g.moveTo(cx, cy - bh / 4.5); g.lineTo(cx + bw / 9, cy); g.lineTo(cx, cy + bh / 4.5); g.lineTo(cx - bw / 9, cy); g.closePath(); }
+      else if (p === 'stars') for (let i = 0; i < 5; i++) { const cx = bx + (0.12 + i * 0.19) * bw, cy = by + (i % 2 ? 0.3 : 0.7) * bh, r = bh * 0.16; for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.45 : r; if (k) g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); else g.moveTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } g.closePath(); }
+      else if (p === 'halves') g.rect(bx + bw / 2, by, bw / 2, bh);
+      else if (p === 'yoke') g.rect(bx, by + bh * 0.62, bw, bh * 0.38);
+      g.fill();
+    });
+    // ゼッケン：白地に黒の番号
+    rect(R_NUM, (x, y, w, hh) => {
+      g.fillStyle = '#f4f4f2'; g.fillRect(x, y, w, hh);
+      g.strokeStyle = '#2a2a2a'; g.lineWidth = 3; g.strokeRect(x + 4.5, y + 4.5, w - 9, hh - 9);
+      g.fillStyle = '#111'; g.font = `bold 54px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(String(h.num != null ? h.num : ''), x + w / 2, y + hh / 2 + 3);
+    });
     return cv;
   }
 
-  // 馬の形を動かす。ph＝走りの位相 0〜1、sp＝走りの大きさ（0＝立つ）、push＝騎手の追い 0〜1
-  const LEGS = [[5, 6, -0.35, true], [7, 8, -0.45, true], [9, 10, 0.0, false], [11, 12, -0.1, false]];
+  // ---- 走りの動き ----
+  // 周期の折れ線をなめらかにつなぐ（Catmull-Rom）。K＝[[位相, 値], ...]
+  function cyc(K, x) {
+    x = ((x % 1) + 1) % 1;
+    const n = K.length;
+    let i = n - 1;
+    for (let k = 0; k < n; k++) if (K[k][0] <= x) i = k;
+    const p0 = K[(i - 1 + n) % n][1], p1 = K[i][1], p2 = K[(i + 1) % n][1], p3 = K[(i + 2) % n][1];
+    const t1 = K[i][0], t2 = K[(i + 1) % n][0] + (i + 1 >= n ? 1 : 0);
+    const u = (x + (x < t1 ? 1 : 0) - t1) / (t2 - t1 || 1), u2 = u * u, u3 = u2 * u;
+    return 0.5 * (2 * p1 + (p2 - p0) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u2 + (3 * p1 - p0 - 3 * p2 + p3) * u3);
+  }
+  // 脚の関節の角度（φ＝その脚が地面に着いてからの位相。0〜DUTY が地面を押す間、そのあと畳んで前へ振り出す）
+  //   正の角度＝下を向いた骨の先が前へ。膝・飛節・球節の曲がりもこの向きで書く
+  const F_DUTY = 0.25, H_DUTY = 0.27;
+  const FK = [
+    [[0, 0.38], [0.125, 0.0], [0.25, -0.42], [0.4, -0.4], [0.6, 0.05], [0.8, 0.42], [0.92, 0.47]],   // 肩
+    [[0, 0.04], [0.125, 0.0], [0.25, -0.08], [0.4, 0.25], [0.6, 0.85], [0.8, 0.62], [0.92, 0.22]],   // 肘
+    [[0, 0.0], [0.125, 0.04], [0.25, 0.0], [0.38, -0.9], [0.5, -1.75], [0.65, -1.6], [0.8, -0.6], [0.92, -0.05]], // 膝
+    [[0, 0.15], [0.1, 0.45], [0.2, 0.35], [0.28, -0.2], [0.4, -0.9], [0.6, -0.7], [0.8, -0.25], [0.92, 0.1]],     // 球節
+  ];
+  const HK = [
+    [[0, 0.42], [0.13, 0.05], [0.27, -0.42], [0.42, -0.42], [0.6, -0.05], [0.78, 0.38], [0.9, 0.5]],  // 股
+    [[0, 0.0], [0.13, -0.05], [0.27, 0.12], [0.42, -0.1], [0.6, -0.5], [0.78, -0.45], [0.9, -0.12]],  // 後膝
+    [[0, 0.1], [0.13, 0.28], [0.27, -0.05], [0.42, 0.7], [0.6, 1.35], [0.78, 1.0], [0.9, 0.35]],        // 飛節
+    [[0, 0.1], [0.13, 0.45], [0.25, 0.2], [0.35, -0.5], [0.5, -1.0], [0.68, -0.6], [0.85, -0.15]],     // 球節
+  ];
+  // 襲歩の4拍子（左手前）：右後 → 左後 → 右前 → 左前、そのあと4本とも浮く。右手前は左右を入れ替える
+  const TOUCH_L = { 8: 0.46, 12: 0.34, 16: 0.12, 20: 0.0 }, TOUCH_R = { 8: 0.34, 12: 0.46, 16: 0.0, 20: 0.12 };
+  const BOB = [[0, -0.3], [0.13, -0.7], [0.3, -0.2], [0.46, -0.6], [0.6, -0.5], [0.75, 0.2], [0.88, 0.8]];  // 胴の上下（浮く間が高い）
+  const PITCH = [[0, 0.3], [0.16, 0.7], [0.34, 0.1], [0.5, -0.6], [0.66, -0.6], [0.84, -0.1]];          // 胴の前後の傾き（＋＝鼻が上）
+  const NOD = [[0, 0.5], [0.2, 0.8], [0.4, 0.0], [0.56, -0.8], [0.72, -0.6], [0.86, 0.0]];               // 首の上下（＋＝上げる）
+  const HOOF_OFF = [0.07, -0.215, 0];
+  const _m = { a: null, v: null };
+  // 蹄の底の高さ（馬の形の中で。胴の骨から関節をたどる）
+  function hoofY(b, b0) {
+    const A = _m.a || (_m.a = new THREE.Matrix4()), V = _m.v || (_m.v = new THREE.Vector3());
+    A.copy(b[1].matrix);
+    for (let i = 0; i < 4; i++) A.multiply(b[b0 + i].matrix);
+    V.set(HOOF_OFF[0], HOOF_OFF[1], 0).applyMatrix4(A);
+    return V.y;
+  }
+  // 馬の形を動かす。ph＝走りの位相 0〜1、sp＝走りの大きさ（0＝立つ）、push＝騎手の追い 0〜1、lead＝手前（1＝左）
   function poseHorse(H, ph, sp, push, t, seed, whip, pose) {
     const b = H.bones;
+    const J = BONES;
+    // 騎手の骨を元の位置へ
+    b[24].position.set(J[24][1] - J[1][1], J[24][2] - J[1][2], 0);
+    for (const i of [1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31]) b[i].rotation.set(0, 0, 0);
+    let bob = 0, pitch = 0;
     if (sp <= 0) {
-      b[1].position.y = 1.25; b[1].rotation.z = 0;
+      b[1].position.y = 1.25;
       b[2].rotation.z = 0.04 * Math.sin(t * 1.1 + seed * 5);
-      b[3].rotation.z = 0.05 * Math.sin(t * 0.7 + seed * 3);
-      b[4].rotation.z = 0.06 * Math.sin(t * 1.3 + seed * 7); b[4].rotation.x = 0.05 * Math.sin(t * 0.9 + seed);
-      for (const [u, l] of LEGS) { b[u].rotation.z = 0; b[l].rotation.z = 0; }
-      b[13].rotation.z = 0.03 * Math.sin(t * 0.8 + seed * 2); b[13].position.x = 0; b[14].rotation.z = 0;
-      return;
-    }
-    const a = ph * TAU;
-    b[1].position.y = 1.25 + sp * 0.06 * Math.cos(a - 0.6) - sp * 0.03;
-    b[1].rotation.z = sp * 0.05 * Math.sin(a + 1.4);
-    const nk = sp * 0.15 * Math.sin(a + 2.3);
-    b[2].rotation.z = nk - sp * 0.12;
-    b[3].rotation.z = -nk * 0.5 + sp * 0.1;
-    b[4].rotation.z = -sp * 0.5 + 0.1 * Math.sin(a * 2 + seed);
-    b[4].rotation.x = 0.06 * Math.sin(a + seed * 3);
-    for (const [u, l, off, front] of LEGS) {
-      const p = (ph + off) * TAU, s = Math.sin(p), c = Math.max(0, Math.cos(p));
-      if (front) {
-        b[u].rotation.z = sp * (0.12 + 0.62 * s);
-        b[l].rotation.z = -sp * 1.75 * Math.pow(c, 1.4);
-      } else {
-        b[u].rotation.z = sp * (-0.08 + 0.55 * s);
-        b[l].rotation.z = -sp * 1.05 * Math.pow(c, 1.3) + sp * 0.12;
+      b[4].rotation.z = 0.06 * Math.sin(t * 0.7 + seed * 3);
+      b[5].rotation.z = 0.75 + 0.05 * Math.sin(t * 1.3 + seed * 7); b[6].rotation.z = 0.25; b[7].rotation.z = 0.15;
+      b[5].rotation.x = 0.05 * Math.sin(t * 0.9 + seed);
+      for (let i = 8; i < 24; i++) b[i].rotation.z = 0;
+      b[24].position.y -= 0.03;
+      b[25].rotation.z = 0.08 + 0.03 * Math.sin(t * 0.8 + seed * 2);
+      b[26].rotation.z = -0.08;
+      b[27].rotation.z = b[29].rotation.z = -0.15; b[28].rotation.z = b[30].rotation.z = -0.25;
+    } else {
+      const k = Math.min(sp, 1.1);
+      const T = H.lead > 0 ? TOUCH_L : TOUCH_R;
+      for (const b0 of [8, 12, 16, 20]) {
+        const front = b0 < 16, K = front ? FK : HK, phi = ((ph - T[b0]) % 1 + 1) % 1;
+        for (let i = 0; i < 4; i++) b[b0 + i].rotation.z = k * cyc(K[i], phi);
       }
+      bob = 0.02 * k * cyc(BOB, ph);
+      pitch = 0.05 * k * cyc(PITCH, ph);
+      b[1].position.y = 1.25 + bob;
+      b[1].rotation.z = pitch;
+      b[1].updateMatrix();
+      for (let i = 8; i < 24; i++) b[i].updateMatrix();
+      // 地面を押している脚の蹄が地面に着くように、胴の高さを寄せる
+      // 4本とも浮いている間は、いちばん低い蹄を地面から少し上げる
+      let ws = 0, wy = 0, lo = 9;
+      for (const b0 of [8, 12, 16, 20]) {
+        const duty = b0 < 16 ? F_DUTY : H_DUTY, phi = ((ph - T[b0]) % 1 + 1) % 1, y = hoofY(b, b0);
+        lo = Math.min(lo, y);
+        if (phi < duty) { const w = Math.sin(phi / duty * Math.PI); ws += w; wy += w * y; }
+      }
+      const al = Math.min(1, ws * 1.5);
+      b[1].position.y -= al * (ws > 0 ? wy / ws : 0) + (1 - al) * (lo - 0.05 * k);
+      // 首：前脚が着く頃に下げ、後脚で押す頃に上げる。走るほど前へ伸ばす
+      const nod = cyc(NOD, ph) * k;
+      b[2].rotation.z = -0.14 * k + 0.09 * nod;
+      b[3].rotation.z = -0.05 * k + 0.06 * nod;
+      b[4].rotation.z = 0.12 * k - 0.1 * nod - pitch;
+      // 尾：走ると後ろへ流れる
+      b[5].rotation.z = 0.46 - 0.1 * k + 0.05 * Math.sin(ph * TAU * 2 + seed);
+      b[6].rotation.z = 0.05 * Math.sin(ph * TAU + 1 + seed); b[7].rotation.z = 0.08 * Math.sin(ph * TAU + 2 + seed);
+      b[5].rotation.x = 0.06 * Math.sin(ph * TAU + seed * 3);
+      // 騎手：鐙の上で腰を浮かせ、馬の上下を脚で吸う。追うときは首の動きに合わせて上体と腕を前へ送る
+      const pk = clamp(push, 0, 1);
+      b[24].position.y -= bob * 0.75;
+      b[24].rotation.z = -pitch * 0.8;
+      const pump = -cyc(NOD, ph + 0.04);
+      b[24].position.x += pk * 0.06 * pump;
+      b[24].position.y -= pk * 0.03 * (1 + pump) * 0.5;
+      b[25].rotation.z = -0.04 - pk * (0.05 + 0.06 * pump);
+      b[26].rotation.z = 0.04 + pk * (0.05 + 0.06 * pump) + pitch * 0.8;
+      for (const ua of [27, 29]) { b[ua].rotation.z = pk * (0.12 + 0.3 * pump); b[ua + 1].rotation.z = pk * (0.05 + 0.25 * pump); }
     }
-    // 騎手：追うときは首の動きに合わせて上体と腕を前後に
-    const k = clamp(push, 0, 1);
-    b[13].rotation.z = -0.02 + k * 0.13 * Math.sin(a + 2.0) - sp * 0.02 * Math.sin(a);
-    b[13].position.x = k * 0.06 * Math.sin(a + 2.0);
-    b[14].rotation.z = k * 0.42 * Math.sin(a + 2.3) - k * 0.12;
-    // ムチ：入れてから 0.5 秒、腕を大きく振り上げて振り下ろす
+    // ムチ：入れてから 0.5 秒。右腕を振り上げ、尻へ振り下ろして戻す
     if (whip != null && whip >= 0 && whip < 0.5) {
-      const w = Math.sin(whip / 0.5 * Math.PI);
-      b[14].rotation.z = -1.25 * w + 0.25 * (1 - w);
-      b[13].rotation.z -= 0.1 * w;
+      const u = whip / 0.5;
+      const key = (K) => { let i = 0; while (i < K.length - 2 && K[i + 1][0] <= u) i++; const [t0, v0] = K[i], [t1, v1] = K[i + 1]; return v0 + (v1 - v0) * smooth((u - t0) / (t1 - t0)); };
+      b[29].rotation.z = key([[0, b[29].rotation.z], [0.38, 1.7], [0.58, -1.4], [1, 0]]);
+      b[29].rotation.x = key([[0, 0], [0.38, -0.25], [0.58, -0.8], [1, 0]]);
+      b[30].rotation.z = key([[0, b[30].rotation.z], [0.38, 0.5], [0.58, 0.17], [1, 0]]);
+      b[31].rotation.z = key([[0, 0], [0.38, -0.5], [0.58, 2.25], [1, 0]]);
+      b[31].rotation.x = key([[0, 0], [0.38, 0], [0.58, 0.6], [1, 0]]);
+      b[25].rotation.z += 0.12 * key([[0, 0], [0.38, 1], [0.58, -0.3], [1, 0]]);
     }
-    // ガッツポーズ：ゴールのあと、上体を起こして腕を突き上げる（pose＝始めてからの秒）
+    // ガッツポーズ：ゴールのあと、上体を起こして右の拳を突き上げる（pose＝始めてからの秒）
     if (pose != null && pose >= 0 && pose < 2.6) {
       const w = clamp(pose / 0.25, 0, 1) * clamp((2.6 - pose) / 0.4, 0, 1);
-      b[13].rotation.z = b[13].rotation.z * (1 - w) + 0.22 * w;
-      b[13].position.x *= 1 - w;
-      b[14].rotation.z = b[14].rotation.z * (1 - w) - 2.5 * w + 0.12 * w * Math.sin(pose * 9);
+      b[25].rotation.z = b[25].rotation.z * (1 - w) + 0.45 * w;
+      b[26].rotation.z = b[26].rotation.z * (1 - w) - 0.3 * w;
+      b[24].position.x *= 1 - w;
+      b[29].rotation.z = b[29].rotation.z * (1 - w) + 2.5 * w + 0.12 * w * Math.sin(pose * 9);
+      b[30].rotation.z = b[30].rotation.z * (1 - w) + 0.4 * w;
+      b[29].rotation.x = -0.3 * w;
     }
   }
+
+  // テスト用：馬の形（q＝1 近く・0 遠く）と骨の数
+  R3.horseGeometry = q => horseGeometry(q);
+  R3.BONES = BONES.length;
+  R3.GEAR = GEAR;
 
   // ---- 本体 ----
   R3.create = function (canvas, setup) {
@@ -859,12 +1312,15 @@
     ring(1500, a => 22 + 7 * Math.sin(37 * a) + 5 * Math.sin(61 * a + 1.3) + 4 * Math.sin(97 * a + 0.2), haze(look.woods, 0.18), haze(look.woods, 0.35));
 
     // ---- 馬 ----
-    const hgeo = G(horseGeometry());
+    // 形は近く・遠くの2つを全頭で使い回す。馬ごとに違うのは絵（毛色・勝負服・ゼッケン）と、馬具の骨を見せるかだけ
+    const hgeo = G(horseGeometry(1)), hgeoLo = G(horseGeometry(0));
     const H = [];
     for (let i = 0; i < nH; i++) {
-      const h = horsesIn[i] || {};
+      const h0 = horsesIn[i] || {};
+      const h = Object.assign({}, h0, { age: ageOf(h0), gear: gearOf(h0) });
       const tex = T(texOf(paintHorse(h), false, aniso));
-      const mat = M(new THREE.MeshLambertMaterial({ map: tex, skinning: true }));
+      const L = coatLook(h.coat, h.age);
+      const mat = M(new THREE.MeshPhongMaterial({ map: tex, skinning: true, shininess: 18 + 30 * (L.gloss || 0), specular: new THREE.Color(0x111111).lerp(new THREE.Color(0x3a3a3a), L.gloss || 0) }));
       const mesh = new THREE.SkinnedMesh(hgeo, mat);
       const bones = BONES.map(() => new THREE.Bone());
       BONES.forEach(([par, x, y, z], k) => {
@@ -874,9 +1330,12 @@
       mesh.add(bones[0]);
       mesh.updateMatrixWorld(true);
       mesh.bind(new THREE.Skeleton(bones));
+      // 着けていない馬具は骨を縮めて消す
+      for (const [k, bi] of Object.entries(GEAR)) if (!h.gear[k]) bones[bi].scale.set(0, 0, 0);
       mesh.rotation.order = 'YXZ';
       scene.add(mesh);
-      H.push({ mesh, bones, num: h.num != null ? h.num : i + 1, seed: hash01(strHash(h.name || i), 3), lean: 0, yaw: 0, lane: null });
+      const seed = hash01(strHash(h.name || i), 3);
+      H.push({ mesh, bones, num: h.num != null ? h.num : i + 1, seed, lead: seed < 0.5 ? 1 : -1, lean: 0, yaw: 0, lane: null });
     }
     // 丸い影の板（まとめて1回）
     const shTexC = canvasOf(64, 64), sg = shTexC.getContext('2d');
@@ -942,6 +1401,8 @@
         Hh.yaw += (tgtYaw - Hh.yaw) * kk;
         const pitch = Math.atan((elev(s - 1) - elev(s + 1)) / 2);
         Hh.mesh.position.set(p.x, f.e, -p.y);
+        // 近い馬は細かい形、遠い馬は粗い形（カメラは前のコマの位置）
+        Hh.mesh.geometry = camera.position.distanceToSquared(Hh.mesh.position) < 28 * 28 ? hgeo : hgeoLo;
         Hh.mesh.rotation.set(sign * Hh.lean, yawOf(f) + sign * Hh.yaw, pitch);
         const ph = ((x / STRIDE + Hh.num * 0.137) % 1 + 1) % 1;
         const sp = moving ? clamp(v / 16, 0.35, 1.15) : 0;
