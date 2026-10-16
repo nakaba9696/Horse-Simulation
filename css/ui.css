@@ -1,0 +1,214 @@
+/* 画面の共通部品（docs/UI.md）。js/ui/uikit.js が作る部品の見た目と、それで作った画面（馬の店・フリーレース・番組表・厩舎・馬の画面の並び）
+   色・字・余白は css/style.css の頭の変数だけを使う（直書きの色は、能力の数の色相と芝・ダートの色だけ） */
+
+/* ---------- 見出しの帯：画面の名前を大きく。左に金の印、右に今の状態 ---------- */
+.u-band {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: var(--sp-4);
+  margin: var(--sp-4) 0 var(--sp-3); padding: var(--sp-3) var(--sp-5) var(--sp-3) var(--sp-4);
+  border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+  background: linear-gradient(105deg, rgba(214, 173, 76, .26) 0, rgba(214, 173, 76, .06) 34%, transparent 34.2%), linear-gradient(180deg, var(--brand), var(--brand-2));
+  box-shadow: 0 1px 0 rgba(255, 236, 180, .22) inset, 0 4px 0 rgba(0, 0, 0, .35), 0 16px 32px -18px rgba(0, 0, 0, .9);
+  animation: u-band-in .34s var(--ease) both;
+}
+.u-band::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(115deg, transparent 0 22px, rgba(255, 255, 255, .025) 22px 24px); }
+@keyframes u-band-in { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+.u-band-ic { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--gold-grad); color: var(--on-accent); box-shadow: 0 3px 0 #6e4d0e, 0 0 0 3px rgba(242, 217, 142, .2); }
+.u-band-ic svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.u-band-t { min-width: 0; }
+.u-band h1 { margin: 0; font-family: var(--ff-serif); font-weight: 900; font-size: var(--fs-xl); line-height: 1.2; letter-spacing: .1em; color: var(--accent-hi); text-shadow: 0 2px 0 rgba(0, 0, 0, .45); }
+.u-band-sub { font-size: var(--fs-sm); color: var(--text-2); }
+.u-band-r { position: relative; z-index: 1; margin-left: auto; display: flex; gap: var(--sp-2); flex-wrap: wrap; justify-content: flex-end; }
+.u-bstat { display: flex; flex-direction: column; align-items: flex-end; min-width: 92px; padding: 4px 12px; border-radius: var(--r); background: rgba(0, 0, 0, .28); border: 1px solid var(--line-2); }
+.u-bstat small { font-size: var(--fs-xs); color: var(--text-2); line-height: 1.3; }
+.u-bstat b { font-size: var(--fs-md); font-variant-numeric: tabular-nums; line-height: 1.3; }
+.u-bstat.money b { color: var(--accent-hi); }
+.u-bstat.warn b { color: var(--warn); }
+
+/* ---------- ボタンの名前（キーボードかパッドか。いま使っている方だけ出す） ---------- */
+.u-key { display: inline-flex; margin-right: 5px; vertical-align: 1px; }
+.u-key i { font-style: normal; display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 5px; border: 1px solid var(--line-2); background: var(--surface-3); box-shadow: 0 2px 0 rgba(0, 0, 0, .5); font: 700 11px/18px var(--ff-sans); color: var(--text); text-align: center; letter-spacing: 0; }
+.u-key .p { display: none; }
+body[data-input="pad"] .u-key .k { display: none; }
+body[data-input="pad"] .u-key .p { display: inline-block; }
+
+/* ---------- タブ（Q・E／LB・RB で切り替え） ---------- */
+.u-tabs { display: flex; align-items: center; gap: 6px; margin: var(--sp-3) 0; padding: 5px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--sunk) 82%, transparent); border: 1px solid var(--line-2); overflow-x: auto; scrollbar-width: none; }
+.u-tabs::-webkit-scrollbar { display: none; }
+.u-lr { flex: none; opacity: .75; padding: 0 2px; }
+.u-lr .u-key { margin: 0; }
+.u-tab { flex: 1 1 auto; min-height: 38px; padding: 6px 18px; border: 0; border-radius: var(--r-pill); background: none; color: var(--text-2); font: 700 var(--fs-base) var(--ff-sans); letter-spacing: .04em; white-space: nowrap; cursor: pointer; transition: color var(--dur) var(--ease), background var(--dur) var(--ease); }
+.u-tab small { margin-left: 6px; padding: 0 7px; border-radius: var(--r-pill); background: rgba(255, 255, 255, .08); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.u-tab:hover { color: var(--text); background: var(--hover); }
+.u-tab.on { background: var(--gold-grad); color: var(--on-accent); box-shadow: 0 2px 0 #6e4d0e, 0 1px 0 rgba(255, 255, 255, .5) inset; }
+.u-tab.on small { background: rgba(0, 0, 0, .15); }
+
+/* ---------- 能力の数値の札・総合力・値段・適性の印 ---------- */
+.u-num { display: inline-block; min-width: 34px; padding: 1px 6px; border-radius: 6px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; background: hsla(var(--h, 205), 72%, 46%, var(--a, .2)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .07) inset; }
+.u-num.big { min-width: 48px; padding: 3px 8px; font-size: var(--fs-md); }
+.u-fh { display: inline-flex; gap: 4px; }
+.u-fh > span { display: inline-flex; align-items: baseline; gap: 3px; min-width: 46px; justify-content: center; padding: 1px 7px; border-radius: 6px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-2); background: rgba(255, 255, 255, .05); }
+.u-fh small { font-size: var(--fs-xs); font-weight: 700; opacity: .8; }
+.u-fh .t.hi { color: #eaffea; background: color-mix(in srgb, var(--turf) 70%, transparent); }
+.u-fh .d.hi { color: #fff1e0; background: color-mix(in srgb, var(--dirt) 75%, transparent); }
+.u-price { font-weight: 900; font-variant-numeric: tabular-nums; color: var(--accent-hi); white-space: nowrap; }
+.u-price.over { color: var(--bad); }
+.u-mark { display: inline-block; width: 1.5em; text-align: center; font-weight: 900; }
+.u-mark.m3 { color: var(--good); } .u-mark.m2 { color: var(--text); } .u-mark.m1 { color: var(--warn); } .u-mark.m0 { color: var(--bad); opacity: .8; }
+
+/* ---------- 選び肢の札（select の代わり） ---------- */
+.u-seg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px; padding: 3px; border-radius: var(--r); background: color-mix(in srgb, var(--sunk) 85%, transparent); border: 1px solid var(--line); }
+.u-seg-l { padding: 0 8px 0 6px; font-size: var(--fs-sm); color: var(--text-2); }
+.u-seg button { min-height: 32px; padding: 3px 12px; border: 0; border-radius: 7px; background: none; color: var(--text-2); font: 700 var(--fs-sm) var(--ff-sans); cursor: pointer; white-space: nowrap; }
+.u-seg button:hover { color: var(--text); background: var(--hover); }
+.u-seg button.on { background: var(--gold-grad); color: var(--on-accent); box-shadow: 0 2px 0 #6e4d0e; }
+.u-segs { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+
+/* ---------- 一覧の表：行は1枚ずつの札。選んだ行は金の縁 ---------- */
+.u-tbox { overflow-x: auto; }
+table.u-t { width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: 14px; font-variant-numeric: tabular-nums; }
+table.u-t th { padding: 4px 8px; font-size: var(--fs-xs); font-weight: 700; color: var(--text-2); text-align: left; white-space: nowrap; letter-spacing: .04em; }
+table.u-t th.sortable { cursor: pointer; user-select: none; }
+table.u-t th.sortable:hover, table.u-t th.sortable.navsel { color: var(--text); }
+table.u-t th.on { color: var(--accent-hi); }
+table.u-t th.c, table.u-t td.c { text-align: center; }
+table.u-t th.r, table.u-t td.r { text-align: right; }
+.u-dir { font-style: normal; margin-left: 2px; font-size: 9px; }
+table.u-t td { padding: 7px 8px; background: var(--glass); border-top: 1px solid var(--line); border-bottom: 1px solid rgba(0, 0, 0, .35); vertical-align: middle; transition: background var(--dur) var(--ease); }
+table.u-t td:first-child { border-radius: var(--r) 0 0 var(--r); border-left: 3px solid transparent; }
+table.u-t td:last-child { border-radius: 0 var(--r) var(--r) 0; }
+table.u-t tr[data-act] { cursor: pointer; }
+table.u-t tr[data-act]:hover td, table.u-t tr.pv-on td { background: color-mix(in srgb, var(--surface-3) 92%, transparent); }
+table.u-t tr.navsel td { background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); border-top-color: var(--line-strong); border-bottom-color: var(--line-strong); }
+table.u-t tr.navsel td:first-child, table.u-t tr.pv-on td:first-child, table.u-t tr.mine td:first-child { border-left-color: var(--accent-hi); }
+table.u-t tr.navsel { animation: none !important; transform: none; filter: none; }
+table.u-t tr.mine td { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+table.u-t tr.dim td { opacity: .55; }
+table.u-t tr.dim td:last-child { opacity: 1; }
+table.u-t .nm { font-weight: 700; font-size: 15px; white-space: nowrap; }
+table.u-t .sub { font-size: var(--fs-xs); color: var(--text-2); }
+table.u-t .w { white-space: nowrap; }
+table.u-t tr.u-month td { background: none; border: 0; padding: var(--sp-3) 4px 2px; font-family: var(--ff-serif); font-weight: 900; color: var(--accent-hi); letter-spacing: .08em; }
+table.u-t tr.u-month td small { font-family: var(--ff-sans); font-weight: 400; color: var(--text-2); letter-spacing: 0; margin-left: 8px; }
+.u-more { display: flex; justify-content: center; margin-top: var(--sp-3); }
+.u-empty { padding: var(--sp-5); text-align: center; color: var(--text-2); border: 1px dashed var(--line-2); border-radius: var(--r-lg); background: var(--glass); }
+
+/* ---------- 二つの列：左に一覧、右に見本（選んでいる物の詳しい中身） ---------- */
+.u-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
+@media (min-width: 1100px) { .u-split { grid-template-columns: minmax(0, 1fr) 340px; } .u-side { position: sticky; top: 76px; } body[data-screen="free"] .u-side { top: 16px; } }
+.u-pv { padding: var(--sp-4); border-radius: var(--r-lg); border: 1px solid var(--line-strong); background: linear-gradient(180deg, rgba(214, 173, 76, .08), transparent 40%), var(--glass); box-shadow: var(--sh-2); }
+.u-pv canvas.pv-art { display: block; width: 100%; aspect-ratio: 2 / 1; border-radius: var(--r); background: #22452a; }
+.u-pv .pv-nm { margin-top: var(--sp-2); font-family: var(--ff-serif); font-weight: 900; font-size: var(--fs-lg); line-height: 1.3; }
+.u-pv .pv-sub { font-size: var(--fs-sm); color: var(--text-2); }
+.u-pv .pv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: var(--sp-3); }
+.u-pv .pv-grid > div { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: var(--fs-xs); color: var(--text-2); }
+.u-pv .pv-row { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); font-size: var(--fs-sm); }
+.u-pv .pv-row b { font-size: var(--fs-base); }
+.u-pv .pv-price { margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--line-2); display: flex; align-items: center; justify-content: space-between; }
+.u-pv .pv-price .u-price { font-size: var(--fs-lg); }
+.u-pv .skills { margin-top: var(--sp-2); }
+.u-pv .pv-empty { color: var(--text-2); font-size: var(--fs-sm); text-align: center; padding: var(--sp-5) 0; }
+
+/* ---------- 下の操作の案内（PC だけ） ---------- */
+.u-keybar { position: fixed; right: var(--sp-4); bottom: 66px; z-index: 25; display: flex; gap: var(--sp-3); padding: 4px 12px; border-radius: var(--r-pill); font-size: var(--fs-xs); color: var(--text-2); background: color-mix(in srgb, var(--bg) 80%, transparent); border: 1px solid var(--line); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); pointer-events: none; }
+.u-keybar > span { white-space: nowrap; }
+body[data-screen="free"] .u-keybar { bottom: var(--sp-3); }
+@media (max-width: 960px), (pointer: coarse) { .u-keybar { display: none; } }
+
+/* ---------- 馬の店 ---------- */
+.shop-t td.mk { width: 30px; text-align: center; padding-left: 4px; padding-right: 0; }
+.shop-t .mk i { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-style: normal; font-weight: 900; font-size: var(--fs-xs); background: rgba(255, 255, 255, .08); color: var(--text-2); }
+.shop-t .mk i.sp { background: var(--gold-grad); color: var(--on-accent); }
+.shop-t .mk i.none { background: none; }
+.shop-t tr.legend td { background: color-mix(in srgb, #8a5cf0 16%, var(--surface)); }
+.shop-t tr { animation: u-row-in .3s var(--ease) both; animation-delay: calc(var(--i, 0) * 22ms); }
+@keyframes u-row-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.shop-note { margin-top: var(--sp-3); font-size: var(--fs-sm); color: var(--text-2); }
+.shop-locks { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ---------- フリーレース ---------- */
+.fr-top { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--glass); border: 1px solid var(--line-2); }
+.fr-top .cond { font-family: var(--ff-serif); font-weight: 900; font-size: var(--fs-md); color: var(--accent-hi); }
+.fr-top .grow { flex: 1; }
+.u-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-2); }
+.u-ccard { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: var(--sp-2) var(--sp-2) var(--sp-2); border-radius: var(--r-lg); border: 1px solid var(--line-2); background: linear-gradient(180deg, rgba(255, 255, 255, .05), transparent 45%), var(--glass); color: var(--text); font-family: var(--ff-sans); text-align: left; cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+.u-ccard:hover, .u-ccard.navsel { transform: translateY(-2px); border-color: var(--line-strong); }
+.u-ccard.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), 0 3px 0 rgba(0, 0, 0, .4), 0 0 24px -4px rgba(214, 173, 76, .6); background: linear-gradient(180deg, rgba(214, 173, 76, .16), transparent 55%), var(--glass-2); }
+.u-ccard svg { width: 100%; height: 62px; display: block; }
+.u-ccard .cn { font-family: var(--ff-serif); font-weight: 900; font-size: var(--fs-md); line-height: 1.25; }
+.u-ccard .cm { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; font-size: var(--fs-xs); color: var(--text-2); }
+.u-ccard .cm .chip { font-size: 10.5px; padding: 0 6px; }
+.u-ccard .cty { position: absolute; top: 6px; right: 8px; font-size: var(--fs-xs); color: var(--text-2); font-weight: 700; }
+.fr-detail { display: flex; flex-direction: column; gap: var(--sp-3); }
+.fr-detail .course-svg { width: 100%; height: auto; display: block; }
+.fr-detail h3 { margin: 0; font-family: var(--ff-serif); font-weight: 900; font-size: var(--fs-xl); color: var(--accent-hi); letter-spacing: .06em; }
+.fr-detail .u-seg { width: 100%; }
+.fr-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-2); }
+.fr-filters input, .fr-filters select { min-height: 36px; padding: 4px 10px; border-radius: var(--r); border: 1px solid var(--line-2); background: var(--sunk); color: var(--text); font: inherit; font-size: var(--fs-sm); }
+.fr-filters input { flex: 1 1 200px; }
+.fr-tbl td.num { text-align: center; padding-left: 3px; padding-right: 3px; }
+.fr-tbl th { text-align: center; }
+.fr-tbl th:first-child { text-align: left; }
+.fr-tbl { font-size: 13px; }
+.fr-tbl td { padding: 5px 3px; }
+.fr-tbl td:first-child { padding-left: 10px; max-width: 13em; }
+.fr-tbl .nm { font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+.fr-tbl th { padding: 4px 3px; }
+.fr-tbl .u-num { min-width: 30px; padding: 1px 3px; }
+.fr-add { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line-strong); color: var(--accent-hi); font-weight: 900; }
+.fr-add.on { background: var(--gold-grad); color: var(--on-accent); border-color: transparent; }
+.fr-add.off { opacity: .3; }
+.fr .u-split { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1100px) { .fr .u-split { grid-template-columns: minmax(0, 1fr) 300px; } }
+.fr-tbl tr.on td { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.fr-picks { display: flex; flex-direction: column; gap: 4px; margin-top: var(--sp-2); max-height: 46vh; overflow-y: auto; }
+.fr-pick { display: flex; align-items: center; gap: var(--sp-2); padding: 4px 6px 4px 8px; border-radius: var(--r); background: rgba(0, 0, 0, .22); border: 1px solid var(--line); font-size: var(--fs-sm); }
+.fr-pick.me { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.fr-pick .nm { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fr-pick .btn.sm { min-height: 26px; padding: 0 8px; font-size: var(--fs-xs); }
+
+/* ---------- 番組表（次走の選び方） ---------- */
+.pg-head { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); align-items: center; padding: var(--sp-3) var(--sp-4); border-radius: var(--r-lg); background: var(--glass); border: 1px solid var(--line-2); font-size: var(--fs-sm); }
+.pg-head b { font-size: var(--fs-base); }
+.pg-head .next { margin-left: auto; padding: 4px 12px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--accent) 18%, transparent); border: 1px solid var(--line-strong); }
+.pg-t td.wk { width: 74px; white-space: nowrap; }
+.pg-t td.wk b { display: block; font-size: 14px; }
+.pg-t td.wk small { color: var(--text-2); font-size: var(--fs-xs); }
+.pg-t td.act { width: 120px; text-align: right; white-space: nowrap; }
+.pg-t .why { font-size: var(--fs-xs); color: var(--warn); }
+.pg-t .tag { display: inline-block; padding: 1px 8px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 700; }
+.pg-t .tag.rsv { background: var(--gold-grad); color: var(--on-accent); }
+.pg-t .tag.ent { background: var(--good); color: #062012; }
+.pg-t .tag.busy { color: var(--text-3); border: 1px solid var(--line-2); }
+.pg-t tr.g1 .nm { color: var(--accent-hi); }
+.pg-t tr.now td { background: color-mix(in srgb, var(--info) 8%, var(--surface)); }
+
+/* ---------- 厩舎の一覧 ---------- */
+.st-t canvas.thumb { width: 84px; height: 56px; border-radius: var(--r-sm); display: block; background: #22452a; }
+.st-t td.th { width: 92px; padding-right: 0; }
+.st-t .next b { color: var(--accent-hi); }
+
+/* ---------- 馬の画面：PC では左に絵と札、右にタブと中身 ---------- */
+@media (min-width: 1100px) {
+  .hz { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
+  .hz-l { position: sticky; top: 76px; }
+  .hz-l .hero canvas { aspect-ratio: 4 / 3; object-fit: cover; }
+  .hz-r > .tabs:first-child, .hz-r > .u-tabs:first-child { margin-top: 0; }
+  .hz-r > .comment:first-child { margin-top: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) { .u-band, .shop-t tr { animation: none; } }
+
+/* ---------- 前からあるタブ（.tabs）も同じ形にそろえる ---------- */
+.tabs { margin: var(--sp-3) 0; padding: 5px; gap: 4px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--sunk) 82%, transparent); border: 1px solid var(--line-2); }
+.tabs button { min-height: 36px; padding: 5px 16px; border: 0; border-radius: var(--r-pill); background: none; color: var(--text-2); box-shadow: none; font-weight: 700; }
+.tabs button:hover { color: var(--text); background: var(--hover); }
+.tabs button.on { background: var(--gold-grad); color: var(--on-accent); box-shadow: 0 2px 0 #6e4d0e, 0 1px 0 rgba(255, 255, 255, .5) inset; }
+
+/* ---------- 選んでいる札のひと言（下の案内の左） ---------- */
+.u-help { color: var(--text); max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
+.u-help:empty { display: none; }
+
+/* ---------- 画面の入りを短く（待たせない。0.2秒ほど） ---------- */
+main.enter-tab > * { animation-duration: 240ms; }
+main.enter-tab > *:nth-child(2) { animation-delay: 25ms; } main.enter-tab > *:nth-child(3) { animation-delay: 50ms; } main.enter-tab > *:nth-child(4) { animation-delay: 75ms; } main.enter-tab > *:nth-child(n+5) { animation-delay: 100ms; }
+main.enter-push, main.enter-back { animation-duration: 220ms; }

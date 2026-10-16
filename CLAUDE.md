@@ -68,6 +68,8 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/ui/screens.js`・`app.js` | 画面の中身と操作・週の流れ | U |
 | `js/core/edits.js`・`js/ui/editor.js` | 競走馬エディット（史実馬の書き換え・書き出し・読み込み） | U |
 | `css/style.css` | 見た目（深緑と金が既定、紺と金に切り替えられる） | U |
+| `js/ui/uikit.js`・`css/ui.css`・`docs/UI.md` | 画面の共通部品（見出しの帯・タブ・表の行・能力の数の札・値段・選び肢の札・操作の案内）と画面の決まり。騎乗の外の画面はこの部品で作る | U |
+| `js/core/listsort.js`・`js/core/program.js`・`js/ui/program.js` | 一覧の並べ替えと絞り込み（`HS.List`）／番組表（今週から1年先の重賞と条件戦・出られるか・適性・出走と予約）と厩舎の一覧 | U |
 | `tests/` | 検証 | T |
 
 ## 決まり（どのゲームでも）

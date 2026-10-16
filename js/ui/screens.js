@@ -152,23 +152,24 @@
     const wIdx = W.wIdx();
     const mine = h.owner === 'P';
     const tab = st.htab || (h.loc === 'stable' ? 'train' : 'info');
-    const tabs = [['info', '能力'], (h.loc === 'stable' || (G.mode === 'jockey' && h.loc === 'farm')) && mine ? ['train', G.mode === 'jockey' ? '出走' : '調教・出走'] : null, ['results', '戦績'], ['ped', '血統']].filter(Boolean);
+    const tabs = [['info', '能力'], (h.loc === 'stable' || (G.mode === 'jockey' && h.loc === 'farm')) && mine ? ['train', G.mode === 'jockey' ? '番組表・次走' : '調教・出走'] : null, ['results', '戦績'], ['ped', '血統']].filter(Boolean);
     const cls = H.className(H.classOf(h), G.year);
     let body = '';
     if (tab === 'info') body = infoTab(h, wIdx);
-    else if (tab === 'train') body = trainTab(h, wIdx, st);
+    else if (tab === 'train') body = G.mode === 'jockey' && UI.programTab ? UI.programTab(h, st) : trainTab(h, wIdx, st); // 騎手のゲームは番組表（js/ui/program.js）
     else if (tab === 'results') body = resultsTab(h);
     else if (tab === 'ped') body = pedTab(h);
     const locLabel = { stable: '入厩中', farm: '牧場', mare: '繁殖牝馬', stud: '種牡馬' }[h.loc] || '';
-    return `
+    // PC では左に絵と札、右にタブと中身（css/ui.css の .hz）。タブは Q・E でも切り替わる
+    return `<div class="hz"><div class="hz-l">
       <div class="row mt"><button class="btn sm" data-act="back">← もどる</button><span class="right small muted">${locLabel}</span></div>
       <div class="hero mt"><canvas width="960" height="480" data-art="portrait" data-id="${h.id}"></canvas>
         <div class="plate"><div class="row"><span class="nm">${e(W.displayName(h))}</span>${UI.histMark(h)}</div>
         <div class="pd">${UI.age(h)}　${e(h.coat || '')}　父 ${e(h.sire || '不明')}　母 ${e(h.dam || '不明')}${P.parents(h.dam)[0] ? `（母父 ${e(P.parents(h.dam)[0])}）` : ''}</div>
         <div class="pd">${h.loc === 'stud' ? `種付け料 ${U.money(h.studFee)}` : `${cls}・${h.starts || 0}戦${h.wins || 0}勝（${h.w2 || 0}-${h.w3 || 0}）・獲得 ${U.money(h.prize || 0)}`}</div></div></div>
-      ${mine ? actionsBar(h) : ''}
-      <div class="tabs">${tabs.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="htab" data-tab="${k}">${l}</button>`).join('')}</div>
-      ${body}`;
+      ${mine ? actionsBar(h) : ''}</div>
+      <div class="hz-r"><div class="tabs">${tabs.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="htab" data-tab="${k}">${l}</button>`).join('')}</div>
+      ${body}</div></div>`;
   };
   function actionsBar(h) {
     const G = W.get();
@@ -449,7 +450,7 @@
       }).join('')}</table></div>`;
     }
     return `<h2 class="sec">レース</h2>
-      <div class="tabs">${[['last', '先週の結果'], ['cal', G.year + '年の重賞']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="rtab" data-tab="${k}">${l}</button>`).join('')}</div>${body}`;
+      <div class="tabs">${[['last', '先週の結果'], ['cal', W.yLabel(G.year) + 'の重賞']].map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="rtab" data-tab="${k}">${l}</button>`).join('')}</div>${body}`;
   };
   UI.resultTable = function (r) {
     return `<h3>${UI.gradeTag(r)} ${e(r.short || r.name)}</h3><div class="small muted">${r.course} ${r.surface}${r.dist}m　馬場：${r.ground}</div>
@@ -506,14 +507,21 @@
         <div class="row mt"><span class="grow">自分の馬のレースを</span><select data-act-change="setting" data-k="watch"><option value="1" ${G.settings.watch !== 0 ? 'selected' : ''}>映像で見る</option><option value="0" ${G.settings.watch === 0 ? 'selected' : ''}>結果だけ見る</option></select></div>
         <div class="row mt"><span class="grow">史実メモ（史実の勝ち鞍など）</span><select data-act-change="setting" data-k="showHistNote"><option value="1" ${G.settings.showHistNote ? 'selected' : ''}>表示する</option><option value="0" ${!G.settings.showHistNote ? 'selected' : ''}>隠す</option></select></div>
       </div>
-      <div class="panel"><b>遊び方</b>
+      ${G.mode === 'jockey' ? `<div class="panel"><b>遊び方</b>
+        <ul class="small">
+          <li>ホームの「レースへ」で今週の騎乗に向かう（乗るレースが無ければ「次の週へ」）。</li>
+          <li>馬の店でデビュー前の史実馬を買う。2歳の4月から自動で入厩する。</li>
+          <li>厩舎の「番組表」で次に出るレースを選ぶ。今週は出走登録、先の週は予約。選ばなければおまかせで決まる。</li>
+          <li>馬主から騎乗依頼が来る。受けると、その馬に乗る。仲良くなるほど大きなレースの依頼が来る。</li>
+          <li>年末は距離ごとのグランドフィナーレ。その年に活躍した馬だけが招待される。</li>
+        </ul></div>` : `<div class="panel"><b>遊び方</b>
         <ul class="small">
           <li>毎週、厩舎の馬の調教と出走レースを決めて「次の週へ」。おまかせにすると自動で決まります。</li>
           <li>市場ではデビュー前の史実馬が買えます。史実の名牝を買い、史実どおりの種牡馬をつければ、あの名馬が自分の牧場に生まれます。違う相手をつければ歴史が変わります。</li>
           <li>種付けは2月〜6月。血統表のクロス（インブリード）やニックスで仔の素質が上下します。</li>
           <li>能力は「見立て」です。レースを走り、調教を積むほど正確になります。</li>
           <li>引退した牡馬は実績しだいで種牡馬に、牝馬は繁殖牝馬になります。</li>
-        </ul></div>
+        </ul></div>`}
       <div class="panel"><b>データを消す</b><div class="small muted">この端末のセーブを消して、タイトルに戻ります。</div><div class="btns mt"><button class="btn red" data-act="reset">セーブを消す</button></div></div>
       <div class="small muted center mt">馬名・レース名・騎手名は実在のものを使ったファンメイドのゲームです。調教師・馬主は架空です。</div>`;
   };

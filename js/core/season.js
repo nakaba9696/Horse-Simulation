@@ -122,7 +122,7 @@
     } else HS.World.news(`資金がマイナスです。来月の末までに立て直さないと、シーズンが終わります。`, 'warn');
   };
 
-  // ---------- 出走の予約（1年先＝52週先まで、重賞を先に押さえておく。入厩前の馬も） ----------
+  // ---------- 出走の予約（1年先＝52週先まで、重賞と条件戦を先に押さえておく。入厩前の馬も） ----------
   T.RESERVE_WEEKS = 52;
   T.weeksLeft = () => T.RESERVE_WEEKS;
   T.reserves = id => (HS.World.get().reserve || []).filter(x => !id || x.id === id);
@@ -130,8 +130,8 @@
     const W = HS.World, G = W.get();
     const h = W.horse(id);
     if (!h || h.owner !== 'P') return '持ち馬ではない';
-    if (!race.graded) return '予約できるのは重賞だけ';
-    const why = T.staticIneligible(h, race, race.year);
+    if (!race.graded && !(race.cls && race.region === 'JRA')) return '予約できるのは重賞と条件戦だけ';
+    const why = T.staticIneligible(h, race, race.year) || (race.graded ? null : HS.Races.ineligible(Object.assign({}, h, { injury: null }), race, race.year)); // 条件戦は勝ち星の条件もいまの成績で見る（番組表 js/core/program.js）
     if (why) return why;
     G.reserve = G.reserve || [];
     if (G.reserve.some(x => x.id === id && x.y === race.year && x.m === race.month && x.w === race.week)) return 'その週はもう予約している';
