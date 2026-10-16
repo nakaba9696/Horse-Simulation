@@ -436,6 +436,94 @@
   document.addEventListener('click', ev => { if (App.st.screen === 'title' && !App.st.titleOpen && !ev.target.closest('[data-act], #modal-root, .fx')) act['title-open'](); });
   document.addEventListener('keydown', ev => { if (App.st.screen === 'title' && !App.st.titleOpen && (ev.key === 'Enter' || ev.key === ' ') && !$('#modal-root').children.length) { ev.preventDefault(); act['title-open'](); } });
 
+  // ---------- 十字キー・矢印キー・ゲームパッドで札を選ぶ（持ち主の決定 2026-10-16「遊ぶのは PC だけ」） ----------
+  // 選んでいる札は金に光る（.navsel）。Enter・A で押す、Esc・B で閉じる・もどる。
+  // 騎乗中・見せ場・タイトルの「スタート」の前は、それぞれの画面が自分で受け取るので触らない。パドックの左右は馬の切り替え
+  const NAV_SEL = 'button:not([disabled]), a[href], [data-act], select, input, textarea';
+  const navRoot = () => { const m = $('#modal-root'); return m.lastElementChild || $('#app'); };
+  const navOff = () => App.inRace || !!document.querySelector('.ride, .fx') || (App.st.screen === 'title' && !App.st.titleOpen);
+  const visible = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
+  let navEl = null;
+  App.navSelect = function (el) {
+    if (navEl && navEl !== el) navEl.classList.remove('navsel');
+    navEl = el; if (!el) return;
+    el.classList.add('navsel');
+    if (el.tabIndex < 0 && !/^(BUTTON|A|SELECT|INPUT|TEXTAREA)$/.test(el.tagName)) el.tabIndex = 0;
+    el.focus({ preventScroll: true });
+    el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: App.reduced() ? 'auto' : 'smooth' });
+  };
+  App.navMove = function (dir) {
+    const root = navRoot();
+    const items = [...root.querySelectorAll(NAV_SEL)].filter(el => visible(el) && !el.matches('.title'));
+    if (!items.length) return;
+    const cur = navEl && root.contains(navEl) && visible(navEl) ? navEl : null;
+    if (!cur) { App.navSelect(root.querySelector('.btn.gold:not([disabled]), .go:not([disabled])') || items[0]); return; }
+    const a = cur.getBoundingClientRect(), ax = a.left + a.width / 2, ay = a.top + a.height / 2;
+    // 下の並び（いつも画面の下にある）は、そこから動くときか、ほかに行き先が無いときだけ
+    const inNav = el => !!el.closest('.nav');
+    const pick = list => {
+    let best = null, bs = Infinity;
+    for (const el of list) {
+      if (el === cur || el.contains(cur)) continue;
+      const b = el.getBoundingClientRect(), bx = b.left + b.width / 2, by = b.top + b.height / 2;
+      const dx = bx - ax, dy = by - ay;
+      const main = dir === 'right' ? dx : dir === 'left' ? -dx : dir === 'down' ? dy : -dy;
+      const side = dir === 'left' || dir === 'right' ? Math.abs(dy) : Math.abs(dx);
+      if (main <= 4) continue;
+      const sc = main + side * 2.2;
+      if (sc < bs) { bs = sc; best = el; }
+    }
+    return best;
+    };
+    const best = inNav(cur) ? pick(items) : (pick(items.filter(el => !inNav(el))) || pick(items));
+    if (best) App.navSelect(best);
+  };
+  App.navPress = function () { if (navEl && document.contains(navEl)) navEl.click(); };
+  App.navBack = function () {
+    const m = $('#modal-root').lastElementChild;
+    if (m) { const c = m.querySelector('[data-act=close], [data-x=no]'); if (c) c.click(); return; }
+    if (App.st.screen === 'game' && App.st.stack.length) App.back();
+  };
+  const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+  document.addEventListener('keydown', ev => {
+    if (navOff() || ev.altKey || ev.ctrlKey || ev.metaKey) return;
+    const t = ev.target, typing = t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+    const dir = KEYDIR[ev.key];
+    if (dir) {
+      if (typing && (t.tagName !== 'INPUT' || dir === 'left' || dir === 'right')) return;
+      if (document.querySelector('.paddock') && (dir === 'left' || dir === 'right')) return;
+      ev.preventDefault(); App.navMove(dir);
+    } else if (ev.key === 'Enter' && navEl && t === navEl && !/^(BUTTON|A|INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) { ev.preventDefault(); App.navPress(); }
+    else if (ev.key === 'Escape') { ev.preventDefault(); App.navBack(); }
+  });
+  document.addEventListener('pointerdown', () => { if (navEl) { navEl.classList.remove('navsel'); navEl = null; } }, true);
+  // ゲームパッド：十字キーで選ぶ（長押しで続けて動く）・A で押す・B で閉じる・もどる
+  const padPrev = {};
+  let padRepeat = 0;
+  const pollPad = () => {
+    const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+    if (pads.length) {
+      const g = pads[0], btn = i => !!(g.buttons[i] && g.buttons[i].pressed);
+      const ax = g.axes || [];
+      const st = { up: btn(12) || ax[1] < -0.6, down: btn(13) || ax[1] > 0.6, left: btn(14) || ax[0] < -0.6, right: btn(15) || ax[0] > 0.6, a: btn(0), b: btn(1) };
+      // 騎乗中などは見るだけ（押しっぱなしのボタンが、戻ったときに押したことにならないように）
+      if (navOff()) { Object.assign(padPrev, st); setTimeout(pollPad, 50); return; }
+      const now = performance.now();
+      for (const d of ['up', 'down', 'left', 'right']) {
+        if (st[d] && (!padPrev[d] || now > padRepeat)) {
+          padRepeat = now + (padPrev[d] ? 120 : 380);
+          if (document.querySelector('.paddock') && (d === 'left' || d === 'right')) window.dispatchEvent(new KeyboardEvent('keydown', { key: d === 'left' ? 'ArrowLeft' : 'ArrowRight' }));
+          else App.navMove(d);
+        }
+      }
+      if (st.a && !padPrev.a) { if (navEl && document.contains(navEl)) App.navPress(); else App.navMove('down'); }
+      if (st.b && !padPrev.b) App.navBack();
+      Object.assign(padPrev, st);
+    }
+    setTimeout(pollPad, 50);
+  };
+  pollPad();
+
   // 起動
   window.addEventListener('DOMContentLoaded', () => {
     App.applyTheme();

@@ -829,3 +829,13 @@ main.enter-back { animation: backin 300ms var(--ease) both; }
   .wipe { display: none; }
   #scene-bg i { transition: none; }
 }
+
+/* ---------- 十字キー・矢印キー・ゲームパッドで選んでいる札（金に光る） ---------- */
+.navsel { outline: none !important; position: relative; z-index: 2; animation: navglow 1.4s ease-in-out infinite !important; opacity: 1 !important; }
+.btn.navsel, .mgr-cmds button.navsel, .shop-row.navsel, .card.navsel { transform: translateY(-2px); filter: brightness(1.12); }
+.nav button.navsel { box-shadow: none !important; color: var(--accent-hi); }
+.nav button.navsel .ic { box-shadow: 0 0 0 2px var(--accent-hi), 0 0 18px rgba(242, 217, 142, .8); }
+@keyframes navglow { 0%, 100% { box-shadow: 0 0 0 2px var(--accent-hi), 0 0 0 5px rgba(242, 217, 142, .22), 0 0 18px 2px rgba(242, 217, 142, .4); } 50% { box-shadow: 0 0 0 2px #fff4c8, 0 0 0 6px rgba(242, 217, 142, .36), 0 0 30px 6px rgba(242, 217, 142, .65); } }
+@media (prefers-reduced-motion: reduce) { .navsel { animation: none !important; box-shadow: 0 0 0 2px var(--accent-hi), 0 0 0 5px rgba(242, 217, 142, .3), 0 0 24px 4px rgba(242, 217, 142, .55) !important; } }
+/* 大きな PC の画面（1600px 以上）は列を広げる */
+@media (min-width: 1600px) { :root, html[data-theme] { --w-app: 1200px; } .mgr-cmds button { min-height: 120px; } }
