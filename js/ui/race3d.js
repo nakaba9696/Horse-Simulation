@@ -2099,14 +2099,14 @@
       return { horses: out };
     }
 
-    // 重さの見張り：60コマのうち 6 割以上が 38ms（26fps）より遅ければ、影 → 画素の細かさの順に落とす
+    // 重さの見張り：60コマのうち 6 割以上が 24ms（約 42fps）より遅ければ、影 → 画素の細かさの順に落とす（目安は PC の中くらいの GPU で 60fps）
     const perf = { last: 0, n: 0, slow: 0, level: 0, dpr: 1, cap: mobile ? 1.25 : 1.5 };
     function watchPerf() {
       if (typeof performance === 'undefined') return;
       const now = performance.now(), d = perf.last ? now - perf.last : 0;
       perf.last = now;
       if (!(d > 0) || d > 250) return; // 止まっていた（タブの切り替え・一時停止）
-      perf.n++; if (d > 38) perf.slow++;
+      perf.n++; if (d > 24) perf.slow++;
       if (perf.n < 60) return;
       if (perf.slow >= 36 && perf.level < 2) {
         perf.level++;

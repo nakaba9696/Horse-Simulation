@@ -36,19 +36,23 @@
   };
 
   // ---------- タイトル ----------
-  S.title = function () {
-    return `<div class="title">
-      <canvas id="title-cv" width="1280" height="560"></canvas>
-      <div class="logo">ターフの系譜</div>
-      <div class="logo-sub">TURF DYNASTY</div>
-      <div class="btns">
+  S.title = function (open) {
+    return `<div class="title ${open ? 'open' : ''}" ${open ? '' : 'data-act="title-open"'}>
+      <div class="t-flare" aria-hidden="true"></div>
+      <div class="t-head">
+        <div class="logo"><span>ターフの系譜</span></div>
+        <div class="logo-sub">TURF DYNASTY</div>
+      </div>
+      <canvas id="title-cv" aria-hidden="true"></canvas>
+      ${open ? `<div class="btns t-menu">
         ${W.hasLocal() ? '<button class="btn gold" data-act="continue">つづきから</button>' : ''}
         <button class="btn ${W.hasLocal() ? '' : 'gold'}" data-act="newgame-form">はじめから</button>
         <button class="btn" data-act="import">セーブを読み込む</button>
         <button class="btn" data-act="editor">競走馬エディット</button>
         <button class="btn" data-act="sound">${HS.Audio && HS.Audio.settings.bgm + HS.Audio.settings.se > 0 ? '🔊 音：あり' : '🔇 音：なし'}</button>
       </div>
-      <p class="small muted mt">実在の名馬と実在のレースに、騎手として乗る。新人騎手から始めて、リーディングと大レースを目指す。</p>
+      <p class="small muted t-lead">実在の名馬と実在のレースに、騎手として乗る。新人騎手から始めて、リーディングと大レースを目指す。</p>`
+      : '<div class="t-press">クリック・Enter でスタート</div>'}
     </div>`;
   };
 

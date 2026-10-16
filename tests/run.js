@@ -123,6 +123,24 @@ check('profiles: スペシャルホースは全頭に名鑑（年代・戦績・
   return `スペシャルホース ${SP.list().length}頭・解説 ${Math.min(...lens)}〜${Math.max(...lens)}字・名鑑 ${prof.size}頭`;
 });
 
+check('assets: 素材はすべて出典の一覧にあり、大きさが目安以内', () => {
+  const fs = require('fs'), path = require('path');
+  const dir = path.join(__dirname, '..', 'assets');
+  if (!fs.existsSync(dir)) return '素材なし';
+  const credits = fs.readFileSync(path.join(dir, 'CREDITS.md'), 'utf8');
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.js'));
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let total = 0; const bad = [];
+  for (const f of files) {
+    total += fs.statSync(path.join(dir, f)).size;
+    if (!html.includes(`assets/${f}`)) bad.push(f + ':index.html で読んでいない');
+    if (!credits.includes(f.replace(/\.js$/, '')) && !credits.includes(f)) bad.push(f + ':CREDITS に無い');
+  }
+  assert(!bad.length, bad.join(', '));
+  assert(total < 60 * 1024 * 1024, `素材が大きすぎる（${(total / 1048576).toFixed(1)}MB）`);
+  return `${files.length}個・${(total / 1048576).toFixed(1)}MB`;
+});
+
 check('jockeys: 毎年 JRA の騎手が足りる・主戦騎手が実在する', () => {
   const J = D.jockeys || [];
   assert(J.length > 0, '騎手のデータがない');
@@ -719,13 +737,14 @@ check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中�
   const ROOT = path.join(__dirname, '..'), dir = path.join(ROOT, 'assets');
   const credits = fs.readFileSync(path.join(dir, 'CREDITS.md'), 'utf8');
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  const { LIST } = require('../assets/pack_assets.js');
-  const files = fs.readdirSync(dir).filter(f => /\.js$/.test(f) && f !== 'pack_assets.js');
+  const { LIST } = require('../assets/pack_assets.cjs');
+  // 3D のレースの素材（assets/pack_assets.cjs の表にあるもの。画面の背景 ui_bg_* は別の確かめ）
+  const files = fs.readdirSync(dir).filter(f => /\.js$/.test(f) && LIST.some(a => a.key + '.js' === f));
   const uris = {};
   let total = 0;
   for (const f of files) {
     const key = f.replace(/\.js$/, ''), a = LIST.find(x => x.key === key);
-    assert(a, `${f} が assets/pack_assets.js の表に無い`);
+    assert(a, `${f} が assets/pack_assets.cjs の表に無い`);
     const row = credits.split('\n').find(l => l.includes('`assets/' + f + '`'));
     assert(row, `${f} が assets/CREDITS.md に無い`);
     assert(/CC0|CC-BY/.test(row) && /https:\/\//.test(row), `${f} の行にライセンス（CC0・CC-BY）か URL が無い`);

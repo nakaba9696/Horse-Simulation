@@ -215,19 +215,18 @@
     items.sort((a, b) => ((b.it.legend ? 1 : 0) - (a.it.legend ? 1 : 0)) || b.top - a.top || b.it.price - a.it.price); // 倒したスペシャルホースは上に
     const lim = st.mlimit || 40;
     const full = !T.canBuy();
-    const rows = items.slice(0, lim).map(({ it, fh, top }) => {
+    const rows = items.slice(0, lim).map(({ it, fh }, k) => {
       const h = it.horse, best = fh.turf >= fh.dirt ? 'turf' : 'dirt';
-      return `<tr class="shop-row" data-act="horse" data-id="${e(h.id)}">
-        <td><b>${e(h.name)}</b>${h.legendBought ? ' <span class="chip legend">スペシャル</span>' : ''}</td>
-        <td><span class="sexm ${h.sex === '牝' ? 'f' : 'm'}">${h.sex === '牝' ? '牝馬' : '牡馬'}</span></td>
-        <td class="num">${G.year - h.born}歳</td>
-        <td class="num"><span class="fhv turf ${best === 'turf' ? '' : 'dim'}">${fh.turf}</span></td>
-        <td class="num"><span class="fhv dirt ${best === 'dirt' ? '' : 'dim'}">${fh.dirt}</span></td>
-        <td class="num"><b style="color:var(--gold2)">${U.money(it.price)}</b></td></tr>`;
+      return `<div class="shop-row ${it.legend ? 'legend' : ''}" data-act="horse" data-id="${e(h.id)}" style="--i:${Math.min(k, 12)}">
+        <span class="rk">${k + 1}</span>
+        <canvas class="thumb" width="168" height="112" data-art="thumbdata" data-coat="${e(h.coat || '鹿毛')}" data-key="${e(h.name)}"></canvas>
+        <span class="who"><b>${e(h.name)}</b>${h.legendBought ? ' <span class="chip legend">スペシャル</span>' : ''}<span class="sub"><span class="sexm ${h.sex === '牝' ? 'f' : 'm'}">${h.sex === '牝' ? '牝馬' : '牡馬'}</span> ${G.year - h.born}歳</span></span>
+        <span class="fhs"><span class="fhv turf ${best === 'turf' ? '' : 'dim'}"><small>芝</small>${fh.turf}</span><span class="fhv dirt ${best === 'dirt' ? '' : 'dim'}"><small>ダ</small>${fh.dirt}</span></span>
+        <span class="price">${U.money(it.price)}</span></div>`;
     }).join('');
     return `<h2 class="sec">馬の店<span class="r">資金 ${U.money(G.player.money)}・お手馬 ${T.ownCount()}/${T.MAX_OWN}${full ? '（いっぱい）' : ''}</span></h2>
       <div class="small muted">1989〜2026年に走った馬で、いま走っていない馬を、デビュー前の2歳として売る。${T.FH_NAME}（伸びきったときの強さ。史実馬は45〜85で、オリジナルホースは99まで）の芝・ダートの高いほうの順。倒したスペシャルホースは上に並ぶ。行を押すと馬の画面が開き、そこで買えます。</div>
-      ${items.length ? `<div class="tblwrap mt"><table class="t shop"><tr><th>馬名</th><th>性別</th><th class="num">年齢</th><th class="num">芝</th><th class="num">ダ</th><th class="num">値段</th></tr>${rows}</table></div>
+      ${items.length ? `<div class="shop-head mt"><span>馬名</span><span>芝・ダ</span><span>値段</span></div><div class="shop">${rows}</div>
         ${items.length > lim ? `<div class="center mt"><button class="btn" data-act="mmore">もっと見る（残り${items.length - lim}頭）</button></div>` : ''}`
         : '<div class="panel empty">いま買えるデビュー前の史実馬はいません。毎年3月に新しい世代が生まれます。</div>'}`;
   };
@@ -357,7 +356,7 @@
     const name = (ng.jname || '').trim() || '青空 翔';
     W.newGame({ mode: 'jockey', jockeyName: name, name, region: ng.region || '美浦', year: ng.year || 1995 });
     App.save();
-    App.st.screen = 'game'; App.st.tab = 'home'; App.st.view = null; App.st.stack = [];
+    App.st.screen = 'game'; App.st.tab = 'home'; App.st.view = null; App.st.stack = []; App.navAnim = 'tab';
     App.render();
     App.modal(`<h3>${e(name)}騎手、デビュー</h3>
       <p>${W.get().year}年1月。${e(W.get().jockey.region)}所属の新人騎手として、最初の依頼を待つ。</p>
@@ -396,6 +395,7 @@
         App.closeModal();
         App.inRace = false;
       }
+      const G0 = W.get(), tr0 = Object.keys(G0.trophies || {}), un0 = (G0.unlocked || []).slice();
       const report = W.finishWeek(played);
       W.lastReport = report;
       App.save();
@@ -403,6 +403,14 @@
         if (r.ridden) await resultOf(r);
         else await App.playRace(r, false);
       }
+      // トロフィーを手にした・スペシャルホースを破った：大きな見せ場
+      const G1 = W.get();
+      for (const id of Object.keys(G1.trophies || {}).filter(k => !tr0.includes(k))) {
+        const t = HS.Trophy && HS.Trophy.BY[id], got = G1.trophies[id];
+        if (t) await UI.celebrate({ kind: 'trophy', kicker: 'トロフィーを手にした', title: t.label, name: got.horse, sub: got.bonus ? `ボーナス賞金 ${U.money(got.bonus)}` : '' });
+      }
+      const beat = (G1.unlocked || []).filter(n => !un0.includes(n));
+      if (beat.length) await UI.celebrate({ kind: 'special', kicker: 'スペシャルホースを破った', title: beat.join('・'), sub: `${beat.join('・')}が馬の店に並ぶようになった` });
       App.weekSummary(report);
       App.render();
     } catch (err) {
@@ -437,11 +445,13 @@
         <div class="panel mt offer"><div class="row"><b>${e(h.name)}</b><span class="small muted">${e(J.trainerOf(h))}調教師より</span></div>
           <div class="comment">「${tip}${kireTip}」</div>
           ${UI.hasSkills(h) ? `<div class="pd-myskills mt">${UI.skillList(h)}</div>` : ''}${UI.numStats(h, wIdx, { surface: card.race.surface })}</div>
-        <div class="btns mt"><button class="btn gold" data-x="ride">ゲートイン（自分で乗る）</button><button class="btn" data-x="auto">おまかせで乗る</button></div>`, { noClose: true });
+        <div class="btns mt"><button class="btn gold" data-x="ride">ゲートイン（自分で乗る）</button><button class="btn" data-x="auto">おまかせで乗る</button></div>`, { noClose: true, scene: 'paddock' });
       const cv = bg.querySelector('.pd-cv'), ctx = cv.getContext('2d'), band = bg.querySelector('.pd-band');
       const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
       cv.width = 720 * dpr; cv.height = 250 * dpr; ctx.scale(dpr, dpr);
       let alive = true, t0 = performance.now(), x0 = -80;
+      const pdSrc = HS.ASSETS && HS.ASSETS.ui_bg_paddock;
+      const pdImg = pdSrc ? (UI._pdImg || (UI._pdImg = Object.assign(new Image(), { src: pdSrc }))) : null;
       const show = () => {
         const x = rows[sel], m = UI.mood(x.horse, wIdx), me = x === runner;
         band.innerHTML = `${UI.waku(x.frame, x.num)}<b class="nm ${me ? 'me' : ''}">${e(x.horse.name)}</b><span>${x.horse.gelding ? 'セ' : x.horse.sex}${W.get().year - x.horse.born}</span><span>${x.weight}kg</span><span>${e(x.jockey ? x.jockey.name : '')}</span><span>単勝 <b>${x.odds}</b>（${x.pop}番人気）</span><span class="md ${m.cls}">${m.text}</span>${me ? UI.condMark(x.horse, wIdx) : ''}<div class="pd-skills">${UI.hasSkills(x.horse) ? UI.skillChips(x.horse) : '<span class="small muted">特殊能力なし</span>'}</div>`;
@@ -454,11 +464,19 @@
       const draw = now => {
         if (!alive) return;
         const t = (now - t0) / 1000, x = rows[sel], m = UI.mood(x.horse, wIdx);
-        // 地面・柵・植え込み
-        ctx.fillStyle = '#8fc4e8'; ctx.fillRect(0, 0, 720, 90);
-        ctx.fillStyle = '#5c8f4a'; for (let i = 0; i < 12; i++) { ctx.beginPath(); ctx.arc(30 + i * 62, 92, 34, Math.PI, 0); ctx.fill(); }
-        ctx.fillStyle = '#c9b48a'; ctx.fillRect(0, 90, 720, 160);
-        ctx.fillStyle = '#b39c6e'; ctx.fillRect(0, 210, 720, 40);
+        // 地面・柵・植え込み（背景の写真が読めれば、木立の写真の前に周回路と柵を置く）
+        if (pdImg && pdImg.complete && pdImg.naturalWidth) {
+          const iw = pdImg.naturalWidth, ih = pdImg.naturalHeight, sh = iw * 250 / 720;
+          ctx.drawImage(pdImg, 0, ih * 0.3, iw, sh, 0, 0, 720, 250);
+          const g = ctx.createLinearGradient(0, 120, 0, 250); g.addColorStop(0, 'rgba(201,180,138,0)'); g.addColorStop(0.35, 'rgba(190,166,120,.92)'); g.addColorStop(1, 'rgba(160,136,94,1)');
+          ctx.fillStyle = g; ctx.fillRect(0, 120, 720, 130);
+          ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(0, 0, 720, 250);
+        } else {
+          ctx.fillStyle = '#8fc4e8'; ctx.fillRect(0, 0, 720, 90);
+          ctx.fillStyle = '#5c8f4a'; for (let i = 0; i < 12; i++) { ctx.beginPath(); ctx.arc(30 + i * 62, 92, 34, Math.PI, 0); ctx.fill(); }
+          ctx.fillStyle = '#c9b48a'; ctx.fillRect(0, 90, 720, 160);
+          ctx.fillStyle = '#b39c6e'; ctx.fillRect(0, 210, 720, 40);
+        }
         ctx.strokeStyle = '#f2f2f2'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 112); ctx.lineTo(720, 112); ctx.moveTo(0, 128); ctx.lineTo(720, 128); ctx.stroke();
         for (let i = 0; i < 13; i++) { ctx.fillStyle = '#f2f2f2'; ctx.fillRect(i * 60, 104, 5, 34); }
         // 歩く馬（気配で歩き方が変わる：イレ込むと首を振って小走り、覇気がないとゆっくり）
@@ -535,11 +553,73 @@
       const head = me && me.pos === 1
         ? (r.race.graded ? '<div class="hero"><canvas class="winner-cv" width="960" height="560"></canvas></div>' : `<div class="panel gold center"><div class="serif" style="font-size:24px;font-weight:900;color:var(--gold2)">🏆 ${e(me.horse.name)}で1着！</div></div>`)
         : `<div class="panel center">${me ? `${e(me.horse.name)}は${me.pos}着` : ''}</div>`;
-      const bg = App.modal(`${head}${UI.resultTable(slim)}<div class="btns mt"><button class="btn gold" data-x="ok">次へ</button></div>`, { noClose: true });
       if (me && me.pos === 1 && AU) { App.inRace = true; AU.playOnce('victory').then(() => { App.inRace = false; AU.bgm('home'); }); }
-      const cv = bg.querySelector('.winner-cv');
-      if (cv && me) A.winner(cv, me.horse, HS.RaceView.silksOf(me.horse), `${r.race.short || r.race.name} 優勝`, `${me.horse.name}　${U.time(me.time)}　騎手 ${J.me().name}`);
-      bg.querySelector('[data-x=ok]').onclick = () => { App.closeModal(); res(); };
+      const show = () => {
+        const bg = App.modal(`${head}${UI.resultTable(slim)}<div class="btns mt"><button class="btn gold" data-x="ok">次へ</button></div>`, { noClose: true, scene: 'result' });
+        const cv = bg.querySelector('.winner-cv');
+        if (cv && me) A.winner(cv, me.horse, HS.RaceView.silksOf(me.horse), `${r.race.short || r.race.name} 優勝`, `${me.horse.name}　${U.time(me.time)}　騎手 ${J.me().name}`);
+        bg.querySelector('[data-x=ok]').onclick = () => { App.closeModal(); res(); };
+      };
+      if (me && me.pos === 1 && r.race.graded) UI.celebrate(UI.winFx(r.race, me.horse.name, me.time, J.me().name)).then(show);
+      else show();
     });
   }
+
+  // ---------- 見せ場：重賞の優勝・トロフィー・スペシャルホース（光の筋・紙吹雪・大きな題字。押すと閉じる） ----------
+  UI.winFx = (race, name, time, jockey) => ({ kind: 'win', kicker: `${(R.gradeBadge && R.gradeBadge(race)) || '重賞'} 優勝`, title: race.short || race.name, name, sub: `${U.time(time)}　騎手 ${jockey || ''}` });
+  UI.celebrate = function (o) {
+    return new Promise(res => {
+      const AU = HS.Audio;
+      const el = document.createElement('div');
+      el.className = `fx fx-${o.kind || 'win'}`;
+      el.setAttribute('role', 'dialog');
+      const img = App.bgUrl(o.kind === 'trophy' ? 'title' : 'result');
+      el.innerHTML = `<div class="fx-bg" style="${img ? `background-image:${e(img)}` : ''}"></div><div class="fx-rays"></div><canvas class="fx-cf"></canvas>
+        <div class="fx-body"><div class="fx-badge">${o.kind === 'trophy' ? '🏆' : o.kind === 'special' ? '★' : '👑'}</div>
+          <div class="fx-kicker">${e(o.kicker || '')}</div><div class="fx-title">${e(o.title || '')}</div>
+          ${o.name ? `<div class="fx-name">${e(o.name)}</div>` : ''}${o.sub ? `<div class="fx-sub">${e(o.sub)}</div>` : ''}
+          <div class="fx-tap">クリック・Enter で次へ</div></div>`;
+      document.body.appendChild(el);
+      if (AU) { AU.se('skill'); if (o.kind !== 'win') setTimeout(() => AU.se('coin'), 380); }
+      // 紙吹雪（動きを減らす設定では、散った形を1枚だけ描く）
+      const cv = el.querySelector('.fx-cf'), ctx = cv.getContext('2d');
+      const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+      const W0 = cv.clientWidth || innerWidth, H0 = cv.clientHeight || innerHeight;
+      cv.width = W0 * dpr; cv.height = H0 * dpr; ctx.scale(dpr, dpr);
+      const rnd = App.fxRand(o.title ? o.title.length * 97 : 3), still = App.reduced();
+      const cols = o.kind === 'special' ? ['#c9a2ff', '#ffd34d', '#ffffff', '#8a5cf0'] : ['#ffd34d', '#f6e1a0', '#ffffff', '#e8b23a', o.kind === 'trophy' ? '#ffcf6b' : '#ff7d70'];
+      const ps = []; for (let i = 0; i < 160; i++) ps.push({ x: rnd() * W0, y: still ? rnd() * H0 : -rnd() * H0 * 0.9, vx: (rnd() - 0.5) * 60, vy: 90 + rnd() * 160, r: rnd() * 6, vr: (rnd() - 0.5) * 9, w: 5 + rnd() * 6, c: cols[i % cols.length] });
+      let alive = true, last = null;
+      const draw = ts => {
+        if (!alive) return;
+        const dt = last == null ? 0 : Math.min(0.05, (ts - last) / 1000); last = ts;
+        ctx.clearRect(0, 0, W0, H0);
+        for (const p of ps) {
+          p.x += (p.vx + Math.sin(p.y / 40) * 30) * dt; p.y += p.vy * dt; p.r += p.vr * dt;
+          if (p.y > H0 + 20) { p.y = -20; p.x = rnd() * W0; }
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.scale(1, Math.cos(p.r * 1.7));
+          ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.w / 4, p.w, p.w / 2); ctx.restore();
+        }
+        if (!still) requestAnimationFrame(draw);
+      };
+      requestAnimationFrame(draw);
+      const t0 = performance.now();
+      const close = ev => {
+        if (ev && ev.type === 'keydown' && !['Enter', ' ', 'Escape'].includes(ev.key)) return;
+        if (performance.now() - t0 < 700) return; // 開いた勢いで閉じない
+        alive = false; window.removeEventListener('keydown', close);
+        el.classList.add('out'); setTimeout(() => { el.remove(); res(); }, App.reduced() ? 0 : 280);
+      };
+      el.addEventListener('click', close); window.addEventListener('keydown', close);
+      // ゲームパッドのボタンでも閉じる（押しっぱなしで開いた分は、いったん離してから）
+      let held = true;
+      const pad = () => {
+        if (!alive) return;
+        const any = [...(navigator.getGamepads ? navigator.getGamepads() : [])].some(g => g && g.buttons.some(b => b.pressed));
+        if (!any) held = false; else if (!held) close();
+        setTimeout(pad, 60);
+      };
+      pad();
+    });
+  };
 })();

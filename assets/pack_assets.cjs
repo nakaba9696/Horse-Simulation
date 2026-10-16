@@ -1,5 +1,5 @@
 // 絵の素材（空・質感・木・騎手の形）を base64 にして assets/<名前>.js に書き出す。file:// でも <script> で読めるように
-// 使い方：node assets/pack_assets.js <素材を置いたフォルダ>
+// 使い方：node assets/pack_assets.cjs <素材を置いたフォルダ>
 //   フォルダの中のファイル名は下の表のとおり。作り方と出典は assets/CREDITS.md
 // 書き出したファイルは HS.ASSETS[名前] に 'data:<種類>;base64,...' を載せる
 const fs = require('fs');
@@ -19,12 +19,12 @@ const LIST = [
 
 function main() {
   const src = process.argv[2];
-  if (!src) { console.error('使い方：node assets/pack_assets.js <素材のフォルダ>'); process.exit(1); }
+  if (!src) { console.error('使い方：node assets/pack_assets.cjs <素材のフォルダ>'); process.exit(1); }
   const outDir = __dirname;
   fs.mkdirSync(outDir, { recursive: true });
   for (const a of LIST) {
     const buf = fs.readFileSync(path.join(src, a.file));
-    const js = `// ${a.note}。出典は assets/CREDITS.md。assets/pack_assets.js が書き出した。手で直さない\n` +
+    const js = `// ${a.note}。出典は assets/CREDITS.md。assets/pack_assets.cjs が書き出した。手で直さない\n` +
       `(globalThis.HS = globalThis.HS || {}).ASSETS = Object.assign(globalThis.HS.ASSETS || {}, { ${a.key}: 'data:${a.mime};base64,${buf.toString('base64')}' });\n`;
     fs.writeFileSync(path.join(outDir, a.key + '.js'), js);
     console.log(`${a.key}.js ${(js.length / 1024).toFixed(0)}KB`);
