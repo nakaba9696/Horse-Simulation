@@ -982,10 +982,10 @@
       groove([[-0.93, 1.5], [-0.89, 1.26], [-0.8, 1.02]], 0.05, 0.17 * dk);
       groove([[-0.5, 1.42], [-0.45, 1.16], [-0.52, 0.98]], 0.045, 0.1 * dk);
       // 筋肉の山の光り（肩・上腕・尻・太もも・首すじ・胴）。光を計算する材質（細かい絵）では控えめに
-      const gk = res > 256 ? 0.45 : 1, ga = (0.08 + 0.1 * L.gloss) * gk;
-      spot(0.53, 1.36, 0.17, 'rgba(255,255,255,0.5)', ga * 1.2); spot(0.6, 1.1, 0.1, 'rgba(255,255,255,0.5)', ga);
-      spot(-0.66, 1.43, 0.21, 'rgba(255,255,255,0.5)', ga * 1.2); spot(-0.62, 1.18, 0.13, 'rgba(255,255,255,0.5)', ga);
-      spot(0.8, 1.68, 0.12, 'rgba(255,255,255,0.5)', ga * 0.8); spot(0.0, 1.32, 0.3, 'rgba(255,255,255,0.5)', ga * 0.6);
+      // 光りの丸は弱く広く（白い点が乗らず、面の明るさの差で筋肉が見えるように）
+      const gk = res > 256 ? 0.3 : 0.6, ga = (0.05 + 0.05 * L.gloss) * gk;
+      spot(0.53, 1.36, 0.3, 'rgba(255,255,255,0.5)', ga); spot(-0.66, 1.43, 0.34, 'rgba(255,255,255,0.5)', ga);
+      spot(0.8, 1.68, 0.2, 'rgba(255,255,255,0.5)', ga * 0.7); spot(0.0, 1.32, 0.45, 'rgba(255,255,255,0.5)', ga * 0.5);
       // 頭の側（耳）
       spot(1.1, 2.05, 0.12, L.top, 0.5);
     });
@@ -1425,7 +1425,7 @@
   // 手作りの馬の頭：うなじ（骨 4 の付け根）と鼻先（体の比を直したあとの座標）
   R3.handmadeHead = function () {
     const n = mapBone(HEAD0[0] + HD[0] * HEAD_L, HEAD0[1] + HD[1] * HEAD_L, 0, 4);
-    return { start: new THREE.Vector3(HEADP[0], HEADP[1], 0), nose: new THREE.Vector3(n[0], n[1], 0) };
+    return { start: new THREE.Vector3(HEADP[0], HEADP[1], 0), nose: new THREE.Vector3(n[0], n[1], 0), width: headSec(0.5).w * HK0 };
   };
   R3.BONES = BONES.length;
   R3.BONE_AT = i => BONES[i].slice(1); // テスト用：骨の付け根（体の比を直したあとの座標）
@@ -2208,7 +2208,7 @@
       const tex = T(texOf(paintHorse(h, photo ? 512 : 256), false, aniso));
       const L = coatLook(h.coat, h.age), gl = L.gloss || 0;
       const mat = photo
-        ? M(new THREE.MeshStandardMaterial({ map: tex, normalMap: norTex, normalScale: new THREE.Vector2(1, 1), skinning: true, roughness: 0.5 - 0.22 * gl, metalness: 0, envMapIntensity: 1.0 }))
+        ? M(new THREE.MeshStandardMaterial({ map: tex, normalMap: norTex, normalScale: new THREE.Vector2(1, 1), skinning: true, roughness: 0.78 - 0.08 * gl, metalness: 0, envMapIntensity: 0.6 }))
         : M(new THREE.MeshPhongMaterial({ map: tex, skinning: true, shininess: 18 + 30 * gl, specular: new THREE.Color(0x111111).lerp(new THREE.Color(0x3a3a3a), gl) }));
       const mesh = new THREE.SkinnedMesh(hgeo, mat);
       mesh.castShadow = shadowOn;
@@ -2653,8 +2653,8 @@
       const h = { coat, age, gear, name: horse.name || horse.id || '', noMarks: small };
       const tex = texOf(paintHorse(h, small ? 256 : 1024), false, 8);
       const L = coatLook(coat, age), gl = L.gloss || 0;
-      // 肖像は毛のつやを薄い上塗り（clearcoat）で出す
-      const mat = new THREE.MeshPhysicalMaterial({ map: tex, normalMap: K.nor, skinning: true, roughness: 0.52 - 0.22 * gl, metalness: 0, envMapIntensity: 1.0, clearcoat: 0.18 + 0.25 * gl, clearcoatRoughness: 0.42 });
+      // 毛は「しっとり」：光は少しだけ乗る（持ち主の指摘「つやつやしすぎ」）
+      const mat = new THREE.MeshStandardMaterial({ map: tex, normalMap: K.nor, skinning: true, roughness: 0.78 - 0.08 * gl, metalness: 0, envMapIntensity: 0.6 });
       const mesh = new THREE.SkinnedMesh(rigged ? K.geoTack : K.geo, mat);
       const bones = horseBones();
       mesh.add(bones[0]); mesh.updateMatrixWorld(true); mesh.bind(new THREE.Skeleton(bones));

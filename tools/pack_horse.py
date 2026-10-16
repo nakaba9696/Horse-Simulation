@@ -21,7 +21,7 @@ shade = np.clip(detail * low * 0.5, 0, 1)
 #   たてがみは首すじ（絵の毛の帯の上の縁）から下へ細い帯にする（サラブレッドのたてがみは短い）
 CREST = [(0.03, 0.335), (0.1, 0.33), (0.2, 0.38), (0.3, 0.455), (0.37, 0.505)]
 mask = Image.new('L', (1024, 1024), 0); d = ImageDraw.Draw(mask)
-band = CREST + [(u, v + 0.1) for u, v in reversed(CREST)]
+band = CREST + [(u, v + 0.16) for u, v in reversed(CREST)]
 d.polygon([(u * 1024, v * 1024) for u, v in band], fill=255)
 d.rectangle([0.6 * 1024, 0.43 * 1024, 1024, 0.61 * 1024], fill=255)
 mask = mask.filter(ImageFilter.GaussianBlur(6))

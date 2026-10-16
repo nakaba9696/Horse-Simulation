@@ -57,6 +57,7 @@
   // 手作りの骨 → 素材の骨（同じ横の軸のまわりに回す）
   // 尾は手作りの馬の立ち姿の角度を 0 とみなす（素材の尾ははじめから垂れている）
   const REF = { 5: 0.75, 6: 0.25, 7: 0.15 };
+  const HIP_K = 0.6;
   const RETARGET = [
     [2, 'neck'], [3, 'neck1'], [4, 'head'], [5, 'tail'], [6, 'tail1'], [7, 'tail2'],
     [8, 'lCla'], [9, 'lUp'], [10, 'lFo'], [11, 'lHa'], [12, 'rCla'], [13, 'rUp'], [14, 'rFo'], [15, 'rHa'],
@@ -71,7 +72,7 @@
     lHL: 0.72, rHL: 0.72, lFt: 0.7, rFt: 0.7, lTo: 0.75, rTo: 0.75, lTon: 0.75, rTon: 0.75 };
   const NECK = { neck: 1, neck1: 1, pony1: 1, pony1n: 1 }, HEAD = { head: 1, headNub: 1, pony2: 1, pony2n: 1 };
   const Y0 = 0.9, KY = 1.12;               // 脚：y0 より下を KY 倍に伸ばし、上はその分持ち上げる
-  const NK = { along: 1.08, across: 0.92, x: 0.86 }, HK = 0.88, BODY_X = 0.94;
+  const NK = { along: 1.08, across: 0.92, x: 0.86 }, HK = 0.8, BODY_X = 0.94;
   // 頂点の属性の j 番目（r128 には getComponent が無い。正規化された整数は 0〜1 に）
   function comp(at, k, j) {
     const v = at.array[k * at.itemSize + j];
@@ -155,9 +156,13 @@
     let nose = headP.clone(), far = 0;
     for (let k = 0; k < Pos.count; k++) { const b = comp(si, k, 0); if (role[b] !== 'head') continue; const d = vs[k].distanceTo(headP); if (d > far && vs[k].z > headP.z) { far = d; nose = vs[k]; } }
     const trunk = vs.filter((p, k) => !NECK[dom[k]] && !HEAD[dom[k]] && !LEG_UP[dom[k]] && !LEG_LO[dom[k]]);
+    // 頭の半幅（頭のまんなかあたり）
+    const hAx = nose.clone().sub(headP), hLen = hAx.length(); hAx.normalize();
+    let headW = 0;
+    for (let k = 0; k < Pos.count; k++) { if (!HEAD[dom[k]]) continue; const t = vs[k].clone().sub(headP).dot(hAx) / hLen; if (t > 0.4 && t < 0.6) headW = Math.max(headW, Math.abs(vs[k].x)); }
     const chest = Math.max(...trunk.filter(p => p.y > 1.0 && p.y < 1.5 && Math.abs(p.x) < 0.15).map(p => p.z));
     const buttock = Math.min(...sel(p => p.y > 1.0 && p.y < 1.4 && Math.abs(p.x) < 0.15).map(p => p.z));
-    P.info = { back: top(-0.25, 0.15), withers: top(0.2, 0.6), kneeY, hockY, fetY, headP, nose, chest, buttock, legZ: (W2[byRole('lUp')].z + W2[byRole('lCa')].z) / 2, bellyY: Math.min(...sel(p => Math.abs(p.z + 0.1) < 0.15 && Math.abs(p.x) < 0.1).map(p => p.y)) };
+    P.info = { headW, back: top(-0.25, 0.15), withers: top(0.2, 0.6), kneeY, hockY, fetY, headP, nose, chest, buttock, legZ: (W2[byRole('lUp')].z + W2[byRole('lCa')].z) / 2, bellyY: Math.min(...sel(p => Math.abs(p.z + 0.1) < 0.15 && Math.abs(p.x) < 0.1).map(p => p.y)) };
     // 蹄の底（脚の最後の骨の中の点）
     P.hoof = {};
     for (const [b0, r] of Object.entries(HOOF)) { const b = bones[byRole(r)]; P.hoof[b0] = b.worldToLocal(new THREE.Vector3(W2[byRole(r)].x, 0, W2[byRole(r)].z)); }
@@ -198,7 +203,7 @@
       uSock: { value: new THREE.Vector4(sock[0], sock[1], sock[2], sock[3]) }, uHoofY: { value: 0.075 / S },
       uHead: { value: I.headP.clone() }, uHeadDir: { value: hd.clone().normalize() }, uHeadLen: { value: hl }, uBlaze: { value: blaze },
     };
-    const m = new THREE.MeshStandardMaterial({ map: P.tex, skinning: true, roughness: 0.52 - 0.22 * (L.gloss || 0), metalness: 0, envMapIntensity: 1.0 });
+    const m = new THREE.MeshStandardMaterial({ map: P.tex, skinning: true, roughness: 0.78 - 0.08 * (L.gloss || 0), metalness: 0, envMapIntensity: 0.6 });
     m.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, U);
       sh.vertexShader = 'attribute float aHair;\nvarying vec3 vRest;\nvarying vec3 vRestN;\nvarying float vHair;\n' + sh.vertexShader
@@ -246,7 +251,10 @@ float hrN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     c = mix(c, uWhite, b * fr);
   }
   // たてがみ・尾の毛
-  c = mix(c, uMane, max(vHair, tx.g));
+  // たてがみ・尾：毛の色にし、陰影は暗めで差を小さく（毛の筋が白く光らないように）
+  float hm = max(vHair, tx.g);
+  c = mix(c, uMane, hm);
+  sh = mix(sh, 0.8 + 0.4 * (sh - 1.0), hm);
   diffuseColor.rgb *= c * sh;`);
     };
     m.customProgramCacheKey = () => 'hs-horse-rigged';
@@ -288,10 +296,10 @@ float hrN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     const a0 = toW(hand.start), a1 = toW(hand.nose);
     const da = a1.clone().sub(a0), db = sNose.clone().sub(sHw);
     const rot = new THREE.Quaternion().setFromUnitVectors(da.clone().normalize(), db.clone().normalize());
-    const sc = db.length() / da.length();
+    const sc = db.length() / da.length(), scz = P.info.headW * P.place.S / hand.width;
     const J4 = HS.Race3D.BONE_AT(4);
     // 骨 4 の付け根（J4）→ 素材の頭の付け根 + 回転・拡大
-    const want = new THREE.Matrix4().compose(sHw.clone().add(toW(new THREE.Vector3(J4[0], J4[1], J4[2])).sub(a0).applyQuaternion(rot).multiplyScalar(sc)), rot, new THREE.Vector3(sc, sc, sc));
+    const want = new THREE.Matrix4().compose(sHw.clone().add(toW(new THREE.Vector3(J4[0], J4[1], J4[2])).sub(a0).applyQuaternion(rot).multiplyScalar(sc)), rot, new THREE.Vector3(sc, sc, scz));
     inst.K = new THREE.Matrix4().copy(sH.matrixWorld).invert().multiply(want);
     return inst;
   };
@@ -303,7 +311,11 @@ float hrN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     for (const [hi, k] of RETARGET) {
       const b = r.bones[k]; if (!b) continue;
       const ax = P.axis[k];
-      b.quaternion.copy(r.rest[k]).multiply(qa.setFromAxisAngle(ax.z, hb[hi].rotation.z - (REF[hi] || 0)));
+      // 股は素材の尻の皮も引っぱるので小さく回し、残りを後膝へ回す（後脚の付け根が伸びて見えないように）
+      let ang = hb[hi].rotation.z - (REF[hi] || 0);
+      if (hi === 16 || hi === 20) ang *= HIP_K;
+      else if (hi === 17 || hi === 21) ang += hb[hi - 1].rotation.z * (1 - HIP_K);
+      b.quaternion.copy(r.rest[k]).multiply(qa.setFromAxisAngle(ax.z, ang));
       if (hb[hi].rotation.y) b.quaternion.multiply(qb.setFromAxisAngle(ax.y, hb[hi].rotation.y));
     }
     // 尾の先は尾の2つめと同じだけ
