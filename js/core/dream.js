@@ -1,4 +1,4 @@
-// 年末のドリームレース（グランドフィナーレ・GF）：距離ごとに6つ。出られる条件と、出るかどうかの選択（騎手のゲーム）
+// 年末のドリームレース（グランドフィナーレ・GF）：距離ごとに5つ。出られる条件と、出るかどうかの選択（騎手のゲーム）
 // 持ち主の声 2026-10-16「GFはそれぞれの距離で開かれます」
 // 選ばれ方（GF ごとに16頭。入厩している3歳以上で、故障していない馬）：
 //   1. 確定：前の年のその GF の勝ち馬（連覇に挑む）と、その年にその区分の距離の G1 を勝った自分の馬
@@ -6,26 +6,26 @@
 //      G1を1つ勝てば100票なので、その区分の G1 の勝ち馬はたいてい入る。票が同じなら総合力の順
 //   3. 票のある馬が16頭に足りなければ、その距離に向くほかの馬（総合力の順）で埋める（自分の馬は票が要る）
 //   外国で調教された馬は1つの GF に4頭まで（多いと日本の年末の大一番に見えない）。
-// 招待は12月1週。12月は4週しかないので、2〜4週に2つずつ開く。同じ馬が2つの GF に出るのは、間が2週あるときだけ（2週と4週）。
+// 招待は12月1週。12月は4週しかないので、2・3週に2つずつ、4週に1つ開く。同じ馬が2つの GF に出るのは、間が2週あるときだけ（2週と4週）。
 // 自分の馬が何頭招待されても、1つの GF に出られるのは1頭だけ（プレイヤーが選ぶ）。出ないこともできる。空いた枠はほかの馬の次の順位から埋める。
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const T = HS.Season;
   if (!T) return;
 
-  // ---------- 6つの GF ----------
+  // ---------- 5つの GF ----------
   const turf = (lo, hi) => r => r.surface !== 'ダ' && r.dist >= lo && r.dist <= hi;
+  // 持ち主の決定 2026-10-16：芝1000・芝1600・芝2400・芝3200・ダート2000 の5つ。区分の境目（票・GF の馬の鍵）は数を見て決めた
   T.GF_CATS = [
-    { id: 'sprint', label: 'スプリント', course: '中山', surface: '芝', dist: 1200, week: 2, fit: turf(0, 1400) },
+    { id: 'sprint', label: '短距離', course: '新潟', surface: '芝', dist: 1000, week: 2, fit: turf(0, 1400) },       // 新潟の直線1000m（data/layouts.js の line）
     { id: 'dirt', label: 'ダート', course: '大井', surface: 'ダ', dist: 2000, week: 2, fit: r => r.surface === 'ダ' },
-    { id: 'mile', label: 'マイル', course: '東京', surface: '芝', dist: 1600, week: 3, fit: turf(1401, 1800) },
-    { id: 'long', label: '長距離', course: '京都', surface: '芝', dist: 3200, week: 3, fit: turf(2701, 9999) },
-    { id: 'middle', label: '中距離', course: '阪神', surface: '芝', dist: 2000, week: 4, fit: turf(1801, 2200) },
-    { id: 'classic', label: 'クラシック', course: '東京', surface: '芝', dist: 2400, week: 4, fit: turf(2201, 2700) },
+    { id: 'mile', label: 'マイル', course: '東京', surface: '芝', dist: 1600, week: 3, fit: turf(1401, 2000) },
+    { id: 'long', label: '長距離', course: '京都', surface: '芝', dist: 3200, week: 3, fit: turf(2801, 9999) },
+    { id: 'classic', label: '中長距離', course: '東京', surface: '芝', dist: 2400, week: 4, fit: turf(2001, 2800) }, // 前からの GF（東京芝2400）
   ];
   T.GF_BY = {}; for (const c of T.GF_CATS) T.GF_BY[c.id] = c;
   // AI の馬を割り振る順（1頭が2つに招待されるときは、この順で先の GF に出る）
-  T.GF_ORDER = ['classic', 'middle', 'mile', 'sprint', 'long', 'dirt'];
+  T.GF_ORDER = ['classic', 'mile', 'sprint', 'long', 'dirt'];
   T.DC_PREV = ['ドリームクラシック']; // 前の名前
   T.DC_RESERVE = 6;                    // 招待のあとに故障した馬の代わり
   T.DC_FOREIGN = 4;                    // 外国で調教された馬の枠
@@ -33,7 +33,7 @@
   T.gfName = id => `${T.DC_NAME}（${T.GF_BY[id].label}）`;
   // 勝ち鞍の名前が GF か（前の名前・距離ごとになる前の「グランドフィナーレ」も）
   T.isGF = n => !!n && (n.startsWith(T.DC_NAME) || T.DC_PREV.includes(n));
-  // 勝ち鞍の名前 → 区分（距離ごとになる前の GF はクラシック）
+  // 勝ち鞍の名前 → 区分（距離ごとになる前の GF は中長距離）
   T.gfCatOfName = function (n) {
     if (!T.isGF(n)) return null;
     const c = T.GF_CATS.find(x => n === T.gfName(x.id));
@@ -45,7 +45,7 @@
     if (d.surface === 'ダ' || (d.surface === '芝ダ' && peak && peak.dirt > peak.turf)) return 'dirt';
     if ((d.distMin || 0) >= 2000 && (d.distMax || 0) >= 3000) return 'long';
     const m = ((d.distMin || 1600) + (d.distMax || 2400)) / 2;
-    return m <= 1400 ? 'sprint' : m <= 1800 ? 'mile' : m <= 2150 ? 'middle' : 'classic';
+    return m <= 1400 ? 'sprint' : m <= 2000 ? 'mile' : 'classic';
   };
   // スペシャルホース（伝説級）がこの GF の距離に合うか
   T.gfFits = function (d, race) {
@@ -179,7 +179,7 @@
       gf[id] = { ai, elig, pick: null, ans: null };
     }
     G.dc = { y: G.year, gf };
-    W.news(`${T.DC_NAME}（12月2〜4週・距離ごとに6つ）の招待馬が決まった。`, 'g1');
+    W.news(`${T.DC_NAME}（12月2〜4週・距離ごとに5つ）の招待馬が決まった。`, 'g1');
     const mine = new Set(); for (const id in gf) for (const x of gf[id].elig) mine.add(x.id);
     if (mine.size) W.news(`${[...mine].map(id => W.horse(id).name).join('・')}に${T.DC_NAME}の招待が届いた！ 出るかどうかを決めてください。`, 'g1');
   };
@@ -287,7 +287,7 @@
     return T.dcField({ year: G.year, gf: C.id, key: `${G.year}-12-${C.week}-GF-${C.id}` }).map(x => x.horse);
   };
   // 前の形のセーブを今の形に：
-  //  { y, ids }（GF が1つで、招待された自分の馬が全部出た）・{ y, ai, elig, pick, ans }（GF が1つで、自分の馬は1頭）→ クラシックの GF だけ開く年
+  //  { y, ids }（GF が1つで、招待された自分の馬が全部出た）・{ y, ai, elig, pick, ans }（GF が1つで、自分の馬は1頭）→ 中長距離の GF だけ開く年
   T.dcUpgrade = function (g) {
     if (!g.dc || g.dc.gf) return;
     const d = g.dc;

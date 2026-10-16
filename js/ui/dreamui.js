@@ -1,4 +1,4 @@
-// 年末のドリームレース（グランドフィナーレ・距離ごとに6つ）の画面：
+// 年末のドリームレース（グランドフィナーレ・距離ごとに5つ）の画面：
 // ホームの「グランドフィナーレへの道」（自分の馬 × GF の資格の表）と、12月の招待（GF ごとに、出るなら自分の馬から1頭を選ぶ・出ない）
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
@@ -6,7 +6,7 @@
   if (!UI || !App || !T || !T.dcStatus || !T.GF_CATS) return;
   const e = U.esc;
   const isJ = () => J && J.isMode();
-  const RULE = '距離ごとに6つ。その距離のG1を勝った自分の馬と、前の年のその GF の勝ち馬は必ず招待。残りはその距離のレースで集めたファンの票（大きいレースほど・上の着ほど多い）の上位16頭。外国の馬は4頭まで。1つの GF に出られるのは自分の馬から1頭。同じ馬が2つに出るのは間が2週あるときだけ。';
+  const RULE = '距離ごとに5つ。その距離のG1を勝った自分の馬と、前の年のその GF の勝ち馬は必ず招待。残りはその距離のレースで集めたファンの票（大きいレースほど・上の着ほど多い）の上位16頭。外国の馬は4頭まで。1つの GF に出られるのは自分の馬から1頭。同じ馬が2つに出るのは間が2週あるときだけ。';
   const place = c => `12月${c.week}週・${c.course}${c.surface === 'ダ' ? 'ダ' : '芝'}${c.dist}m`;
   // 招待の決まった12月か
   const open = () => { const G = W.get(); return G.dc && G.dc.y === G.year && G.dc.gf && G.month === 12; };
@@ -72,7 +72,7 @@
         ${lineup.length ? `<div class="small dc-lineup">${lineup.map(h => h.owner === 'P' ? `<b class="dc-me">★${e(h.name)}</b>` : e(h.name)).join('・')}</div>` : ''}
       </div>`;
     }).join('');
-    return `<h2 class="sec">${T.DC_NAME}<span class="r">距離ごとに6つ・各16頭</span></h2><div class="panel dc-road">${rows}</div>`;
+    return `<h2 class="sec">${T.DC_NAME}<span class="r">距離ごとに5つ・各16頭</span></h2><div class="panel dc-road">${rows}</div>`;
   }
 
   // ---------- 招待の画面（GF ひとつ）：出るなら1頭を選ぶ。出ないなら AI の馬だけで走る（結果は週のまとめから観戦できる） ----------

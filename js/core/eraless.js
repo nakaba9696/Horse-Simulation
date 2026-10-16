@@ -156,7 +156,7 @@
     }
     return [...keys];
   };
-  // 前のセーブ：自分の馬が勝った GF の区分の鍵（World.migrate から。区分の無い前の GF はクラシック）
+  // 前のセーブ：自分の馬が勝った GF の区分の鍵（World.migrate から。区分の無い前の GF は中長距離）
   E.gfKeys = function (g) {
     const keys = new Set();
     for (const h of Object.values(g.horses || {})) if (h.owner === 'P') for (const w of h.gradedWins || []) { const c = HS.Season.gfCatOfName(w.short || w.race); if (c) keys.add('gf:' + c); }
