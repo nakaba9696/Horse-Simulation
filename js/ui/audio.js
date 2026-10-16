@@ -776,6 +776,8 @@
     else if (name === 'whip') { noise(bus, t, 0.05, 'highpass', 3000, 0.5); noise(bus, t + 0.01, 0.08, 'bandpass', 1800, 0.35, 2); }
     else if (name === 'skill') { ['E6', 'B6', 'E7'].forEach((n, i) => V.bell(bus, [freq(n)], t + i * 0.05, 0.18, 1.7)); }
     else if (name === 'fight') { blip(220, 660, 0.22, 'sawtooth', 0.07); blip(330, 990, 0.22, 'square', 0.04); noise(bus, t, 0.18, 'bandpass', 1200, 0.25, 1.2); } // 競り合いで気合が乗った：駆け上がる音と、どよめき
+    else if (name === 'snort') { noise(bus, t, 0.16, 'bandpass', 700, 0.55, 1.4); noise(bus, t + 0.17, 0.12, 'bandpass', 520, 0.4, 1.2); } // 鼻息（掛かり始め・手綱とケンカ）：ブルッ、ブルッ
+    else if (name === 'exhale') { noise(bus, t, 0.5, 'lowpass', 900, 0.22, 0.8); } // 折り合って、ふうっと息を吐く
     else if (name === 'gate') { V.bell(bus, [1568], t, 0.05, 3); V.bell(bus, [2093], t, 0.05, 2); noise(bus, t, 0.25, 'bandpass', 900, 0.35, 1.5); }
   };
 
