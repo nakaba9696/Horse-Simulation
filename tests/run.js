@@ -158,17 +158,22 @@ check('jockeys: 毎年 JRA の騎手が足りる・主戦騎手が実在する',
 });
 
 check('layouts: 競馬場の形（コーナー・直線・高低差）がそろっている', () => {
-  // index.html でまだ読んでいなければ、ここで読む
-  if (!D.layouts) { const fs = require('fs'), path = require('path'), vm = require('vm'); const f = path.join(__dirname, '..', 'data', 'layouts.js'); vm.runInThisContext(fs.readFileSync(f, 'utf8'), { filename: f }); }
-  const L = D.layouts; assert(L, 'data/layouts.js がない');
+  // index.html でまだ読んでいなければ、ここで読み、終わったら外す（ほかの確かめはゲームと同じ読み込みで動かす）
+  const own = !D.layouts;
+  if (own) { const fs = require('fs'), path = require('path'), vm = require('vm'); const f = path.join(__dirname, '..', 'data', 'layouts.js'); vm.runInThisContext(fs.readFileSync(f, 'utf8'), { filename: f }); }
+  try { return checkLayouts(D.layouts); } finally { if (own) delete D.layouts; }
+});
+function checkLayouts(L) {
+  assert(L, 'data/layouts.js がない');
   const RAD = Math.PI / 180, bad = [];
-  // 走る向きにたどって、ゴールに戻るかを見る（半径は角度に沿って直線的に変わる）
+  // 走る向きにたどって、ゴールに戻るかを見る（曲がり＝1/半径は長さに沿って入口から出口へ直線的に変わる。track.js の fromLayout と同じ読み方）
+  const arcLen = s => Math.abs(s[3]) * RAD / ((1 / s[1] + 1 / s[2]) / 2);
   const closeErr = segs => {
     let x = 0, y = 0, h = 0;
     for (const s of segs.slice().reverse()) {
       if (s[0] === 'S') { x += s[1] * Math.cos(h); y += s[1] * Math.sin(h); continue; }
-      const n = 360, dphi = s[3] * RAD / n;
-      for (let i = 0; i < n; i++) { const r = s[1] + (s[2] - s[1]) * (i + 0.5) / n, hm = h + dphi / 2; x += r * Math.abs(dphi) * Math.cos(hm); y += r * Math.abs(dphi) * Math.sin(hm); h += dphi; }
+      const m = 360, ds = arcLen(s) / m, sg = Math.sign(s[3]);
+      for (let i = 0; i < m; i++) { const k = (1 / s[1] + (1 / s[2] - 1 / s[1]) * (i + 0.5) / m) * sg; h += k * ds / 2; x += ds * Math.cos(h); y += ds * Math.sin(h); h += k * ds / 2; }
     }
     return Math.hypot(x, y);
   };
@@ -188,7 +193,7 @@ check('layouts: 競馬場の形（コーナー・直線・高低差）がそろ�
         let len = 0, ang = 0;
         for (const s of o.segs) {
           if (s[0] === 'S' && s.length === 2 && s[1] >= 0) len += s[1];
-          else if (s[0] === 'C' && s.length === 5 && s[1] > 0 && s[2] > 0 && s[3] !== 0) { len += Math.abs(s[3]) * RAD * (s[1] + s[2]) / 2; ang += s[3]; }
+          else if (s[0] === 'C' && s.length === 5 && s[1] > 0 && s[2] > 0 && s[3] !== 0) { len += arcLen(s); ang += s[3]; }
           else bad.push(`${kk}:segs の形 ${JSON.stringify(s)}`);
         }
         if (o.segs[0][0] !== 'S' || Math.abs(o.segs[0][1] - o.straight) > 1) bad.push(`${kk}:最初の直線が straight と違う`);
@@ -200,6 +205,7 @@ check('layouts: 競馬場の形（コーナー・直線・高低差）がそろ�
           const e = closeErr(o.segs); maxErr = Math.max(maxErr, e / o.lap);
           if (e > o.lap * 0.02) bad.push(`${kk}:形が閉じない（${e.toFixed(1)}m）`);
         }
+        if (HS.Track && HS.Track.fromLayout && !o.open) { const tr = HS.Track.fromLayout(o, co.dir); if (Math.abs(tr.L - o.lap) > o.lap * 0.01) bad.push(`${kk}:fromLayout の長さ ${tr.L.toFixed(1)} が lap と1%より違う`); }
         const ev = o.elev || [];
         if (ev.length < 2 || ev[0][0] !== 0 || Math.abs(ev[ev.length - 1][0] - o.lap) > 0.5) bad.push(`${kk}:elev が残り0から lap まででない`);
         for (let i = 1; i < ev.length; i++) if (!(ev[i][0] > ev[i - 1][0])) { bad.push(`${kk}:elev の並び`); break; }
@@ -217,10 +223,12 @@ check('layouts: 競馬場の形（コーナー・直線・高低差）がそろ�
       for (const d of need) if (!uses.has(d)) bad.push(`${k}:${d}m の回りが無い`);
     }
   }
+  // courses.js の全部の場・馬場に形がある
+  for (const [name, co] of Object.entries(D.courses)) for (const sf of ['turf', 'dirt']) if (co[sf] && !(L[name] && L[name][sf] && L[name][sf].length)) bad.push(`${name}${sf === 'turf' ? '芝' : 'ダ'}:形が無い`);
   assert(!bad.length, bad.slice(0, 15).join(', '));
   const all = Object.keys(D.courses).length, has = Object.keys(L).length;
   return `${has}/${all}場・${n}の回り・閉じ方の誤差は最大 ${(maxErr * 100).toFixed(2)}%`;
-});
+}
 
 // ---------- 模擬 ----------
 check('sim: 走破タイムが現実的', () => {

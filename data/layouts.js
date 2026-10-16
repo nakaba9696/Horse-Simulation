@@ -5,7 +5,7 @@
 //   use：その回りを使うレースの距離（m）。同じ馬場の中で回りどうし重ならない
 //   segs：ゴール板から「走る向きと逆」にたどった順。最初はゴールから最後のコーナーの出口までの直線、最後は1コーナーの入口からゴールまで
 //     ['S', 長さ]：直線　['C', 入口の半径, 出口の半径, 曲がる角度(度), 番号]：コーナー（入口・出口は走る向きで見たもの。番号 3＝3〜4コーナー、1＝1〜2コーナー。負の角度は逆向きの曲がり）
-//     半径は角度に沿って入口から出口へ直線的に変わる（長さ＝角度×(入口＋出口)/2）。同じ値なら円、入口が大きければスパイラルカーブ
+//     曲がり（1/半径）は長さに沿って入口から出口へ直線的に変わる（長さ＝角度÷((1/入口＋1/出口)/2)。js/core/track.js の fromLayout と同じ）。同じ値なら円、入口が大きければスパイラルカーブ
 //   elev：[ゴールまでの残り(m), 高さ(m)]。残り0から lap まで。いちばん低い所が0。点の間は直線でつなぐ
 //   src：確かめた出典　note：特徴　approx：出典で細かく分からない所を、分かる数に合わせて作ったもの
 // JRA の10場：1周・直線・高低差・使う距離は JRA のコース紹介の表、高さは同じページの高低断面図から読んだ（表の高低差とおよそ0.1〜0.2m で合う）。
@@ -18,14 +18,14 @@
     '札幌': {
       turf: [
         { id: '周回', lap: 1640.9, straight: 266.1, use: [1000, 1200, 1500, 1800, 2000, 2600],
-          segs: [['S', 266.1], ['C', 165, 165, 182.5, 3], ['S', 312.7], ['C', 158, 158, 177.5, 1], ['S', 46.6]],
+          segs: [['S', 266.1], ['C', 165.1, 165.1, 182.5, 3], ['S', 312.7], ['C', 158.1, 158.1, 177.5, 1], ['S', 46.6]],
           elev: [[0, 0.3], [316, 0.1], [804, 0.7], [844, 0.7], [962, 0], [1029, 0.2], [1338, 0.2], [1392, 0], [1496, 0], [1640.9, 0.3]],
           src: ['https://www.jra.go.jp/facilities/race/sapporo/course/index.html'],
           note: 'ほぼ平坦。4つのコーナーが大きく丸い', approx: true },
       ],
       dirt: [
         { id: '周回', lap: 1487, straight: 264.3, use: [1000, 1200, 1700, 2000, 2400],
-          segs: [['S', 264.3], ['C', 141, 141, 180.1, 3], ['S', 301.1], ['C', 141, 141, 179.9, 1], ['S', 36.8]],
+          segs: [['S', 264.3], ['C', 140.9, 140.9, 180.1, 3], ['S', 301.1], ['C', 140.7, 140.7, 179.9, 1], ['S', 36.8]],
           elev: [[0, 0.5], [360, 0.2], [439, 0.5], [649, 0.4], [750, 0.9], [835, 0.7], [847, 0.5], [1118, 0], [1423, 0.2], [1487, 0.5]],
           src: ['https://www.jra.go.jp/facilities/race/sapporo/course/index.html'],
           note: 'ほぼ平坦。丸いコース', approx: true },
@@ -34,14 +34,14 @@
     '函館': {
       turf: [
         { id: '周回', lap: 1626.6, straight: 262.1, use: [1000, 1200, 1700, 1800, 2000, 2400, 2600],
-          segs: [['S', 262.1], ['C', 154, 134, 179.6, 3], ['S', 352.7], ['C', 145, 145, 180.4, 1], ['S', 103.4]],
+          segs: [['S', 262.1], ['C', 154.8, 134.6, 179.6, 3], ['S', 352.7], ['C', 145.2, 145.2, 180.4, 1], ['S', 103.4]],
           elev: [[0, 2.3], [116, 2.3], [126, 2.5], [293, 3.4], [363, 3.6], [466, 3.6], [795, 1.5], [941, 1], [1158, 0], [1204, 0], [1410, 0.6], [1580, 2.2], [1626.6, 2.3]],
           src: ['https://www.jra.go.jp/facilities/race/hakodate/course/index.html'],
           note: '3〜4コーナーに小高い丘。直線は全場で最も短い。3、4コーナーはスパイラルカーブ', approx: true },
       ],
       dirt: [
         { id: '周回', lap: 1475.8, straight: 260.3, use: [1000, 1700, 2400],
-          segs: [['S', 260.3], ['C', 130, 113, 181.1, 3], ['S', 356.5], ['C', 118, 118, 178.9, 1], ['S', 107.1]],
+          segs: [['S', 260.3], ['C', 130.6, 113.6, 181.1, 3], ['S', 356.5], ['C', 117.8, 117.8, 178.9, 1], ['S', 107.1]],
           elev: [[0, 2.2], [97, 2.2], [324, 3.5], [420, 3.5], [587, 2.4], [635, 2.1], [714, 1.6], [919, 1], [1016, 0.5], [1031, 0.2], [1068, 0.2], [1086, 0], [1125, 0.2], [1176, 0.2], [1192, 0.5], [1255, 0.6], [1443, 2.2], [1475.8, 2.2]],
           src: ['https://www.jra.go.jp/facilities/race/hakodate/course/index.html'],
           note: '3〜4コーナーに小高い丘。3、4コーナーはスパイラルカーブ', approx: true },
@@ -50,14 +50,14 @@
     '福島': {
       turf: [
         { id: '周回', lap: 1600, straight: 292, use: [1000, 1200, 1700, 1800, 2000, 2400, 2600],
-          segs: [['S', 292], ['C', 169, 113, 183.5, 3], ['S', 355.7], ['C', 130, 130, 176.5, 1], ['S', 100.7]],
+          segs: [['S', 292], ['C', 176.6, 117.7, 183.2, 3], ['S', 355.9], ['C', 129.5, 129.5, 176.8, 1], ['S', 100.7]],
           elev: [[0, 1.8], [52, 1.8], [160, 0.7], [190, 0.7], [412, 2.1], [700, 2.1], [906, 1.8], [926, 1.7], [1027, 0.3], [1220, 0], [1296, 0], [1564, 1.8], [1600, 1.8]],
           src: ['https://www.jra.go.jp/facilities/race/fukushima/course/index.html'],
           note: '1周に2回の上り下り。ゴール前に緩い上り（1.2m）。3、4コーナーはスパイラルカーブ', approx: true },
       ],
       dirt: [
         { id: '周回', lap: 1444.6, straight: 295.7, use: [1000, 1150, 1700, 2400],
-          segs: [['S', 295.7], ['C', 137, 92, 179.6, 3], ['S', 346.5], ['C', 116, 116, 180.4, 1], ['S', 79.2]],
+          segs: [['S', 295.7], ['C', 142.4, 95.9, 179.4, 3], ['S', 346.6], ['C', 115.6, 115.6, 180.6, 1], ['S', 79.2]],
           elev: [[0, 2.2], [47, 2.1], [248, 1.2], [278, 1.2], [363, 1.9], [647, 1.8], [777, 1.4], [942, 0.5], [1001, 0.4], [1061, 0.2], [1093, 0], [1152, 0.2], [1167, 0.5], [1196, 0.6], [1421, 2.1], [1444.6, 2.2]],
           src: ['https://www.jra.go.jp/facilities/race/fukushima/course/index.html'],
           note: '1周に2回の上り下り。3、4コーナーはスパイラルカーブ', approx: true },
@@ -66,12 +66,12 @@
     '新潟': {
       turf: [
         { id: '外', lap: 2223, straight: 658.7, use: [1600, 1800, 2000, 3000, 3200],
-          segs: [['S', 658.7], ['C', 138, 120, 180, 3], ['S', 701.2], ['C', 129, 129, 180, 1], ['S', 54]],
+          segs: [['S', 658.7], ['C', 138.4, 120.4, 180, 3], ['S', 701.2], ['C', 128.8, 128.8, 180, 1], ['S', 54]],
           elev: [[0, 0], [340, 0], [436, 0.5], [585, 0.3], [667, 0.7], [762, 0.6], [994, 2.2], [1016, 2.2], [1030, 2], [1053, 2], [1338, 0.6], [1697, 0.6], [1769, 0.7], [1919, 0.3], [2091, 0.3], [2150, 0.2], [2173, 0], [2223, 0]],
           src: ['https://www.jra.go.jp/facilities/race/niigata/course/index.html'],
           note: '日本最長の直線（658.7m）。3コーナーから4コーナーへ緩い下り。スパイラルカーブ', approx: true },
         { id: '内', lap: 1623, straight: 358.7, use: [1200, 1400, 2200, 2400],
-          segs: [['S', 358.7], ['C', 138, 120, 180, 3], ['S', 401.2], ['C', 129, 129, 180, 1], ['S', 54]],
+          segs: [['S', 358.7], ['C', 138.4, 120.4, 180, 3], ['S', 401.2], ['C', 128.7, 128.7, 180, 1], ['S', 54]],
           elev: [[0, 0.1], [338, 0.1], [354, 0.3], [381, 0.3], [397, 0.1], [444, 0], [659, 0.4], [699, 0.6], [1096, 0.6], [1146, 0.8], [1315, 0.4], [1484, 0.4], [1547, 0.3], [1570, 0.1], [1623, 0.1]],
           src: ['https://www.jra.go.jp/facilities/race/niigata/course/index.html'],
           note: 'ほぼ平坦。3、4コーナーはスパイラルカーブ', approx: true },
@@ -83,7 +83,7 @@
       ],
       dirt: [
         { id: '周回', lap: 1472.5, straight: 353.9, use: [1000, 1200, 1700, 1800, 2500],
-          segs: [['S', 353.9], ['C', 111, 97, 180.1, 3], ['S', 405], ['C', 104, 104, 179.9, 1], ['S', 60.4]],
+          segs: [['S', 353.9], ['C', 111.9, 97.3, 180, 3], ['S', 405.1], ['C', 103.8, 103.8, 180, 1], ['S', 60.4]],
           elev: [[0, 0], [599, 0], [614, 0.2], [702, 0.5], [900, 0.5], [949, 0.4], [1069, 0.5], [1141, 0.2], [1153, 0], [1472.5, 0]],
           src: ['https://www.jra.go.jp/facilities/race/niigata/course/index.html'],
           note: 'ほぼ平坦。3、4コーナーはスパイラルカーブ', approx: true },
@@ -92,14 +92,14 @@
     '東京': {
       turf: [
         { id: '周回', lap: 2083.1, straight: 525.9, use: [1400, 1600, 1800, 2000, 2200, 2300, 2400, 2500, 2600, 3200, 3400],
-          segs: [['S', 525.9], ['C', 138, 138, 179.6, 3], ['S', 602.9], ['C', 141, 141, 180.4, 1], ['S', 77]],
+          segs: [['S', 525.9], ['C', 138.5, 138.5, 179.6, 3], ['S', 602.9], ['C', 140.8, 140.8, 180.4, 1], ['S', 77]],
           elev: [[0, 2.5], [302, 2.4], [456, 0.5], [886, 0], [1142, 2.2], [1201, 2.2], [1278, 0.9], [1325, 0.9], [1947, 2.7], [2083.1, 2.5]],
           src: ['https://www.jra.go.jp/facilities/race/tokyo/course/index.html'],
           note: '直線の坂（残り460〜300m・高低差2m）と3コーナー手前の上り坂。コーナーはゆったり', approx: true },
       ],
       dirt: [
         { id: '周回', lap: 1899, straight: 501.6, use: [1200, 1300, 1400, 1600, 1700, 2100, 2300, 2400],
-          segs: [['S', 501.6], ['C', 125, 125, 179.8, 3], ['S', 555.3], ['C', 126, 126, 180.2, 1], ['S', 53.7]],
+          segs: [['S', 501.6], ['C', 125.1, 125.1, 179.8, 3], ['S', 555.3], ['C', 125.9, 125.9, 180.2, 1], ['S', 53.7]],
           elev: [[0, 2.7], [217, 2.6], [485, 0.2], [788, 0], [812, 0], [885, 0.6], [901, 0.6], [1014, 1.6], [1099, 1.6], [1192, 0.9], [1239, 0.9], [1899, 2.7]],
           src: ['https://www.jra.go.jp/facilities/race/tokyo/course/index.html'],
           note: '日本最大のダート。直線の坂（高低差2.4m）と向正面の坂', approx: true },
@@ -108,19 +108,19 @@
     '中山': {
       turf: [
         { id: '内', lap: 1667.1, straight: 310, use: [1800, 2000, 2500, 3200, 3600],
-          segs: [['S', 310], ['C', 143, 143, 180.4, 3], ['S', 385.5], ['C', 142, 142, 179.6, 1], ['S', 75.5]],
+          segs: [['S', 310], ['C', 143.2, 143.2, 180.4, 3], ['S', 385.5], ['C', 142, 142, 179.6, 1], ['S', 75.5]],
           elev: [[0, 2.6], [84, 2.4], [189, 0.1], [250, 0], [297, 0.4], [415, 0.7], [429, 0.8], [756, 0.6], [948, 1], [1151, 3.8], [1313, 5], [1363, 5.3], [1454, 5.3], [1640, 2.9], [1667.1, 2.6]],
           src: ['https://www.jra.go.jp/facilities/race/nakayama/course/index.html'],
           note: 'ゴール前の急坂（残り180〜70m・2.2m）。2コーナーの手前が頂上で高低差5.3m。2・3コーナーがきつい小回り', approx: true },
         { id: '外', lap: 1839.7, straight: 310, use: [1200, 1600, 2200, 2400, 2600, 4000],
-          segs: [['S', 310], ['C', 166, 166, 178.9, 3], ['S', 393.2], ['C', 169, 169, 181.1, 1], ['S', 83.2]],
+          segs: [['S', 310], ['C', 165.8, 165.8, 178.9, 3], ['S', 393.2], ['C', 169.5, 169.5, 181.1, 1], ['S', 83.2]],
           elev: [[0, 2.6], [78, 2.4], [182, 0.1], [250, 0], [290, 0.4], [439, 0.8], [693, 0.6], [704, 0.7], [965, 1.6], [1255, 4.6], [1437, 4.7], [1542, 5.2], [1613, 5.2], [1795, 2.9], [1839.7, 2.6]],
           src: ['https://www.jra.go.jp/facilities/race/nakayama/course/index.html'],
           note: 'ゴール前の急坂（残り180〜70m・2.2m）。2コーナーから長い下り。高低差5.3m', approx: true },
       ],
       dirt: [
         { id: '周回', lap: 1493, straight: 308, use: [1000, 1200, 1700, 1800, 2400, 2500],
-          segs: [['S', 308], ['C', 119, 119, 180.3, 3], ['S', 375.1], ['C', 118, 118, 179.7, 1], ['S', 67.1]],
+          segs: [['S', 308], ['C', 118.8, 118.8, 180.3, 3], ['S', 375.1], ['C', 117.7, 117.7, 179.7, 1], ['S', 67.1]],
           elev: [[0, 2.4], [18, 2.4], [115, 1.4], [206, 0.1], [435, 0], [843, 1], [1025, 3.8], [1212, 4.3], [1278, 4.3], [1411, 3.7], [1493, 2.4]],
           src: ['https://www.jra.go.jp/facilities/race/nakayama/course/index.html'],
           note: 'ゴール前の急坂。高低差4.5m', approx: true },
@@ -129,14 +129,14 @@
     '中京': {
       turf: [
         { id: '周回', lap: 1705.9, straight: 412.5, use: [1200, 1300, 1400, 1600, 1700, 1800, 2000, 2200, 2400, 2800, 3000],
-          segs: [['S', 412.5], ['C', 158, 127, 184.7, 3], ['S', 421.5], ['C', 125, 125, 175.3, 1], ['S', 30]],
+          segs: [['S', 412.5], ['C', 160.5, 128.4, 184.6, 3], ['S', 421.5], ['C', 124.9, 124.9, 175.4, 1], ['S', 30]],
           elev: [[0, 2.3], [241, 2], [338, 0], [956, 3.1], [1061, 3.4], [1106, 3.4], [1479, 2.4], [1705.9, 2.3]],
           src: ['https://www.jra.go.jp/facilities/race/chukyo/course/index.html'],
           note: '直線に向いてすぐの急坂（約2m・勾配約2%）。3、4コーナーはスパイラルカーブ', approx: true },
       ],
       dirt: [
         { id: '周回', lap: 1530, straight: 410.7, use: [1200, 1400, 1700, 1800, 1900, 2000, 2200, 2300, 2500],
-          segs: [['S', 410.7], ['C', 130, 104, 185.1, 3], ['S', 418.2], ['C', 98, 98, 174.9, 1], ['S', 24.7]],
+          segs: [['S', 410.7], ['C', 131.5, 105.2, 185, 3], ['S', 418.2], ['C', 97.9, 97.9, 175, 1], ['S', 24.7]],
           elev: [[0, 2.1], [54, 2.2], [218, 1.8], [310, 0.5], [370, 0], [392, 0], [970, 3.3], [1094, 3.1], [1157, 2.6], [1280, 2.1], [1530, 2.1]],
           src: ['https://www.jra.go.jp/facilities/race/chukyo/course/index.html'],
           note: '直線に向いてすぐの急坂。3、4コーナーはスパイラルカーブ', approx: true },
@@ -145,19 +145,19 @@
     '京都': {
       turf: [
         { id: '外', lap: 1894.3, straight: 403.7, use: [1400, 1600, 1800, 1900, 2200, 2400, 3000, 3200],
-          segs: [['S', 403.7], ['C', 156, 156, 185.2, 3], ['S', 489.7], ['C', 134, 134, 174.8, 1], ['S', 86]],
+          segs: [['S', 403.7], ['C', 156.5, 156.5, 185.2, 3], ['S', 489.7], ['C', 134.1, 134.1, 174.8, 1], ['S', 86]],
           elev: [[0, 0.3], [276, 0], [683, 0.8], [832, 4.2], [847, 4.2], [1005, 3], [1085, 2.5], [1189, 0.4], [1894.3, 0.3]],
           src: ['https://www.jra.go.jp/facilities/race/kyoto/course/index.html'],
           note: '3コーナーの坂（淀の坂）。向正面の半ばから上り、4コーナーへ一気に下る。高低差4.3m', approx: true },
         { id: '内', lap: 1782.8, straight: 328.4, use: [1100, 1200, 2000],
-          segs: [['S', 328.4], ['C', 166, 166, 188.2, 3], ['S', 414.4], ['C', 136, 136, 171.8, 1], ['S', 86]],
+          segs: [['S', 328.4], ['C', 165.9, 165.9, 188.2, 3], ['S', 414.4], ['C', 136.4, 136.4, 171.8, 1], ['S', 86]],
           elev: [[0, 0.3], [278, 0], [603, 0.4], [621, 0.5], [772, 3.2], [899, 3.2], [1072, 0.4], [1782.8, 0.3]],
           src: ['https://www.jra.go.jp/facilities/race/kyoto/course/index.html'],
           note: '3コーナーの坂（高低差3.1m）。3、4コーナーがきつい', approx: true },
       ],
       dirt: [
         { id: '周回', lap: 1607.6, straight: 329.1, use: [1000, 1100, 1200, 1400, 1800, 1900, 2600],
-          segs: [['S', 329.1], ['C', 140, 140, 189.9, 3], ['S', 418.3], ['C', 104, 104, 170.1, 1], ['S', 89.2]],
+          segs: [['S', 329.1], ['C', 139.8, 139.8, 189.9, 3], ['S', 418.3], ['C', 103.6, 103.6, 170.1, 1], ['S', 89.2]],
           elev: [[0, 0.1], [522, 0.1], [727, 2.6], [822, 2.9], [838, 2.9], [1040, 0.4], [1255, 0], [1386, 0.4], [1607.6, 0.1]],
           src: ['https://www.jra.go.jp/facilities/race/kyoto/course/index.html'],
           note: '3コーナーの丘から4コーナーへ下り、平坦な直線', approx: true },
@@ -166,19 +166,19 @@
     '阪神': {
       turf: [
         { id: '外', lap: 2089, straight: 473.6, use: [1600, 1800, 2400, 2600],
-          segs: [['S', 473.6], ['C', 201, 201, 194.8, 3], ['S', 508.4], ['C', 135, 135, 165.2, 1], ['S', 34.8]],
+          segs: [['S', 473.6], ['C', 200.9, 200.9, 194.8, 3], ['S', 508.4], ['C', 135, 135, 165.2, 1], ['S', 34.8]],
           elev: [[0, 1.8], [61, 1.8], [178, 0], [210, 0.1], [584, 1.9], [1210, 2.1], [1313, 1.6], [1444, 1.8], [2089, 1.8]],
           src: ['https://www.jra.go.jp/facilities/race/hanshin/course/index.html'],
           note: '長い向正面と大きな3、4コーナー。ゴール前の急坂（1.8m・勾配1.5%）', approx: true },
         { id: '内', lap: 1689, straight: 356.5, use: [1200, 1400, 1850, 1900, 2000, 2200, 2500, 3000, 3100, 3200],
-          segs: [['S', 356.5], ['C', 157, 157, 188.1, 3], ['S', 391.3], ['C', 130, 130, 171.9, 1], ['S', 34.8]],
+          segs: [['S', 356.5], ['C', 157.5, 157.5, 188.1, 3], ['S', 391.3], ['C', 129.8, 129.8, 171.9, 1], ['S', 34.8]],
           elev: [[0, 1.8], [64, 1.8], [181, 0], [801, 1.5], [1175, 1.8], [1689, 1.8]],
           src: ['https://www.jra.go.jp/facilities/race/hanshin/course/index.html'],
           note: 'ゴール前の急坂（1.8m・勾配1.5%）', approx: true },
       ],
       dirt: [
         { id: '周回', lap: 1517.6, straight: 352.7, use: [1200, 1400, 1800, 2000, 2600],
-          segs: [['S', 352.7], ['C', 145, 145, 195.4, 3], ['S', 375.3], ['C', 95, 95, 164.6, 1], ['S', 22.6]],
+          segs: [['S', 352.7], ['C', 145.3, 145.3, 195.4, 3], ['S', 375.3], ['C', 94.5, 94.5, 164.6, 1], ['S', 22.6]],
           elev: [[0, 1.3], [68, 1.3], [204, 0], [544, 0.2], [1017, 1.3], [1517.6, 1.3]],
           src: ['https://www.jra.go.jp/facilities/race/hanshin/course/index.html'],
           note: '残り200mに上り坂（1.6m）', approx: true },
@@ -187,14 +187,14 @@
     '小倉': {
       turf: [
         { id: '周回', lap: 1615.1, straight: 293, use: [1000, 1200, 1700, 1800, 2000, 2600],
-          segs: [['S', 293], ['C', 148, 129, 179.6, 3], ['S', 364.2], ['C', 140, 140, 180.4, 1], ['S', 83.4]],
+          segs: [['S', 293], ['C', 148.9, 129.5, 179.6, 3], ['S', 364.2], ['C', 139.8, 139.8, 180.4, 1], ['S', 83.4]],
           elev: [[0, 0], [405, 0], [422, 0.2], [670, 1.3], [749, 1.1], [978, 1.1], [1269, 3.2], [1334, 2.7], [1599, 0.2], [1615.1, 0]],
           src: ['https://www.jra.go.jp/facilities/race/kokura/course/index.html'],
           note: '2コーナーに小高い丘。直線は平坦。3、4コーナーはスパイラルカーブ', approx: true },
       ],
       dirt: [
         { id: '周回', lap: 1445.4, straight: 291.3, use: [1000, 1700, 2400],
-          segs: [['S', 291.3], ['C', 109, 109, 180.5, 3], ['S', 384.4], ['C', 107, 107, 179.5, 1], ['S', 93.1]],
+          segs: [['S', 291.3], ['C', 108.5, 108.5, 180.5, 3], ['S', 384.4], ['C', 106.9, 106.9, 179.5, 1], ['S', 93.1]],
           elev: [[0, 0.6], [405, 0], [642, 1.5], [891, 1.5], [1138, 2.9], [1164, 2.9], [1311, 0.6], [1445.4, 0.6]],
           src: ['https://www.jra.go.jp/facilities/race/kokura/course/index.html'],
           note: '2コーナーに丘。残り400mから直線へ緩い上り（0.6m）', approx: true },
@@ -227,12 +227,12 @@
     '船橋': {
       dirt: [
         { id: '外', lap: 1400, straight: 308, use: [1000, 1200, 1500, 1600, 1700, 1800, 2000, 2200, 2400],
-          segs: [['S', 308], ['C', 118.3, 96.8, 180, 3], ['S', 362], ['C', 118.3, 96.8, 180, 1], ['S', 54]],
+          segs: [['S', 308], ['C', 119.5, 97.8, 180, 3], ['S', 362], ['C', 119.5, 97.8, 180, 1], ['S', 54]],
           elev: [[0, 0], [1400, 0]],
           src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E8%88%B9%E6%A9%8B%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
           note: 'スパイラルカーブ（コーナーの内外に高低差）。平坦', approx: true },
         { id: '内', lap: 1250, straight: 308, use: [1400],
-          segs: [['S', 308], ['C', 92.1, 75.3, 180, 3], ['S', 362], ['C', 92.1, 75.3, 180, 1], ['S', 54]],
+          segs: [['S', 308], ['C', 93, 76.1, 180, 3], ['S', 362], ['C', 93, 76.1, 180, 1], ['S', 54]],
           elev: [[0, 0], [1250, 0]],
           src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E8%88%B9%E6%A9%8B%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
           note: '内コース。いまはレースで使っていない', approx: true },
@@ -266,7 +266,7 @@
     '名古屋': {
       dirt: [
         { id: '周回', lap: 1180, straight: 240, use: [900, 920, 1400, 1500, 1700, 1900, 2000, 2100],
-          segs: [['S', 240], ['C', 105.9, 83.3, 180, 3], ['S', 285.6], ['C', 94.6, 94.6, 180, 1], ['S', 60]],
+          segs: [['S', 240], ['C', 107.5, 84.5, 179.9, 3], ['S', 285.6], ['C', 94.6, 94.6, 180.1, 1], ['S', 60]],
           elev: [[0, 0], [164, 0], [388, 0.3], [607, 0], [752, 0], [831, 0.2], [912, 0], [1180, 0]],
           src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E5%90%8D%E5%8F%A4%E5%B1%8B%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.nagoyakeiba.com/news/5c50174720d00f5e58bb8d04b06dc58f.pdf'],
           note: '2022年に弥富へ移ったいまのコース。3〜4コーナーはスパイラルカーブ。ほぼ平坦', approx: true },
@@ -307,7 +307,7 @@
     '浦和': {
       dirt: [
         { id: '周回', lap: 1200, straight: 220, use: [800, 1300, 1400, 1500, 1600, 1900, 2000],
-          segs: [['S', 220], ['C', 107.2, 87.7, 180, 3], ['S', 287.6], ['C', 97.5, 97.5, 180, 1], ['S', 80]],
+          segs: [['S', 220], ['C', 108.3, 88.6, 179.9, 3], ['S', 287.6], ['C', 97.4, 97.4, 180.1, 1], ['S', 80]],
           elev: [[0, 0], [1200, 0]],
           src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E6%B5%A6%E5%92%8C%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.urawa-keiba.jp/guide/course_paddock/'],
           note: '小回り。3コーナーはスパイラルカーブ。平坦', approx: true },
@@ -708,7 +708,7 @@
     'ウッドバイン': {
       turf: [
         { id: 'EPテイラー', lap: 2413.5, straight: 438.9, use: [1600, 2000, 2400],
-          segs: [['S', 438.9], ['C', 207.8, 124.7, 184.3, 3], ['S', 746.5], ['C', 102.1, 102.1, 150, 2], ['S', 142.5], ['C', 186.4, 186.4, 25.7, 1], ['S', 200]],
+          segs: [['S', 438.9], ['C', 222.1, 133.4, 184, 3], ['S', 746], ['C', 102.1, 102.1, 150, 2], ['S', 142.5], ['C', 184, 184, 26, 1], ['S', 200]],
           elev: [[0, 0], [438.9, 0], [941.4, 0.8], [1741.4, 0.8], [1992.5, 0], [2413.5, 0]],
           src: ['https://en.wikipedia.org/wiki/Woodbine_Racetrack', 'https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://www.jairs.jp/contents/courses/can.html', 'https://ja.wikipedia.org/wiki/%E3%82%A6%E3%83%83%E3%83%89%E3%83%90%E3%82%A4%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
           note: '左回りの3コーナーの芝（30度→短い直線→150度）。北米最長の直線1440フィート。向正面がホーム直線より0.8〜0.9m高い', approx: true },
@@ -749,7 +749,7 @@
     'フレミントン': {
       turf: [
         { id: '周回', lap: 2312, straight: 450, use: [3200],
-          segs: [['S', 450], ['C', 291.6, 225.3, 197.1, 3], ['S', 413.5], ['C', 192.5, 192.5, 162.9, 1], ['S', 12]],
+          segs: [['S', 450], ['C', 296.8, 229.3, 196.9, 3], ['S', 413.5], ['C', 192.3, 192.3, 163.1, 1], ['S', 12]],
           elev: [[0, 0], [2312, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/australia/flemington.html', 'https://www.jairs.jp/contents/courses/au.html', 'https://en.wikipedia.org/wiki/Flemington_Racecourse'],
           note: '洋梨型。3〜4コーナーのゆったりしたカーブ。ほぼ平坦。3200mはストレート6の上から発走し最初のコーナーまで約900m', approx: true },
@@ -799,6 +799,266 @@
           elev: [[0, 0], [1800, 0]],
           src: ['https://www.readkong.com/page/fast-facts-the-singapore-racecourse-kranji-9199574', 'https://ja.wikipedia.org/wiki/%E3%82%AF%E3%83%A9%E3%83%B3%E3%82%B8%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
           note: 'ショートコース（幅27m）', approx: true },
+      ],
+    },
+    // ---------- 海外（欧州） ----------
+    'ロンシャン': {
+      turf: [
+        { id: '大回り', lap: 2750, straight: 533, use: [1600, 1850, 2000, 2100, 2400, 3000, 3100, 4000],
+          segs: [['S', 533], ['C', 230, 230, 25, 3], ['S', 250], ['C', 133.9, 133.9, 165.3, 3], ['S', 993.9], ['C', 102.4, 102.4, 169.7, 1], ['S', 183.3]],
+          elev: [[0, 0], [800, 0], [1400, 10], [2000, 0], [2750, 0]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/france/longchamp.html', 'https://ja.wikipedia.org/wiki/%E3%83%91%E3%83%AA%E3%83%AD%E3%83%B3%E3%82%B7%E3%83%A3%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://fr.wikipedia.org/wiki/Hippodrome_de_Longchamp'],
+          note: '向正面の上り坂から3コーナーの下り（高低差約10m）、フォルスストレート（約250m）、平坦な直線533m（奥のゴール板までは650m）', approx: true },
+        { id: '中回り', lap: 2500, straight: 533, use: [2500],
+          segs: [['S', 533], ['C', 230, 230, 25, 3], ['S', 150], ['C', 120, 120, 162.2, 3], ['S', 896.8], ['C', 100.6, 100.6, 172.8, 1], ['S', 176.7]],
+          elev: [[0, 0], [700, 0], [1250, 8], [1800, 0], [2500, 0]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/france/longchamp.html', 'https://ja.wikipedia.org/wiki/%E3%83%91%E3%83%AA%E3%83%AD%E3%83%B3%E3%82%B7%E3%83%A3%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://fr.wikipedia.org/wiki/Hippodrome_de_Longchamp'],
+          note: '1周2500m。フォルスストレートと直線は大回りと同じ。坂の高さは出典に無く、大回りの形を縮めた', approx: true },
+        { id: '小回り', lap: 2150, straight: 533, use: [],
+          segs: [['S', 533], ['C', 105.4, 105.4, 179.3, 3], ['S', 737.3], ['C', 109.6, 109.6, 180.7, 1], ['S', 204.3]],
+          elev: [[0, 0], [600, 0], [1000, 5], [1500, 0], [2150, 0]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/france/longchamp.html', 'https://ja.wikipedia.org/wiki/%E3%83%91%E3%83%AA%E3%83%AD%E3%83%B3%E3%82%B7%E3%83%A3%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://fr.wikipedia.org/wiki/Hippodrome_de_Longchamp'],
+          note: '1周2150m。フォルスストレートは無い。坂の高さは出典に無い', approx: true },
+        { id: '新コース', lap: 1400, straight: 533, open: true, use: [1400],
+          segs: [['S', 533], ['C', 230, 230, 25, 3], ['S', 250], ['C', 150, 150, 65, 3], ['S', 346.5]],
+          elev: [[0, 0], [800, 0], [1400, 8]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/france/longchamp.html', 'https://ja.wikipedia.org/wiki/%E3%83%91%E3%83%AA%E3%83%AD%E3%83%B3%E3%82%B7%E3%83%A3%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://fr.wikipedia.org/wiki/Hippodrome_de_Longchamp'],
+          note: '3コーナーのポケットから発走して大回りの最後のコーナーに合流する1400m（ヌーヴェルピスト）。下りの途中から出る', approx: true },
+        { id: '直線', lap: 1000, straight: 1000, line: true, use: [1000],
+          segs: [['S', 1000]],
+          elev: [[0, 0], [1000, 0]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/france/longchamp.html', 'https://ja.wikipedia.org/wiki/%E3%83%91%E3%83%AA%E3%83%AD%E3%83%B3%E3%82%B7%E3%83%A3%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '直線1000m（アベイ・ド・ロンシャン賞）。ゴールまで平坦' },
+      ],
+    },
+    'シャンティイ': {
+      turf: [
+        { id: '大回り', lap: 2400, straight: 600, use: [1400, 1600, 1800, 2000, 2100, 2400, 3100, 4000],
+          segs: [['S', 600], ['C', 148, 148, 182.4, 3], ['S', 760.2], ['C', 131.8, 131.8, 177.6, 1], ['S', 160.2]],
+          elev: [[0, 10], [250, 9.6], [800, 0], [1071, 6], [1700, 10], [2400, 10]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/france/chantilly.html', 'https://fr.wikipedia.org/wiki/Hippodrome_de_Chantilly', 'https://ja.wikipedia.org/wiki/%E3%82%B7%E3%83%A3%E3%83%B3%E3%83%86%E3%82%A3%E3%82%A4%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://en.wikipedia.org/wiki/Chantilly_Racecourse'],
+          note: '3〜4コーナーの谷（下ってから上る）、最後の800mで10m上る直線600m（残り250mはほぼ平坦）', approx: true },
+        { id: '中回り', lap: 2150, straight: 550, use: [],
+          segs: [['S', 550], ['C', 129, 129, 181.4, 3], ['S', 682.3], ['C', 120.9, 120.9, 178.6, 1], ['S', 132.3]],
+          elev: [[0, 10], [250, 9.6], [800, 0], [1000, 5], [1500, 10], [2150, 10]],
+          src: ['https://fr.wikipedia.org/wiki/Hippodrome_de_Chantilly', 'https://ja.wikipedia.org/wiki/%E3%82%B7%E3%83%A3%E3%83%B3%E3%83%86%E3%82%A3%E3%82%A4%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.jra.go.jp/keiba/overseas/country/france/chantilly.html'],
+          note: 'モワイエンヌピスト。1周2150m、直線550m、ゴールへ上る（高低差10m）', approx: true },
+        { id: '直線', lap: 1200, straight: 1200, line: true, use: [1000],
+          segs: [['S', 1200]],
+          elev: [[0, 10], [250, 9.6], [800, 0], [1200, 0]],
+          src: ['https://fr.wikipedia.org/wiki/Hippodrome_de_Chantilly', 'https://ja.wikipedia.org/wiki/%E3%82%B7%E3%83%A3%E3%83%B3%E3%83%86%E3%82%A3%E3%82%A4%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '直線1200m。ゴール前の上りは周回と同じとみた', approx: true },
+      ],
+    },
+    'ドーヴィル': {
+      turf: [
+        { id: '直線', lap: 1600, straight: 1600, line: true, use: [1300, 1400, 1600],
+          segs: [['S', 1600]],
+          elev: [[0, 0], [1600, 0]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/france/deauville.html', 'https://fr.wikipedia.org/wiki/Hippodrome_de_Deauville-La_Touques', 'https://ja.wikipedia.org/wiki/%E3%83%89%E3%83%BC%E3%83%B4%E3%82%A3%E3%83%AB%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '直線1600m（ジャック・ル・マロワ賞・モーリス・ド・ゲスト賞）。平坦で起伏が無い' },
+        { id: '周回', lap: 2200, straight: 450, use: [],
+          segs: [['S', 450], ['C', 130, 130, 180, 3], ['S', 691.6], ['C', 130, 130, 180, 1], ['S', 241.6]],
+          elev: [[0, 0], [2200, 0]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/france/deauville.html', 'https://fr.wikipedia.org/wiki/Hippodrome_de_Deauville-La_Touques', 'https://ja.wikipedia.org/wiki/%E3%83%89%E3%83%BC%E3%83%B4%E3%82%A3%E3%83%AB%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '1周2200m・直線450m。まったく平ら（parfaitement plate）', approx: true },
+      ],
+    },
+    'サンクルー': {
+      turf: [
+        { id: '周回', lap: 2300, straight: 500, use: [2100, 2400, 2500, 3100],
+          segs: [['S', 500], ['C', 140, 140, 180, 3], ['S', 710.2], ['C', 140, 140, 180, 1], ['S', 210.2]],
+          elev: [[0, 1.5], [450, 0], [1200, 0], [2300, 1.5]],
+          src: ['https://fr.wikipedia.org/wiki/Hippodrome_de_Saint-Cloud', 'https://ja.wikipedia.org/wiki/%E3%82%B5%E3%83%B3%E3%82%AF%E3%83%AB%E3%83%BC%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.turfoo.fr/hippodromes/saint-cloud/'],
+          note: '1周2300mの左回り（馬蹄形に近い）。直線約500mでゆるい上り。ほかは平ら。上りの高さは出典に無い', approx: true },
+      ],
+    },
+    'アスコット': {
+      turf: [
+        { id: 'ラウンド', lap: 2816, straight: 503, use: [1600, 2000, 2400, 4000],
+          segs: [['S', 503], ['C', 88.4, 88.4, 123.2, 3], ['S', 827.5], ['C', 110, 110, 129, 2], ['S', 642], ['C', 146.9, 146.9, 107.8, 1], ['S', 129.3]],
+          elev: [[0, 22.3], [200, 22.3], [503, 20.5], [693, 19], [1500, 1], [1620, 0], [1748, 1], [2390, 20], [2816, 22.3]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/racecourse.html', 'https://www.jra.go.jp/keiba/overseas/country/gbr/ascot.html', 'https://ja.wikipedia.org/wiki/%E3%82%A2%E3%82%B9%E3%82%B3%E3%83%83%E3%83%88%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://en.wikipedia.org/wiki/Ascot_Racecourse'],
+          note: 'おむすび型。発走からスウィンリーボトムへ約20m下り、オールドマイルから直線へ上り続ける（スウィンリーボトム→ゴールで22.3m）', approx: true },
+        { id: '直線', lap: 1609, straight: 1609, line: true, use: [],
+          segs: [['S', 1609]],
+          elev: [[0, 3.3], [200, 3.3], [503, 1.5], [1609, 0]],
+          src: ['https://ja.wikipedia.org/wiki/%E3%82%A2%E3%82%B9%E3%82%B3%E3%83%83%E3%83%88%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://en.wikipedia.org/wiki/Ascot_Racecourse'],
+          note: 'ニューマイル（直線1マイル。クイーンアンS）。ゆるく起伏して直線の上りに入る', approx: true },
+      ],
+    },
+    'エプソム': {
+      turf: [
+        { id: 'ダービー', lap: 2400, straight: 805, open: true, use: [2400],
+          segs: [['S', 805], ['C', 169, 169, 100, 3], ['C', 150, 150, 100, 2], ['S', 400], ['C', 600, 600, -20, 1], ['S', 428.8]],
+          elev: [[0, 13], [100, 12], [805, 22], [1100, 36], [1300, 42], [2400, 0]],
+          src: ['https://ja.wikipedia.org/wiki/%E3%82%A8%E3%83%97%E3%82%BD%E3%83%A0%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://en.wikipedia.org/wiki/Epsom_Downs_Racecourse', 'https://www.geegeez.co.uk/epsom/', 'https://www.racingpost.com/guide-to-racing/epsom-racecourse/'],
+          note: '周回しない馬蹄形。発走から約42m上り、下りながらタッテナムコーナー、内側に傾いた直線（約半マイル）、ゴール前で上る', approx: true },
+      ],
+    },
+    'ニューマーケット': {
+      turf: [
+        { id: 'ローリーマイル', lap: 4023, straight: 2012, open: true, use: [1000, 1200, 1400, 1600, 2000, 2400],
+          segs: [['S', 2012], ['C', 300, 300, 60, 3], ['S', 1696.8]],
+          elev: [[0, 3], [200, 0], [400, 1.5], [2012, 1.5], [4023, 1.5]],
+          src: ['https://en.wikipedia.org/wiki/Newmarket_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%83%8B%E3%83%A5%E3%83%BC%E3%83%9E%E3%83%BC%E3%82%B1%E3%83%83%E3%83%88%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://thejockeyclub.co.uk/events-tickets/festivals/the-qipco-guineas-festival/all-about-the-rowley-mile'],
+          note: '直線10ハロン。ゴール前のディップ（残り2〜1ハロンで下り、最後の1ハロンで上る）。10ハロンより長いレースはセザレウィッチコースから右に曲がって入る。坂の高さは出典に無い', approx: true },
+        { id: 'ジュライ', lap: 3420, straight: 1609, open: true, use: [],
+          segs: [['S', 1609], ['C', 300, 300, 20, 3], ['S', 1706.3]],
+          elev: [[0, 3], [200, 0], [1200, 4], [1609, 4], [3420, 4]],
+          src: ['https://en.wikipedia.org/wiki/Newmarket_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%83%8B%E3%83%A5%E3%83%BC%E3%83%9E%E3%83%BC%E3%82%B1%E3%83%83%E3%83%88%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '夏の直線1マイル（バンバリーマイル）。長い下りのあと最後の1ハロンが上り。坂の高さは出典に無い', approx: true },
+      ],
+    },
+    'ヨーク': {
+      turf: [
+        { id: '周回', lap: 3200, straight: 900, use: [1600, 2000, 2050, 2400, 2800, 4000],
+          segs: [['S', 900], ['C', 144.1, 144.1, 150.9, 3], ['S', 634.7], ['C', 200, 200, 48, 2], ['S', 400], ['C', 238.4, 238.4, 161.1, 1], ['S', 47.8]],
+          elev: [[0, 0], [3200, 0]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/york.html', 'https://en.wikipedia.org/wiki/York_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%83%A8%E3%83%BC%E3%82%AF%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '平らで広い左回り。2050mは向正面から出て、ゆるい左カーブ、約550mの直線、大きなコーナー、約900mの最後の直線。2005年まで馬蹄形', approx: true },
+        { id: '直線', lap: 1200, straight: 1200, line: true, use: [1000],
+          segs: [['S', 1200]],
+          elev: [[0, 0], [1200, 0]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/york.html', 'https://en.wikipedia.org/wiki/York_Racecourse'],
+          note: '直線6ハロン（ナンソープSは5ハロン）。平ら', approx: true },
+      ],
+    },
+    'グッドウッド': {
+      turf: [
+        { id: 'ロウアーベンド', lap: 1600, straight: 680, open: true, use: [1600],
+          segs: [['S', 680], ['C', 253, 253, 95, 3], ['S', 500.5]],
+          elev: [[0, 0], [680, 3], [1000, 8], [1420, 2], [1600, 4]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/goodwood.html', 'https://en.wikipedia.org/wiki/Goodwood_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%82%B0%E3%83%83%E3%83%89%E3%82%A6%E3%83%83%E3%83%89%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '8の字をつぶしたコースの右側から。下ってから急に上り、ロウアーベンドを回って下りながら直線（700m弱、ゆるい下り）。高さは出典に無い', approx: true },
+        { id: 'トップベンド', lap: 2000, straight: 820, open: true, use: [2000],
+          segs: [['S', 820], ['C', 100, 100, 135, 3], ['S', 350], ['C', 110, 110, 135, 2], ['S', 335.2]],
+          elev: [[0, 0], [820, 4], [1100, 8], [1450, 6], [2000, 2]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/goodwood.html', 'https://en.wikipedia.org/wiki/Goodwood_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%82%B0%E3%83%83%E3%83%89%E3%82%A6%E3%83%83%E3%83%89%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: 'ループを回って急なトップベンドから直線（800m強）へ。起伏が大きいが高さは出典に無い', approx: true },
+      ],
+    },
+    'ニューベリー': {
+      turf: [
+        { id: '直線', lap: 1609, straight: 1609, line: true, use: [1600],
+          segs: [['S', 1609]],
+          elev: [[0, 0], [1609, 0]],
+          src: ['https://en.wikipedia.org/wiki/Newbury_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%83%8B%E3%83%A5%E3%83%BC%E3%83%99%E3%83%AA%E3%83%BC%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '直線1マイル（ロッキンジS）。ほぼ平ら、最後の1ハロンに小さな起伏', approx: true },
+        { id: '周回', lap: 2816, straight: 1006, use: [2400],
+          segs: [['S', 1006], ['C', 110, 110, 180, 3], ['S', 1062.4], ['C', 110, 110, 180, 1], ['S', 56.4]],
+          elev: [[0, 0], [1006, 0], [1350, 1.5], [2816, 0]],
+          src: ['https://en.wikipedia.org/wiki/Newbury_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%83%8B%E3%83%A5%E3%83%BC%E3%83%99%E3%83%AA%E3%83%BC%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '1周1マイル6ハロン余り、直線5ハロン（直線1マイルと合流）。向正面が長い。最後のコーナーへゆるく下るほかはほぼ平ら（高さは出典に無い）', approx: true },
+      ],
+    },
+    'ドンカスター': {
+      turf: [
+        { id: '周回', lap: 3118, straight: 905, use: [2900],
+          segs: [['S', 905], ['C', 154.7, 154.7, 181.3, 3], ['S', 1093], ['C', 141.9, 141.9, 178.7, 1], ['S', 188]],
+          elev: [[0, 0], [1800, 0], [2000, 2], [2250, 1], [3118, 0]],
+          src: ['https://en.wikipedia.org/wiki/Doncaster_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%83%89%E3%83%B3%E3%82%AB%E3%82%B9%E3%82%BF%E3%83%BC%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.attheraces.com/festivals/leger/course-guide'],
+          note: '洋ナシ形の平らな左回り（1周約1マイル7ハロン半、直線約4ハロン半）。ゴールから約1マイル1/4の所にゆるい上り（ローズヒル）。高さは出典に無い', approx: true },
+      ],
+    },
+    'サンダウン': {
+      turf: [
+        { id: '周回', lap: 2615, straight: 800, use: [2000],
+          segs: [['S', 800], ['C', 84.3, 84.3, 176.2, 3], ['S', 990.7], ['C', 116.7, 116.7, 183.8, 1], ['S', 190.7]],
+          elev: [[0, 7.1], [46, 7.1], [800, 0], [1800, 0], [2091, 1], [2209, 2], [2300, 8.1], [2615, 7.1]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/sandown.html', 'https://en.wikipedia.org/wiki/Sandown_Park_Racecourse'],
+          note: '1コーナーの先で20フィート下り、急な3〜4コーナー、ゴール前50ヤードまで上り続ける直線（約4ハロン）', approx: true },
+      ],
+    },
+    'ケンプトン': {
+      turf: [
+        { id: 'ジュビリー', lap: 2012, straight: 600, open: true, use: [2000],
+          segs: [['S', 600], ['C', 150, 150, 90, 3], ['S', 1176.4]],
+          elev: [[0, 0], [1646, 0], [2012, 1]],
+          src: ['https://en.wikipedia.org/wiki/Kempton_Park_Racecourse'],
+          note: '芝の平地は2006年まで。ジュビリーコース（10ハロン）は2本の直線を右のコーナーでつなぐ形で、発走から400ヤードはゆるい下り。直線の長さ・高さは出典に無い', approx: true },
+        { id: '周回', lap: 2615, straight: 600, use: [],
+          segs: [['S', 600], ['C', 106.6, 106.6, 112.6, 3], ['S', 600], ['C', 100, 100, 120, 2], ['S', 720.2], ['C', 94.2, 94.2, 127.4, 1], ['S', 66.5]],
+          elev: [[0, 0], [2615, 0]],
+          src: ['https://en.wikipedia.org/wiki/Kempton_Park_Racecourse'],
+          note: '芝の三角形のコース（1周約1マイル5ハロン、2006年まで）。直線の長さは出典に無い', approx: true },
+      ],
+    },
+    'エア': {
+      turf: [
+        { id: '周回', lap: 2414, straight: 805, use: [2900],
+          segs: [['S', 805], ['C', 110, 110, 180, 3], ['S', 861.4], ['C', 110, 110, 180, 1], ['S', 56.4]],
+          elev: [[0, 0], [805, 0], [1151, 1], [2000, 1], [2414, 0]],
+          src: ['https://en.wikipedia.org/wiki/Ayr_Racecourse'],
+          note: '1周12ハロンの楕円、直線半マイル。ほぼ平らで、直線に向くコーナーがゆるい下り（高さは出典に無い）', approx: true },
+      ],
+    },
+    'カラ': {
+      turf: [
+        { id: 'ラウンド', lap: 3200, straight: 600, open: true, use: [2400, 2800],
+          segs: [['S', 600], ['C', 250, 250, 180, 3], ['S', 1814.6]],
+          elev: [[0, 3], [400, 0], [3200, 0]],
+          src: ['https://en.wikipedia.org/wiki/Curragh_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%A9%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.attheraces.com/course-guides/Curragh', 'https://www.curragh.ie/track-talk/'],
+          note: '馬蹄形の右回り（約2マイル。ダービーコースとプレートコース）。急なコーナーは無く、最後の直線は約3ハロンで、最後の2ハロンがゆるい上り（高さは出典に無い）', approx: true },
+        { id: 'マイル', lap: 1600, straight: 1300, open: true, use: [1600],
+          segs: [['S', 1300], ['C', 400, 400, 15, 3], ['S', 195.3]],
+          elev: [[0, 3], [400, 0], [1600, 0]],
+          src: ['https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%A9%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.attheraces.com/course-guides/Curragh'],
+          note: '直線コースの1300m付近から分かれる1マイル（ドッグレッグ）。最後の2ハロンがゆるい上り。折れの角度・向きは出典に無い', approx: true },
+      ],
+    },
+    'フェニックスパーク': {
+      turf: [
+        { id: '周回', lap: 2400, straight: 600, use: [2000],
+          segs: [['S', 600], ['C', 120, 120, 180, 3], ['S', 823], ['C', 120, 120, 180, 1], ['S', 223]],
+          elev: [[0, 0], [2400, 0]],
+          src: ['https://en.wikipedia.org/wiki/Phoenix_Park_Racecourse'],
+          note: '1990年に閉場。形・高低差の出典が見つからず、courses.js の値で楕円にした', approx: true },
+      ],
+    },
+    'レパーズタウン': {
+      turf: [
+        { id: '周回', lap: 2800, straight: 400, use: [2000],
+          segs: [['S', 400], ['C', 214.5, 214.5, 175.3, 3], ['S', 839.5], ['C', 110, 110, 135, 2], ['S', 310.8], ['C', 223.5, 223.5, 49.7, 1], ['S', 140.5]],
+          elev: [[0, 4], [400, 2.5], [1400, 0], [1856, 0.5], [2800, 4]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/ire/racecourse.html', 'https://www.jra.go.jp/keiba/overseas/country/ire/leopardstown.html', 'https://ja.wikipedia.org/wiki/%E3%83%AC%E3%83%91%E3%83%BC%E3%82%BA%E3%82%BF%E3%82%A6%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://en.wikipedia.org/wiki/Leopardstown_Racecourse'],
+          note: '1周約2800mの左回り。長い向正面（約800m）、残り1400mから上りが多く、約400mの直線もゴールまで上る。高さは出典に無い', approx: true },
+      ],
+    },
+    'バーデンバーデン': {
+      turf: [
+        { id: '周回', lap: 2000, straight: 500, use: [2400],
+          segs: [['S', 500], ['C', 105, 105, 180, 3], ['S', 670.2], ['C', 105, 105, 180, 1], ['S', 170.1]],
+          elev: [[0, 0], [2000, 0]],
+          src: ['https://ja.wikipedia.org/wiki/%E3%83%90%E3%83%BC%E3%83%87%E3%83%B3%E3%83%90%E3%83%BC%E3%83%87%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://de.wikipedia.org/wiki/Rennplatz_Iffezheim'],
+          note: 'イフェツハイム。左回り、1周約2000m、直線約500m。高低差の出典は無い', approx: true },
+      ],
+    },
+    'ハンブルク': {
+      turf: [
+        { id: '周回', lap: 2000, straight: 500, use: [2400],
+          segs: [['S', 500], ['C', 105, 105, 180, 3], ['S', 670.2], ['C', 105, 105, 180, 1], ['S', 170.1]],
+          elev: [[0, 0], [2000, 0]],
+          src: ['https://ja.wikipedia.org/wiki/%E3%83%8F%E3%83%B3%E3%83%96%E3%83%AB%E3%82%AF%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://de.wikipedia.org/wiki/Galopprennbahn_Hamburg-Horn', 'https://en.wikipedia.org/wiki/Horner_Rennbahn'],
+          note: 'ホルン。右回り、1周2000m、直線500m（ドイツダービー2400m）。高低差の出典は無い', approx: true },
+      ],
+    },
+    'ホッペガルテン': {
+      turf: [
+        { id: '周回', lap: 2400, straight: 500, use: [2400],
+          segs: [['S', 500], ['C', 120, 120, 180, 3], ['S', 823], ['C', 120, 120, 180, 1], ['S', 323]],
+          elev: [[0, 2.5], [500, 1.5], [800, 0], [2400, 2.5]],
+          src: ['https://ja.wikipedia.org/wiki/%E3%83%9B%E3%83%83%E3%83%9A%E3%82%AC%E3%83%AB%E3%83%86%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://taz.de/Lauf-Mensch-schneller-lauf-du-Affe/!1774018/'],
+          note: '右回り、1周1.5マイル、直線2.5ハロン（約500m）でやや上り（直線に向く所の上りは Anberg と呼ばれる）。高さは出典に無い', approx: true },
+      ],
+    },
+    'デュッセルドルフ': {
+      turf: [
+        { id: '周回', lap: 2000, straight: 500, use: [2400, 2600],
+          segs: [['S', 500], ['C', 90, 90, 128.4, 3], ['S', 442.3], ['C', 90, 90, 103.2, 2], ['S', 442.3], ['C', 90, 90, 128.4, 1], ['S', 50]],
+          elev: [[0, 0], [2000, 0]],
+          src: ['https://ja.wikipedia.org/wiki/%E3%83%87%E3%83%A5%E3%83%83%E3%82%BB%E3%83%AB%E3%83%89%E3%83%AB%E3%83%95%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.visitduesseldorf.de/en/attractions/galopprennbahn-duesseldorf-racecourse-688c6f02fc'],
+          note: 'グラーフェンベルク。右回り、1周2000mのおむすび型、直線約500mで比較的平坦。上り（Anberg）があると言われるが位置・高さは出典に無い', approx: true },
       ],
     },
   };
