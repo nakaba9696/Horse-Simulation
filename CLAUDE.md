@@ -54,7 +54,8 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/core/races.js` | 週ごとのレース（重賞と条件戦）・出走できるか・優先順 | M |
 | `js/core/racesim.js` | レースの模擬（0.1秒刻み。S.create・S.step・S.finish）・プレイヤーの騎乗の操作（S.ctl）・実況・描画用のコマ | M |
 | `js/core/world.js` | 世界の状態・週の進行（W.prepareWeek → W.cards → W.finishWeek）・AI の出走・賞金・市場・配合・表彰・セーブ | C |
-| `js/core/jockey.js` | 騎手のゲーム：持ち馬の入厩・評判・腕前・お手馬・見習いの減量・リーディング・騎手の表彰（騎乗依頼は馬主のキャラクターから。子が作っている） | C |
+| `data/owners.js`・`js/core/owners.js`・`js/ui/ownersui.js`・`css/owners.css` | 馬主のキャラクター（架空・7人。口調の表・場面ごとの台詞）と騎乗依頼・好感度の段階・ご褒美・名コンビ賞（`G.owners`）。画面はホームの依頼の札・馬主の一覧・ご褒美の場面・パドックとレースの後のひと言・顔の絵（SVG） | C |
+| `js/core/jockey.js` | 騎手のゲーム：持ち馬の入厩・評判・腕前・お手馬・見習いの減量・リーディング・騎手の表彰（騎乗依頼は馬主のキャラクターから。`js/core/owners.js`） | C |
 | `js/ui/art.js` | 絵（馬・騎手・勝負服・肖像）。画像ファイルは使わず canvas で描く | V |
 | `js/ui/audio.js` | BGM と効果音（Web Audio で鳴らす。曲は書き下ろし） | V |
 | `js/ui/raceview.js` | レースの画面（カメラ・柵・ハロン棒・ミニマップ・順位・実況・掲示板） | V |
