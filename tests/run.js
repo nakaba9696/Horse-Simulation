@@ -340,6 +340,27 @@ check('sim: 坂が弱い馬は坂のあるコースで沈む', () => {
   assert(hill - flat > 0.6, `中山 ${hill.toFixed(2)} 京都 ${flat.toFixed(2)}`);
   return `平均着順 中山 ${hill.toFixed(1)}・京都 ${flat.toFixed(1)}`;
 });
+check('track: 実際の形と高低差（data/layouts.js の形）から、コースの位置・高さ・勝ち負けへの効きを出す', () => {
+  const T = HS.Track;
+  const lay = { id: '内', lap: 1667, straight: 310, use: [2000], segs: [['S', 310], ['C', 120, 95, 180, 3], ['S', 420], ['C', 100, 100, 180, 1], ['S', 300]], elev: [[0, 3], [70, 3], [180, 0.8], [800, 0], [1300, 4], [1667, 3]] };
+  const t = T.fromLayout(lay, '右');
+  const p0 = t.at(0), pL = t.at(t.L - 0.01);
+  assert(Math.hypot(p0.x - pL.x, p0.y - pL.y) < 1, `周回が閉じていない ${JSON.stringify([p0, pL])}`);
+  assert(t.at(100).corner === 0 && t.at(400).corner === 3, 'コーナーの番号が違う');
+  assert(t.gAt(120) > 0.015 && t.gAt(1000) < 0, `勾配の向きが違う ${t.gAt(120)} ${t.gAt(1000)}`);
+  const ln = T.fromLayout({ id: '直線', line: true, lap: 1000, straight: 1000, segs: [['S', 1000]], elev: [[0, 0]] }, '左');
+  assert(Math.abs(Math.hypot(ln.at(0).x - ln.at(1000).x, ln.at(0).y - ln.at(1000).y) - 1000) < 1 && ln.at(500).corner === 0, '直線のコースの長さが違う');
+  // 坂の弱い馬は、実際の坂（ゴール前の急坂）があると沈む。仮の形で中山と京都を置き換えて比べる
+  const LY0 = HS.DATA.layouts; HS.DATA.layouts = Object.assign({}, LY0, { '中山': { turf: [lay] }, '京都': { turf: [Object.assign({}, lay, { elev: [[0, 0]] })] } });
+  try {
+    const weak = h => { h.pot.slope = 50; };
+    const hill = fieldTest('中山', 2000, weak, 150).pos, flat = fieldTest('京都', 2000, weak, 150).pos;
+    assert(hill - flat > 0.4, `坂あり ${hill.toFixed(2)} 平ら ${flat.toFixed(2)}`);
+    const f = T.forRace({ course: '中山', surface: '芝', dist: 2000 });
+    assert(f.geo.loop === '内' && Math.abs(f.geo.lap - 1667) < 20 && !f.track.flat, '回りの選び方が違う');
+    return `周回 ${t.L.toFixed(0)}m・坂の弱い馬の平均着順 坂あり ${hill.toFixed(1)}・平ら ${flat.toFixed(1)}`;
+  } finally { HS.DATA.layouts = LY0; }
+});
 check('sim: 脚の切れはコースで向き不向きがある', () => {
   const kire = k => h => { h.kire = k; };
   const tokyoCut = fieldTest('東京', 2400, kire(7), 150).pos, tokyoZubu = fieldTest('東京', 2400, kire(2), 150).pos;

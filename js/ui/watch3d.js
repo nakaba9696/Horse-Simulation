@@ -13,7 +13,7 @@
       const { race, sim, runners } = data;
       const results = sim.results, frames = sim.frames;
       const course = HS.DATA.courses[race.course] || HS.DATA.courses['東京'];
-      const geo = (race.surface === 'ダ' ? course.dirt : course.turf) || course.turf || course.dirt;
+      const geo = HS.Track.forRace(race).geo;
       el.innerHTML = `<div class="rv"><div class="ride-stage"><canvas class="ride-3d"></canvas><canvas class="ride-canvas"></canvas></div>
         <div class="rv-bar"><div class="rv-speed">${[1, 2, 4].map(s => `<button data-sp="${s}" class="${s === (opts.speed || 1) ? 'on' : ''}">×${s}</button>`).join('')}</div>
         <div class="rv-speed"><button data-cam="tv" class="on">中継</button><button data-cam="ride">騎手目線</button></div><button class="rv-skip">ゴールまで飛ばす</button></div></div>`;
@@ -30,7 +30,7 @@
       let r3;
       try {
         r3 = HS.Race3D.create(cv3, {
-          D: sim.D, surface: race.surface, ground: race.ground, track: HS.Track.make(geo.lap, geo.straight, course.dir),
+          D: sim.D, surface: race.surface, ground: race.ground, track: sim.track || HS.Track.forRace(race).track,
           course: { name: race.course, dir: course.dir, lap: geo.lap, straight: geo.straight, slope: geo.slope },
           horses: meta.map(m => ({ num: m.x.num, frame: m.x.frame, cap: m.cap, silks: m.silks, coat: m.x.horse.coat, name: m.x.horse.name, age: (HS.World.get() ? HS.World.get().year : race.year) - m.x.horse.born, mine: !!(m.x.mine || m.x.rider === 'P') })),
         });
