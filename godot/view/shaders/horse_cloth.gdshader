@@ -10,8 +10,8 @@ uniform float y0 = 1.02;
 uniform float trim_w = 0.02;
 uniform float round_k = 0.06;
 uniform float rough = 0.85;
-uniform float fade_near = 2.2;
-uniform float fade_far = 4.6;
+uniform float fade_near = 2.8;
+uniform float fade_far = 4.9;
 varying vec3 v_rest;
 
 float bayer4(vec2 p) {

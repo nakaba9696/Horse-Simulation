@@ -280,7 +280,8 @@ func update_camera(H: Array, dt: float) -> void:
 	var first := mode == "jockey"
 	if first != cam_state.get("first", false) or not cam_state.has("first"):
 		cam_state.first = first
-		hm.set_fade(not first)
+		# 自分の馬は網目に消さない（騎手の目のときは騎手の体だけ隠す）
+		hm.set_fade(false)
 		for n in hm.jockey.head_parts:
 			n.visible = not first
 	var k := 1.0 - exp(-dt * 6.0) if dt > 0.0 else 1.0
@@ -308,9 +309,9 @@ func update_camera(H: Array, dt: float) -> void:
 			var head := (hm.jockey.nodes[26] as Node3D).global_transform * Vector3(0, 0.16, 0.1)
 			var fw := tr.fwd3(tr.frame(D - (mx - BODY)))
 			cam_state.bob = lerpf(cam_state.bob, head.y, 1.0 - exp(-dt * 4.0) if dt > 0.0 else 1.0)
-			cp = Vector3(head.x, cam_state.bob, head.z) - fw * 0.05
+			cp = Vector3(head.x, cam_state.bob - 0.08, head.z) - fw * 0.05
 			var fl := tr.frame(D - (mx - BODY + 22.0))
-			lk = tr.w3(fl, cam_state.u, fl.e + 1.2)
+			lk = tr.w3(fl, cam_state.u, fl.e + 0.2)
 			fov = 62.0
 		_:
 			# 後ろ：自分の馬の 6.4m 後ろ・3.2m 上。進路を変えると少し遅れてついてくる。上下の揺れは馬の胴の上下を弱めて

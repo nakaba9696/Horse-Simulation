@@ -1,10 +1,10 @@
-; ターフの系譜：Godot の試作（同じ1レースの場面を再生する）
+; ターフの系譜：Godot 版（見た目と操作は godot/view・godot/ui、遊びの決まりと模擬は godot/core）
 config_version=5
 
 [application]
 
-config/name="ターフの系譜 Godot 試作"
-run/main_scene="res://scenes/race.tscn"
+config/name="ターフの系譜"
+run/main_scene="res://scenes/race_card.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [display]
@@ -12,6 +12,7 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 window/size/viewport_width=1920
 window/size/viewport_height=1080
 window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [rendering]
 

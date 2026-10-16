@@ -86,7 +86,7 @@ const FC = HS.DATA.frameColors, FT = HS.DATA.frameText;
 const out = {
   about: 'ターフの系譜：レースの記録（tools/export_race.js で作る。手で直さない）',
   seed: SEED,
-  race: { name: race.name, short: race.short, grade: race.grade, course: race.course, surface: race.surface, dist: race.dist, ground: race.ground },
+  race: { name: race.name, short: race.short, grade: race.grade, course: race.course, surface: race.surface, dist: race.dist, ground: race.ground, num: 11, weather: '晴', dir: course.dir },
   // コースの形（js/core/track.js の T.make と同じ値。Godot 側は同じ式で位置を出す）
   track: { lap: tr.L, a: tr.a, r: tr.r, straight: tr.straight, sign: tr.sign, dir: course.dir, slope: geo.slope, D: sim.D, line: !!tr.line, step: STEP, pts, layout: cf.layout ? cf.layout.id || '' : null },
   dt: DT,
@@ -96,7 +96,7 @@ const out = {
     // 白い靴下の高さ（m。js/ui/horse_rigged.js と同じ決め方）
     const sockLen = k => [0.16, 0.24, 0.34, 0.46][Math.floor(hash01(strHash(r.horse.name + k), 5) * 4)];
     return {
-      num: r.num, frame: r.frame, name: r.horse.name, coat: r.horse.coat, sex: r.horse.sex, style: r.horse.style, jockey: r.jockey.name, weight: r.weight,
+      num: r.num, frame: r.frame, name: r.horse.name, coat: r.horse.coat, sex: r.horse.sex, age: 4, style: r.horse.style, weight: r.weight, mine: !!r.mine,
       coatLook: { body: L.body, top: L.top, belly: L.belly, mane: L.mane, tail: L.tail, points: L.points, muzzle: L.muzzle, hoof: L.hoof, gloss: L.gloss, dapple: L.dapple || 0, dappleCol: L.dappleCol || null, pointsSoft: !!L.pointsSoft },
       marks: { blaze: mk.blaze, socks: mk.socks.map((on, k) => on ? sockLen(k) : 0) },
       silks: RaceView.silksOf(r.horse), cap: FC[(r.frame - 1) % 8], capText: FT[(r.frame - 1) % 8],

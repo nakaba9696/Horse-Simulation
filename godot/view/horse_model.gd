@@ -49,7 +49,7 @@ var ear_bones := PackedInt32Array()   # 耳（素材に無いので足した骨�
 var cloth_mesh: ArrayMesh             # 鞍の下の布（体の面を浮かせた殻）
 var saddle_mesh: ArrayMesh            # 鞍
 const CLOTH := {"z0": -0.36, "z1": 0.2, "y0": 1.02}     # 布の範囲（素材の座標）
-const SADDLE := {"z0": -0.2, "z1": 0.08, "y0": 1.36}
+const SADDLE := {"z0": -0.2, "z1": 0.08, "y0": 1.45}
 
 static func get_model() -> ViewHorseModel:
 	if _inst == null:

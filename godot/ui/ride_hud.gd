@@ -240,7 +240,7 @@ func update(st: Dictionary) -> void:
 	var rem := maxf(0.0, D - float(st.me_x))
 	dist_l.text = _comma(int(ceil(rem))) if rem > 0.0 else "0"
 	top_left.visible = phase == "run" or phase == "gate"
-	place_l.get_parent().visible = phase == "run" and t > 1.0
+	place_l.get_parent().visible = phase == "run" and t > 1.0 and ride
 	var rank: int = st.rank
 	place_l.text = str(rank)
 	place_sfx.text = ordinal(rank)

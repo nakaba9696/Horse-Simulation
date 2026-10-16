@@ -30,8 +30,8 @@ uniform float head_len = 0.4;
 uniform float blaze = 0.0;
 uniform float gloss = 0.5;
 // カメラのすぐ前の馬は網目に消す（自分の馬を隠さないように）。0 で消さない
-uniform float fade_near = 2.2;
-uniform float fade_far = 4.6;
+uniform float fade_near = 2.8;
+uniform float fade_far = 4.9;
 float bayer4(vec2 p) {
 	int x = int(mod(p.x, 4.0));
 	int y = int(mod(p.y, 4.0));

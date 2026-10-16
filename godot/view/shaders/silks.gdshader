@@ -4,8 +4,8 @@ uniform vec3 base_col : source_color = vec3(0.1, 0.3, 0.8);
 uniform vec3 sub_col : source_color = vec3(1.0, 0.85, 0.2);
 uniform int pattern = 0; // 0 無地 1 横縞 2 縦縞 3 たすき 4 十字たすき 5 ダイヤ 6 星 7 左右 8 肩
 uniform float sheen = 0.35;
-uniform float fade_near = 2.2;
-uniform float fade_far = 4.6;
+uniform float fade_near = 2.8;
+uniform float fade_far = 4.9;
 float bayer4(vec2 p) {
 	int x = int(mod(p.x, 4.0));
 	int y = int(mod(p.y, 4.0));

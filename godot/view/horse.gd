@@ -172,7 +172,7 @@ func build_cloth(info: Dictionary, font: Font) -> void:
 		l.pixel_size = 0.0022
 		l.modulate = Color(0.06, 0.06, 0.06)
 		l.outline_size = 0
-		l.position = p + n * 0.006
+		l.position = p + n * 0.014
 		l.basis = Basis.looking_at(-n, Vector3.UP)
 		l.shaded = true
 		l.double_sided = false
@@ -182,17 +182,19 @@ func build_cloth(info: Dictionary, font: Font) -> void:
 # カメラのすぐ前で網目に消すか（騎手の目のカメラのときの自分の馬は消さない）
 func set_fade(on: bool) -> void:
 	for m in fade_sh:
-		m.set_shader_parameter("fade_far", 4.6 if on else 0.0)
+		m.set_shader_parameter("fade_far", 4.9 if on else 0.0)
 	for m in fade_std:
 		m.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER if on else BaseMaterial3D.DISTANCE_FADE_DISABLED
 	for m in jockey.mats:
 		m.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER if on else BaseMaterial3D.DISTANCE_FADE_DISABLED
-	jockey.silk.set_shader_parameter("fade_far", 4.6 if on else 0.0)
+	jockey.silk.set_shader_parameter("fade_far", 4.9 if on else 0.0)
+	if jockey.bmat != null:
+		jockey.bmat.set_shader_parameter("fade_far", 4.9 if on else 0.0)
 
 static func fade_setup(m: BaseMaterial3D) -> void:
 	m.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
-	m.distance_fade_min_distance = 2.2
-	m.distance_fade_max_distance = 4.6
+	m.distance_fade_min_distance = 2.8
+	m.distance_fade_max_distance = 4.9
 
 # ---- 1コマの形 ----
 # g＝{ph, sp, push, t, walk_ph, walk_w, whip, pose, head_up, ears, lead_want}
@@ -210,14 +212,14 @@ func animate(g: Dictionary, dt: float, near: bool) -> void:
 	torso.position = Vector3(_j1.x, P[ViewGait.Y], _j1.z)
 	torso.basis = _rot(P[1 * 3], P[1 * 3 + 1], P[1 * 3 + 2])
 	retarget()
+	# 蹄を地面へ（騎手はそのあとで合わせる）
+	var walking: bool = g.walk_w >= 0.5
+	settle(g.walk_ph if walking else g.ph, 1.0 if walking else g.sp, walking)
 	if near:
 		jockey.pose(P)
 	var cd: float = g.get("cam_d", 99.0)
 	for l in numbers:
 		l.visible = cd > 4.0
-	# 蹄を地面へ
-	var walking: bool = g.walk_w >= 0.5
-	settle(g.walk_ph if walking else g.ph, 1.0 if walking else g.sp, walking)
 
 # 手作りの角度（rz・ry・rx）→ Godot の回転（three.js の XYZ の順：Rx・Ry・Rz）
 static func _rot(rz: float, ry: float, rx: float) -> Basis:

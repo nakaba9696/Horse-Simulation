@@ -1,5 +1,6 @@
-# 騎手：手作りの骨（js/ui/race3d.js の 24 腰・25 上体・26 頭・27/28 左腕・29/30 右腕・31 ムチ）と同じ並びの節に、丸い棒の形を付ける
-# 角度は ViewGait の P（rz・ry・rx）。脚は腰から鐙（胴に付いた点）へ、2本の骨の IK で膝を出す。この Node3D は馬の胴（手作りの骨 1）の子
+# 騎手：手作りの骨（js/ui/race3d.js の 24 腰・25 上体・26 頭・27/28 左腕・29/30 右腕・31 ムチ）と同じ並びの節を ViewGait の角度で動かし、
+# 素材の体（assets/jockey/jockey.glb。Quaternius・CC0）の骨を、その節の位置へ毎コマ IK で合わせる（js/ui/race3d.js の poseJockey と同じ合わせ方）。
+# 素材が読めないときは、節に丸い棒の形を付けた騎手で描く。この Node3D は馬の胴（手作りの骨 1）の子
 class_name ViewJockey
 extends Node3D
 
@@ -17,6 +18,16 @@ var silk: ShaderMaterial
 var whip_mi: MeshInstance3D
 var mats: Array[BaseMaterial3D] = []
 var head_parts: Array[Node3D] = []
+# 素材の体
+const JK_SCALE := 0.86
+const JSH := 0.084            # 騎手の骨の前後のずれ（race3d.js の JSH）
+var body: Node3D              # 素材の体の根（馬の根の子）
+var skel: Skeleton3D
+var bmat: ShaderMaterial
+var B := {}                   # 骨の名前 → 番号
+var _head_up := Vector3.ZERO  # 頭の骨の中の、頭の上を指す点
+static var _mesh_cache: ArrayMesh
+static var _src: PackedScene
 
 static func hmv(a: Array) -> Vector3:
 	return Vector3(-a[2], a[1], a[0])
@@ -83,6 +94,12 @@ func setup(info: Dictionary, torso_origin: Vector3) -> void:
 		n.set_meta("base", base)
 		par.add_child(n)
 		nodes[i] = n
+	# ムチ（右手。後ろへ寝かせて持つ）
+	var w31: Node3D = nodes[31]
+	whip_mi = capsule(w31, Vector3(0, 0, 0), Vector3(0.02, 0.32, -0.6), 0.008, mat(Color(0.08, 0.06, 0.05), 0.4))
+	if _make_body(info):
+		pose(ViewGait.make())
+		return
 	var n24: Node3D = nodes[24]
 	var n25: Node3D = nodes[25]
 	var n26: Node3D = nodes[26]
@@ -128,9 +145,6 @@ func setup(info: Dictionary, torso_origin: Vector3) -> void:
 		var hand := Vector3(-0.09 * side[2], 1.78, 0.86) - hmv(J[side[1]])
 		capsule(fa, Vector3.ZERO, hand, 0.045, silk)
 		ball(fa, hand, 0.045, breeches)
-	# ムチ（右手。後ろへ寝かせて持つ）
-	var w31: Node3D = nodes[31]
-	whip_mi = capsule(w31, Vector3(0, 0, 0), Vector3(0.02, 0.32, -0.6), 0.008, mat(Color(0.08, 0.06, 0.05), 0.4))
 	# 脚：腰の左右 → 鐙（胴の横）
 	for sd in [-1.0, 1.0]:
 		var thigh := capsule(self, Vector3.ZERO, Vector3(0, THIGH, 0), 0.066, breeches)
@@ -148,6 +162,9 @@ func pose(P: PackedFloat32Array) -> void:
 		if i == 24:
 			n.position = base + Vector3(0, P[ViewGait.JY], P[ViewGait.JX])
 		n.basis = ViewHorse._rot(P[i * 3], P[i * 3 + 1], P[i * 3 + 2])
+	if skel != null:
+		_ik()
+		return
 	var n24: Node3D = nodes[24]
 	for L in legs:
 		var a: Vector3 = n24.transform * (L[2] as Vector3)
@@ -165,3 +182,156 @@ func pose(P: PackedFloat32Array) -> void:
 
 func _place(mi: MeshInstance3D, a: Vector3, b: Vector3) -> void:
 	mi.transform = Transform3D(basis_between(a, b), (a + b) / 2.0)
+
+# ---- 素材の体 ----
+func _make_body(info: Dictionary) -> bool:
+	if _src == null:
+		if not ResourceLoader.exists("res://assets/jockey/jockey.glb"):
+			return false
+		_src = load("res://assets/jockey/jockey.glb")
+	if _src == null:
+		return false
+	body = _src.instantiate()
+	var sks := body.find_children("*", "Skeleton3D", true, false)
+	if sks.is_empty():
+		body.free()
+		body = null
+		return false
+	skel = sks[0]
+	var hi: MeshInstance3D = null
+	for mi in body.find_children("*", "MeshInstance3D", true, false):
+		if String(mi.name).to_lower().ends_with("lo"):
+			mi.visible = false
+		else:
+			hi = mi
+	if hi == null:
+		return false
+	if _mesh_cache == null:
+		_mesh_cache = _with_rest(hi.mesh)
+	hi.mesh = _mesh_cache
+	hi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	var sk: Dictionary = info.get("silks", {"base": "#1f4fbf", "sub": "#ffd23f", "pattern": "plain"})
+	bmat = ShaderMaterial.new()
+	bmat.shader = preload("res://view/shaders/jockey.gdshader")
+	bmat.set_shader_parameter("base_col", ViewHorse.hexc(sk.get("base"), Color(0.12, 0.3, 0.75)))
+	bmat.set_shader_parameter("sub_col", ViewHorse.hexc(sk.get("sub", sk.get("base")), Color(1, 1, 1)))
+	var pats := ["plain", "hoops", "stripes", "sash", "cross", "diamonds", "stars", "halves", "yoke"]
+	bmat.set_shader_parameter("pattern", maxi(0, pats.find(String(sk.get("pattern", "plain")))))
+	bmat.set_shader_parameter("cap_col", ViewHorse.hexc(info.get("cap"), Color(1, 1, 1)))
+	hi.material_override = bmat
+	body.scale = Vector3.ONE * JK_SCALE
+	# 馬の根（胴の親）の子にする
+	get_parent().get_parent().add_child(body)
+	for i in skel.get_bone_count():
+		B[skel.get_bone_name(i)] = i
+	var hb: int = B.get("Head", -1)
+	if hb >= 0:
+		var g := skel.get_bone_global_rest(hb)
+		_head_up = g.affine_inverse() * (g.origin + Vector3(0, 0.15, 0))
+	head_parts.append(body)
+	return true
+
+# 頂点に、写す前の位置と部位の番号（頂点色の R×8）を CUSTOM0 で持たせる
+static func _with_rest(src: Mesh) -> ArrayMesh:
+	var out := ArrayMesh.new()
+	for si in src.get_surface_count():
+		var a := src.surface_get_arrays(si)
+		var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		var C: PackedColorArray = a[Mesh.ARRAY_COLOR]
+		var C0 := PackedFloat32Array()
+		C0.resize(V.size() * 4)
+		for k in V.size():
+			C0[k * 4] = V[k].x; C0[k * 4 + 1] = V[k].y; C0[k * 4 + 2] = V[k].z
+			C0[k * 4 + 3] = roundf(C[k].r * 8.0) if C.size() > k else 1.0
+		a[Mesh.ARRAY_CUSTOM0] = C0
+		var flags: int = src.surface_get_format(si) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, [], {}, flags | (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT))
+	out.custom_aabb = AABB(Vector3(-1, -0.2, -1), Vector3(2, 2.4, 2))
+	return out
+
+# 手作りの骨 i の中の点（race3d.js の atBone：馬の形の座標で書いた点 → 体の比を直す → 骨の付け根からの差）→ 骨格の座標
+func _at(i: int, x: float, y: float, z: float) -> Vector3:
+	var m := Vector3(x + JSH, y, z) if i >= 24 else Vector3(_tx(x), y, z)
+	var jj: Array = J[i] if i >= 24 else [0.099, 1.25, 0.0]
+	var local := hmv([m.x - jj[0], m.y - jj[1], m.z - jj[2]])
+	var n: Node3D = nodes[i] if i >= 24 else get_parent()
+	return _to_skel(n.global_transform * local)
+
+func _dir(i: int, x: float, y: float, z: float) -> Vector3:
+	var n: Node3D = nodes[i] if i >= 24 else get_parent()
+	var w := n.global_transform.basis * hmv([x, y, z])
+	return (_skel_inv.basis * w).normalized()
+
+static func _tx(x: float) -> float:
+	return 0.66 + (x - 0.66) * 0.85 if x < 0.66 else x
+
+var _skel_inv := Transform3D.IDENTITY
+func _to_skel(p: Vector3) -> Vector3:
+	return _skel_inv * p
+
+func _gp(b: int) -> Vector3:
+	return skel.get_bone_global_pose(b).origin
+
+# 骨 b をまわして、いま cur にある点を target の向きへ（骨格の座標）
+func _aim(b: int, cur: Vector3, target: Vector3) -> void:
+	var g := skel.get_bone_global_pose(b)
+	var u := cur - g.origin
+	var w := target - g.origin
+	if u.length_squared() < 1e-10 or w.length_squared() < 1e-10:
+		return
+	var q := Quaternion(u.normalized(), w.normalized())
+	skel.set_bone_global_pose(b, Transform3D(Basis(q) * g.basis, g.origin))
+
+# 2本の骨（a→b→c）の先 c を target へ。曲がる向きは pole
+func _two(a: int, b: int, c: int, target: Vector3, pole: Vector3) -> void:
+	var pa := _gp(a)
+	var pb := _gp(b)
+	var pc := _gp(c)
+	var l1 := pa.distance_to(pb)
+	var l2 := pb.distance_to(pc)
+	var dir := target - pa
+	var d := clampf(dir.length(), absf(l1 - l2) + 1e-3, (l1 + l2) * 0.999)
+	dir = dir.normalized()
+	var x := (l1 * l1 - l2 * l2 + d * d) / (2.0 * d)
+	var y := sqrt(maxf(0.0, l1 * l1 - x * x))
+	var pn := pole - dir * pole.dot(dir)
+	pn = Vector3.UP if pn.length_squared() < 1e-8 else pn.normalized()
+	var knee := pa + dir * x + pn * y
+	_aim(a, pb, knee)
+	_aim(b, _gp(c), pa + dir * d)
+
+func _ik() -> void:
+	if not body.is_inside_tree():
+		return
+	_skel_inv = skel.global_transform.affine_inverse()
+	skel.reset_bone_poses()
+	for s in ["l", "r"]:
+		skel.set_bone_pose_scale(B["upperarm_" + s], Vector3.ONE * 1.08)
+	# 腰：手作りの腰の骨（24）の位置へ。少し前へ傾ける
+	var pel: int = B.pelvis
+	var hip := _at(24, -0.04, 1.9, 0.0)
+	var gp := skel.get_bone_global_pose(pel)
+	skel.set_bone_global_pose(pel, Transform3D(gp.basis, hip))
+	_aim(pel, _gp(B.spine_01), hip + _dir(24, 0.9, 0.42, 0.0))
+	# 背骨：肩の真ん中へ
+	var sh := _at(25, 0.46, 2.01, 0.0)
+	_aim(B.spine_01, _gp(B.neck_01), sh)
+	_aim(B.spine_03, _gp(B.neck_01), sh)
+	# 首と頭：前を見る
+	var np := _gp(B.neck_01)
+	_aim(B.neck_01, _gp(B.Head), np + _dir(26, 0.78, 0.62, 0.0))
+	var hg := skel.get_bone_global_pose(B.Head)
+	_aim(B.Head, hg * _head_up, hg.origin + _dir(26, 0.32, 0.95, 0.0))
+	# 腕：手綱を持つ手へ。肘は外・上へ
+	for arm in [["l", 28, -1.0], ["r", 30, 1.0]]:
+		var s: String = arm[0]
+		var hand := _at(arm[1], 0.66, 1.79, arm[2] * 0.1)
+		_two(B["upperarm_" + s], B["lowerarm_" + s], B["hand_" + s], hand, _dir(1, -0.5, 0.35, arm[2]))
+	# 脚：鐙へ。膝は前・外へ。つま先は前へ
+	for leg in [["l", -1.0], ["r", 1.0]]:
+		var s2: String = leg[0]
+		var sd: float = leg[1]
+		var ank := _at(1, 0.235, 1.37, sd * 0.29)
+		_two(B["thigh_" + s2], B["calf_" + s2], B["foot_" + s2], ank, _dir(1, 1.0, 0.15, sd * 0.45))
+		var fp := _gp(B["foot_" + s2])
+		_aim(B["foot_" + s2], _gp(B["ball_" + s2]), fp + _dir(1, 0.95, -0.12, sd * 0.25))

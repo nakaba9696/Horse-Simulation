@@ -1,41 +1,57 @@
-# Godot の試作（同じ1レースの場面）
+# ターフの系譜 Godot 版
 
-エンジンを Godot 4 に移すかを決めるための試作。ゲーム全体は移していない。
-いまの JS の模擬（`js/core/racesim.js`）で走らせた1レースの記録を、Godot 4.7（Forward+）で再生する。
-見比べの絵と、移すときの見積もりは [docs/shots/godot/](../docs/shots/godot/README.md)。
+エンジンを Godot 4 へ並行で移している（持ち主の決定 2026-10-16「Godotで作り始めていい」・「並行で移す」）。JS 版（リポジトリのルート）は遊べる見本として残す。
+- 見た目と操作（この README の中身）：`project.godot`・`scenes/`・`view/`・`ui/`・`assets/`・`tools/`（枝 `claude/lucid-ptolemy-j204a3-gdview`）
+- 遊びの決まりと模擬（GDScript）：`core/`・`data/`・`tests/`（枝 `claude/lucid-ptolemy-j204a3-gdcore`。API は `docs/GODOT.md`）
+
+模擬が GDScript に移るまでは、JS の模擬で走らせた1レースの記録（`assets/replay_race.json`）を再生する。見た目は「レースの入れ口」（`view/race_source.gd` の `ViewReplay`）から各馬の状態を読むだけなので、模擬ができたら入れ口だけを差し替える。
 
 ## 動かし方
-1. Godot 4.7 の標準版（.NET ではない方）を https://godotengine.org/download から取る（試作は 4.7.2 で作った）。
-2. Godot でこのフォルダ（`godot/project.godot`）を開いて、▶（F5）で再生する。
-   - 1＝中継のカメラ・2＝騎乗のカメラ（自分の馬＝11番の後ろ）・スペース＝止める・←→＝5秒戻す／進める・↑↓＝速さ・R＝はじめから・H＝表示を隠す
+1. Godot 4.7 の標準版（.NET ではない方）を https://godotengine.org/download から取る（4.7.2 で作っている）。
+2. Godot でこのフォルダ（`godot/project.godot`）を開いて ▶（F5）。出走表 → GATE IN! → 騎乗。
 
-## レースの記録を作り直す
-```
-node tools/export_race.js          # godot/data/race.json（東京 芝2400m の G1、史実馬16頭、0.1秒ごと）
-```
-- 乱数の種は固定（`SEED`）。同じ記録が毎回出る。馬・枠・コースは `tools/export_race.js` の頭で変えられる。
-- 記録の中身：コースの形（`js/core/track.js` と同じ値）・各馬の毛色（`js/ui/art.js` の表）・勝負服（`js/ui/raceview.js` の `silksOf`）・枠の色・0.1秒ごとの `[x, lane, v]`・着順・実況。
+### 操作（ゲームパッド・キーボード。押したコマで動く）
+| 行い | ゲームパッド | キーボード |
+|---|---|---|
+| しごく（ゲートの中ならスタート） | 十字キー↑・左スティック↑ | ↑・W・スペース |
+| 引く | 十字キー↓・左スティック↓ | ↓・S |
+| 進路（押し続けると続けて動く） | 十字キー←→・左スティック←→ | ←→・A/D |
+| ムチ（右・左。持っていない手は持ち替え） | B（○）・X（□） | X・Z |
+| 持ち替え | A（×） | C |
+| 左右を見る | LT・RT | Q・E |
+| 視点（BEHIND・JOCKEY・TV） | Back | V |
+| 出走表で選ぶ・決める・戻る | 十字キー・A・B | 矢印・Enter・Esc |
 
-## 絵を撮る（画面の無い container でも撮れる）
-```
-# Godot（Xvfb と mesa の lavapipe＝CPU の Vulkan。1枚 10秒ほど）
-sh godot/tools/shot_godot.sh 出力先 --shot=122:tv:straight --shot=122:ride:straight_ride --seq=137:140.6:10:tv:seq
-# ブラウザ版（Playwright の Chromium、SwiftShader。同じ記録・同じ秒）
-node godot/tools/shot_web.js 出力先 122:tv:straight 122:ride:straight_ride --seq=137:140.6:10:tv:seq
-```
-- カメラ：`tv`＝中継（横から追う。直線では斜め前から）、`ride`＝騎乗（自分の馬の後ろ）、`close`＝寄り（自分の馬の内側、斜め前から。Godot だけ）。
-- container で Godot を動かすには `apt-get install mesa-vulkan-drivers`（lavapipe）と Godot の本体（`GODOT=` で場所を渡す。既定は `/home/user/godot-bin/godot`）が要る。本体はリポジトリに入れない。
+振動：蹄の拍子（後脚は強く・前脚は弱く。速いほど・追うほど強い）・ゲートが開く・ムチ・ゴール（勝つと2回）。`Input.start_joy_vibration`。
 
 ## 中身
 | 場所 | 中身 |
 |---|---|
-| `project.godot`・`main.tscn` | プロジェクト（Forward+・MSAA 2x・影 8192） |
-| `scripts/main.gd` | 記録を読んで再生する。光・空・色の調子（AgX・SSAO・SSIL・SSR・グロー・霞）、カメラ（ブラウザ版の `js/ui/race3d.js` と同じ決め方）、撮影 |
-| `scripts/track.gd` | コースの形（`js/core/track.js` をそのまま GDScript に） |
-| `scripts/world.gd` | 競馬場を組む：芝とダート・柵・ハロン棒・ゴール板・スタンドと観客（MultiMesh で約3万人）・内馬場（池・大きな画面）・木・遠くの町と山・発走のゲート |
-| `scripts/horse_rig.gd` | 馬（Quaternius の馬。毛色で塗る・法線をならす・襲歩を走った距離に合わせて進める）・騎手（勝負服の模様・枠の色の帽子）・鞍とゼッケン |
-| `scripts/hud.gd` | 画面の上の表示（レース名・残り・時計・順位・実況・確定の掲示板） |
-| `shaders/` | 芝・ダート（刈り目の縞・内ラチ沿いの荒れ）、地面、勝負服の模様 |
+| `scenes/race_card.tscn`・`ui/race_card.gd` | 出走表（全頭を1画面に。PADDOCK・GATE IN!）。後ろはパドック（`view/paddock.gd`） |
+| `scenes/race.tscn`・`view/race_view.gd` | 3D のレース（騎乗）。ゲート → 走る → ゴールのあと流す → 着順 → 確定の表。カメラ・振動・撮影 |
+| `view/race_source.gd` | レースの入れ口（記録の再生 `ViewReplay`。模擬ができたら差し替える） |
+| `view/ride_input.gd` | 騎乗の操作（入力の割り当て・押し続け・振動） |
+| `view/horse_model.gd`・`view/horse.gd`・`view/gait.gd` | 馬：素材の馬（JS 版と同じ比・たてがみ・尾・頭絡）を、JS 版の動き（襲歩の4拍子・関節の遅れ・背と骨盤・首と尾の遅れ・常歩・立ち姿・頭を上げる・耳・手前）で動かす。鞍とゼッケンは体の面の殻 |
+| `view/jockey.gd` | 騎手：素材の体を手作りの骨（追う・ムチ・ガッツポーズ）へ IK で合わせる。読めないときは丸い棒の騎手 |
+| `view/track.gd`・`view/course.gd` | コースの形（`data/layouts.js` の実際の回りと高さ）と競馬場（馬場・柵・ハロン棒・ゲート・スタンド・観客・木・空） |
+| `view/shaders/` | 毛色（白徴・連銭・脚先）・鞍の布・勝負服・騎手・芝とダート |
+| `ui/theme.gd` | 共通の部品（深緑と金。見出しの帯・表の行・数値の札・枠の色・ボタン） |
+| `ui/ride_hud.gd`・`ui/ride_meter.gd`・`ui/minimap.gd`・`ui/style_arrows.gd` | 騎乗の表示（残り・順位・計器・ミニマップ・合図・着順・確定の表）、脚質の矢印 |
+| `view/horse_lab.gd`・`scenes/horse_lab.tscn` | 馬の確かめ場（立ち姿・常歩・襲歩を並べて撮る） |
 | `assets/` | 素材（出典とライセンスは [CREDITS.md](CREDITS.md)） |
-| `tools/` | 撮影の道具（Godot・ブラウザ版） |
-| `data/race.json` | レースの記録（`tools/export_race.js` が作る。手で直さない） |
+
+## 作り直す
+```
+node tools/export_race.js                                  # assets/replay_race.json（東京 芝2400m の G1。実際の回り・高さ・白徴・頭と耳・自分の馬の操作）
+NODE_PATH=$(npm root -g) node tools/export_horse_godot.js  # assets/horse_rigged/（JS 版で写し直した馬の形）
+```
+
+## 確かめる・撮る（画面の無い container でも動く：Xvfb と mesa の lavapipe）
+```
+godot --headless --path godot -s res://tools/check_input.gd      # 十字キー・スティック・キーボードの割り当て
+sh godot/tools/run_scene.sh res://scenes/race.tscn -- --out=DIR --shot=秒:behind|jockey|tv:名前 --video=始め:終わり:fps:カメラ:名前 --press=秒:ride_up|ride_right|ride_whip_r…
+sh godot/tools/run_scene.sh res://scenes/race_card.tscn -- --out=DIR --shot=秒:名前[:選ぶ馬[:paddock]] --video=始め:終わり:fps:名前
+sh godot/tools/run_scene.sh res://scenes/horse_lab.tscn -- --out=DIR --cam=side|close|front|back|head --seq=枚数
+```
+- container で動かすには `apt-get install mesa-vulkan-drivers` と Godot の本体（`GODOT=` で場所を渡す。既定は `/home/user/godot-bin/godot`）が要る。本体はリポジトリに入れない。
+- 撮るときは決まった刻み（1/30 秒か fps）で進めるので、同じ引数なら同じ絵になる。
