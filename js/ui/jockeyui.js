@@ -389,7 +389,7 @@
         const AU = HS.Audio;
         if (AU && AU.ready() && AU.settings.bgm > 0 && card.race.graded) {
           bg.querySelector('.ride-holder').innerHTML = `<div class="panel gold center" style="padding:40px 10px"><div class="serif" style="font-size:22px;font-weight:900;color:var(--gold2)">${e(R.label(card.race))}</div><div class="mt">ファンファーレ</div><button class="btn sm mt" data-x="skipfan">飛ばす</button></div>`;
-          await Promise.race([AU.playOnce('fanfare'), new Promise(res => { bg.querySelector('[data-x=skipfan]').onclick = () => { AU.stopBgm(); res(); }; })]);
+          await Promise.race([AU.playOnce('fanfare', card.race), new Promise(res => { bg.querySelector('[data-x=skipfan]').onclick = () => { AU.stopBgm(); res(); }; })]);
         }
         played[card.race.key] = await HS.Ride.ride(bg.querySelector('.ride-holder'), card);
         App.closeModal();
@@ -430,7 +430,7 @@
     return { text: '落ち着いている', cls: 'good', jitter: 0, slow: 1 };
   };
   function paddock(card, runner) {
-    if (HS.Audio) HS.Audio.bgm('paddock');
+    if (HS.Audio) HS.Audio.bgm('paddock', card.race);
     return new Promise(res => {
       const h = runner.horse;
       const wIdx = W.prepareWeek().wIdx;
@@ -553,12 +553,13 @@
       const head = me && me.pos === 1
         ? (r.race.graded ? '<div class="hero"><canvas class="winner-cv" width="960" height="560"></canvas></div>' : `<div class="panel gold center"><div class="serif" style="font-size:24px;font-weight:900;color:var(--gold2)">🏆 ${e(me.horse.name)}で1着！</div></div>`)
         : `<div class="panel center">${me ? `${e(me.horse.name)}は${me.pos}着` : ''}</div>`;
-      if (me && me.pos === 1 && AU) { App.inRace = true; AU.playOnce('victory').then(() => { App.inRace = false; AU.bgm('home'); }); }
+      let open = true; // 結果を見ている間は、勝った曲のあとに表彰の曲
+      if (me && AU) { App.inRace = true; AU.playOnce(me.pos === 1 ? 'victory' : 'lose').then(() => { App.inRace = false; AU.bgm(open && me.pos === 1 ? 'glory' : AU.songFor(App.st)); }); }
       const show = () => {
         const bg = App.modal(`${head}${UI.resultTable(slim)}<div class="btns mt"><button class="btn gold" data-x="ok">次へ</button></div>`, { noClose: true, scene: 'result' });
         const cv = bg.querySelector('.winner-cv');
         if (cv && me) A.winner(cv, me.horse, HS.RaceView.silksOf(me.horse), `${r.race.short || r.race.name} 優勝`, `${me.horse.name}　${U.time(me.time)}　騎手 ${J.me().name}`);
-        bg.querySelector('[data-x=ok]').onclick = () => { App.closeModal(); res(); };
+        bg.querySelector('[data-x=ok]').onclick = () => { open = false; App.closeModal(); res(); };
       };
       if (me && me.pos === 1 && r.race.graded) UI.celebrate(UI.winFx(r.race, me.horse.name, me.time, J.me().name)).then(show);
       else show();
