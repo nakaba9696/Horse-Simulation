@@ -40,17 +40,24 @@
   T.fromLayout = function (lay, dir) {
     const sign = dir === '左' ? -1 : 1;
     const segs = lay.segs || [['S', lay.lap || 2000]];
-    const line = !!lay.line;
+    const line = !!(lay.line || lay.open); // 直線だけ・周回しないコースは閉じない
     // 曲がりの合計を周回なら 360 度にそろえる
     const turn = segs.reduce((t, g) => t + (g[0] === 'C' ? g[3] : 0), 0);
     const kTurn = !line && turn ? 360 / turn : 1;
     // 区切りを一続きの「長さ・曲がりの始め・曲がりの終わり・番号」に
     const parts = segs.map(g => {
-      if (g[0] !== 'C') return { len: g[1], k0: 0, k1: 0, c: 0 };
-      const th = g[3] * kTurn * Math.PI / 180, kIn = 1 / g[1], kOut = 1 / g[2];
-      // さかのぼる向きでは、出口から入口へ
-      return { len: th / ((kIn + kOut) / 2), k0: kOut, k1: kIn, c: g[4] || 3 };
+      if (g[0] !== 'C') return { len: g[1], th: 0, c: 0 };
+      // 半径は角度に沿って入口から出口へ直線的に変わる（長さ＝角度×(入口＋出口)/2）。さかのぼる向きでは、出口から入口へ
+      const th = g[3] * kTurn * Math.PI / 180;
+      return { len: Math.abs(th) * (g[1] + g[2]) / 2, th, r0: g[2], r1: g[1], c: g[4] || 3 };
     });
+    // コーナーの中の u m の地点の曲がり（1/半径。負の角度は逆向き）
+    const kAt = (q, u) => {
+      if (!q.th) return 0;
+      const T = Math.abs(q.th), a = (q.r1 - q.r0) / (2 * T), b = q.r0;
+      const phi = Math.abs(a) < 1e-9 ? u / b : (-b + Math.sqrt(Math.max(0, b * b + 4 * a * u))) / (2 * a);
+      return Math.sign(q.th) / (q.r0 + (q.r1 - q.r0) * U01(phi / T));
+    };
     const L = parts.reduce((t, q) => t + q.len, 0);
     const n = Math.ceil(L / T.STEP) + 1, dl = L / (n - 1);
     const X = new Float64Array(n), Y = new Float64Array(n), K = new Float64Array(n), C = new Uint8Array(n);
@@ -58,7 +65,7 @@
     for (let i = 0; i < n; i++) {
       const s = i * dl;
       while (pi < parts.length - 1 && s > u0 + parts[pi].len) { u0 += parts[pi].len; pi++; }
-      const q = parts[pi], f = q.len ? U01((s - u0) / q.len) : 0, k = q.k0 + (q.k1 - q.k0) * f;
+      const q = parts[pi], k = kAt(q, Math.max(0, Math.min(q.len, s - u0)));
       X[i] = x; Y[i] = y; K[i] = k; C[i] = q.c;
       if (i < n - 1) { th += k * dl / 2; x += Math.cos(th) * dl; y += Math.sin(th) * dl; th += k * dl / 2; }
     }

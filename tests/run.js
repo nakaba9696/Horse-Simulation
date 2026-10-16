@@ -402,7 +402,7 @@ check('sim: 芝の馬はダートで沈み、ダートの馬はダートで走�
 check('sim: 坂が弱い馬は坂のあるコースで沈む', () => {
   const weak = h => { h.pot.slope = 50; };
   const hill = fieldTest('中山', 2000, weak, 150).pos, flat = fieldTest('京都', 2000, weak, 150).pos;
-  assert(hill - flat > 0.6, `中山 ${hill.toFixed(2)} 京都 ${flat.toFixed(2)}`);
+  assert(hill - flat > 0.35, `中山 ${hill.toFixed(2)} 京都 ${flat.toFixed(2)}`); // 京都も3コーナーに坂がある（実際の高低差）。ゴール前の急坂の分だけ中山で沈む
   return `平均着順 中山 ${hill.toFixed(1)}・京都 ${flat.toFixed(1)}`;
 });
 check('track: 実際の形と高低差（data/layouts.js の形）から、コースの位置・高さ・勝ち負けへの効きを出す', () => {
@@ -639,12 +639,13 @@ check('dream: 資格（G1・前年の勝ち馬・ファンの票）と、出な�
   const v = T.votesOf({ results: [{ y: G.year, grade: 'G1', pos: 1, pop: 1 }, { y: G.year, grade: 'G3', pos: 2 }, { y: G.year - 1, grade: 'G1', pos: 1 }] }, G.year);
   assert(v === 117, `票の数え方（${v}）`);
   // 自分の馬を3頭：G1を勝った馬・票で圏内の馬・圏外の馬
-  const pool = W.all().filter(h => h.loc === 'stable' && !h.injury && G.year - h.born >= 3 && h.owner !== 'P' && !h.foreignTrained);
+  const pool = W.all().filter(h => h.loc === 'stable' && !h.injury && G.year - h.born >= 3 && h.owner !== 'P' && !h.foreignTrained && !T.g1Wins(h, G.year).length && !T.dcChamp(h, G.year));
   const st0 = T.dcStanding();
   const inside = st0.find(x => x.in && x.tier === 2 && !x.h.foreignTrained && !T.g1Wins(x.h, G.year).length && !T.dcChamp(x.h, G.year)).h;
   const outside = pool.find(h => !st0.some(x => x.h === h && x.in));
   const g1 = pool.find(h => h !== inside && h !== outside && !st0.some(x => x.h === h && x.in));
   for (const h of [inside, outside, g1]) { h.owner = 'P'; h.auto = false; }
+  inside.results.push({ y: G.year, grade: 'G2', pos: 1 }); // 境目の馬だと、G1 の馬を足したときに押し出されるので、票を足して圏内に
   g1.gradedWins.push({ y: G.year, race: '天皇賞（秋）', short: '天皇賞・秋', grade: 'G1', region: 'JRA' });
   W.dirty();
   const s = h => T.dcStatus(h);
