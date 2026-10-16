@@ -69,6 +69,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/core/edits.js`・`js/ui/editor.js` | 競走馬エディット（史実馬の書き換え・書き出し・読み込み） | U |
 | `css/style.css` | 見た目（深緑と金が既定、紺と金に切り替えられる） | U |
 | `tests/` | 検証 | T |
+| `godot/core/`・`godot/data/`・`godot/tests/`・`tools/export_godot.js`・`tools/golden_race.js` | Godot 版の中身：データの書き出し・模擬（JS と同じ種で同じ結果）・一致テスト。[docs/GODOT.md](docs/GODOT.md) | C |
 
 ## 決まり（どのゲームでも）
 - **設定・世界観・人物の性格をねじ曲げない。**
