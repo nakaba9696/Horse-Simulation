@@ -13,12 +13,37 @@ func run(t) -> void:
 	HSWorld.load_save(save)
 	t.eq(HSData.digest_save(HSJson.parse(HSWorld.serialize())), g.late.start, "world: JS のセーブを読んだ状態")
 	_play(t, "late", g.late.weeks)
-	print("    world: 新しいゲーム %d 週 %.1f 秒・セーブから %d 週 %.1f 秒" % [g.new.weeks.size(), (t1 - t0) / 1000.0, g.late.weeks.size(), (Time.get_ticks_msec() - t1) / 1000.0])
+	var t2 := Time.get_ticks_msec()
+	# 手を加えたセーブ：予約・スペシャルホースの出るレース・引退と殿堂入り・オリジナルホース
+	HSWorld.load_save(FileAccess.get_file_as_string("res://tests/golden/world_craft.json"))
+	t.eq(HSData.digest_save(HSJson.parse(HSWorld.serialize())), g.craft.start, "world: 手を加えたセーブを読んだ状態")
+	_play(t, "craft", g.craft.weeks)
+	print("    world: 新しいゲーム %d 週 %.1f 秒・セーブから %d 週 %.1f 秒・手を加えたセーブから %d 週 %.1f 秒" % [g.new.weeks.size(), (t1 - t0) / 1000.0, g.late.weeks.size(), (t2 - t1) / 1000.0, g.craft.weeks.size(), (Time.get_ticks_msec() - t2) / 1000.0])
+
+func _ops(ops: Array) -> Array:
+	var out: Array = []
+	for op in ops:
+		match op[0]:
+			"reserve":
+				var r = null
+				for x in HSWorld.upcoming_graded(52):
+					if x.name == op[2]: r = x; break
+				out.append(HSSeason.reserve(op[1], r) if r else "no race")
+			"retire":
+				var r := HSJockey.retire(op[1])
+				out.append(r.err if r.has("err") else r.to)
+			"make":
+				var r := HSOriginal.make(op[1], op[2], op[3])
+				out.append(r.err if r.has("err") else "%s:%s" % [r.horse.name, ",".join(r.skills)])
+			_: out.append("unknown")
+	return out
 
 func _play(t, name: String, weeks: Array) -> void:
 	for want in weeks:
 		var G = HSWorld.G
 		var step := {}
+		if want.has("ops"):
+			step.ops = want.ops; step.opsRet = _ops(want.ops)
 		if HSWorld.mine().size() < 3:
 			var items: Array = HSU.stable_sort(HSWorld.market_historic(), func(a, b): return a.price < b.price)
 			for it in items:

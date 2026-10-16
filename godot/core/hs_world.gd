@@ -87,6 +87,14 @@ static func used_names() -> Dictionary:
 		c.used = u
 	return c.used
 
+# 遊んでいる間の使い回しを空にする（新しいゲーム・セーブを読んだとき）。
+# JS 版はページを開いている間これらを持ち続けるので、セーブを読み直すと結果が変わることがある（馬主の own など。docs/GODOT.md）。
+# Godot は、ページを開き直してセーブを読んだときの JS と同じにする
+static func _reset_caches() -> void:
+	_wcache = null; _cache = null; _soon = null; _week = null
+	HSOwners._own = null
+	HSEraless._mk = null
+
 # ---------- 新しいゲーム ----------
 static func new_game(opts: Dictionary) -> Dictionary:
 	var edits: Dictionary = HSU.or_(opts.get("edits"), {})
@@ -104,7 +112,7 @@ static func new_game(opts: Dictionary) -> Dictionary:
 		records = { g1 = {}, graded = {}, awards = {}, pts = {}, course = {}, hall = [], player = { starts = 0.0, wins = 0.0, earn = 0.0, g1 = [] } },
 		news = [], entries = {}, rides = {}, mode = "jockey" if opts.get("mode") == "jockey" else "owner", lastWeek = null, market = { gen = [], genMares = [], month = 0.0 },
 		farmLevel = 1.0, stats = {}, settings = { animSpeed = 1.0, showHistNote = true }, broke = 0.0, gameOver = null, reserve = [], dc = null }
-	_wcache = null; _cache = null; _soon = null; _week = null
+	_reset_caches()
 	rng = HSRng.new(seed)
 	HSPed.build(G.pedExtra)
 	if eraless: HSEraless.populate()
@@ -1065,7 +1073,7 @@ static func load_save(json: Variant) -> Dictionary:
 	index()
 	HSPed.build(HSU.or_(G.get("pedExtra"), {}))
 	rng = HSRng.new(G.rngState)
-	_cache = null; _week = null; _wcache = null; _soon = null
+	_reset_caches()
 	return G
 # 古いセーブを今の形にそろえる
 static func migrate(g: Dictionary) -> void:
@@ -1080,7 +1088,7 @@ static func migrate(g: Dictionary) -> void:
 	if not g.get("gameOver"): g.gameOver = null
 	if not g.get("dc"): g.dc = null
 	if not g.get("lineup"): g.lineup = {}
-	if g.get("eraless") and not g.get("shopKeys"): g.shopKeys = HSEraless.migrate_keys(g)
+	if g.get("eraless") and not HSU.truthy(g.get("shopKeys")): g.shopKeys = HSEraless.migrate_keys(g)   # JS と同じく、空の配列は「ある」
 	if g.get("eraless") and not g.get("startYear"): g.startYear = 2025.0
 	if not g.get("mode"): g.mode = "owner"
 	if not g.get("pedExtra"): g.pedExtra = {}

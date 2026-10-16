@@ -24,11 +24,22 @@ function canon(v, out) {
 }
 const digest = v => crypto.createHash('sha256').update(canon(v, []).join(''), 'utf8').digest('hex').slice(0, 16);
 
-function play(HS, weeks, log) {
+// 週の初めに行う操作（ops）：['reserve', 馬の id, レース名]・['retire', 馬の id]・['make', 父の id, 母の id, 名前]
+function runOps(HS, ops) {
+  const { World: W, Jockey: J, Season: T, Original: Ori } = HS;
+  return (ops || []).map(op => {
+    if (op[0] === 'reserve') { const r = W.upcomingGraded(52).find(x => x.name === op[2]); return r ? T.reserve(op[1], r) : 'no race'; }
+    if (op[0] === 'retire') { const r = J.retire(op[1]); return r.err || r.to; }
+    if (op[0] === 'make') { const r = Ori.make(op[1], op[2], op[3]); return r.err || (r.horse.name + ':' + r.skills.join(',')); }
+    return 'unknown';
+  });
+}
+function play(HS, weeks, log, opsByWeek) {
   const { World: W, Jockey: J, Owners: O, Season: T, Sim: S } = HS;
   const out = [];
   for (let i = 0; i < weeks; i++) {
     const G = W.get(), step = {};
+    if (opsByWeek && opsByWeek[i]) { step.ops = opsByWeek[i]; step.opsRet = runOps(HS, opsByWeek[i]); }
     // 1. 店：お手馬が3頭より少なければ、買えるいちばん安い馬を
     if (W.mine().length < 3) {
       const items = W.marketHistoric().slice().sort((a, b) => a.price - b.price);
@@ -93,9 +104,30 @@ function build(log) {
   HS.World.load(save);
   const lateStart = digest(JSON.parse(HS.World.serialize()));
   const lateWeeks = play(HS, WEEKS_LATE, log);
+  // craft：いまの状態に手を加えて、ふだんの遊び方では起きにくい所を通す（JS で手を加えたセーブを Godot が読む）
+  //   1頭目を5歳・能力120・G1を4勝・トロフィー2つにして、フェブラリーSを予約（G1を5勝した名馬・歴代のフェブラリーS馬のスペシャルホースが出る）。
+  //   そのあと引退させて殿堂入り、もう1頭（牝馬にする）も引退させ、オリジナルホースを作る
+  {
+    const W = HS.World, G = W.get();
+    const mine = W.mine().filter(h => h.loc === 'stable' || h.loc === 'farm');
+    const p1 = mine[0], p2 = mine[1];
+    Object.assign(p1, { born: G.year - 5, loc: 'stable', injury: null, fatigue: 0, cond: 30, wins: 8, starts: 9, apt: { turf: 100, dirt: 100, heavy: 80 } });
+    for (const k of Object.keys(p1.pot)) p1.pot[k] = 120;
+    p1.gradedWins = [['皐月賞', '皐月賞'], ['東京優駿', '日本ダービー'], ['天皇賞（秋）', '天皇賞・秋'], ['有馬記念', '有馬記念']].map(([race, short]) => ({ y: G.year - 1, race, short, grade: 'G1', region: 'JRA' }));
+    G.trophies = Object.assign(G.trophies || {}, { grandprix: { y: G.year - 1, horse: p1.name, hid: p1.id, bonus: 0 }, tenno: { y: G.year - 1, horse: p1.name, hid: p1.id, bonus: 0 } });
+    Object.assign(p2, { sex: p1.sex === '牝' ? '牡' : '牝', gelding: false });
+    if (p1.sex !== '牝' && p1.gelding) p1.gelding = false;
+    W.dirty(); W._week = null;
+    var craftSave = W.serialize();
+    HS = load(); HS.World.load(craftSave);
+    var ops = { 0: [['reserve', p1.id, 'フェブラリーステークス']], 5: [['retire', p1.id], ['retire', p2.id]], 6: [['make', p1.sex === '牝' ? p2.id : p1.id, p1.sex === '牝' ? p1.id : p2.id, 'テストホース']] };
+    var craftStart = digest(JSON.parse(HS.World.serialize()));
+    var craftWeeks = play(HS, 8, log, ops);
+  }
   return {
-    'world.json': JSON.stringify({ note: 'tools/golden_world.js が作る。手で直さない', new: { seed: 11, start: newStart, weeks: newWeeks }, late: { start: lateStart, weeks: lateWeeks } }) + '\n',
+    'world.json': JSON.stringify({ note: 'tools/golden_world.js が作る。手で直さない', new: { seed: 11, start: newStart, weeks: newWeeks }, late: { start: lateStart, weeks: lateWeeks }, craft: { start: craftStart, weeks: craftWeeks } }) + '\n',
     'world_save.json': save + '\n',
+    'world_craft.json': craftSave + '\n',
   };
 }
 
