@@ -200,5 +200,145 @@
           note: '2コーナーに丘。残り400mから直線へ緩い上り（0.6m）', approx: true },
       ],
     },
+    // ---------- 地方 ----------
+    '大井': {
+      dirt: [
+        { id: '外', lap: 1600, straight: 386, use: [1000, 1190, 1200, 1400, 1700, 1800, 2000, 2400, 2600, 2800],
+          segs: [['S', 386], ['C', 99.9, 99.9, 180, 3], ['S', 486], ['C', 99.9, 99.9, 180, 1], ['S', 100]],
+          elev: [[0, 0], [1600, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E5%A4%A7%E4%BA%95%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://ja.wikipedia.org/wiki/%E6%9D%B1%E4%BA%AC%E7%9B%83'],
+          note: '外回り。地方でいちばん長い直線。平坦', approx: true },
+        { id: '内', lap: 1400, straight: 286, use: [1500, 1600],
+          segs: [['S', 286], ['C', 99.9, 99.9, 180, 3], ['S', 386], ['C', 99.9, 99.9, 180, 1], ['S', 100]],
+          elev: [[0, 0], [1400, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E5%A4%A7%E4%BA%95%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '内回り（3〜4コーナーだけ内側を回る）。平坦', approx: true },
+      ],
+    },
+    '川崎': {
+      dirt: [
+        { id: '周回', lap: 1200, straight: 300, use: [900, 1400, 1500, 1600, 2000, 2100],
+          segs: [['S', 300], ['C', 63.7, 63.7, 180, 3], ['S', 400], ['C', 63.7, 63.7, 180, 1], ['S', 100]],
+          elev: [[0, 0], [1200, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E5%B7%9D%E5%B4%8E%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '小さく急なコーナー。平坦', approx: true },
+      ],
+    },
+    '船橋': {
+      dirt: [
+        { id: '外', lap: 1400, straight: 308, use: [1000, 1200, 1500, 1600, 1700, 1800, 2000, 2200, 2400],
+          segs: [['S', 308], ['C', 118.3, 96.8, 180, 3], ['S', 362], ['C', 118.3, 96.8, 180, 1], ['S', 54]],
+          elev: [[0, 0], [1400, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E8%88%B9%E6%A9%8B%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: 'スパイラルカーブ（コーナーの内外に高低差）。平坦', approx: true },
+        { id: '内', lap: 1250, straight: 308, use: [1400],
+          segs: [['S', 308], ['C', 92.1, 75.3, 180, 3], ['S', 362], ['C', 92.1, 75.3, 180, 1], ['S', 54]],
+          elev: [[0, 0], [1250, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E8%88%B9%E6%A9%8B%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '内コース。いまはレースで使っていない', approx: true },
+      ],
+    },
+    '盛岡': {
+      turf: [
+        { id: '周回', lap: 1400, straight: 300, use: [1000, 1600, 1700, 2400],
+          segs: [['S', 300], ['C', 95.5, 95.5, 180, 3], ['S', 400], ['C', 95.5, 95.5, 180, 1], ['S', 100]],
+          elev: [[0, 3], [24, 3], [56, 2.8], [120, 1.9], [184, 0.8], [260, 0], [312, 0.3], [376, 1.4], [440, 2.3], [504, 3], [568, 4.1], [632, 4.6], [728, 4.2], [824, 3.8], [920, 3.3], [984, 3], [1048, 2.7], [1128, 2.5], [1208, 2.8], [1272, 3], [1400, 3]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E7%9B%9B%E5%B2%A1%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.iwatekeiba.or.jp/guide/moriokakeiba/oro_01', 'https://www.iwatekeiba.or.jp/guide/moriokakeiba/oro_06'],
+          note: '地方で唯一の芝コース（ダートの内側）。直線の上り坂。高低差4.6m' },
+      ],
+      dirt: [
+        { id: '周回', lap: 1600, straight: 300, use: [1000, 1200, 1400, 1600, 1800, 2000, 2500, 2600],
+          segs: [['S', 300], ['C', 127.3, 127.3, 180, 3], ['S', 400], ['C', 127.3, 127.3, 180, 1], ['S', 100]],
+          elev: [[0, 1.9], [30, 1.9], [50, 1.8], [105, 1.4], [195, 0.8], [255, 0], [286, 0.6], [377, 1.4], [468, 2.3], [559, 3.2], [650, 4.1], [714, 4.4], [741, 4.4], [832, 4.1], [923, 3.6], [1014, 3.1], [1105, 2.7], [1214, 2.4], [1430, 1.9], [1600, 1.9]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E7%9B%9B%E5%B2%A1%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.iwatekeiba.or.jp/guide/moriokakeiba/oro_01', 'https://www.iwatekeiba.or.jp/guide/moriokakeiba/oro_06'],
+          note: '3コーナーが頂上で4コーナーへ下り、直線は上り坂。高低差4.4m' },
+      ],
+    },
+    '園田': {
+      dirt: [
+        { id: '周回', lap: 1051, straight: 213, use: [820, 1230, 1400, 1700, 1870, 2400],
+          segs: [['S', 213], ['C', 94, 94, 183.3, 3], ['S', 241], ['C', 87, 87, 176.7, 1], ['S', 28]],
+          elev: [[0, 0], [213, 0], [511, 1.2], [757, 0], [1051, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E5%9C%92%E7%94%B0%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '小回り。向正面から3コーナーへ1.2mの上り。3〜4コーナーが1〜2コーナーより大きい', approx: true },
+      ],
+    },
+    '名古屋': {
+      dirt: [
+        { id: '周回', lap: 1180, straight: 240, use: [900, 920, 1400, 1500, 1700, 1900, 2000, 2100],
+          segs: [['S', 240], ['C', 105.9, 83.3, 180, 3], ['S', 285.6], ['C', 94.6, 94.6, 180, 1], ['S', 60]],
+          elev: [[0, 0], [164, 0], [388, 0.3], [607, 0], [752, 0], [831, 0.2], [912, 0], [1180, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E5%90%8D%E5%8F%A4%E5%B1%8B%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.nagoyakeiba.com/news/5c50174720d00f5e58bb8d04b06dc58f.pdf'],
+          note: '2022年に弥富へ移ったいまのコース。3〜4コーナーはスパイラルカーブ。ほぼ平坦', approx: true },
+      ],
+    },
+    '門別': {
+      dirt: [
+        { id: '外', lap: 1600, straight: 330, use: [1000, 1100, 1200, 1700, 1800, 2000, 2600],
+          segs: [['S', 330], ['C', 127.3, 127.3, 180, 3], ['S', 400], ['C', 127.3, 127.3, 180, 1], ['S', 70]],
+          elev: [[0, 0], [1600, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E9%96%80%E5%88%A5%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '外回り。直線は大井に次ぐ長さで、カーブがゆるい', approx: true },
+        { id: '内', lap: 1376, straight: 218, use: [1500, 1600],
+          segs: [['S', 218], ['C', 127.3, 127.3, 180, 3], ['S', 288], ['C', 127.3, 127.3, 180, 1], ['S', 70]],
+          elev: [[0, 0], [1376, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E9%96%80%E5%88%A5%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '2015年にできた内回り（3コーナー手前から分かれる）', approx: true },
+      ],
+    },
+    '金沢': {
+      dirt: [
+        { id: '周回', lap: 1200, straight: 236, use: [900, 1300, 1400, 1500, 1700, 1900, 2000, 2100, 2300, 2600],
+          segs: [['S', 236], ['C', 99.9, 99.9, 180, 3], ['S', 286], ['C', 99.9, 99.9, 180, 1], ['S', 50]],
+          elev: [[0, 0], [1200, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E9%87%91%E6%B2%A2%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '4つのコーナーすべてにポケット（発走地点）がある。平坦', approx: true },
+      ],
+    },
+    '佐賀': {
+      dirt: [
+        { id: '周回', lap: 1100, straight: 200, use: [900, 1300, 1400, 1750, 1800, 1860, 2000, 2400, 2500],
+          segs: [['S', 200], ['C', 95.5, 95.5, 180, 3], ['S', 250], ['C', 95.5, 95.5, 180, 1], ['S', 50]],
+          elev: [[0, 0], [1100, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E4%BD%90%E8%B3%80%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.sagakeiba.net/raceinfo/course/'],
+          note: '粒の大きい砂で力の要るダート。ほぼ平坦', approx: true },
+      ],
+    },
+    '浦和': {
+      dirt: [
+        { id: '周回', lap: 1200, straight: 220, use: [800, 1300, 1400, 1500, 1600, 1900, 2000],
+          segs: [['S', 220], ['C', 107.2, 87.7, 180, 3], ['S', 287.6], ['C', 97.5, 97.5, 180, 1], ['S', 80]],
+          elev: [[0, 0], [1200, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E6%B5%A6%E5%92%8C%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.urawa-keiba.jp/guide/course_paddock/'],
+          note: '小回り。3コーナーはスパイラルカーブ。平坦', approx: true },
+      ],
+    },
+    '笠松': {
+      dirt: [
+        { id: '周回', lap: 1100, straight: 201, use: [800, 1400, 1580, 1800, 1900, 2500],
+          segs: [['S', 201], ['C', 99.3, 99.3, 180, 3], ['S', 238], ['C', 99.3, 99.3, 180, 1], ['S', 37]],
+          elev: [[0, 0], [1100, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E7%AC%A0%E6%9D%BE%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.kasamatsu-keiba.com/courseinfo'],
+          note: '小回りでコーナーからの追い込みが難しい', approx: true },
+      ],
+    },
+    '高知': {
+      dirt: [
+        { id: '周回', lap: 1100, straight: 200, use: [800, 1000, 1300, 1400, 1600, 1800, 1900, 2100, 2400],
+          segs: [['S', 200], ['C', 109.5, 109.5, 187.9, 3], ['S', 230], ['C', 93.6, 93.6, 172.1, 1], ['S', 30]],
+          elev: [[0, 0], [1100, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E9%AB%98%E7%9F%A5%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
+          note: '1〜2コーナーが3〜4コーナーより小さい（きつい）', approx: true },
+      ],
+    },
+    '水沢': {
+      dirt: [
+        { id: '周回', lap: 1200, straight: 245, use: [850, 1300, 1400, 1600, 1800, 1900, 2000, 2500],
+          segs: [['S', 245], ['C', 90.1, 90.1, 180, 3], ['S', 317], ['C', 90.1, 90.1, 180, 1], ['S', 72]],
+          elev: [[0, 0], [1200, 0]],
+          src: ['https://www.keiba.go.jp/guide/course/', 'https://ja.wikipedia.org/wiki/%E6%B0%B4%E6%B2%A2%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.iwatekeiba.or.jp/mizu_01'],
+          note: '平坦な小回り', approx: true },
+      ],
+    },
   };
 })();

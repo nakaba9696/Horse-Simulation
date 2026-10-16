@@ -27,7 +27,7 @@
     '浦和': C('地方', '左', null, { lap: 1200, straight: 220, slope: '平' }),
     '笠松': C('地方', '右', null, { lap: 1100, straight: 201, slope: '平' }),
     '高知': C('地方', '右', null, { lap: 1100, straight: 200, slope: '平' }),
-    '水沢': C('地方', '右', null, { lap: 1200, straight: 247, slope: '平' }),
+    '水沢': C('地方', '右', null, { lap: 1200, straight: 245, slope: '平' }),
     // 海外
     'ロンシャン': C('海外', '右', { lap: 2750, straight: 533, slope: '小', speed: -0.025 }, null, { country: '仏' }),
     'シャンティイ': C('海外', '右', { lap: 2400, straight: 600, slope: '小', speed: -0.02 }, null, { country: '仏' }),
