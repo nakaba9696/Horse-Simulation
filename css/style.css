@@ -294,7 +294,7 @@ html[data-theme="navy"] .mgr { background: linear-gradient(180deg, #1d3a63, #102
 .mgr .go.on { background: linear-gradient(180deg, #e0443a, #a5221a); animation: goblink 1.1s ease-in-out infinite; }
 .mgr .go:disabled { opacity: .5; animation: none; }
 @keyframes goblink { 50% { box-shadow: 0 0 0 4px rgba(255,120,100,.45); } }
-.mgr-cmds { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 0 12px 12px; }
+.mgr-cmds { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; padding: 0 12px 12px; }
 .mgr-cmds button { border: 2px solid #3f8a5c; border-radius: 10px; background: linear-gradient(180deg, #e9d79a, #c8a64a); color: #2b1d05; padding: 8px 2px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; box-shadow: 0 3px 0 #6b5212; }
 .mgr-cmds button:active { transform: translateY(2px); box-shadow: 0 1px 0 #6b5212; }
 .mgr-cmds .ic { font-size: 24px; } .mgr-cmds b { font-size: 14px; } .mgr-cmds small { font-size: 10px; color: #5a4210; }
@@ -339,9 +339,11 @@ html[data-theme="green"] .tenkai { background: #0e2a1a; }
 .sexm { white-space: nowrap; display: inline-block; padding: 0 7px; border-radius: 4px; font-size: 12px; font-weight: 700; color: #fff; }
 .sexm.m { background: #2f5fa8; } .sexm.f { background: #b0406e; }
 .gcurve { width: 280px; max-width: 100%; height: auto; display: block; }
-.grade.DC { background: linear-gradient(90deg, #6a2bb8, #c99a2e); }
+.grade.GF, .grade.DC { background: linear-gradient(90deg, #6a2bb8, #c99a2e); }
 /* トロフィーと伝説の名馬 */
 .chip.legend { background: linear-gradient(90deg, #5a1f8a, #b8862a); color: #fff; }
 .panel.trophy .cup { font-size: 22px; } .panel.trophy:not(.got) { opacity: .85; } .panel.trophy.got { border-color: var(--gold); }
 .legend-call { margin-top: 6px; padding: 6px 10px; border-radius: 8px; background: linear-gradient(90deg, rgba(90,31,138,.6), rgba(184,134,42,.5)); color: #fff; font-size: 13px; }
 .sp-reach { color: #ffd34d; font-weight: 700; }
+.card.sel { outline: 3px solid var(--gold); } .card[data-act="orig-pick"] { cursor: pointer; }
+.sp-got { color: #ffd34d; }

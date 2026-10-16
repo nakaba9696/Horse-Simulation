@@ -154,6 +154,7 @@
   };
   // 引退：自分の手を離れる（種牡馬・繁殖牝馬になっても持ち馬にはしない）
   J.retire = function (id) {
+    if (HS.Original && HS.Original.on()) return HS.Original.retire(id); // 年代なしのゲームは、牧場に残してオリジナルホースの親にする
     const h = W.horse(id); if (!h) return { err: '持ち馬ではない' };
     const r = W.retire(id);
     if (!r.err && W.horse(id)) { W.horse(id).owner = 'AI'; W.dirty(); }

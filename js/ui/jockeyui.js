@@ -35,8 +35,48 @@
   };
   UI.nav = function (tab) {
     if (!isJ()) return nav0(tab);
-    const items = [['home', '🏠', 'ホーム'], ['stable', '🐎', '厩舎'], ['market', '💰', '市場'], ['races', '🏆', 'レース'], ['jrecord', '🏇', '成績'], ['records', '📜', '記録'], ['menu', '⚙', 'メニュー']];
+    const items = [['home', '🏠', 'ホーム'], ['stable', '🐎', '厩舎'], ['market', '💰', '馬の店'], ['breed', '🐣', '生産'], ['races', '🏆', 'レース'], ['jrecord', '🏇', 'データ'], ['menu', '⚙', 'メニュー']];
     return `<nav class="nav"><div class="in">${items.map(([k, ic, lb]) => `<button data-act="tab" data-tab="${k}" class="${tab === k ? 'on' : ''}"><span class="ic">${ic}</span>${lb}</button>`).join('')}</div></nav>`;
+  };
+
+  // ---------- 生産：オリジナルホース（引退させた牡馬と牝馬から） ----------
+  const potStats = h => `<div class="nums">${['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'].map(k => `<span>${H.STAT_SHORT[k]} <b>${Math.round(h.pot[k])}</b></span>`).join('')}<span>切れ <b>${h.kire || 4}</b></span></div>`;
+  const skillChip = id => { const k = HS.Skills.BY[id]; return k ? `<span class="chip skill trig ${k.bad ? 'bad' : ''}" title="${e(k.note)}">⚡${e(k.label)}</span>` : H.SKILLS[id] ? `<span class="chip skill ${H.SKILLS[id].bad ? 'bad' : ''}" title="${e(H.SKILLS[id].note)}">${e(H.SKILLS[id].label)}</span>` : ''; };
+  S.breed = function (st) {
+    const O = HS.Original, G = W.get();
+    if (!O || !O.on()) return '<div class="panel empty mt">この遊び方では使えません。</div>';
+    const sires = O.retired('牡'), dams = O.retired('牝');
+    const ps = sires.find(h => h.id === st.osire), pd = dams.find(h => h.id === st.odam);
+    const card = (h, role, on) => `<div class="card ${on ? 'sel' : ''}" data-act="orig-pick" data-role="${role}" data-id="${h.id}">${UI.thumb(h)}<div class="grow">
+        <div class="row"><span class="nm">${e(h.name)}</span>${h.hist ? UI.histMark(h) : ''}${h.parentBonus ? `<span class="chip crown">ボーナス +${h.parentBonus}</span>` : ''}${role === 'dam' && h.foalY === G.year ? '<span class="chip">今年は産んだ</span>' : ''}<button class="btn sm right" data-act="orig-release" data-id="${h.id}">放す</button></div>
+        <div class="sub">${h.starts || 0}戦${h.wins || 0}勝・${e(h.style)}・${H.distLabel(h.distMin, h.distMax)}</div>${potStats(h)}
+        <div class="skills">${O.skillsOf(h).map(skillChip).join('')}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}</div></div>`;
+    const cand = ps && pd ? O.candidates(ps, pd) : [];
+    const bonus = ps && pd ? Math.min(O.BONUS_MAX, (ps.parentBonus || 0) + (pd.parentBonus || 0)) : 0;
+    return `<h2 class="sec">オリジナルホース<span class="r">お手馬 ${T.ownCount()}/${T.MAX_OWN}</span></h2>
+      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬・グランドフィナーレを勝った馬を親にすると、仔の能力にボーナス。牝馬は1年に1頭。</div>
+      ${ps && pd ? `<div class="panel gold mt"><b>${e(ps.name)} × ${e(pd.name)}</b>${bonus ? `<span class="chip crown" style="margin-left:6px">ボーナス +${bonus}</span>` : ''}
+        <div class="small mt">受け継ぐ特殊能力の候補（${cand.length}つ${cand.length > O.MAX_SKILLS ? '。この中から4つ' : ''}）</div><div class="skills">${cand.map(skillChip).join('') || '<span class="small muted">なし</span>'}</div>
+        <div class="row mt"><input id="orig-name" maxlength="12" placeholder="名前（空ならおまかせ）" class="grow"><button class="btn gold" data-act="orig-make">オリジナルホースを作る</button></div></div>`
+        : '<div class="panel small mt">父と母を1頭ずつ選んでください。</div>'}
+      <h2 class="sec">父（引退した牡馬）<span class="r">${sires.length} / ${O.MAX_EACH}</span></h2>
+      ${sires.length ? `<div class="list">${sires.map(h => card(h, 'sire', h === ps)).join('')}</div>` : '<div class="panel empty">まだいません。牡馬を引退させると、ここに残ります。</div>'}
+      <h2 class="sec">母（引退した牝馬）<span class="r">${dams.length} / ${O.MAX_EACH}</span></h2>
+      ${dams.length ? `<div class="list">${dams.map(h => card(h, 'dam', h === pd)).join('')}</div>` : '<div class="panel empty">まだいません。牝馬を引退させると、ここに残ります。</div>'}`;
+  };
+  App.act['orig-pick'] = d => { const v = App.st.view || {}; if (d.role === 'sire') v.osire = d.id; else v.odam = d.id; App.st.view = Object.assign({ name: 'breed' }, v); App.render(); };
+  App.act['orig-release'] = async d => {
+    const h = W.horse(d.id); if (!h) return;
+    if (!(await App.confirm(`${e(h.name)}を牧場から放しますか？（親にできなくなります）`, '放す'))) return;
+    const err = HS.Original.release(d.id); if (err) App.toast(err); else { App.save(); App.render(); }
+  };
+  App.act['orig-make'] = () => {
+    const v = App.st.view || {}, inp = document.getElementById('orig-name');
+    const r = HS.Original.make(v.osire, v.odam, inp ? inp.value : '');
+    if (r.err) { App.toast(r.err); return; }
+    App.save();
+    App.toast(`「${r.horse.name}」が生まれた！`);
+    App.go({ name: 'horse', id: r.horse.id, htab: 'info' });
   };
 
   // ---------- 調子の8色・フリーハンデ・冠 ----------
@@ -86,7 +126,7 @@
   };
 
   // スペシャルホースのリーチ（あと1勝で条件がそろう）
-  UI.reachLine = h => { if (!HS.Special || !W.get().eraless) return ''; const r = HS.Special.reachInfo(h); return r.length ? `<div class="sp-reach small">★ リーチ：${r.slice(0, 3).map(x => `${e(x.need)}でスペシャルホース ${e(x.name)}`).join('／')}${r.length > 3 ? ` ほか${r.length - 3}頭` : ''}</div>` : ''; };
+  UI.reachLine = h => { if (!HS.Special || !W.get().eraless || h.loc === 'retired') return ''; const r = HS.Special.reachInfo(h); return r.length ? `<div class="sp-reach small">★ リーチ：${r.map(x => `${e(x.need)}で「${e(x.group.label)}」`).join('／')}</div>` : ''; };
   // ---------- ホーム（管理画面）：上の帯と大きなコマンド ----------
   const home0 = S.home;
   S.home = function (st) {
@@ -101,7 +141,7 @@
     // 今週のおもなレース（乗るレースがあればその競馬場）の天気と馬場
     const main = rides.length ? rides[0].card.race : (W.cards().map(c => c.race).find(r => r.region === 'JRA' && r.graded) || (W.cards()[0] || {}).race);
     const wx = main ? T.weather(G.seed, G.year, G.month, G.week, main.course, main.ground) : null;
-    const cmds = [['stable', '🐎', '出走登録', '厩舎とレース'], ['market', '💰', '馬の店', `お手馬 ${T.ownCount()}/${T.MAX_OWN}`], ['jrecord', '🏇', 'データ', '成績・殿堂・レコード'], ['records', '📜', '記録', '年代記・表彰'], ['menu', '⚙', 'システム', 'セーブ・音・色']];
+    const cmds = [['stable', '🐎', '出走登録', '厩舎とレース'], ['market', '💰', '馬の店', `お手馬 ${T.ownCount()}/${T.MAX_OWN}`], ['breed', '🐣', '生産', 'オリジナルホース'], ['jrecord', '🏇', 'データ', '成績・スペシャル・トロフィー'], ['records', '📜', '記録', '年代記・表彰'], ['menu', '⚙', 'システム', 'セーブ・音・色']];
     const over = G.gameOver;
     return `
       ${over ? `<div class="panel over mt"><div class="big">シーズン終了</div><div>${W.yLabel(over.y)}${over.m}月、資金が尽きた（${U.money(over.money)}）。</div><div class="small muted">記録はここまでの分が残っています。</div><div class="btns mt"><button class="btn gold" data-act="newgame-form">はじめから</button><button class="btn" data-act="tab" data-tab="jrecord">成績を見る</button></div></div>` : ''}
@@ -126,7 +166,7 @@
         : `<div class="panel empty">今週は乗るレースがありません。${W.mine('stable').length ? '<br><a href="#" data-act="tab" data-tab="stable">厩舎で出るレースを決める（おまかせなら自動で選ぶ）</a>' : ''}</div>`}
       ${T.reserves().length ? `<h2 class="sec">出走の予約<span class="r">${T.reserves().length}件</span></h2><div class="panel"><table class="t">${T.reserves().map(x => { const h = W.horse(x.id); return h ? `<tr><td class="small muted">${x.m}月${x.w}週</td><td><b>${e(x.label)}</b></td><td>${e(h.name)}</td><td><button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(x.key)}">取消</button></td></tr>` : ''; }).join('')}</table></div>` : ''}
       <h2 class="sec">お手馬<span class="r">${T.ownCount()} / ${T.MAX_OWN}頭・毎月 ${U.money(W.monthlyCost())}</span></h2>
-      ${W.mine().length ? `<div class="list">${W.mine().map(h => `<div class="card" data-act="horse" data-id="${h.id}">${UI.thumb(h)}<div class="grow"><div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${h.auto ? '<span class="chip">おまかせ</span>' : ''}${h.loc === 'stable' ? UI.condMark(h) : ''}</div><div class="sub">${UI.age(h)}・${h.loc === 'stable' ? '入厩中' : '牧場'}・${h.starts || 0}戦${h.wins || 0}勝・${U.money(h.prize || 0)}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}${UI.reachLine(h)}${UI.numStats(h, W.wIdx())}</div></div>`).join('')}</div>` : '<div class="panel empty">まだお手馬がいません。</div>'}
+      ${W.mine().filter(h => h.loc !== 'retired').length ? `<div class="list">${W.mine().filter(h => h.loc !== 'retired').map(h => `<div class="card" data-act="horse" data-id="${h.id}">${UI.thumb(h)}<div class="grow"><div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${h.auto ? '<span class="chip">おまかせ</span>' : ''}${h.loc === 'stable' ? UI.condMark(h) : ''}</div><div class="sub">${UI.age(h)}・${h.loc === 'stable' ? '入厩中' : '牧場'}・${h.starts || 0}戦${h.wins || 0}勝・${U.money(h.prize || 0)}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}${UI.reachLine(h)}${UI.numStats(h, W.wIdx())}</div></div>`).join('')}</div>` : '<div class="panel empty">まだお手馬がいません。</div>'}
       <h2 class="sec">これからのG1</h2>
       <div class="panel"><table class="t">${up.map(r => `<tr><td class="small muted">${r.inWeeks}週後</td><td>${UI.gradeTag(r)}</td><td><b>${e(R.label(r))}</b></td><td class="small">${r.course} ${UI.surf(r.surface)} ${r.dist}m</td></tr>`).join('') || '<tr><td class="muted">なし</td></tr>'}</table></div>
       <h2 class="sec">ニュース</h2>
@@ -181,8 +221,10 @@
   App.act.retire = async d => {
     if (!isJ()) return retire0(d);
     const h = W.horse(d.id);
-    if (!(await App.confirm(`${e(h.name)}を引退させますか？（手もとを離れます）`, '引退させる'))) return;
-    J.retire(d.id); App.save(); App.back();
+    const keep = HS.Original && HS.Original.on() && !h.gelding;
+    if (!(await App.confirm(`${e(h.name)}を引退させますか？${keep ? '（牧場に残り、オリジナルホースの親にできます）' : '（手もとを離れます）'}`, '引退させる'))) return;
+    const r = J.retire(d.id); if (r && r.err) { App.toast(r.err); return; }
+    App.save(); App.back();
   };
   // 出走の予約（12月4週まで）
   App.act.reserve = d => {
@@ -249,10 +291,13 @@
       body = ys.length ? ys.map(y => `<h2 class="sec">${W.yLabel(y)}</h2><div class="panel"><dl class="kv">${Object.entries(aw[y]).map(([k, v]) => `<dt>${k}</dt><dd>${v === j.name ? '★ <b>' + e(v) + '</b>（あなた）' : e(v)}</dd>`).join('')}</dl></div>`).join('') : '<div class="panel empty">年が明けると、前の年の騎手の表彰が発表されます。</div>';
     } else if (tab === 'special' && HS.Special) {
       const un = G.unlocked || [];
-      const L = HS.Special.list().slice().sort((a, b) => (un.includes(b.name) ? 1 : 0) - (un.includes(a.name) ? 1 : 0));
-      const reach = {}; for (const h of W.mine()) for (const r of HS.Special.reachInfo(h)) (reach[r.name] = reach[r.name] || []).push(`${h.name}（${r.need}）`);
-      body = `<div class="small muted">1989年より前に走り終えた名馬。自分の馬が、その名馬の戦績に合わせた条件にリーチをかける（あと1勝でそろう）と、最後のレースに出てくる。勝つと馬の店に並ぶ。店に並んだ馬 ${un.length} / ${L.length}</div>
-        <div class="tblwrap mt"><table class="t sp-t"><tr><th>馬名</th><th>条件</th><th>いま</th></tr>${L.map(x => `<tr class="${un.includes(x.name) ? 'lead-me' : ''}"><td><b>${e(x.name)}</b><div class="small muted">${x.d.born}年生 ${x.d.sex === '牝' ? '牝' : x.d.sex === 'セ' ? 'セ' : '牡'}</div></td><td class="small">${e(x.text)}</td><td class="small">${un.includes(x.name) ? '<b>店に並ぶ</b>' : reach[x.name] ? `<span class="sp-reach">リーチ：${reach[x.name].map(e).join('・')}</span>` : ''}</td></tr>`).join('')}</table></div>`;
+      const SPx = HS.Special;
+      const reach = {}; for (const h of W.mine().filter(x => x.loc === 'stable' || x.loc === 'farm')) for (const r of SPx.reachInfo(h)) (reach[r.group.id] = reach[r.group.id] || []).push(`${h.name}（${r.need}）`);
+      body = `<div class="small muted">1989年より前に走り終えた名馬。自分の馬がグループの条件にリーチをかける（あと1勝でそろう）と、最後のレースにそのグループの名馬が出てくる。勝つと馬の店に並ぶ。店に並んだ馬 ${un.length} / ${SPx.list().length}</div>
+        <div class="list mt">${SPx.GROUPS.map(g => { const ms = SPx.members(g); if (!ms.length) return '';
+          return `<div class="panel sp-g"><div class="row"><b class="nm">${e(g.label)}</b><span class="right small muted">${ms.filter(d => un.includes(d.name)).length} / ${ms.length}頭</span></div>
+            <div class="small">${e(g.note)}</div>${reach[g.id] ? `<div class="sp-reach small">リーチ：${reach[g.id].map(e).join('・')}</div>` : ''}
+            <div class="small mt">${ms.map(d => un.includes(d.name) ? `<b class="sp-got">${e(d.name)}</b>` : e(d.name)).join('・')}</div></div>`; }).join('')}</div>`;
     } else if (tab === 'trophy' && HS.Trophy) {
       const tr = G.trophies || {};
       const n = HS.Trophy.LIST.filter(t => tr[t.id]).length;

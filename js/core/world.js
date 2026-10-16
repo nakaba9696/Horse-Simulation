@@ -420,7 +420,7 @@
       const rc = W.aiChoose(h, races, wIdx, r);
       if (rc && rc.region !== '海外') (field[rc.key] = field[rc.key] || []).push({ horse: h, jockeyName: W.bestFreeJockey(rc.key, h.id), mine: true, auto: true });
     }
-    // 招待のレース（ドリームクラシック）は招待馬で組む
+    // 招待のレース（グランドフィナーレ）は招待馬で組む
     for (const rc of allRaces) if (rc.invite && HS.Season) field[rc.key] = HS.Season.dcField(rc);
     // 自分の馬がスペシャルホースの条件にリーチをかけて出るレースには、その名馬が出てくる（special.js）
     if (G.eraless && HS.Special) for (const rc of allRaces) { const lg = HS.Special.forRace(rc, field[rc.key] || []); if (lg.length) field[rc.key] = (field[rc.key] || []).concat(lg); }

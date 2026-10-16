@@ -452,7 +452,7 @@ check('season: デビュー前の馬も、新馬戦と重賞を1年先まで予�
   return `${h.name}：${wk.y}年${wk.m}月${wk.w}週 ${race ? race.name + ' ' + race.course + race.surface + race.dist : '（ニュースで知らせた）'}`;
 });
 
-check('season: 年末のドリームクラシックに強い馬が招待され、12月4週に走る', () => {
+check('season: 年末のグランドフィナーレに強い馬が招待され、12月4週に走る', () => {
   const T = HS.Season;
   W.newGame({ year: 2005, seed: 12, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
@@ -468,7 +468,7 @@ check('season: 年末のドリームクラシックに強い馬が招待され�
   const ok = !star.injury;
   while (!(G.month === 12 && G.week === 4) && guard++ < 70) W.finishWeek({});
   const card = W.cards().find(c => c.race.invite);
-  assert(card && card.runners.length >= 10, `ドリームクラシックの出走表が無い（${card && card.runners.length}）`);
+  assert(card && card.runners.length >= 10, `グランドフィナーレの出走表が無い（${card && card.runners.length}）`);
   assert(!card.runners.some(x => x.horse.filler) || card.runners.filter(x => !x.horse.filler).length >= 10, '招待馬が少ない');
   const rep = W.finishWeek({});
   const r = rep.races.find(x => x.race.invite);
@@ -509,21 +509,20 @@ check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデ�
   return `史実馬 ${hist.length}頭・店 ${shop.length}頭・2年目の2歳 ${crop}頭`;
 });
 
-check('special: 1989年より前の名馬は戦績に合わせた条件を持ち、リーチで最後のレースに出てきて、勝つと店に並ぶ', () => {
+check('special: 1989年より前の名馬はグループごとの条件にリーチで出てきて、勝つと店に並ぶ', () => {
   const SP = HS.Special;
   W.newGame({ seed: 33, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
-  // 条件は戦績から：シンボリルドルフは七冠、セントサイモンは無敗の連勝とアスコットGC
-  const sr = SP.byName('シンボリルドルフ'), ss = SP.byName('セントサイモン');
-  assert(sr && sr.cond.total === 7 && sr.cond.req['有馬記念'] === 2 && sr.cond.req['皐月賞'] === 1, `シンボリルドルフの条件 ${sr && sr.text}`);
-  assert(ss && ss.cond.streak === 9 && ss.cond.req['アスコットGC'] === 1, `セントサイモンの条件 ${ss && ss.text}`);
+  const tri = SP.members(SP.BY.triple).map(d => d.name);
+  assert(['セントライト', 'シンザン', 'ミスターシービー', 'シンボリルドルフ'].every(n => tri.includes(n)), `歴代の三冠馬 ${tri.join('・')}`);
+  assert(SP.members(SP.BY.unbeaten).some(d => d.name === 'セントサイモン'), '無敗の名馬にセントサイモンがいない');
   assert(!SP.list().some(x => HS.Eraless.isPool(x.d)), '1989年以降の馬がスペシャルホースになっている');
-  // 皐月賞と日本ダービーを勝った馬が菊花賞に出ると、三冠などの名馬が出てくる
+  // 皐月賞と日本ダービーを勝った馬が菊花賞に出ると、歴代の三冠馬が出てくる
   const kk = R.gradedYear(G.year).find(r => r.short === '菊花賞');
   const h = W.all().find(x => x.hist && x.sex !== '牝' && !x.gelding && G.year - x.born === 3 && x.loc === 'stable' && !x.injury);
   h.owner = 'P'; h.auto = false; h.fatigue = 0; h.injury = null; h.earn = 30000; h.wins = 4; h.starts = 5;
   h.gradedWins.push({ y: G.year, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year, race: '東京優駿', short: '日本ダービー', grade: 'G1' });
-  assert(SP.reachInfo(h).some(r => r.name === 'セントライト' && r.need === '菊花賞'), 'リーチが出ない');
+  assert(SP.reachInfo(h).some(r => r.group.id === 'triple' && r.need === '菊花賞'), 'リーチが出ない');
   for (const k of H.STATS) h.pot[k] = 150;
   h.distMin = 1600; h.distMax = 3200; h.kire = 6; h.apt.turf = 100;
   G.month = kk.month; G.week = kk.week; W.dirty(); W._cache = null; W._week = null;
@@ -531,7 +530,7 @@ check('special: 1989年より前の名馬は戦績に合わせた条件を持ち
   assert(!W.enter(h.id, race.key), '菊花賞に登録できない');
   const card = W.cards().find(c => c.race.key === race.key);
   const sps = card.runners.filter(x => x.horse.legend).map(x => x.horse.name);
-  assert(sps.includes('セントライト') && sps.length <= SP.MAX_IN_RACE, `スペシャルホースが出ない（${sps.join('・')}）`);
+  assert(sps.includes('セントライト') && sps.includes('シンボリルドルフ') && sps.length <= SP.MAX_IN_RACE, `スペシャルホースが出ない（${sps.join('・')}）`);
   const rep = W.finishWeek({});
   const res = rep.races.find(r => r.race.key === race.key).sim.results;
   assert(res[0].horse === h, `勝てなかった（1着 ${res[0].horse.name}）`);
@@ -539,10 +538,44 @@ check('special: 1989年より前の名馬は戦績に合わせた条件を持ち
   assert(G.trophies.triple, 'トロフィー「三冠」が付かない');
   assert(W.marketHistoric().some(x => x.horse.name === 'セントライト' && x.legend), 'セントライトが店に並ばない');
   assert(!W.all().some(x => x.legend), 'スペシャルホースが世界に残る');
-  // 無敗の連勝：8連勝の馬がアスコットGCに出ると、セントサイモンが出てくる
-  const g = Object.assign({}, h, { owner: 'P', wins: 8, starts: 8, gradedWins: [] });
-  assert(SP.reach(g, ss, { short: 'アスコットGC' }) && !SP.reach(Object.assign({}, g, { starts: 9 }), ss, { short: 'アスコットGC' }), '無敗の連勝のリーチが合わない');
-  return `${SP.list().length}頭・菊花賞に ${sps.join('・')}`;
+  // 無敗の連勝：7連勝の馬は、次のレースで無敗の名馬に挑む
+  const g = Object.assign({}, h, { owner: 'P', wins: SP.STREAK - 1, starts: SP.STREAK - 1 });
+  assert(SP.reach(g, SP.BY.unbeaten, { short: '何か' }) && !SP.reach(Object.assign({}, g, { starts: SP.STREAK }), SP.BY.unbeaten, { short: '何か' }), '無敗の連勝のリーチが合わない');
+  return `${SP.list().length}頭・${SP.GROUPS.length}グループ・菊花賞に ${sps.join('・')}`;
+});
+
+check('original: 引退させた牡馬と牝馬からオリジナルホース。能力は親から、特殊能力は4つまで、トロフィー・GFでボーナス', () => {
+  const O = HS.Original, J = HS.Jockey;
+  W.newGame({ seed: 44, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get();
+  const pick = (sex, n) => W.all().filter(x => x.hist && x.loc === 'stable' && !x.gelding && (sex === '牝' ? x.sex === '牝' : x.sex !== '牝') && G.year - x.born >= 4).slice(0, n);
+  const males = pick('牡', 6), mares = pick('牝', 2);
+  for (const h of males.concat(mares)) h.owner = 'P';
+  // 父はトロフィーとDCを勝っている
+  const s = males[0];
+  G.trophies.triple = { y: G.year, horse: s.name };
+  s.gradedWins.push({ y: G.year, race: 'グランドフィナーレ', short: 'グランドフィナーレ', grade: 'GF' });
+  for (let i = 0; i < 5; i++) { const r = J.retire(males[i].id); assert(r.to === 'retired', `引退できない ${r.err}`); }
+  assert(J.retire(males[5].id).err, '6頭目の牡馬も牧場に残れてしまう');
+  for (const m of mares) assert(J.retire(m.id).to === 'retired', '牝馬が残らない');
+  assert(s.parentBonus === 2 * O.BONUS_PER, `ボーナス ${s.parentBonus}`);
+  // 特殊能力：両親で8つあれば4つ
+  s.skills = ['big', 'longspurt']; s.trigFixed = ['isshun', 'chokusen'];
+  const m = mares[0]; m.skills = ['narabu', 'nino']; m.trigFixed = ['oosoto', 'startdash'];
+  assert(O.candidates(s, m).length === 8, '候補が8つにならない');
+  const n0 = W.mine().length;
+  const r = O.make(s.id, m.id, 'テストオリジナル');
+  assert(!r.err && r.horse.owner === 'P' && r.horse.original && W.mine().length === n0 + 1, `作れない ${r.err}`);
+  const c = r.horse;
+  const all = (c.skills || []).concat(HS.Skills.of(c));
+  assert(all.length === 4 && all.every(id => O.candidates(s, m).includes(id)), `特殊能力 ${all.join(',')}`);
+  assert(r.bonus === s.parentBonus, 'ボーナスが付かない');
+  for (const k of H.STATS) { const avg = (s.pot[k] + m.pot[k]) / 2; assert(Math.abs(c.pot[k] - avg - r.bonus) < 30, `${k} が親から離れすぎ`); }
+  assert(O.make(males[1].id, m.id).err, '同じ年に同じ牝馬から2頭作れてしまう');
+  assert(!O.make(males[1].id, mares[1].id).err, '別の牝馬から作れない');
+  assert(!O.release(males[4].id) && O.retired('牡').length === 4, '放せない');
+  const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
+  return `${c.name}：${c.sex}・特殊能力 ${all.map(id => HS.Skills.label(id)).join('・')}・ボーナス +${r.bonus}`;
 });
 
 // ---------- 騎手のゲーム ----------

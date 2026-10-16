@@ -1,13 +1,12 @@
 // スペシャルホース（騎手のゲーム・年代なし。持ち主の決定 2026-10-16）
-// 1989年より前に走った名馬は、世界の暦には出ない。馬ごとに、その戦績に合わせた条件（勝つレースの組み合わせ・無敗の連勝）を持つ。
-// 自分の馬がその条件にリーチをかける（あと1勝で達成）と、最後のレースにその名馬が特別に出てくる。勝てば、その名馬が馬の店に並ぶ。
+// 1989年より前に走り終えた名馬は、世界の暦には出ない。条件のグループ（歴代の三冠馬・グランプリホース・無敗の名馬など）にまとめ、
+// 自分の馬がその条件にリーチをかける（あと1勝で達成）と、最後のレースにそのグループの名馬が特別に出てくる。勝てば、その名馬たちが馬の店に並ぶ。
+// グループの名馬は、データの勝ち鞍から自動で決める（1頭ずつ手で書かない）
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const U = HS.U, H = HS.Horse, W = HS.World;
   const SP = HS.Special = {};
   SP.MAX_IN_RACE = 4;   // 1レースに出てくる数の上限
-  SP.MAX_RACES = 7;     // 条件のレースの数の上限（戦績の大きいレースから）
-  SP.MAX_STREAK = 12;   // 無敗の連勝の条件の上限
   // 史実馬のデータに戦績の数が無い、無敗の名馬
   SP.UNBEATEN = { 'マルゼンスキー': 8 };
 
@@ -28,74 +27,78 @@
     name = ALIAS[name] || name;
     return g1Map().get(name) || null;
   };
-  // 戦績から条件を作る：いまの番組の G1 に当たる勝ち鞍（同じレースを何度も勝っていれば、その回数）と、無敗の連勝
-  SP.condOf = function (d) {
-    const cnt = new Map();
-    for (const s of d.wins || []) { const m = SP.mapWin(s); if (m) { const c = cnt.get(m.short) || { n: 0, prize: m.prize, at: m.at }; c.n++; cnt.set(m.short, c); } }
-    let races = [...cnt.entries()].sort((a, b) => b[1].prize - a[1].prize);
-    let total = 0; const keep = [];
-    for (const [k, v] of races) { const n = Math.min(v.n, SP.MAX_RACES - total); if (n <= 0) break; keep.push([k, n, v.at]); total += n; }
-    keep.sort((a, b) => a[2] - b[2]); // 見せるときは暦の順
-    const req = {}; for (const [k, n] of keep) req[k] = n;
-    const unb = d.unbeaten || (SP.UNBEATEN[d.name] || 0);
-    const streak = unb ? Math.min(unb, SP.MAX_STREAK) : 0;
-    if (total + (streak ? 2 : 0) < 2) return null; // 大きいレースを1つ勝っただけの馬はスペシャルホースにしない
-    return { req, total, streak };
-  };
-  SP.condText = c => {
-    const rs = Object.entries(c.req).map(([k, n]) => n > 1 ? `${k}×${n}` : k);
-    const a = rs.length ? `${rs.join('・')}を勝つ` : '';
-    const b = c.streak ? `デビューから無敗で${c.streak}連勝${rs.length ? 'し、' : ''}` : '';
-    return b + a || '';
-  };
+  // ---------- 条件のグループ（三冠なら歴代の三冠馬、のように、条件ごとに名馬をまとめる） ----------
+  // finals：最後のレース（短い名）。legs(h, race)：それまでに勝っておくもの（＝リーチ）。member(d)：出てくる名馬（データの勝ち鞍で判定）
+  const gw = h => (h.gradedWins || []).map(g => ({ y: g.y, r: g.short || g.race }));
+  const won = (h, name, pred) => gw(h).some(w => w.r === name && (!pred || pred(w.y)));
+  const dn = (d, name) => (d.wins || []).filter(x => x.slice(4) === name).length;
+  const sameYear = names => (h, race) => names.every(n => won(h, n, y => y === race.year));
+  const prevYear = name => (h, race) => won(h, name, y => y === race.year - 1);
+  const other = pairs => (h, race) => { const o = pairs[race.short]; return !!o && won(h, o) && !won(h, race.short); };
+  const CLASSIC = ['皐月賞', '日本ダービー', '菊花賞'];
+  const g1Count = d => (d.wins || []).filter(x => SP.mapWin(x)).length;
+  SP.unbeatenOf = d => d.unbeaten || SP.UNBEATEN[d.name] || 0;
+  SP.STREAK = 8; // 無敗の名馬が出てくる連勝の数
+  SP.GROUPS = [
+    { id: 'triple', label: '歴代の三冠馬', note: '皐月賞・日本ダービーを勝って菊花賞へ', finals: ['菊花賞'], legs: sameYear(['皐月賞', '日本ダービー']), member: d => dn(d, '皐月賞') && dn(d, '東京優駿') && dn(d, '菊花賞') },
+    { id: 'nikan', label: 'クラシック二冠馬', note: '皐月賞・日本ダービー・菊花賞のどれかを勝って、ほかのクラシックへ', finals: CLASSIC, legs: (h, race) => CLASSIC.filter(n => won(h, n, y => y === race.year)).length === 1 && !won(h, race.short, y => y === race.year), member: d => (dn(d, '皐月賞') ? 1 : 0) + (dn(d, '東京優駿') ? 1 : 0) + (dn(d, '菊花賞') ? 1 : 0) === 2 },
+    { id: 'ftriple', label: '名牝（牝馬の二冠）', note: '桜花賞・オークスを勝って秋華賞へ', finals: ['秋華賞'], legs: sameYear(['桜花賞', 'オークス']), member: d => dn(d, '桜花賞') && dn(d, '優駿牝馬') },
+    { id: 'autumn', label: '秋の王者', note: '天皇賞・秋とジャパンCを勝って有馬記念へ', finals: ['有馬記念'], legs: sameYear(['天皇賞・秋', 'ジャパンC']), member: d => (dn(d, '天皇賞（秋）') ? 1 : 0) + (dn(d, 'ジャパンカップ') ? 1 : 0) + (dn(d, '有馬記念') ? 1 : 0) >= 2 },
+    { id: 'spring', label: '春の王者', note: '天皇賞・春を勝って宝塚記念へ', finals: ['宝塚記念'], legs: sameYear(['天皇賞・春']), member: d => dn(d, '天皇賞（春）') && dn(d, '宝塚記念') },
+    { id: 'grandprix', label: 'グランプリホース', note: '宝塚記念と有馬記念の片方を勝って、もう片方へ', finals: ['有馬記念', '宝塚記念'], legs: other({ '有馬記念': '宝塚記念', '宝塚記念': '有馬記念' }), member: d => dn(d, '宝塚記念') && dn(d, '有馬記念') },
+    { id: 'tenno', label: '天皇賞の春秋制覇', note: '天皇賞の春と秋の片方を勝って、もう片方へ', finals: ['天皇賞・秋', '天皇賞・春'], legs: other({ '天皇賞・秋': '天皇賞・春', '天皇賞・春': '天皇賞・秋' }), member: d => dn(d, '天皇賞（春）') && dn(d, '天皇賞（秋）') },
+    { id: 'arima2', label: '有馬記念の連覇', note: '有馬記念を勝って、次の年の有馬記念へ', finals: ['有馬記念'], legs: prevYear('有馬記念'), member: d => dn(d, '有馬記念') >= 2 },
+    { id: 'mile', label: 'マイルの王者', note: '安田記念とマイルCSの片方を勝って、もう片方へ', finals: ['マイルCS', '安田記念'], legs: other({ 'マイルCS': '安田記念', '安田記念': 'マイルCS' }), member: d => dn(d, '安田記念') && dn(d, 'マイルチャンピオンシップ') },
+    { id: 'arc2', label: '凱旋門賞の連覇', note: '凱旋門賞を勝って、次の年の凱旋門賞へ', finals: ['凱旋門賞'], legs: prevYear('凱旋門賞'), member: d => dn(d, '凱旋門賞') >= 2 },
+    { id: 'europe', label: '欧州の頂点', note: '英ダービーかキングジョージを勝って凱旋門賞へ', finals: ['凱旋門賞'], legs: (h, race) => won(h, '英ダービー', y => y === race.year) || won(h, 'キングジョージ', y => y === race.year), member: d => dn(d, '凱旋門賞') && (dn(d, '英ダービー') || dn(d, 'キングジョージ6世＆クイーンエリザベスステークス')) },
+    { id: 'uk3', label: '英国の三冠馬', note: '英2000ギニー・英ダービーを勝って英セントレジャーへ', finals: ['英セントレジャー'], legs: sameYear(['英2000ギニー', '英ダービー']), member: d => dn(d, '英2000ギニー') && dn(d, '英ダービー') && dn(d, '英セントレジャー') },
+    { id: 'us3', label: '米国の三冠馬', note: 'ケンタッキーダービー・プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['ケンタッキーダービー', 'プリークネスS']), member: d => dn(d, 'ケンタッキーダービー') && dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
+    { id: 'us2', label: '米国の名馬', note: 'プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['プリークネスS']), member: d => dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
+    { id: 'aus', label: '豪州の英雄', note: 'コックスプレートを勝ってメルボルンカップへ', finals: ['メルボルンカップ'], legs: sameYear(['コックスプレート']), member: d => dn(d, 'コックスプレート') && dn(d, 'メルボルンカップ') },
+    { id: 'g1five', label: 'G1を5勝した名馬', note: 'G1を4勝して、次のG1へ', finals: null, legs: (h, race) => race.grade === 'G1' && gw(h).length && (h.gradedWins || []).filter(g => g.grade === 'G1').length === 4, member: d => g1Count(d) >= 5 },
+    { id: 'unbeaten', label: '無敗の名馬', note: `デビューから無敗で${SP.STREAK - 1}連勝して、次のレースへ`, finals: null, legs: h => (h.starts || 0) === (h.wins || 0) && (h.wins || 0) === SP.STREAK - 1, member: d => SP.unbeatenOf(d) >= SP.STREAK },
+  ];
+  SP.BY = {}; SP.GROUPS.forEach(g => { SP.BY[g.id] = g; });
 
-  // スペシャルホースの一覧（1989年より前に走った史実馬と、data/legends.js）
+  // スペシャルホースの元：1989年より前に走り終えた史実馬と、data/legends.js
+  let pool = null;
+  SP.pool = () => pool || (pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d)).concat(HS.DATA.legendsExtra || []));
+  SP.data = name => SP.pool().find(d => d.name === name) || null;
+  // グループの名馬（強い順）
+  const memCache = {};
+  SP.members = g => memCache[g.id] || (memCache[g.id] = SP.pool().filter(g.member).sort((a, b) => (b.rating || 0) - (a.rating || 0)));
+  // どれかのグループに入っている名馬（スペシャルホース）
   let list = null;
   SP.list = function () {
     if (list) return list;
-    const src = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d)).concat(HS.DATA.legendsExtra || []);
-    list = [];
-    for (const d of src) { const c = SP.condOf(d); if (c) list.push({ name: d.name, d, cond: c, text: SP.condText(c) }); }
-    list.sort((a, b) => (b.d.rating || 0) - (a.d.rating || 0) || b.cond.total - a.cond.total);
+    const seen = new Map();
+    for (const g of SP.GROUPS) for (const d of SP.members(g)) { if (!seen.has(d.name)) seen.set(d.name, { name: d.name, d, groups: [] }); seen.get(d.name).groups.push(g.id); }
+    list = [...seen.values()].sort((a, b) => (b.d.rating || 0) - (a.d.rating || 0));
     return list;
   };
   SP.byName = name => SP.list().find(x => x.name === name) || null;
-  SP.data = name => { const x = SP.byName(name); return x ? x.d : null; };
 
-  // 自分の馬 h が、このレース race でスペシャルホース sp の条件にリーチをかけているか
-  const winsOf = h => { const m = {}; for (const g of h.gradedWins || []) { const k = g.short || g.race; m[k] = (m[k] || 0) + 1; } return m; };
-  SP.reach = function (h, sp, race, wm) {
-    const c = sp.cond;
-    wm = wm || winsOf(h);
-    let miss = 0, last = null;
-    for (const [k, n] of Object.entries(c.req)) { const m = Math.max(0, n - (wm[k] || 0)); miss += m; if (m) last = k; }
-    const unbeaten = (h.starts || 0) === (h.wins || 0);
-    if (c.streak && !unbeaten) return false;
-    const missW = c.streak ? Math.max(0, c.streak - (h.wins || 0)) : 0;
-    if (miss > 1 || missW > 1 || miss + missW === 0) return false;
-    if (miss === 1) return race.short === last;
-    return true; // あと1勝で無敗の連勝がそろう：次に出るレースに出てくる
+  // 自分の馬 h が、このレースでグループ g にリーチをかけているか
+  SP.reach = (h, g, race) => h.owner === 'P' && (!g.finals || g.finals.includes(race.short)) && g.legs(h, race);
+  // このレースに出てくるスペシャルホース（まだ店に並んでいない名馬だけ）
+  SP.pending = function (h, race) {
+    const G = W.get(), un = G.unlocked || [];
+    const out = [];
+    for (const g of SP.GROUPS) if (SP.reach(h, g, race)) for (const d of SP.members(g)) if (!un.includes(d.name) && !out.some(x => x.d === d)) out.push({ d, g });
+    return out.sort((a, b) => (b.d.rating || 0) - (a.d.rating || 0));
   };
-  // 自分の馬のリーチ（あと1勝で条件がそろうもの）：{ name, need（勝てばよいレース。無敗の連勝だけなら「次のレース」） }
+  // 自分の馬のリーチ（次に勝てばよいレースと、出てくるグループ）。ホームに出す
   SP.reachInfo = function (h) {
-    const G = W.get();
+    const G = W.get(), un = G.unlocked || [];
     if (h.owner !== 'P') return [];
-    const wm = winsOf(h), out = [];
-    for (const sp of SP.list()) {
-      if ((G.unlocked || []).includes(sp.name)) continue;
-      const any = { short: null };
-      let need = null;
-      for (const [k, n] of Object.entries(sp.cond.req)) if ((wm[k] || 0) < n) { need = k; break; }
-      if (need ? SP.reach(h, sp, { short: need }, wm) : SP.reach(h, sp, any, wm)) out.push({ name: sp.name, need: need || '次のレース' });
+    const out = [];
+    const nextRaces = W.upcomingGraded(52).filter(r => r.inWeeks > 0 && !HS.Season.staticIneligible(h, r, r.year));
+    for (const g of SP.GROUPS) {
+      if (!SP.members(g).some(d => !un.includes(d.name))) continue;
+      const r = nextRaces.find(rc => SP.reach(h, g, rc));
+      if (r) out.push({ group: g, need: g.finals ? r.short : (g.id === 'g1five' ? '次のG1' : '次のレース') });
     }
     return out;
-  };
-  // このレースに出てくるスペシャルホース（自分の馬がリーチをかけているもの。まだ店に並んでいない馬）
-  SP.pending = function (h, race) {
-    const G = W.get();
-    if (h.owner !== 'P') return [];
-    const wm = winsOf(h);
-    return SP.list().filter(sp => !(G.unlocked || []).includes(sp.name) && SP.reach(h, sp, race, wm));
   };
   // その場限りの馬にする（いちばん良いときの力で）
   SP.horse = function (d, race) {
@@ -111,9 +114,9 @@
     for (const e of entries) {
       if (!e.mine || !e.horse) continue;
       for (const sp of SP.pending(e.horse, race)) {
-        if (names.has(sp.name) || out.length >= SP.MAX_IN_RACE) continue;
+        if (names.has(sp.d.name) || out.length >= SP.MAX_IN_RACE) continue;
         if (race.sex === '牝' && sp.d.sex !== '牝') continue; // 牝馬限定のレースには牝馬だけ
-        names.add(sp.name); out.push({ horse: SP.horse(sp.d, race), legend: true });
+        names.add(sp.d.name); out.push({ horse: SP.horse(sp.d, race), legend: true });
       }
     }
     return out;

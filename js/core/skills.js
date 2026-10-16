@@ -88,6 +88,7 @@
   // この馬の発動する特殊能力（id の並び）
   K.of = function (h, wIdx) {
     if (!h) return [];
+    if (h.trigFixed) return h.trigFixed.slice(); // オリジナルホースは親から受け継いだもの
     const p = K.stats(h, wIdx);
     const ok = K.LIST.filter(k => k.learn(p));
     ok.sort((a, b) => K.ORDER.indexOf(a.group) - K.ORDER.indexOf(b.group));
