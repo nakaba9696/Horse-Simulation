@@ -36,6 +36,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `data/courses.js`・`names.js` | 競馬場の形・開催・枠の色／モブ馬の名前の材料 | D |
 | `data/jockeys.js`・`jockeys_old.js`・`jockeys_extra.js` | 実在の騎手（1987〜／1960年代〜と海外・地方／記録から見積もった騎手＝`node tools/build_jockeys_extra.js`） | D |
 | `data/famous_old.js`・`famous_1.js`・`famous_2.js`・`famous_world.js` | 名馬の解説（史実だけ。馬主・調教師の名は書かない）・脚の切れ・特殊能力。`js/core/datafix.js` が史実馬に合わせる | D |
+| `data/profiles.js`・`profiles_old.js`・`profiles_1.js`・`profiles_2.js`・`profiles_world.js` | 名馬の名鑑（年代・戦績・主な勝鞍・8行ほどの解説。スペシャルホース／日本 1955〜1986年生／1987〜2004年生／2005年生〜／海外）。出典で確かめた史実だけで、人の名前は書かない。`js/core/datafix.js` が史実馬に合わせ、名馬の解説より優先する | D |
 | `data/historic_jockeys.js` | 史実馬の主戦騎手（手で確かめたもの。ほかは馬のデータの jockey と記録から） | D |
 | `js/core/fictional.js` | 騎手の名前を架空にする（実名 → 架空の名前を一対一で。データの後・datafix の前に読む） | C |
 | `js/core/datafix.js` | 読み込んだ史実馬をまとめる（重複・小さいカナ・勝ち鞍のレース名を暦にそろえる） | C |
