@@ -1128,7 +1128,7 @@ check('fight: 掛かると首と頭を上げ、騎手が上体を起こす。値
   assert(c.rot[2] > a.rot[2] + 0.15 && c.rot[4] > a.rot[4] + 0.2, `掛かっても首・頭が上がらない ${a.rot[2].toFixed(2)}→${c.rot[2].toFixed(2)}`);
   assert(c.rot[25] > a.rot[25] + 0.2, '掛かっても騎手が上体を起こさない');
   const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js/ui/ride.js'), 'utf8');
-  assert(/fight: s\.headUp \|\| 0, ears: s\.ears != null \? s\.ears : 0\.3/.test(src), 'ride.js が頭の上げ具合・耳を渡していない');
+  assert(/fight: s\.kakari \|\| 0, ears: s\.ears != null \? s\.ears : 0\.3/.test(src), 'ride.js が頭の上げ具合・耳を渡していない');
   return `首 ${a.rot[2].toFixed(2)}→${c.rot[2].toFixed(2)}・頭 ${a.rot[4].toFixed(2)}→${c.rot[4].toFixed(2)}`;
 });
 
