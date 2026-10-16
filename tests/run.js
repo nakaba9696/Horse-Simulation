@@ -166,14 +166,14 @@ check('layouts: 競馬場の形（コーナー・直線・高低差）がそろ�
 function checkLayouts(L) {
   assert(L, 'data/layouts.js がない');
   const RAD = Math.PI / 180, bad = [];
-  // 走る向きにたどって、ゴールに戻るかを見る（曲がり＝1/半径は長さに沿って入口から出口へ直線的に変わる。track.js の fromLayout と同じ読み方）
-  const arcLen = s => Math.abs(s[3]) * RAD / ((1 / s[1] + 1 / s[2]) / 2);
+  // 走る向きにたどって、ゴールに戻るかを見る（半径は角度に沿って入口から出口へ直線的に変わる。track.js の fromLayout と同じ読み方）
+  const arcLen = s => Math.abs(s[3]) * RAD * (s[1] + s[2]) / 2;
   const closeErr = segs => {
     let x = 0, y = 0, h = 0;
     for (const s of segs.slice().reverse()) {
       if (s[0] === 'S') { x += s[1] * Math.cos(h); y += s[1] * Math.sin(h); continue; }
-      const m = 360, ds = arcLen(s) / m, sg = Math.sign(s[3]);
-      for (let i = 0; i < m; i++) { const k = (1 / s[1] + (1 / s[2] - 1 / s[1]) * (i + 0.5) / m) * sg; h += k * ds / 2; x += ds * Math.cos(h); y += ds * Math.sin(h); h += k * ds / 2; }
+      const m = 360, dphi = s[3] * RAD / m;
+      for (let i = 0; i < m; i++) { const r = s[1] + (s[2] - s[1]) * (i + 0.5) / m, hm = h + dphi / 2; x += r * Math.abs(dphi) * Math.cos(hm); y += r * Math.abs(dphi) * Math.sin(hm); h += dphi; }
     }
     return Math.hypot(x, y);
   };
