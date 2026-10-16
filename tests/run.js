@@ -205,7 +205,7 @@ check('layouts: 競馬場の形（コーナー・直線・高低差）がそろ�
         for (let i = 1; i < ev.length; i++) if (!(ev[i][0] > ev[i - 1][0])) { bad.push(`${kk}:elev の並び`); break; }
         if (ev.length && Math.abs(Math.min(...ev.map(p => p[1]))) > 0.05) bad.push(`${kk}:elev のいちばん低い所が0でない`);
         if (loop && ev.length && Math.abs(ev[0][1] - ev[ev.length - 1][1]) > 0.05) bad.push(`${kk}:周回なのに残り0と lap の高さが違う`);
-        if (!Array.isArray(o.use) || !o.use.length) bad.push(`${kk}:use が無い`);
+        if (!Array.isArray(o.use)) bad.push(`${kk}:use が無い`);  // 今のゲームのレースで使わない回りは空でよい
         for (const d of o.use || []) { if (uses.has(d)) bad.push(`${k}:${d}m が2つの回りにある`); uses.add(d); }
         if (!Array.isArray(o.src) || !o.src.length || o.src.some(u => !/^https:\/\//.test(u))) bad.push(`${kk}:src`);
         if (typeof o.note !== 'string' || !o.note) bad.push(`${kk}:note`);
