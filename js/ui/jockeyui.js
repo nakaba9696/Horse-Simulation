@@ -79,7 +79,7 @@
     App.go({ name: 'horse', id: r.horse.id, htab: 'info' });
   };
 
-  // ---------- 調子の8色・フリーハンデ・冠 ----------
+  // ---------- 調子の8色・総合力・冠 ----------
   const T = HS.Season;
   UI.condMark = (h, wIdx) => { const c = T.cond(h, wIdx != null ? wIdx : W.wIdx()); return `<span class="cmark" style="--c:${c.color}" title="調子"><i></i>${c.label}</span>`; };
   const condTag0 = UI.condTag;
@@ -107,14 +107,15 @@
       <polygon points="${area}" fill="rgba(127,224,160,.18)"/><polyline points="${line}" fill="none" stroke="#7fe0a0" stroke-width="2.5" stroke-linejoin="round"/>
       ${nowA >= a0 && nowA <= a1 ? `<line x1="${nx}" y1="${T0}" x2="${nx}" y2="${H0 - B}" stroke="#ffd34d" stroke-dasharray="3 3"/><circle cx="${nx}" cy="${ny}" r="5.5" fill="#ffd34d" stroke="#3a2a00" stroke-width="1.5"/><text x="${U.clamp(nx, 20, W0 - 20)}" y="${T0 - 1}" fill="#ffd34d" font-size="10" text-anchor="middle">いま</text>` : ''}</svg>`;
   };
-  // 馬の画面の上：フリーハンデ・国内の順位・調子・冠・成長の山・お金
+  // 馬の画面の上：総合力（いま・完成）・国内の順位・調子・冠・成長の山・お金
   UI.grPanel = function (h, wIdx) {
     if (!isJ()) return '';
     const mine = h.owner === 'P';
-    const fh = T.fhBoth(h, wIdx), rk = h.loc === 'stable' ? T.rank(h, wIdx) : null;
+    const fh = T.fhBoth(h, wIdx), pk = T.fhPeak(h), rk = h.loc === 'stable' ? T.rank(h, wIdx) : null;
     const bars = UI.growthCurve(h);
     return `<div class="panel gr mt">
-      <div class="grrow"><div><div class="small muted">フリーハンデ</div><b class="fh"><span class="turf">芝 ${fh.turf.toFixed(1)}</span><span class="dirt">ダ ${fh.dirt.toFixed(1)}</span></b></div>
+      <div class="grrow"><div><div class="small muted">${T.FH_NAME}（いま）</div><b class="fh"><span class="turf">芝 ${fh.turf}</span><span class="dirt">ダ ${fh.dirt}</span></b></div>
+        <div><div class="small muted">${T.FH_NAME}（完成）</div><b class="fh"><span class="turf">芝 ${pk.turf}</span><span class="dirt">ダ ${pk.dirt}</span></b></div>
         <div><div class="small muted">国内の順位</div><b>${rk && rk.pos ? `${rk.pos}位 <small class="muted">/ ${rk.n}頭</small>` : '－'}</b></div>
         <div><div class="small muted">調子</div>${UI.condMark(h, wIdx)}</div>
         <div><div class="small muted">成績</div><b>${h.starts || 0}戦${h.wins || 0}勝</b></div></div>
@@ -160,7 +161,7 @@
         <div class="mgr-foot small">今年 ${yr.rides}戦${yr.wins}勝（2着${yr.w2}・3着${yr.w3}）・通算 ${j.total.rides}戦${j.total.wins}勝・評判 ${J.repLabel(j.rep)}・騎乗技術 ${Math.round(j.skill)}</div>
       </div>
       ${!W.mine().length && !over ? `<div class="panel gold mt">📌 <a href="#" data-act="tab" data-tab="market">馬の店でデビュー前の史実馬を買おう</a>（2歳の4月から自動で入厩し、レースに出られる）。お手馬は${T.MAX_OWN}頭まで。毎月の費用がかかり、資金がマイナスのまま2か月続くとシーズンが終わる。</div>` : ''}
-      ${G.dc && G.dc.y === G.year && G.month === 12 ? `<h2 class="sec">${T.DC_NAME}<span class="r">12月4週・東京芝2400m・招待${G.dc.ids.length}頭</span></h2><div class="panel small">${G.dc.ids.map(id => W.horse(id)).filter(Boolean).map(h => h.owner === 'P' ? `<b class="dc-me">★${e(h.name)}</b>` : e(h.name)).join('・')}${G.dc.ids.some(id => (W.horse(id) || {}).owner === 'P') ? '' : '<div class="muted mt">自分の馬は招待されなかった。フリーハンデの上位16頭か、その年にG1を勝つと招待される。</div>'}</div>` : ''}
+      ${G.dc && G.dc.y === G.year && G.month === 12 ? `<h2 class="sec">${T.DC_NAME}<span class="r">12月4週・東京芝2400m・招待${G.dc.ids.length}頭</span></h2><div class="panel small">${G.dc.ids.map(id => W.horse(id)).filter(Boolean).map(h => h.owner === 'P' ? `<b class="dc-me">★${e(h.name)}</b>` : e(h.name)).join('・')}${G.dc.ids.some(id => (W.horse(id) || {}).owner === 'P') ? '' : '<div class="muted mt">自分の馬は招待されなかった。${T.FH_NAME}の上位16頭か、その年にG1を勝つと招待される。</div>'}</div>` : ''}
       <h2 class="sec">今週の騎乗<span class="r">${G.month}月${G.week}週</span></h2>
       ${rides.length ? `<div class="list">${rides.map(({ card, runner }) => rideCard(card, runner, true)).join('')}</div>`
         : `<div class="panel empty">今週は乗るレースがありません。${W.mine('stable').length ? '<br><a href="#" data-act="tab" data-tab="stable">厩舎で出るレースを決める（おまかせなら自動で選ぶ）</a>' : ''}</div>`}
@@ -192,28 +193,29 @@
       </div></div>`;
   }
 
-  // ---------- 馬の店：デビュー前の史実馬を、フリーハンデの高い順に一行ずつ。行を押すと馬の画面（解説もそこで読める） ----------
+  // ---------- 馬の店：デビュー前の史実馬を、完成したときの総合力の高い順に一行ずつ（芝とダートを別の列で）。行を押すと馬の画面（解説もそこで読める） ----------
   const market0 = S.market;
   S.market = function (st) {
     if (!isJ()) return market0(st);
     const G = W.get(), wIdx = W.wIdx();
     const items = W.marketHistoric().map((it, i) => ({ it, i, kind: 'hist' })).concat(W.marketForeign().map((it, i) => ({ it, i, kind: 'fhist' })));
-    for (const x of items) { x.fh = T.fhBoth(x.it.horse, wIdx); x.top = Math.max(x.fh.turf, x.fh.dirt); }
+    for (const x of items) { x.fh = T.fhPeak(x.it.horse); x.top = Math.max(x.fh.turf, x.fh.dirt); }
     items.sort((a, b) => ((b.it.legend ? 1 : 0) - (a.it.legend ? 1 : 0)) || b.top - a.top || b.it.price - a.it.price); // 倒したスペシャルホースは上に
     const lim = st.mlimit || 40;
     const full = !T.canBuy();
     const rows = items.slice(0, lim).map(({ it, fh, top }) => {
-      const h = it.horse, surf = fh.turf >= fh.dirt ? '芝' : 'ダ';
+      const h = it.horse, best = fh.turf >= fh.dirt ? 'turf' : 'dirt';
       return `<tr class="shop-row" data-act="horse" data-id="${e(h.id)}">
         <td><b>${e(h.name)}</b>${h.legendBought ? ' <span class="chip legend">スペシャル</span>' : ''}</td>
         <td><span class="sexm ${h.sex === '牝' ? 'f' : 'm'}">${h.sex === '牝' ? '牝馬' : '牡馬'}</span></td>
         <td class="num">${G.year - h.born}歳</td>
-        <td class="num"><span class="fhv ${surf === '芝' ? 'turf' : 'dirt'}">${top.toFixed(1)}</span><small class="muted"> ${surf}</small></td>
+        <td class="num"><span class="fhv turf ${best === 'turf' ? '' : 'dim'}">${fh.turf}</span></td>
+        <td class="num"><span class="fhv dirt ${best === 'dirt' ? '' : 'dim'}">${fh.dirt}</span></td>
         <td class="num"><b style="color:var(--gold2)">${U.money(it.price)}</b></td></tr>`;
     }).join('');
     return `<h2 class="sec">馬の店<span class="r">資金 ${U.money(G.player.money)}・お手馬 ${T.ownCount()}/${T.MAX_OWN}${full ? '（いっぱい）' : ''}</span></h2>
-      <div class="small muted">1989〜2026年に走った馬で、いま走っていない馬を、デビュー前の2歳として売る。フリーハンデ（いまの力を斤量で表した数。芝とダートの高いほう）の高い順。倒したスペシャルホースは上に並ぶ。行を押すと馬の画面が開き、そこで買えます。</div>
-      ${items.length ? `<div class="tblwrap mt"><table class="t shop"><tr><th>馬名</th><th>性別</th><th class="num">年齢</th><th class="num">フリーハンデ</th><th class="num">値段</th></tr>${rows}</table></div>
+      <div class="small muted">1989〜2026年に走った馬で、いま走っていない馬を、デビュー前の2歳として売る。${T.FH_NAME}（伸びきったときの強さ。史実馬は50〜80で、オリジナルホースは99まで）の芝・ダートの高いほうの順。倒したスペシャルホースは上に並ぶ。行を押すと馬の画面が開き、そこで買えます。</div>
+      ${items.length ? `<div class="tblwrap mt"><table class="t shop"><tr><th>馬名</th><th>性別</th><th class="num">年齢</th><th class="num">芝</th><th class="num">ダ</th><th class="num">値段</th></tr>${rows}</table></div>
         ${items.length > lim ? `<div class="center mt"><button class="btn" data-act="mmore">もっと見る（残り${items.length - lim}頭）</button></div>` : ''}`
         : '<div class="panel empty">いま買えるデビュー前の史実馬はいません。毎年3月に新しい世代が生まれます。</div>'}`;
   };

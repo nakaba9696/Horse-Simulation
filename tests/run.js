@@ -421,7 +421,7 @@ check('ride: しごく・引くの段は手を止めても保たれ、追い通�
   return `平均着順 直線でしごく ${late.toFixed(1)}・追い通す ${all.toFixed(1)}・何もしない ${none.toFixed(1)}`;
 });
 
-check('season: お手馬10頭まで・資金切れで終わり・冠・調子の8段階・フリーハンデ', () => {
+check('season: お手馬10頭まで・資金切れで終わり・冠・調子の8段階・総合力', () => {
   const T = HS.Season;
   W.newGame({ year: 2003, seed: 5, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
@@ -437,13 +437,19 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・調子の
   const h = { gradedWins: [{ y: 2005, short: '皐月賞', grade: 'G1' }, { y: 2005, short: '日本ダービー', grade: 'G1' }, { y: 2005, short: '菊花賞', grade: 'G1' }, { y: 2006, short: '宝塚記念', grade: 'G1' }, { y: 2006, short: '有馬記念', grade: 'G1' }] };
   const tl = T.titles(h).map(t => t.label);
   assert(tl.includes('三冠') && tl.includes('グランプリ制覇') && !tl.includes('二冠') && tl.includes('G1五勝'), tl.join('・'));
-  // 調子とフリーハンデ
+  // 調子と総合力
   const x = W.mine()[0];
   x.fatigue = 70; assert(T.condLevel(x, W.wIdx()) === 7, '使いすぎにならない');
   x.fatigue = 0; x.cond = 30; x.lastRaceW = W.wIdx() - 3; assert(T.condLevel(x, W.wIdx()) === 2, '絶好調にならない');
   x.lastRaceW = W.wIdx() - 30; assert(T.condLevel(x, W.wIdx()) === 0, '休みすぎにならない');
   const fh = T.fhBoth(x, W.wIdx());
-  assert(fh.turf >= 30 && fh.turf <= 70 && fh.dirt >= 30 && fh.dirt <= 70, JSON.stringify(fh));
+  assert(fh.turf >= 1 && fh.turf <= 99 && fh.dirt >= 1 && fh.dirt <= 99, JSON.stringify(fh));
+  // 総合力：史実馬は伸びきったとき50〜80に入る（ごく弱い馬を除く）。能力の上限がそろうと99
+  const pks = HS.Eraless.pool().map(d => { const p = T.fhPeak(H.fromHistoric(d, 'x')); return Math.max(p.turf, p.dirt); }).sort((a, b) => a - b);
+  const q = f => pks[Math.floor(f * (pks.length - 1))];
+  assert(q(0.02) >= 48 && q(0.5) >= 55 && q(0.5) <= 70 && pks[pks.length - 1] >= 78 && pks[pks.length - 1] <= 81, `史実馬の総合力 ${q(0.02)}〜${q(0.5)}〜${pks[pks.length - 1]}`);
+  const top = {}; for (const k of H.STATS) top[k] = 118;
+  assert(T.fhOf(top, '芝') === 99 && T.fhOf(top, 'ダ') === 99, '能力の上限で99にならない');
   // 出走の予約：1年先までの重賞を押さえると、その週に出走登録になる
   G.gameOver = null; G.broke = 0; G.player.money = 1e9;
   const y = W.all().find(m => m.owner !== 'P' && m.loc === 'stable' && G.year - m.born === 4 && !m.injury);
@@ -459,7 +465,7 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・調子の
   assert((ent && ent.raceKey === target.key) || G.news.some(n => n.text.includes('予約していた')), `予約が出走登録にならない（${target.key}）`);
   assert(T.reserves(y.id).length === 0, '使った予約が残る');
   const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
-  return `予約 ${target.short || target.name}・冠 ${tl.join('・')}・フリーハンデ 芝${fh.turf} ダ${fh.dirt}`;
+  return `予約 ${target.short || target.name}・冠 ${tl.join('・')}・総合力 芝${fh.turf} ダ${fh.dirt}（史実馬の完成 ${q(0.02)}〜${pks[pks.length - 1]}）`;
 });
 
 check('season: デビュー前の馬も、新馬戦と重賞を1年先まで予約できる', () => {
