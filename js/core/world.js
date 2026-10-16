@@ -537,8 +537,8 @@
       const sim = played[race.key] || S.run(race, runners, wIdx, new U.RNG(card.seed), { frames: watch });
       if (HS.Jockey) HS.Jockey.record(race, sim, runners);
       W.applyResults(race, sim, runners, wIdx);
-      W.noteRecord(race, sim);
-      report.races.push({ race, sim, runners, hasMine, watch, ridden: !!played[race.key], ride: card.ride });
+      const rec = W.noteRecord(race, sim);
+      report.races.push({ race, sim, runners, hasMine, watch, ridden: !!played[race.key], ride: card.ride, rec });
     }
     G.entries = {}; G.rides = {};
     if (HS.Jockey) HS.Jockey.weekly();
@@ -556,14 +556,25 @@
   };
   // コースレコード（このゲームの中で出た、競馬場・芝ダ・距離ごとの一番速い時計）
   W.recKey = race => `${race.course}|${race.surface}|${race.dist}`;
-  W.courseRecord = race => (G.records.course || {})[W.recKey(race)] || null;
+  W.courseRecord = race => (G && G.records.course || {})[W.recKey(race)] || null;
+  // time の走破タイムがいまのレコードを破るか（0.1秒に丸めて比べる。同じ時計はタイ記録で、塗り替えない）
+  W.recordCheck = function (race, time, old) {
+    if (old === undefined) old = G ? W.courseRecord(race) : null;
+    const t = Math.round(time * 10) / 10;
+    return { t, old: old ? old.t : null, beat: !!old && t < old.t, diff: old ? Math.round((t - old.t) * 10) / 10 : null };
+  };
+  // 勝ち時計がレコードなら書きかえる。前のレコードを破ったときは { t, old, diff, rode } を返す（結果の画面の「RECORD」に使う）
+  // rode：プレイヤーが乗って作ったレコード（一覧で強調する）
   W.noteRecord = function (race, sim) {
-    const w = sim.results[0]; if (!w || !(w.time > 0)) return;
+    const w = sim.results[0]; if (!w || !(w.time > 0)) return null;
     G.records.course = G.records.course || {};
     const key = W.recKey(race), old = G.records.course[key];
-    if (old && old.t <= w.time) return;
-    G.records.course[key] = { t: Math.round(w.time * 10) / 10, name: w.horse.name, year: race.year, race: R.label(race), mine: w.rider === 'P' || w.horse.owner === 'P' };
+    const chk = W.recordCheck(race, w.time, old || null);
+    if (old && !chk.beat) return null;
+    const rode = w.rider === 'P';
+    G.records.course[key] = { t: chk.t, name: w.horse.name, year: race.year, race: R.label(race), jockey: w.jockey ? w.jockey.name : '', rode, mine: rode || w.horse.owner === 'P', prev: old ? old.t : null };
     if (old && (w.rider === 'P' || w.horse.owner === 'P')) news(`${w.horse.name}が${race.course}${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}mのコースレコードを塗り替えた（${U.time(w.time)}）。`, 'good');
+    return old ? { t: chk.t, old: old.t, diff: chk.diff, rode, name: w.horse.name } : null;
   };
   // 騎乗せずに1週進める（馬主のゲームと、テスト）
   W.advance = () => W.finishWeek({});
@@ -1074,7 +1085,7 @@
   // ---------- セーブ ----------
   W.slimResult = function (r) {
     return {
-      key: r.race.key, name: r.race.name, short: r.race.short, grade: r.race.grade, year: r.race.year, region: r.race.region, course: r.race.course, surface: r.race.surface, dist: r.race.dist, ground: r.race.ground, mine: r.hasMine,
+      key: r.race.key, name: r.race.name, short: r.race.short, rec: r.rec || null, grade: r.race.grade, year: r.race.year, region: r.race.region, course: r.race.course, surface: r.race.surface, dist: r.race.dist, ground: r.race.ground, mine: r.hasMine,
       rows: r.sim.results.map(x => ({ pos: x.pos, num: x.num, frame: x.frame, name: x.horse.name, mine: x.mine, hist: !!x.horse.hist, sex: x.horse.sex, age: G.year - x.horse.born, jockey: x.jockey && x.jockey.name, weight: x.weight, time: Math.round(x.time * 10) / 10, margin: x.margin, last3f: x.last3f ? Math.round(x.last3f * 10) / 10 : null, pop: x.pop, odds: x.odds, sire: x.horse.sire })),
     };
   };
@@ -1107,6 +1118,8 @@
       if (h.kire == null) h.kire = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[h.style] || 4;
       h.skills = h.skills || [];
     }
+    // コースレコードの「自分で乗って作ったか」（前の版のセーブには無い。騎手のゲームでは自分の馬＝自分が乗った馬）
+    for (const rc of Object.values(g.records.course || {})) if (rc.rode == null) rc.rode = !!rc.mine && g.mode === 'jockey';
     // 前の版のエディット（瞬発力などの数値）は、遊ぶときに H.fromHistoric が読み替える
     g.v = SAVE_VERSION;
   };

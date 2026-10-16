@@ -820,6 +820,8 @@ check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中�
   return `素材 ${files.length}・合計 ${(total / 1048576).toFixed(2)}MB・騎手 ${tHi}/${tLo} 面・骨 ${names.length}・IK のずれ 手 ${(worst.hand * 100).toFixed(1)}cm 足 ${(worst.foot * 100).toFixed(1)}cm`;
 });
 
+require('./extra_replay.js')(check, assert, HS); // レコード・リプレイ・フリーレース
+
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
 process.exit(failures ? 1 : 0);

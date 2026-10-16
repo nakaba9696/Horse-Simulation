@@ -839,3 +839,16 @@ main.enter-back { animation: backin 300ms var(--ease) both; }
 @media (prefers-reduced-motion: reduce) { .navsel { animation: none !important; box-shadow: 0 0 0 2px var(--accent-hi), 0 0 0 5px rgba(242, 217, 142, .3), 0 0 24px 4px rgba(242, 217, 142, .55) !important; } }
 /* 大きな PC の画面（1600px 以上）は列を広げる */
 @media (min-width: 1600px) { :root, html[data-theme] { --w-app: 1200px; } .mgr-cmds button { min-height: 120px; } }
+
+/* コースレコード（js/ui/records.js）：一覧の★と、結果の画面の「RECORD」の札 */
+.rec-star { color: var(--accent-hi); margin-right: 4px; text-shadow: 0 0 6px rgba(242, 217, 142, .6); }
+.rec-t tr.rec-mine td:first-child { box-shadow: inset 4px 0 0 var(--accent-hi); }
+.rec-banner { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 var(--sp-3); padding: 10px 14px; border-radius: 10px;
+  background: linear-gradient(90deg, rgba(150, 20, 14, .2), rgba(190, 28, 20, .85) 30%, rgba(190, 28, 20, .85) 70%, rgba(150, 20, 14, .2)); color: #fff; box-shadow: 0 0 18px rgba(255, 80, 50, .35); animation: rec-in .5s ease-out; }
+.rec-banner .rec-word { font: 900 30px "Noto Serif JP", serif; letter-spacing: .12em; color: #ffe08a; text-shadow: 0 2px 0 rgba(0, 0, 0, .4); }
+.rec-banner .rec-time { font: bold 20px monospace; }
+.rec-banner .rec-diff { font-weight: 700; color: #ffe08a; }
+.rec-banner .rec-old { opacity: .85; }
+.rec-banner.me { outline: 2px solid var(--accent-hi); }
+@keyframes rec-in { from { transform: scale(1.25); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rec-banner { animation: none; } }

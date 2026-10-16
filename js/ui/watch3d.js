@@ -108,6 +108,14 @@
             ctx.fillStyle = '#ff9a1f'; ctx.font = '12px "Noto Sans JP", sans-serif'; ctx.fillText(i === 0 ? U.time(r.time) : r.margin, bx2 + 104, y + 9);
           }
           ctx.globalAlpha = 1;
+          // レコードを破ったら、掲示板の下に「RECORD」と前のレコードとの差（data.rec＝W.noteRecord の戻り値）
+          if (data.rec && T > winT + 0.9) {
+            const a2 = Math.min(1, (T - winT - 0.9) / 0.4), yy = by2 + bh + 34, pulse = 0.75 + 0.25 * Math.sin(T * 6);
+            ctx.globalAlpha = a2; ctx.fillStyle = `rgba(190,28,20,${0.8 * pulse})`; rr(VW / 2 - 130, yy - 26, 260, 52, 8); ctx.fill();
+            ctx.fillStyle = '#ffe08a'; ctx.font = '900 30px "Noto Serif JP", serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('RECORD', VW / 2 - 34, yy);
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 15px "Noto Sans JP", sans-serif'; ctx.fillText(`${data.rec.diff < 0 ? '−' : '+'}${Math.abs(data.rec.diff).toFixed(1)}`, VW / 2 + 82, yy);
+            ctx.globalAlpha = 1;
+          }
         }
       }
       function loop(ts) {
