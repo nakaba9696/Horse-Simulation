@@ -277,10 +277,14 @@
     if (!x) return [];
     const me = T.dcRunners()[cat];
     const out = me ? [{ horse: me, jockeyName: W.bestFreeJockey(race.key, me.id), mine: true }] : [];
+    let nf = out.filter(e => e.horse.foreignTrained).length;
     for (const id of x.ai) {
       if (out.length >= T.DC_FIELD) break;
       const h = W.horse(id);
-      if (h && h.owner !== 'P' && h.loc === 'stable' && !h.injury) out.push({ horse: h });
+      if (!h || h.owner === 'P' || h.loc !== 'stable' || h.injury) continue;
+      if (h.foreignTrained && nf >= T.DC_FOREIGN) continue; // 抜けた馬の代わりを補欠から埋めるときも、外国の馬の枠を守る
+      if (h.foreignTrained) nf++;
+      out.push({ horse: h });
     }
     return out;
   };
