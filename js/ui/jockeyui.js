@@ -362,7 +362,7 @@
     App.render();
     App.modal(`<h3>${e(name)}騎手、デビュー</h3>
       <p>${W.get().year}年1月。${e(W.get().jockey.region)}所属の新人騎手として、最初の依頼を待つ。</p>
-      <ul class="small"><li><b>騎乗依頼</b>：毎週、調教師から依頼が来る。受けたレースに乗る。</li>
+      <ul class="small"><li><b>騎乗依頼</b>：毎週、馬主から依頼が来る。受けたレースに乗る。仲良くなるほど大きなレースの依頼が来る。</li>
         <li><b>騎乗</b>：「抑える」で脚をため、「追う」を馬の拍子に合わせて押し、ゴール前は「ムチ」。前が壁なら進路を変える。</li>
         <li>操作したくないレースは「おまかせ」で乗れる。</li><li>勝って評判を上げれば、強い馬と大きいレースの依頼が来る。</li></ul>
       <div class="btns"><button class="btn gold" data-act="close">はじめる</button></div>`);
@@ -405,6 +405,7 @@
         if (r.ridden) await resultOf(r);
         else await App.playRace(r, false);
       }
+      if (UI.ownersAfterWeek) await UI.ownersAfterWeek(report); // 馬主のひと言とご褒美（js/ui/ownersui.js）
       // トロフィーを手にした・スペシャルホースを破った：大きな見せ場
       const G1 = W.get();
       for (const id of Object.keys(G1.trophies || {}).filter(k => !tr0.includes(k))) {
@@ -446,6 +447,7 @@
           <button class="pd-nav l" data-d="-1" aria-label="前の馬">◀</button><button class="pd-nav r" data-d="1" aria-label="次の馬">▶</button>
           <div class="pd-band"></div></div>
         ${UI.entryTable(card)}
+        ${UI.paddockOwner ? UI.paddockOwner(card, runner) : ''}
         <div class="panel mt offer"><div class="row"><b>${e(h.name)}</b><span class="small muted">${e(J.trainerOf(h))}調教師より</span></div>
           <div class="comment">「${tip}${kireTip}」</div>
           ${UI.hasSkills(h) ? `<div class="pd-myskills mt">${UI.skillList(h)}</div>` : ''}${UI.numStats(h, wIdx, { surface: card.race.surface })}</div>

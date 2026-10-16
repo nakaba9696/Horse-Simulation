@@ -1023,6 +1023,7 @@ check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中�
 });
 
 require('./extra_replay.js')(check, assert, HS); // レコード・リプレイ・フリーレース
+require('./extra_owners.js')(check, assert, HS); // 馬主と騎乗依頼
 
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);

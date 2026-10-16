@@ -1,0 +1,78 @@
+/* 馬主と騎乗依頼の画面（js/ui/ownersui.js）。色は style.css の役目の変数と、馬主ごとの勝負服の色（--oc・--oc2） */
+.oface { display: block; flex: none; border-radius: 18%; box-shadow: 0 0 0 2px color-mix(in srgb, var(--oc, var(--accent)) 70%, #fff 0%), 0 6px 14px -6px rgba(0, 0, 0, .7); }
+button.own-face { padding: 0; border: 0; background: none; cursor: pointer; border-radius: 18%; }
+button.own-face:hover .oface { transform: translateY(-2px); transition: transform var(--dur) var(--ease); }
+
+.own-tier { display: inline-block; margin-left: var(--sp-2); padding: 1px 8px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .04em; vertical-align: 2px;
+  background: var(--surface-3); color: var(--text-2); border: 1px solid var(--line-2); }
+.own-tier.t1 { background: rgba(130, 200, 255, .14); color: var(--info); border-color: rgba(130, 200, 255, .35); }
+.own-tier.t2 { background: rgba(214, 173, 76, .18); color: var(--accent-hi); border-color: var(--line-strong); }
+.own-tier.t3 { background: var(--gold-grad); color: var(--on-accent); border-color: transparent; }
+.own-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--sp-2); }
+.own-who b { font-size: var(--fs-md); }
+.own-who .own-tier { margin-left: 0; }
+.own-say { margin: 4px 0; padding: 6px 10px; border-radius: var(--r); background: var(--sunk); border-left: 3px solid var(--oc, var(--accent)); font-size: var(--fs-base); line-height: 1.6; }
+.own-race { font-size: var(--fs-sm); color: var(--text); }
+.own-clash { margin-top: 4px; padding: 4px 8px; border-radius: var(--r-sm); background: rgba(255, 189, 90, .12); color: var(--warn); font-size: var(--fs-sm); }
+.own-silks { width: 26px; height: 26px; vertical-align: -6px; }
+
+/* 依頼の札：左に顔、勝負服の色の帯 */
+.own-offer { position: relative; display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3) var(--sp-3) var(--sp-3) calc(var(--sp-3) + 6px); border-radius: var(--r-lg);
+  background: linear-gradient(100deg, color-mix(in srgb, var(--oc) 22%, transparent), transparent 46%), var(--glass); border: 1px solid var(--line-2); box-shadow: var(--sh-1); overflow: hidden; }
+.own-offer::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: repeating-linear-gradient(180deg, var(--oc) 0 10px, var(--oc2) 10px 14px); }
+.own-offer.on { border-color: var(--line-strong); }
+.own-offer .grow > * + * { margin-top: 3px; }
+.own-offers { display: grid; gap: var(--sp-3); }
+.own-offers .own-offer { animation: own-in .42s var(--ease) both; }
+.own-offers .own-offer:nth-child(2) { animation-delay: .06s; } .own-offers .own-offer:nth-child(3) { animation-delay: .12s; } .own-offers .own-offer:nth-child(4) { animation-delay: .18s; }
+@keyframes own-in { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+
+/* 好感度の帯 */
+.own-gauge { position: relative; height: 8px; margin-top: 6px; border-radius: var(--r-pill); background: var(--sunk); overflow: hidden; box-shadow: 0 0 0 1px var(--line) inset; }
+.own-gauge i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: linear-gradient(90deg, #ff9fb8, #ffd34d); box-shadow: 0 0 10px rgba(255, 180, 120, .6); }
+.own-next { margin-top: 2px; }
+.own-up { color: var(--accent-hi); font-weight: 700; font-size: var(--fs-sm); }
+
+/* 一覧 */
+.own-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--sp-3); }
+.own-card { position: relative; display: flex; gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-lg); cursor: pointer; border: 1px solid var(--line-2);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--oc) 26%, transparent), transparent 55%), var(--glass); box-shadow: var(--sh-1); transition: transform var(--dur) var(--ease), border-color var(--dur); }
+.own-card:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+.own-card .grow > * + * { margin-top: 2px; }
+
+/* 詳しい画面 */
+.own-hero { display: flex; gap: var(--sp-5); align-items: center; margin-top: var(--sp-4); padding: var(--sp-4); border-radius: var(--r-xl); border: 1px solid var(--line-strong);
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--oc) 40%, transparent), transparent 60%), var(--glass); box-shadow: var(--sh-2); }
+.own-hero .oface { box-shadow: 0 0 0 3px var(--oc2), 0 0 0 6px var(--oc), 0 18px 40px -14px rgba(0, 0, 0, .8); }
+.own-name { font-family: var(--ff-serif); font-size: var(--fs-xl); font-weight: 900; color: var(--accent-hi); }
+.own-name small { display: block; font-family: var(--ff-sans); font-size: var(--fs-sm); font-weight: 400; color: var(--text-2); }
+.own-title { font-weight: 700; margin-bottom: 4px; }
+.own-ladder { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--sp-2); }
+.own-ladder li { padding: var(--sp-2) var(--sp-3); border-radius: var(--r); background: var(--sunk); border: 1px solid var(--line); color: var(--text-3); display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); }
+.own-ladder li b { font-size: var(--fs-base); }
+.own-ladder li em { font-style: normal; font-weight: 700; }
+.own-ladder li em.got { color: var(--good); }
+.own-ladder li.on { color: var(--text); border-color: var(--line-strong); background: linear-gradient(180deg, rgba(214, 173, 76, .12), transparent), var(--surface-2); }
+@media (max-width: 760px) { .own-ladder { grid-template-columns: 1fr 1fr; } .own-hero { flex-direction: column; text-align: center; } }
+
+/* パドック・レースのあと */
+.own-paddock, .own-react { display: flex; gap: var(--sp-3); align-items: flex-start; }
+.own-react { padding: var(--sp-3); border-radius: var(--r-lg); background: var(--glass); border: 1px solid var(--line-2); }
+.own-react + .own-react { margin-top: var(--sp-2); }
+
+/* ご褒美の場面：大きな顔と、ひと言ずつ入る台詞 */
+.own-scene { display: flex; gap: var(--sp-5); align-items: center; padding: var(--sp-3); }
+.own-scene-face { flex: none; animation: own-pop .5s var(--ease) both; }
+.own-scene-face .oface { box-shadow: 0 0 0 4px var(--oc2), 0 0 0 8px var(--oc), 0 0 50px rgba(255, 220, 140, .45); }
+.own-scene-body { flex: 1; min-width: 0; }
+.own-kicker { display: inline-block; padding: 2px 12px; border-radius: var(--r-pill); background: var(--gold-grad); color: var(--on-accent); font-weight: 900; letter-spacing: .06em; font-size: var(--fs-sm); }
+.own-scene .own-name { margin: 6px 0 var(--sp-3); }
+.own-talk p { margin: 0 0 var(--sp-2); font-size: var(--fs-md); line-height: 1.7; opacity: 0; animation: own-line .5s var(--ease) both; animation-delay: calc(.35s + var(--d) * .55s); }
+.own-reward { margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r); border: 1px solid var(--line-strong); background: rgba(214, 173, 76, .12); color: var(--accent-hi); font-weight: 700;
+  opacity: 0; animation: own-line .5s var(--ease) both; animation-delay: calc(.35s + var(--d) * .55s); }
+@keyframes own-pop { from { opacity: 0; transform: scale(.82) rotate(-4deg); } to { opacity: 1; transform: none; } }
+@keyframes own-line { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 760px) { .own-scene { flex-direction: column; text-align: center; } }
+@media (prefers-reduced-motion: reduce) { .own-talk p, .own-reward, .own-scene-face, .own-offers .own-offer { animation: none; opacity: 1; } }
+.own-card .own-silks { position: absolute; top: 10px; right: 10px; }
+.own-card .own-who { padding-right: 30px; }
