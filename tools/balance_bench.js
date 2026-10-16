@@ -1,11 +1,12 @@
 // 立ち回りの釣り合いを測る（docs/BALANCE.md の表の数）。
 // 東京・芝2000・14頭。1頭目（h0）にプレイヤーが乗り、決まった乗り方の打ち手（tests/ridebot.js）で N 回走らせて、勝率・平均着順を出す。
 // 乗り方：おまかせ（騎手の腕で自動）・何もしない・ただ追う・噛み合った乗り方・噛み合わない乗り方
-// 使い方：node tools/balance_bench.js [field|upset|strong|fight|all] [N]
+// 使い方：node tools/balance_bench.js [field|upset|strong|fight|bond|all] [N]
 //   field … 同じ強さの相手（全頭 level 82）。脚質 × 気性（荒い・穏やか）ごと
 //   upset … 格上の相手（1頭だけ総合力が4・5上、ほかは3下）。勝率と、格上より先に入る割合
 //   strong … 自分の馬だけ総合力が4上。噛み合わないと強い馬でも負けるか
 //   fight … 競り合いの気合：根性の高い馬・低い馬の、競り合ったあとの伸び
+//   bond … 絆（同じ馬に自分で乗った回数）で、気性の荒い馬の折り合いがどう変わるか
 const { load } = require('../tests/load.js');
 const HS = globalThis.HS && globalThis.HS.Sim ? globalThis.HS : load();
 const U = HS.U, H = HS.Horse, S = HS.Sim;
@@ -30,7 +31,7 @@ function setGuts(h, g) {
 function bench(o) {
   const rng = new U.RNG(o.seed || 41);
   const n = o.N || N;
-  const out = { win: 0, pos: 0, beat: 0, rivalWin: 0, kakari: 0, byPace: {} };
+  const out = { win: 0, pos: 0, beat: 0, rivalWin: 0, kakari: 0, tension: 0, byPace: {} };
   for (let k = 0; k < n; k++) {
     const field = [];
     for (let i = 0; i < 14; i++) {
@@ -43,9 +44,11 @@ function bench(o) {
     }
     const race = Object.assign({ dist: 2000, surface: '芝', course: '東京', ground: '良', year: 2004, month: 5 }, o.race || {});
     const ride = o.policy !== 'omakase';
-    const sim = S.create(race, field, H.weekIndex(2004, 5, 1), new U.RNG(rng.int(1, 1e9)), { ride });
+    const sim = S.create(race, field, H.weekIndex(2004, 5, 1), new U.RNG(rng.int(1, 1e9)), { ride, bond: o.bond });
     const tick = ride ? BOT.make(o.policy) : null;
-    while (!S.step(sim)) { if (tick) tick(sim); }
+    let tsum = 0, tn = 0;
+    while (!S.step(sim)) { if (tick) tick(sim); if (sim.ctl && !sim.st[0].spurting && sim.st[0].x > sim.D * 0.2) { tsum += sim.ctl.tension; tn++; } }
+    out.tension += tn ? tsum / tn : 0;
     const res = S.finish(sim).results;
     const q = res.findIndex(r => r.horse.name === 'h0') + 1, qr = res.findIndex(r => r.horse.name === 'h1') + 1;
     out.pos += q; if (q === 1) out.win++; if (q < qr) out.beat++; if (qr === 1) out.rivalWin++;
@@ -53,7 +56,7 @@ function bench(o) {
     const v = S.paceVerdict(sim.paceF), b = out.byPace[v] = out.byPace[v] || { n: 0, pos: 0, win: 0 };
     b.n++; b.pos += q; if (q === 1) b.win++;
   }
-  out.win /= n; out.pos /= n; out.beat /= n; out.rivalWin /= n; out.kakari /= n;
+  out.win /= n; out.pos /= n; out.beat /= n; out.rivalWin /= n; out.kakari /= n; out.tension /= n;
   for (const v in out.byPace) { const b = out.byPace[v]; b.pos /= b.n; b.win /= b.n; }
   return out;
 }
@@ -104,6 +107,20 @@ function strongTable() {
   return rows;
 }
 
+// 絆（同じ馬に自分で乗った回数）：初騎乗・3回・12回で、気性の荒い馬（気性55）の掛かりやすさと着順
+function bondTable() {
+  const rows = [];
+  console.log('絆（自分で乗った回数）と折り合い（差し・気性55）。道中の気分の平均・掛かった割合・平均着順');
+  for (const policy of ['fit', 'misfit']) {
+    for (const bond of [0, 3, 12]) {
+      const r = bench({ style: '差し', mind: 55, policy, bond });
+      rows.push({ policy, bond, r });
+      console.log(`${POL_JA[policy]}・${bond}回　気分 ${r.tension.toFixed(0)}　掛かり ${pct(r.kakari)}%　平均着順 ${r.pos.toFixed(2)}　勝率 ${pct(r.win)}%`);
+    }
+  }
+  return rows;
+}
+
 // 競り合いの気合：根性だけを変えた馬（おまかせ）の勝率と、気合の最大
 function fightTable() {
   const rows = [];
@@ -121,5 +138,6 @@ if (require.main === module) {
   if (what === 'upset' || what === 'all') upsetTable();
   if (what === 'strong' || what === 'all') strongTable();
   if (what === 'fight' || what === 'all') fightTable();
+  if (what === 'bond' || what === 'all') bondTable();
 }
-module.exports = { bench, fieldTable, upsetTable, strongTable, fightTable, setMind, setGuts, FH };
+module.exports = { bench, fieldTable, upsetTable, strongTable, fightTable, bondTable, setMind, setGuts, FH };
