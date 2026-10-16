@@ -912,3 +912,19 @@ main.enter-back { animation: backin 300ms var(--ease) both; }
 .fr-course .course-svg { width: 100%; max-width: 360px; height: auto; display: block; margin: 0 auto; }
 .fr-t td.right, .fr-picks td.right { text-align: right; white-space: nowrap; }
 .fr #fr-q { min-height: var(--tap, 40px); padding: 6px 10px; border-radius: var(--r); border: 1px solid var(--line-2); background: var(--sunk); color: var(--text); }
+/* 距離ごとの GF：資格の表と、12月の6つの並び */
+.dc-mx th { text-align: center; vertical-align: bottom; }
+.dc-mx th small { display: block; font-weight: 400; color: var(--text-2); font-size: 11px; }
+.dc-mx td.dc-cell { text-align: center; white-space: nowrap; }
+.dc-mx td.dc-cell small { display: block; color: var(--text-2); font-size: 11px; }
+.dc-mx .dc-badge { min-width: 56px; }
+.dc-mx { table-layout: fixed; width: 100%; }
+.dc-mx th:first-child, .dc-mx td.dc-h { width: 26%; }
+.dc-mx th, .dc-mx td { padding-left: 4px; padding-right: 4px; }
+.dc-gfrow { padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); }
+.dc-gfrow:last-child { border-bottom: 0; }
+.dc-gfrow.done { opacity: .55; }
+.dc-gfhead { display: flex; gap: var(--sp-3); align-items: baseline; flex-wrap: wrap; }
+.dc-gfmine { margin-top: 2px; }
+.dc-card.off { opacity: .55; }
+.dc-card .warn { color: var(--warn); }

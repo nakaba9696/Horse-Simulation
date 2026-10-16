@@ -80,10 +80,23 @@
   let raceCountries = null;
   const countryOfRace = r => (HS.DATA.courses[r.course] || {}).country || r.country || '海外';
   const lockCache = new Map();
+  // いちばん上の段「GF の馬」（持ち主の声 2026-10-16「GFを勝ったら開放される馬も欲しいです」）：
+  // とびきり強い馬（完成の総合力が E.GF_FH 以上＝店の馬の上位3%ほど、か評価 E.GF_RATING 以上。約150頭）は、
+  // 国や格の鍵の代わりに、その馬の得意な距離の GF を勝つと並ぶ（区分は HS.Season.gfCatOfData）
+  E.GF_FH = 70; E.GF_RATING = 98;
+  E.eliteCat = function (d) {
+    const T = HS.Season;
+    if (!T || !T.gfCatOfData) return null;
+    const pk = T.fhPeak(H.fromHistoric(d, 'lock:' + d.name));
+    if (Math.max(pk.turf, pk.dirt) < E.GF_FH && (d.rating || 0) < E.GF_RATING) return null;
+    return T.gfCatOfData(d, pk);
+  };
   E.lockOf = function (d) {
     if (lockCache.has(d.name)) return lockCache.get(d.name);
     let key = '';
-    if (HS.DATA.isForeign(d)) {
+    const gf = E.eliteCat(d);
+    if (gf) key = 'gf:' + gf;
+    else if (HS.DATA.isForeign(d)) {
       if (!raceCountries) { raceCountries = new Set(); for (const r of HS.DATA.races || []) if (r.region === '海外') raceCountries.add(countryOfRace(r)); }
       const c = E.COUNTRY_NEAR[d.country] || d.country;
       key = 'c:' + (raceCountries.has(c) ? c : '海外');
@@ -97,11 +110,13 @@
     return key;
   };
   // 鍵の名前と開け方
-  E.lockLabel = k => k === 'g1' ? 'G1馬' : k === 'g2' ? 'G2馬' : k === 'local' ? '地方馬' : k.startsWith('c:') ? `${E.COUNTRY_NAME[k.slice(2)] || k.slice(2)}の馬` : '';
-  E.lockHint = k => k === 'g1' ? 'G1を勝つ' : k === 'g2' ? 'G2かG1を勝つ' : k === 'local' ? '地方のレースを勝つ' : k === 'c:海外' ? '海外のレースを勝つ' : k.startsWith('c:') ? `${E.COUNTRY_NAME[k.slice(2)] || k.slice(2)}のレースを勝つ` : '';
+  const gfLabel = k => (HS.Season.GF_BY[k.slice(3)] || {}).label || k.slice(3);
+  E.lockLabel = k => k.startsWith('gf:') ? `GFの馬（${gfLabel(k)}）` : k === 'g1' ? 'G1馬' : k === 'g2' ? 'G2馬' : k === 'local' ? '地方馬' : k.startsWith('c:') ? `${E.COUNTRY_NAME[k.slice(2)] || k.slice(2)}の馬` : '';
+  E.lockHint = k => k.startsWith('gf:') ? `${gfLabel(k)}のGFを勝つ` : k === 'g1' ? 'G1を勝つ' : k === 'g2' ? 'G2かG1を勝つ' : k === 'local' ? '地方のレースを勝つ' : k === 'c:海外' ? '海外のレースを勝つ' : k.startsWith('c:') ? `${E.COUNTRY_NAME[k.slice(2)] || k.slice(2)}のレースを勝つ` : '';
   // 勝ったレースで開く鍵
   E.keysOfWin = function (race) {
-    const out = [], g = GRADE_RANK[race.grade] || 0;
+    const out = [], g = race.grade === 'GF' ? 3 : GRADE_RANK[race.grade] || 0; // GF は G1 と同じに数える
+    if (race.grade === 'GF' && race.gf) out.push('gf:' + race.gf);
     if (g >= 2) out.push('g2');
     if (g >= 3) out.push('g1');
     if (race.region === '地方') out.push('local');
@@ -126,7 +141,8 @@
   E.locks = function () {
     const G = W.get(), cnt = new Map();
     for (const d of E.pool()) { const k = E.lockOf(d); if (k) cnt.set(k, (cnt.get(k) || 0) + 1); }
-    const order = k => k === 'g2' ? 0 : k === 'g1' ? 1 : k === 'local' ? 2 : k === 'c:海外' ? 99 : 3;
+    const gfo = k => HS.Season.GF_CATS.findIndex(c => 'gf:' + c.id === k);
+    const order = k => k === 'g2' ? 0 : k === 'g1' ? 1 : k.startsWith('gf:') ? 1.1 + gfo(k) / 100 : k === 'local' ? 2 : k === 'c:海外' ? 99 : 3;
     return [...cnt.entries()].map(([k, n]) => ({ key: k, label: E.lockLabel(k), hint: E.lockHint(k), n, open: (G.shopKeys || []).includes(k) }))
       .sort((a, b) => order(a.key) - order(b.key) || b.n - a.n);
   };
@@ -138,6 +154,12 @@
       for (const w of h.gradedWins || []) for (const k of E.keysOfWin({ grade: w.grade, region: w.region, course: '' })) if (k !== 'c:海外') keys.add(k);
       for (const r of h.results || []) if (r.pos === 1) { const c = (HS.DATA.courses[r.course] || {}); if (c.region === '地方') keys.add('local'); if (c.region === '海外') { keys.add('c:' + (c.country || '海外')); keys.add('c:海外'); } }
     }
+    return [...keys];
+  };
+  // 前のセーブ：自分の馬が勝った GF の区分の鍵（World.migrate から。区分の無い前の GF は中長距離）
+  E.gfKeys = function (g) {
+    const keys = new Set();
+    for (const h of Object.values(g.horses || {})) if (h.owner === 'P') for (const w of h.gradedWins || []) { const c = HS.Season.gfCatOfName(w.short || w.race); if (c) keys.add('gf:' + c); }
     return [...keys];
   };
   let mk = null;

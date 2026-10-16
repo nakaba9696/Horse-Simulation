@@ -14,11 +14,11 @@
   O.on = () => { const G = W.get(); return !!(G && G.eraless); };
   O.retired = sex => W.mine().filter(h => h.loc === 'retired' && (sex === '牝' ? h.sex === '牝' : h.sex !== '牝'));
 
-  // 親としてのボーナス：その馬で手にしたトロフィーと、グランドフィナーレの勝ち（前の名前ドリームクラシックも）
+  // 親としてのボーナス：その馬で手にしたトロフィーと、グランドフィナーレの勝ち（どの距離でも。前の名前ドリームクラシックも）
   O.bonusOf = function (h) {
     const G = W.get();
     const tr = Object.values(G.trophies || {}).filter(t => t.horse === h.name).length;
-    const dc = (h.gradedWins || []).filter(g => [HS.Season.DC_NAME, 'ドリームクラシック'].includes(g.short || g.race)).length;
+    const dc = HS.Season.gfWins(h).length; // どの距離の GF でも数える
     return { trophies: tr, dc, pts: Math.min(O.BONUS_MAX, (tr + dc) * O.BONUS_PER) };
   };
 

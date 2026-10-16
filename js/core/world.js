@@ -71,7 +71,7 @@
     U.ERA = eraless ? HS.Eraless.ERA : null;
     const year0 = eraless ? HS.Eraless.START : (opts.year || 1995);
     G = {
-      v: SAVE_VERSION, seed, rngState: seed, year: year0, month: 1, week: 1, eraless, startYear: year0, lineup: {}, unlocked: [], shopKeys: [], trophies: {},
+      v: SAVE_VERSION, seed, rngState: seed, year: year0, month: 1, week: 1, eraless, startYear: year0, lineup: {}, unlocked: [], shopKeys: [], trophies: {}, hallOwn: [], gfShop: 1,
       player: {
         name: opts.name || 'プレイヤー', farm: opts.farm || '新星牧場', crown: opts.crown || '',
         silks: opts.silks || { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, money: Math.round((opts.money || 30000) * U.priceIndex(year0) / 10) * 10,
@@ -453,8 +453,8 @@
     if (!entr.length && !(race.graded && race.grade === 'G1')) return null;
     // 頭数をそろえる
     const lvl = W.fillerLevel(race, year);
-    // 招待のレース（グランドフィナーレ）は招待馬だけで走る（頭数合わせの馬を足さない）
-    const want = race.invite ? entr.length : race.graded ? Math.max(entr.length, Math.min(max, r.int(max - 4, max))) : Math.max(entr.length, r.int(Math.min(10, max), max));
+    // 招待のレース（GF）は招待馬だけ。足りないときだけ16頭まで埋める
+    const want = race.invite ? Math.max(entr.length, HS.Season ? HS.Season.DC_FIELD : 16) : race.graded ? Math.max(entr.length, Math.min(max, r.int(max - 4, max))) : Math.max(entr.length, r.int(Math.min(10, max), max));
     const used = new Set(W.usedNames());
     const runners = entr.map(e => ({ horse: e.horse, jockey: e.jockeyName ? W.jockey(e.jockeyName) : null, mine: !!e.mine, legend: !!e.legend }));
     while (runners.length < want) {
@@ -1111,7 +1111,9 @@
     g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, course: {}, hall: [], player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
-    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; if (g.dc && !g.dc.ai && HS.Season && HS.Season.dcUpgrade) HS.Season.dcUpgrade(g); // 前の形の招待（自分の馬が全部出た） g.lineup = g.lineup || {}; g.unlocked = g.unlocked || []; if (g.eraless && !g.shopKeys) g.shopKeys = HS.Eraless ? HS.Eraless.migrateKeys(g) : []; // 前のセーブは、自分の馬の勝ち鞍で馬の店を開けておく g.trophies = g.trophies || {}; g.hallOwn = g.hallOwn || []; if (g.eraless && !g.startYear) g.startYear = 2025; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
+    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; g.lineup = g.lineup || {}; g.unlocked = g.unlocked || []; if (g.eraless && !g.shopKeys) g.shopKeys = HS.Eraless ? HS.Eraless.migrateKeys(g) : []; /* 前のセーブは、自分の馬の勝ち鞍で馬の店を開けておく */ g.trophies = g.trophies || {}; g.hallOwn = g.hallOwn || []; if (g.eraless && !g.startYear) g.startYear = 2025; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
+    if (g.dc && HS.Season && HS.Season.dcUpgrade) HS.Season.dcUpgrade(g); // 前の形の招待（GF が1つだった頃）を、距離ごとの GF の形に
+    if (g.eraless && !g.gfShop && HS.Eraless && HS.Eraless.gfKeys) { for (const k of HS.Eraless.gfKeys(g)) if (!g.shopKeys.includes(k)) g.shopKeys.push(k); g.gfShop = 1; } // 前のセーブ（GF の馬の段より前）：自分の馬が勝った GF の区分を開けておく
     for (const h of Object.values(g.horses)) {
       h.bonus = h.bonus || {}; h.results = h.results || []; h.gradedWins = h.gradedWins || []; h.coat = h.coat || '鹿毛';
       // 能力の形が変わる前のセーブ（瞬発力・パワー・賢さ・気性 → 気性・坂・脚の切れ）

@@ -82,7 +82,7 @@
     { id: 'tenno', label: '天皇賞の春秋制覇', test: ws => has(ws, '天皇賞・春') && has(ws, '天皇賞・秋') },
     { id: 'world', label: '海外G1制覇', test: ws => ws.some(w => w.region === '海外' && w.grade === 'G1') },
     { id: 'g1five', label: 'G1五勝', test: ws => ws.filter(w => w.grade === 'G1').length >= 5 },
-    { id: 'dc', label: 'グランドフィナーレ制覇', test: ws => ws.some(w => w.r === T.DC_NAME || w.r === 'ドリームクラシック') }, // 前の名前の勝ちも数える
+    { id: 'dc', label: 'グランドフィナーレ制覇', test: ws => ws.some(w => T.isGF(w.r)) }, // どの距離の GF でも、前の名前の勝ちも数える（T.isGF は dream.js）
   ];
   T.titles = function (h) {
     const ws = won(h), got = {};
@@ -203,24 +203,11 @@
   };
 
   // ---------- グランドフィナーレ（GF）：年末のドリームレース。その年に活躍した馬だけが招待されて走る ----------
-  // 12月4週（有馬記念と同じ週の最後）に東京芝2400mで走る。ほかのレースに出た馬も続けて出られる。
-  // 出られる条件（12月1週の招待）・自分の馬を1頭選ぶか出ないか・出走表は js/core/dream.js
+  // 距離ごとに5つ（芝1000・芝1600・芝2400・芝3200・ダート2000）。12月1週に招待し、2〜4週に走る。
+  // 出られる条件・自分の馬を1頭選ぶか出ないか・出走表は js/core/dream.js
   T.DC_NAME = 'グランドフィナーレ';
   T.DC_FIELD = 16;
-  T.dcRace = function (year) {
-    const G = HS.World.get(), R = HS.Races;
-    const arima = R.gradedOf(year, 12, 4).find(r => r.name === '有馬記念');
-    return {
-      name: T.DC_NAME, short: T.DC_NAME, grade: 'GF', region: 'JRA', course: '東京', surface: '芝', dist: 2400, month: 12, week: 4, age: '3+', weight: '定量',
-      key: `${year}-12-4-GF`, graded: true, invite: true, year, prize: arima ? arima.prize : 20000,
-      ground: R.ground(G.seed, year, 12, 4, '東京'),
-    };
-  };
-  // その週の特別なレースを足す（W.weekRaces から呼ぶ）
-  T.addSpecial = function (list, year, month, week) {
-    const G = HS.World.get();
-    if (G.mode === 'jockey' && month === 12 && week === 4 && G.dc && G.dc.y === year) list.push(T.dcRace(year));
-  };
+  // 5つの GF（距離ごと）・レースの形・招待・出走表は js/core/dream.js
 
   // ---------- 天気（馬場から決まる。週と競馬場ごと） ----------
   T.weather = function (seed, year, month, week, course, ground) {
