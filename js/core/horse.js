@@ -56,13 +56,17 @@
     oonige: { label: '大逃げ', note: '後ろを大きく離して逃げる' },
     longspurt: { label: 'ロングスパート', note: '早めに動いて長く脚を使う' },
     narabu: { label: '並ぶと強い', note: '競り合いで抜かせない' },
-    nino: { label: '二の脚', note: 'スタート後の加速が速く、前の位置を取る' },
+    nino: { label: '二の脚', note: 'スタート後の加速が速く、脚を使わずに前の位置を取る' },
+    jiyu: { label: '自由自在', note: '流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい' },
     inner: { label: '内枠巧者', note: '内の枠で走る' },
     travel: { label: '遠征巧者', note: '海外の大レースで力を出す' },
     homebody: { label: '遠征下手', note: '海外では力を出しきれない', bad: true },
     deokure: { label: '出遅れ癖', note: 'ゲートの出が悪い', bad: true },
     kakari: { label: '掛かり癖', note: '折り合いを欠きやすい', bad: true },
     sora: { label: 'ソラを使う', note: '先頭に立つと気を抜く', bad: true },
+    sunaB: { label: '砂かぶり×', note: 'ダートで前の馬の砂をかぶると嫌がり、脚を使う', bad: true },
+    leftB: { label: '左回り×', note: '左回りのコースでは力を出しきれない', bad: true },
+    rightB: { label: '右回り×', note: '右回りのコースでは力を出しきれない', bad: true },
   };
   H.SKILL_IDS = Object.keys(H.SKILLS);
   H.has = (h, id) => !!(h.skills && h.skills.includes(id));
@@ -262,6 +266,12 @@
       const left = cnt(r => (C[r.course] || {}).dir === '左'), right = cnt(r => (C[r.course] || {}).dir === '右');
       if (left >= 3 && right === 0) sk.push('left');
       else if (right >= 3 && left === 0) sk.push('right');
+      // 片方の回りでばかり勝った馬（4勝以上）は、反対の回りが苦手
+      if (left >= 4 && right === 0) sk.push('rightB');
+      else if (right >= 4 && left === 0) sk.push('leftB');
+      // 短い距離と長い距離（800m 以上の開き）の両方で勝った馬は、流れに合わせて位置を変えられる
+      const ds = ws.map(r => r.dist);
+      if (Math.max(...ds) - Math.min(...ds) >= 800) sk.push('jiyu');
       const short = cnt(r => (geo(r) || {}).straight < 330), longS = cnt(r => (geo(r) || {}).straight >= 450);
       if (short >= 2 && short / n >= 0.6) sk.push('small');
       else if (longS >= 3 && longS / n >= 0.7) sk.push('long');
@@ -278,6 +288,8 @@
       const x = rng.pick(pool); if (!sk.includes(x)) sk.push(x);
     }
     if (rng.chance(0.06)) sk.push(rng.pick(['deokure', 'kakari', 'sora']));
+    // ダートで前に行く馬は、砂をかぶるのを嫌って前に行っている見立て（運で）
+    if ((d.style === '逃げ' || d.style === '先行') && cnt(r => r.surface === 'ダ') >= 1 && rng.chance(0.2)) sk.push('sunaB');
     return sk;
   };
 

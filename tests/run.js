@@ -498,6 +498,75 @@ check('skills: 発動する特殊能力は能力値から決まり、数に上�
   return `平均 ${(total / n).toFixed(1)}個・なし${Math.round(base * 100)}% ${out.join(' ')}`;
 });
 
+check('skills: 系統を1つずつ回して選ぶ・一気系は1レースに1つだけ・足した能力（自由自在・砂かぶり×・左右の回り×）が効く', () => {
+  const K = HS.Skills, S = HS.Sim;
+  // 選び方：系統を1つずつ回すので、まだ取っていない系統に持てる能力があるのに、同じ系統を2つ取ることはない
+  const rng = new U.RNG(15);
+  for (let i = 0; i < 400; i++) {
+    const h = H.makeFiller(rng, { level: 70 + (i % 30), surface: '芝', dist: 2000, born: 2000 });
+    const p = K.stats(h), ids = K.of(h);
+    const groups = ids.map(id => K.BY[id].group);
+    const avail = K.ORDER.filter(g => K.LIST.some(k => k.group === g && k.learn(p)));
+    if (new Set(groups).size < groups.length) assert(avail.every(g => groups.includes(g)), `系統が偏る ${ids.join(',')}（取れる系統 ${avail.join(',')}）`);
+  }
+  // 一気系を3つ持たせても、1レースで発動するのは1つだけ
+  const setup0 = K.setup;
+  K.setup = sim => { setup0(sim); sim.st[0].trig = ['saikoubi', 'chokusen', 'oosoto']; };
+  let ikki = 0, over = 0;
+  try {
+    const r = new U.RNG(8);
+    for (let k = 0; k < 40; k++) {
+      const field = []; for (let i = 0; i < 14; i++) { const h = H.makeFiller(r, { level: 82, surface: '芝', dist: 2000, born: 2000 }); if (i === 0) h.style = '追込'; field.push({ horse: h, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 }); }
+      const sim = S.create({ dist: 2000, surface: '芝', course: '東京', ground: '良', year: 2004 }, field, H.weekIndex(2004, 5, 1), r, {});
+      while (!S.step(sim)) { /* 進める */ }
+      const n = sim.skillFx.filter(f => f.i === 0 && K.BY[f.id] && K.BY[f.id].ikki).length;
+      if (n) ikki++; if (n > 1) over++;
+    }
+  } finally { K.setup = setup0; }
+  assert(ikki >= 10 && over === 0, `一気系の発動 ${ikki}/40・2つ以上 ${over}`);
+  // 自由自在：スローなら前、ハイなら後ろで運ぶ。持たない馬は変わらない
+  const h = H.makeFiller(new U.RNG(2), { level: 80, surface: '芝', dist: 2000, born: 2000 }); h.style = '差し';
+  const plain = S.runPos(h, 0.99).gap;
+  h.skills = ['jiyu'];
+  assert(S.runPos(h, 0.99).gap < plain && S.runPos(h, 1.01).gap > plain && S.runPos(h, 1).gap === plain, '自由自在で位置が変わらない');
+  // 左回り×・右回り×は、苦手な回りで総合が下がる
+  const race = c => ({ course: c, surface: '芝', dist: 2000, grade: 'G2', month: 5 });
+  assert(S.skillAdj({ skills: ['leftB'] }, race('東京'), null, {}) < 0 && S.skillAdj({ skills: ['leftB'] }, race('中山'), null, {}) === 0, '左回り×');
+  assert(S.skillAdj({ skills: ['rightB'] }, race('中山'), null, {}) < 0 && S.skillAdj({ skills: ['rightB'] }, race('東京'), null, {}) === 0, '右回り×');
+  // 砂かぶり×：ダートで前に馬がいると脚を使い、着順が下がる
+  const dirt = mod => { const r = new U.RNG(17); let pos = 0; const N = 150;
+    for (let k = 0; k < N; k++) {
+      const field = []; for (let i = 0; i < 14; i++) { const x = H.makeFiller(r, { level: 82, surface: 'ダ', dist: 1800, born: 2000 }); x.name = 'h' + i; if (i === 0) { x.style = '差し'; mod(x); } field.push({ horse: x, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 }); }
+      pos += S.run({ dist: 1800, surface: 'ダ', course: '東京', ground: '良', year: 2004 }, field, H.weekIndex(2004, 5, 1), r, {}).results.findIndex(x => x.horse.name === 'h0') + 1;
+    }
+    return pos / N; };
+  const suna = dirt(x => { x.skills = ['sunaB']; }), none = dirt(x => { x.skills = []; });
+  assert(suna > none, `砂かぶり×が損になっていない（${suna.toFixed(2)}・なし ${none.toFixed(2)}）`);
+  // 史実馬にも付く
+  const hs = D.historic.slice(0, 3000).map((d, i) => H.fromHistoric(d, 't' + i));
+  for (const id of ['jiyu', 'leftB', 'sunaB']) assert(hs.some(x => x.skills.includes(id)), `${H.SKILLS[id].label}を持つ史実馬がいない`);
+  return `一気系 ${ikki}/40 で1つずつ・砂かぶり× 平均着順 ${none.toFixed(2)}→${suna.toFixed(2)}`;
+});
+check('sim: ペース：スローは前・ハイは後ろが有利、平均ペースは脚質がおおむね釣り合う', () => {
+  const S = HS.Sim;
+  const bins = { 'スローペース': {}, '平均ペース': {}, 'ハイペース': {} };
+  const rng = new U.RNG(77);
+  for (let k = 0; k < 220; k++) {
+    const field = []; for (let i = 0; i < 14; i++) field.push({ horse: H.makeFiller(rng, { level: 82, surface: '芝', dist: 2000, born: 2000 }), jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 });
+    const sim = S.create({ dist: 2000, surface: '芝', course: '東京', ground: '良', year: 2004 }, field, H.weekIndex(2004, 5, 1), rng, {});
+    while (!S.step(sim)) { /* 進める */ }
+    const b = bins[S.paceVerdict(sim.paceF)];
+    S.finish(sim).results.forEach(r => { const x = b[r.horse.style] = b[r.horse.style] || { n: 0, pos: 0 }; x.n++; x.pos += r.pos; });
+  }
+  const avg = (v, sts) => { let n = 0, p = 0; for (const st of sts) if (bins[v][st]) { n += bins[v][st].n; p += bins[v][st].pos; } return p / n; };
+  const F = ['逃げ', '先行'], B = ['差し', '追込'];
+  assert(avg('スローペース', F) < avg('スローペース', B) - 1, 'スローで前が有利になっていない');
+  assert(avg('ハイペース', B) < avg('ハイペース', F) - 1, 'ハイで後ろが有利になっていない');
+  const mid = H.STYLES.map(st => avg('平均ペース', [st]));
+  assert(Math.max(...mid) - Math.min(...mid) < 1.5, `平均ペースで脚質の差が大きい ${mid.map(x => x.toFixed(2)).join('・')}`);
+  return `平均ペースの平均着順 ${H.STYLES.map((st, i) => st + mid[i].toFixed(1)).join('・')}`;
+});
+
 check('ride: しごく・引くの段は手を止めても保たれ、追い通すと負ける。ムチは左右と持ち替え', () => {
   const S = HS.Sim;
   const play = (policy, N) => {
@@ -613,7 +682,8 @@ function fakeG1(G, h, name, surface, dist) {
 
 check('season: 年末にグランドフィナーレが距離ごとに5つ開かれ、招待馬が12月2〜4週に走る', () => {
   const T = HS.Season;
-  W.newGame({ year: 2005, seed: 12, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  // 種：長距離の GF の招待馬が12頭以上いる世界（長距離の馬は少なく、種しだいで11頭前後になる。史実馬のデータが変わったら選び直す）
+  W.newGame({ year: 2005, seed: 14, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
   assert(T.GF_CATS.length === 5 && T.GF_CATS.map(c => `${c.surface}${c.dist}`).join() === '芝1000,ダ2000,芝1600,芝3200,芝2400', '5つの GF（芝1000・芝1600・芝2400・芝3200・ダ2000）が無い');
   for (const w of [2, 3, 4]) assert(new Set(T.GF_CATS.filter(c => c.week === w).map(c => c.course)).size === T.GF_CATS.filter(c => c.week === w).length, `${w}週に同じ競馬場の GF が重なる`);
