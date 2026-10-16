@@ -55,6 +55,8 @@
     { id: 'us3', label: '米国の三冠馬', note: 'ケンタッキーダービー・プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['ケンタッキーダービー', 'プリークネスS']), member: d => dn(d, 'ケンタッキーダービー') && dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
     { id: 'us2', label: '米国の名馬', note: 'プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['プリークネスS']), member: d => dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
     { id: 'aus', label: '豪州の英雄', note: 'コックスプレートを勝ってメルボルンカップへ', finals: ['メルボルンカップ'], legs: sameYear(['コックスプレート']), member: d => dn(d, 'コックスプレート') && dn(d, 'メルボルンカップ') },
+    { id: 'gf', label: '伝説級の名馬', note: 'グランドフィナーレを勝って、次の年のグランドフィナーレへ', finals: ['グランドフィナーレ'], top: true,
+      legs: (h, race) => won(h, 'グランドフィナーレ', y => y === race.year - 1) || won(h, 'ドリームクラシック', y => y === race.year - 1), member: () => true },
     { id: 'g1five', label: 'G1を5勝した名馬', note: 'G1を4勝して、次のG1へ', finals: null, legs: (h, race) => race.grade === 'G1' && gw(h).length && (h.gradedWins || []).filter(g => g.grade === 'G1').length === 4, member: d => g1Count(d) >= 5 },
     { id: 'unbeaten', label: '無敗の名馬', note: `デビューから無敗で${SP.STREAK - 1}連勝して、次のレースへ`, finals: null, legs: h => (h.starts || 0) === (h.wins || 0) && (h.wins || 0) === SP.STREAK - 1, member: d => SP.unbeatenOf(d) >= SP.STREAK },
   ];
@@ -65,19 +67,41 @@
   for (const [name, m] of g1Map()) {
     if (seenShort.has(m.short)) continue; seenShort.add(m.short);
     const two = m.age === '2';
-    SP.GROUPS.push({ id: 'r:' + m.short, label: `歴代の${m.short}馬`, note: two ? `重賞を勝って${m.short}へ` : `G1を勝った馬で${m.short}へ`, finals: [m.short], race: true, at: m.at,
+    SP.GROUPS.push({ id: 'r:' + m.short, label: `歴代の${m.short}馬`, note: two ? `重賞を勝って${m.short}へ` : `G1を勝った馬で${m.short}へ`, finals: [m.short], race: true, at: m.at, prize: m.prize,
       legs: (h, race) => !won(h, race.short) && (two ? (h.gradedWins || []).length > 0 : (h.gradedWins || []).some(g => g.grade === 'G1')),
       member: d => (d.wins || []).some(x => { const k = SP.mapWin(x); return k && k.short === m.short; }) });
   }
   SP.BY = {}; SP.GROUPS.forEach(g => { SP.BY[g.id] = g; });
 
-  // スペシャルホースの元：1989年より前に走り終えた史実馬と、data/legends.js
+  // スペシャルホースの元：1989年より前に走り終えた史実馬のうち、有名で強い馬（名馬の解説があり、評価が SP.MIN_RATING 以上）と、data/legends.js
+  // 持ち主の決定 2026-10-16「有名な強い馬だけでいい」
+  SP.MIN_RATING = 92;
   let pool = null;
-  SP.pool = () => pool || (pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d)).concat(HS.DATA.legendsExtra || []));
+  SP.pool = function () {
+    if (pool) return pool;
+    const fam = new Set((HS.DATA.famous || []).map(f => f.name));
+    pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d) && fam.has(d.name) && (d.rating || 0) >= SP.MIN_RATING).concat(HS.DATA.legendsExtra || []);
+    return pool;
+  };
   SP.data = name => SP.pool().find(d => d.name === name) || null;
+  SP.isTop = d => d.tier === 'legend'; // 伝説級：グランドフィナーレのグループだけに入る
+  // 1頭が出てくる条件は1つだけ（持ち主の決定 2026-10-16）。グループに優先順を付け、各馬は当てはまるいちばん上のグループに入る
+  SP.PRIORITY = ['gf', 'triple', 'us3', 'uk3', 'arc2', 'unbeaten', 'ftriple', 'nikan', 'europe', 'autumn', 'spring', 'grandprix', 'tenno', 'arima2', 'mile', 'us2', 'aus', 'g1five'];
+  let assign = null;
+  const assignAll = function () {
+    if (assign) return assign;
+    assign = {};
+    const order = SP.PRIORITY.map(id => SP.BY[id]).filter(Boolean)
+      .concat(SP.GROUPS.filter(g => g.race).sort((a, b) => (b.prize || 0) - (a.prize || 0))); // 大レースは賞金の大きい順
+    const taken = new Set();
+    for (const g of order) {
+      assign[g.id] = SP.pool().filter(d => !taken.has(d.name) && (g.top ? SP.isTop(d) : !SP.isTop(d)) && g.member(d)).sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      for (const d of assign[g.id]) taken.add(d.name);
+    }
+    return assign;
+  };
   // グループの名馬（強い順）
-  const memCache = {};
-  SP.members = g => memCache[g.id] || (memCache[g.id] = SP.pool().filter(g.member).sort((a, b) => (b.rating || 0) - (a.rating || 0)));
+  SP.members = g => assignAll()[g.id] || [];
   // どれかのグループに入っている名馬（スペシャルホース）
   let list = null;
   SP.list = function () {
