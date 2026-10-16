@@ -63,10 +63,10 @@
   };
 
   // ---- 色（馬場の状態で変える） ----
-  function lookOf(surface, ground) {
+  function lookOf(surface, ground, weather) {
     const dirt = surface === 'ダ';
     const wet = ({ '良': 0, '稍重': 1, '重': 2, '不良': 3 })[ground] || 0;
-    const overcast = wet >= 2;
+    const overcast = wet >= 2 || weather === '曇' || weather === '雨' || weather === '雪'; // 天気を決めたレース（フリーレース）は天気でも
     return {
       dirt, wet, overcast,
       skyTop: overcast ? '#76838f' : wet === 1 ? '#4f88c6' : '#2f74cc',
@@ -1270,7 +1270,7 @@
     const D = setup.D || 2000;
     const L = tr.L;
     const sign = tr.sign || (course.dir === '左' ? -1 : 1);
-    const look = lookOf(setup.surface, setup.ground);
+    const look = lookOf(setup.surface, setup.ground, setup.weather);
     const horsesIn = setup.horses || [];
     const nH = horsesIn.length;
 

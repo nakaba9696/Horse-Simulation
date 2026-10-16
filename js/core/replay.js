@@ -97,7 +97,7 @@
     });
     const events = rp.events.map(([t, text, kind]) => ({ t, text, kind }));
     const race = Object.assign({}, rp.race);
-    return { race, runners, rec: rp.rec, sim: { results, events, frames, D: rp.D, straight: rp.straight, winnerTime: results[0].time } };
+    return { race, runners, rec: rp.rec, replay: true, sim: { results, events, frames, D: rp.D, straight: rp.straight, winnerTime: results[0].time } };
   };
   // 結果の表（UI.resultTable）に渡す形
   RP.slim = function (rp) {
