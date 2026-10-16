@@ -872,7 +872,7 @@ check('shop: 馬の店は少しずつ開く（はじめは G3 まで。G1・G2�
   return `はじめの店 ${new Set(E.market().map(x => x.horse.name)).size}頭（G1 とドイツを開けたあと）・鍵 ${locks.map(l => l.label + l.n).join(' ')}`;
 });
 
-check('shop: 品ぞろえは走っていない馬から牡馬・牝馬それぞれ10頭（毎月と鍵が開いたときに入れ替え・買うと消える・セーブに入る）', () => {
+check('shop: 品ぞろえは走っていない馬から牡馬・牝馬それぞれ10頭（毎月入れ替え・鍵が開いた馬は来月から・買うと消える・セーブに入る）', () => {
   const E = HS.Eraless;
   W.newGame({ seed: 24, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
@@ -887,10 +887,10 @@ check('shop: 品ぞろえは走っていない馬から牡馬・牝馬それぞ�
   // セーブの往復で同じ
   const s1 = W.serialize(); W.load(s1);
   assert(W.marketHistoric().map(x => x.horse.name).join() === names.slice(1).join(), 'セーブの往復で品ぞろえが変わる');
-  // 鍵が開くと入れ替わる
+  // 鍵が開いても、品ぞろえは来月まで同じ
   E.unlockWin({ grade: 'G1', region: 'JRA', course: '東京' });
   const n2 = W.marketHistoric().map(x => x.horse.name);
-  assert(n2.join() !== names.slice(1).join(), '鍵が開いても品ぞろえが変わらない');
+  assert(n2.join() === names.slice(1).join(), '鍵が開いたその月に品ぞろえが変わる（来月から）');
   // 月が変わると入れ替わる
   let guard = 0; const m0 = G.month;
   while (G.month === m0 && guard++ < 8) W.finishWeek({});
