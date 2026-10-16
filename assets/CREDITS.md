@@ -46,3 +46,18 @@ Poly Haven の素材はすべて CC0（https://polyhaven.com/license）。人物
 ### 探したが使わなかったもの（次に探す人のために）
 - 走る馬の骨つきの形（CC0）：写実の馬で骨と襲歩の動きのあるものは見つからなかった。Quaternius「Farm Animals Animated」（CC0、Run の動き）・OpenGameArt「horse」（CC0、骨なし 593 面）は、いまの手作りの馬より粗いので使わなかった。馬は手作りの形のまま、体の凹凸（法線の絵）と光の当たり方で質を上げた。
 - Sketchfab の馬：ダウンロードに登録が要るので、この環境からは取れなかった。
+
+
+## 馬主の顔
+
+持ち主が別のゲームのために作った絵（Stable Diffusion）。持ち主の決定 2026-10-16「馬主の顔は別のゲームで素材作ったのでそれでいきます」。`tools/pack_owners.cjs` で、表情4つ（ふだん・ほほえみ・喜び・残念。無い表情は近いものか基本の絵）を base64 にした。
+
+| ファイル | 馬主 | 元の絵 | 作者 | ライセンス | 出典 |
+|---|---|---|---|---|---|
+| `assets/owners_takenouchi.js` | 竹之内 源三郎 | `gensai.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
+| `assets/owners_saginomiya.js` | 鷺ノ宮 澪 | `farina.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
+| `assets/owners_makino.js` | 牧野 ひなた | `tiria.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
+| `assets/owners_kirishima.js` | 霧島 玲 | `constance.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
+| `assets/owners_sengoku.js` | 千石 悠斗 | `dil.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
+| `assets/owners_hanabusa.js` | 花房 つむぎ | `shione.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
+| `assets/owners_takarada.js` | 宝田 マリエ | `dorothea.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
