@@ -806,9 +806,11 @@
     // 頭絡（鼻革・額革・頬革）と手綱
     {
       const ring2 = (t0, t1, off) => [t0, t1].map(t => { const s = headSec(t); return ell(s.c, vHU(), Z, s.h + off, s.w + off, mHead, s.k * s.w / (s.w + off), 0.9); });
-      loft(B, ring2(0.6, 0.645, 0.008), [rig(4), rig(4)], cell('bridle'));
-      loft(B, ring2(0.1, 0.13, 0.008), [rig(4), rig(4)], cell('bridle'));
-      if (hi) for (const sd of [-1, 1]) {
+      // o.noBridle：頭絡を描かない（骨入りの馬の素材は、その頭に合わせた頭絡を js/ui/horse_rigged.js で描く。手綱は残す）
+      const bridle = !(o && o.noBridle);
+      if (bridle) loft(B, ring2(0.6, 0.645, 0.008), [rig(4), rig(4)], cell('bridle'));
+      if (bridle) loft(B, ring2(0.1, 0.13, 0.008), [rig(4), rig(4)], cell('bridle'));
+      if (hi && bridle) for (const sd of [-1, 1]) {
         const pts = [0.04, 0.3, 0.56, 0.84].map(t => headPt(t, Math.PI - sd * 1.32, 0.006));
         tube(B, pts, 0.011, 3, pts.map(() => rig(4)), cell('bridle'));
       }
@@ -2198,7 +2200,7 @@
     // ---- 馬 ----
     // 形は近く・遠くの2つを全頭で使い回す。馬ごとに違うのは絵（毛色・勝負服・ゼッケン）と、馬具の骨を見せるかだけ
     // 騎手の素材（GLB）があれば、馬の形からは騎手を抜き、騎手は別の形で描く（手綱・ムチ・鐙は馬の形のまま）
-    const hgeo = G(horseGeometry(1, { noJockey: useJockey, tack: rigged })), hgeoLo = G(horseGeometry(0, { noJockey: useJockey, tack: rigged }));
+    const hgeo = G(horseGeometry(1, { noJockey: useJockey, tack: rigged, noBridle: rigged })), hgeoLo = G(horseGeometry(0, { noJockey: useJockey, tack: rigged, noBridle: rigged }));
     if (photo && !HORSE_NOR) HORSE_NOR = horseNormalCanvas(512);
     const norTex = photo ? T(texOf(HORSE_NOR, false, aniso, true)) : null;
     const H = [];
@@ -2220,7 +2222,7 @@
       for (const [k, bi] of Object.entries(GEAR)) if (!h.gear[k]) bones[bi].scale.set(0, 0, 0);
       mesh.rotation.order = 'YXZ';
       let rig = null;
-      if (rigged) { try { rig = HRG.make(h, bones); M(rig.mat); } catch (e) { rig = null; } }
+      if (rigged) { try { rig = HRG.make(h, bones); M(rig.mat); M(rig.hairMat); M(rig.bridleMat); } catch (e) { rig = null; } }
       let jockey = null;
       if (useJockey) {
         try { jockey = makeJockey(h, M); mesh.add(jockey.root); } catch (e) { jockey = null; }
@@ -2622,7 +2624,7 @@
         scene.add(new THREE.Mesh(tb.build(), new THREE.MeshBasicMaterial({ map: imgTex('tree', false, 4), alphaTest: 0.45, side: THREE.DoubleSide, color: lin('#c6d6b4') })));
       }
       const camera = new THREE.PerspectiveCamera(26, 2, 0.1, 900);
-      PT.r = { renderer, scene, camera, cv, geo: horseGeometry(1, { bare: true }), geoTack: horseGeometry(1, { bare: true, tack: true }), nor: texOf(HORSE_NOR || (HORSE_NOR = horseNormalCanvas(512)), false, 8, true) };
+      PT.r = { renderer, scene, camera, cv, geo: horseGeometry(1, { bare: true }), geoTack: horseGeometry(1, { bare: true, tack: true, noBridle: true }), nor: texOf(HORSE_NOR || (HORSE_NOR = horseNormalCanvas(512)), false, 8, true) };
     } catch (e) { PT.fail = true; PT.r = null; }
     return PT.r;
   }
@@ -2676,7 +2678,7 @@
       renderer.render(scene, camera);
       img = canvasOf(w, hgt);
       img.getContext('2d').drawImage(renderer.domElement, 0, 0, w, hgt);
-      scene.remove(mesh); mat.dispose(); tex.dispose(); if (mesh.skeleton.dispose) mesh.skeleton.dispose(); if (rig) rig.mat.dispose();
+      scene.remove(mesh); mat.dispose(); tex.dispose(); if (mesh.skeleton.dispose) mesh.skeleton.dispose(); if (rig) { rig.mat.dispose(); rig.hairMat.dispose(); rig.bridleMat.dispose(); }
       PT.cache.set(key, img);
       if (PT.cache.size > 160) PT.cache.delete(PT.cache.keys().next().value);
     }

@@ -17,13 +17,19 @@ Bl = np.asarray(Image.fromarray((L * 255).astype(np.uint8)).filter(ImageFilter.G
 detail = np.clip(L / (Bl + 0.02), 0.45, 1.7)
 low = np.clip(Bl / np.median(Bl[Bl > 0.08]), 0.78, 1.18)
 shade = np.clip(detail * low * 0.5, 0, 1)
+# 首の皮に描いてあるたてがみの毛の筋（絵の左の帯）は、ぼかして毛の筋を消す（たてがみは毛の房で描く）
+MANE = [(0.02, 0.32), (0.1, 0.315), (0.2, 0.37), (0.3, 0.445), (0.39, 0.5), (0.38, 0.57), (0.3, 0.62), (0.22, 0.65), (0.1, 0.62), (0.02, 0.54)]
+mm = Image.new('L', (1024, 1024), 0); ImageDraw.Draw(mm).polygon([(u * 1024, v * 1024) for u, v in MANE], fill=255)
+mm = np.asarray(mm.filter(ImageFilter.GaussianBlur(12))).astype(np.float32) / 255
+flat = np.asarray(Image.fromarray((np.clip(shade, 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(14))).astype(np.float32) / 255
+flat = np.clip(flat, 0.42, 0.55)
+shade = shade * (1 - mm) + flat * mm
 # 緑：たてがみ・尾の毛の印（絵の上の多角形。js/ui/horse_rigged.js の MANE_UV と同じ）
 #   たてがみは首すじ（絵の毛の帯の上の縁）から下へ細い帯にする（サラブレッドのたてがみは短い）
 CREST = [(0.03, 0.335), (0.1, 0.33), (0.2, 0.38), (0.3, 0.455), (0.37, 0.505)]
 mask = Image.new('L', (1024, 1024), 0); d = ImageDraw.Draw(mask)
 band = CREST + [(u, v + 0.16) for u, v in reversed(CREST)]
-d.polygon([(u * 1024, v * 1024) for u, v in band], fill=255)
-d.rectangle([0.6 * 1024, 0.43 * 1024, 1024, 0.61 * 1024], fill=255)
+# たてがみ・尾は毛の房（js/ui/horse_rigged.js の hairCards）で描くので、印は空にしておく（首の皮は毛色のまま）
 mask = mask.filter(ImageFilter.GaussianBlur(6))
 im = Image.merge('RGB', [Image.fromarray((shade * 255).astype(np.uint8), 'L'), mask, Image.new('L', (1024, 1024), 0)])
 buf = io.BytesIO(); im.save(buf, 'JPEG', quality=90, subsampling=0); jpg = buf.getvalue()
