@@ -88,7 +88,7 @@ async function main() {
   for (let i = 0; i < 6; i++) { for (let j = 0; j < 10; j++) await vstep(); await key('x'); }
   // ゴールまで
   for (let i = 0; i < 3000 && !(await page.evaluate(() => HS.Ride.cur.st[HS.Ride.cur.me].done)); i++) await vstep();
-  for (let i = 0; i < 26; i++) await vstep();
+  for (let i = 0; i < (frames ? 24 : 12); i++) await vstep(); // ゴール板から 1.2 秒（着順はまだ出ていない）
   await shot('cool');
   for (let i = 0; i < 400 && !(await page.evaluate(() => !!document.querySelector('.ride-close'))); i++) await vstep();
   for (let i = 0; i < 24; i++) await vstep();
