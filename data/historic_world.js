@@ -525,5 +525,9 @@ HS.DATA.historic = (HS.DATA.historic || []).concat([
  { name:'レインラヴァー', nameEn:'Rain Lover', country:'豪', born:1964, sex:'牡', coat:'鹿毛', sire:'ラテンラヴァー', dam:'レインスポット', damsire:'ヴァローニュ', rating:88, surface:'芝', distMin:2000, distMax:3200, style:'先行', growth:'晩成', retire:1970, wins:['1968メルボルンカップ','1969メルボルンカップ'], note:'メルボルンカップ連覇' },
  { name:'ガンシンド', nameEn:'Gunsynd', country:'豪', born:1967, sex:'牡', coat:'芦毛', sire:'サンセットヒュー', dam:'ウディーワンダー', damsire:'ニュータウンワンダー', rating:89, surface:'芝', distMin:1400, distMax:2400, style:'差し', growth:'晩成', retire:1973, wins:['1972コックスプレート','1972ドンカスターマイル'], ran:['1972メルボルンカップ'], note:'「グーンディウィンディの灰色馬」と親しまれた' },
  { name:'シンクビッグ', nameEn:'Think Big', country:'豪', born:1970, sex:'セ', coat:'鹿毛', sire:'ソービッグ', dam:'サルセル', damsire:'オマーン', rating:87, surface:'芝', distMin:2400, distMax:3200, style:'差し', growth:'晩成', retire:1977, wins:['1974メルボルンカップ','1975メルボルンカップ'], note:'NZ産。メルボルンカップ連覇' },
+ // ===== 2026-10-16 に足した名馬（史実は各行の上の出典。uncertain:true は推定を含む） =====
+ // uncertain：南半球生まれ（1963年8月10日）。アルゼンチンの競走は data/races_world.js に無いので ja.wikipedia の記事名（ジョッキークラブ大賞は「ジョッキークラブ大賞 (アルゼンチン)」）。母父 Advocate のカナは推定。
+ // 出典：https://ja.wikipedia.org/wiki/フォルリ_(競走馬) ・ https://en.wikipedia.org/wiki/Forli_(horse)
+ { name:'フォルリ', nameEn:'Forli', country:'亜', born:1963, sex:'牡', coat:'栗毛', sire:'アリストファネス', dam:'トレヴィサ', damsire:'アドヴォケイト', rating:86, surface:'芝ダ', distMin:1400, distMax:3000, style:'逃げ', growth:'普通', retire:1967, wins:['1966ポージャ・デ・ポトリロス','1966ジョッキークラブ大賞','1966ナシオナル大賞','1966カルロスペルグリニ大賞'], note:'10戦9勝。アルゼンチンの四冠馬。1967年に米国へ渡り、コロナドステークスをコースレコードで勝つ。サイテーションハンデキャップ2着が唯一の負け', uncertain:true },
 ]);
 })();

@@ -101,8 +101,8 @@
   let pool = null;
   SP.pool = function () {
     if (pool) return pool;
-    const prof = new Set((HS.DATA.profiles || []).map(f => f.name));
-    pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d) && (prof.has(d.name) || (SP.WITH_BIG && SP.bigWins(d).length))).concat(HS.DATA.legendsExtra || []);
+    const prof = new Set((HS.DATA.profiles || []).map(f => HS.normName(f.name))); // 名鑑と史実馬は小さいカナをそろえて比べる（ホスピタリテイ＝ホスピタリティ）
+    pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d) && (prof.has(HS.normName(d.name)) || (SP.WITH_BIG && SP.bigWins(d).length))).concat(HS.DATA.legendsExtra || []);
     return pool;
   };
   SP.data = name => SP.pool().find(d => d.name === name) || null;

@@ -639,7 +639,8 @@ check('season: 年末のグランドフィナーレに強い馬が招待され�
 
 check('dream: 資格（G1・前年の勝ち馬・ファンの票）と、出ない／1頭だけ選ぶ、古いセーブ', () => {
   const T = HS.Season;
-  W.newGame({ seed: 31, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  // 種：11月4週に「票で圏内」の内国産馬がいる世界（史実馬のデータが変わると世界も変わるので、そのときは種を選び直す）
+  W.newGame({ seed: 32, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
   let guard = 0;
   while (!(G.month === 11 && G.week === 4) && guard++ < 60) W.finishWeek({});
