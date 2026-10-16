@@ -26,10 +26,11 @@
   O.retire = function (id) {
     const G = W.get(), h = W.horse(id);
     if (!h || h.owner !== 'P' || h.loc === 'retired') return { err: '持ち馬ではない' };
+    if (O.retired(h.sex).length >= O.MAX_EACH && !h.gelding) return { err: `引退した${h.sex === '牝' ? '牝馬' : '牡馬'}は${O.MAX_EACH}頭まで。生産の画面で1頭放してから` };
     W.unenter(id);
     G.reserve = (G.reserve || []).filter(x => x.id !== id);
+    if (HS.Hall) HS.Hall.onRetire(h); // トロフィー2つ以上なら殿堂入り
     if (h.gelding) { delete G.horses[id]; W.dirty(); W.news(`${h.name}は引退して乗馬になった。おつかれさま。`, 'info'); return { to: 'gone' }; }
-    if (O.retired(h.sex).length >= O.MAX_EACH) return { err: `引退した${h.sex === '牝' ? '牝馬' : '牡馬'}は${O.MAX_EACH}頭まで。生産の画面で1頭放してから` };
     const b = O.bonusOf(h);
     h.loc = 'retired'; h.retiredY = G.year; h.auto = false; h.parentBonus = b.pts;
     W.dirty();

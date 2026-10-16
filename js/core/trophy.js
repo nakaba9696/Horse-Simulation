@@ -43,7 +43,7 @@
       const before = Object.assign({}, h, { gradedWins: h.gradedWins.slice(0, -1) });
       if (!t.legs(before, race)) continue;
       const bonus = TR.bonusOf(t);
-      G.trophies[t.id] = { y: race.year, horse: h.name, bonus };
+      G.trophies[t.id] = { y: race.year, horse: h.name, hid: h.id, bonus };
       G.player.money += bonus;
       W.news(`トロフィー「${t.label}」を手にした！（${h.name}）ボーナス賞金 ${HS.U.money(bonus)}`, 'g1');
       got.push(t);

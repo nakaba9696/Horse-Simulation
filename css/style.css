@@ -839,3 +839,62 @@ main.enter-back { animation: backin 300ms var(--ease) both; }
 @media (prefers-reduced-motion: reduce) { .navsel { animation: none !important; box-shadow: 0 0 0 2px var(--accent-hi), 0 0 0 5px rgba(242, 217, 142, .3), 0 0 24px 4px rgba(242, 217, 142, .55) !important; } }
 /* 大きな PC の画面（1600px 以上）は列を広げる */
 @media (min-width: 1600px) { :root, html[data-theme] { --w-app: 1200px; } .mgr-cmds button { min-height: 120px; } }
+
+/* コースレコード（js/ui/records.js）：一覧の★と、結果の画面の「RECORD」の札 */
+.rec-star { color: var(--accent-hi); margin-right: 4px; text-shadow: 0 0 6px rgba(242, 217, 142, .6); }
+.rec-t tr.rec-mine td:first-child { box-shadow: inset 4px 0 0 var(--accent-hi); }
+.rec-banner { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 var(--sp-3); padding: 10px 14px; border-radius: 10px;
+  background: linear-gradient(90deg, rgba(150, 20, 14, .2), rgba(190, 28, 20, .85) 30%, rgba(190, 28, 20, .85) 70%, rgba(150, 20, 14, .2)); color: #fff; box-shadow: 0 0 18px rgba(255, 80, 50, .35); animation: rec-in .5s ease-out; }
+.rec-banner .rec-word { font: 900 30px "Noto Serif JP", serif; letter-spacing: .12em; color: #ffe08a; text-shadow: 0 2px 0 rgba(0, 0, 0, .4); }
+.rec-banner .rec-time { font: bold 20px monospace; }
+.rec-banner .rec-diff { font-weight: 700; color: #ffe08a; }
+.rec-banner .rec-old { opacity: .85; }
+.rec-banner.me { outline: 2px solid var(--accent-hi); }
+@keyframes rec-in { from { transform: scale(1.25); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rec-banner { animation: none; } }
+/* 年末のドリームレース（グランドフィナーレ）：ホームの資格の表と、招待状 */
+.dc-badge { display: inline-block; min-width: 64px; text-align: center; padding: 1px 8px; border-radius: 999px; font-size: var(--fs-sm); font-weight: 700; border: 1px solid var(--line-2); color: var(--text-2); }
+.dc-badge.ok { background: var(--gold-grad); color: var(--on-accent); border-color: transparent; }
+.dc-badge.in { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+.dc-badge.out { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+.chip.dc { background: linear-gradient(90deg, #1f5f8a, #c9a23e); color: #fff; border-color: transparent; margin: 0 4px 4px 0; }
+.dc-me { color: var(--accent-hi); }
+.dc-road { border-color: var(--line-strong); }
+.dc-road .t td { vertical-align: middle; }
+.dc-lineup { line-height: 1.8; color: var(--text-2); }
+.dc-ask .dc-kicker { text-align: center; letter-spacing: .4em; color: var(--accent-hi); font-size: var(--fs-sm); }
+.dc-ask .dc-title { text-align: center; font-family: var(--ff-serif); font-size: 30px; font-weight: 900; margin: 2px 0 6px; background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; }
+.dc-cards { display: grid; gap: var(--sp-3); }
+.dc-card { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3); border-radius: var(--r); background: var(--glass-2); border: 1px solid var(--line-2); box-shadow: var(--sh-1, none); }
+.dc-card.on { border-color: var(--line-strong); box-shadow: 0 0 0 1px var(--line-strong), 0 0 22px rgba(242, 217, 142, .25); }
+.dc-card canvas.thumb { width: 120px; height: 80px; border-radius: var(--r-sm); flex: none; background: #22452a; }
+.dc-card .nm { font-weight: 700; font-size: var(--fs-md); }
+.dc-card .grow > * + * { margin-top: 3px; }
+.dc-card .dc-fh { gap: 6px; align-items: center; }
+.dc-card > .btn { flex: none; align-self: center; }
+@media (max-width: 640px) { .dc-card { flex-wrap: wrap; } .dc-card > .btn { width: 100%; } }
+.dc-ask .btns { justify-content: center; }
+
+/* 馬の店の解放の表（js/core/eraless.js の E.locks） */
+.shop-locks { display: flex; flex-wrap: wrap; gap: 6px; }
+.shop-locks .lk { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line, rgba(255,255,255,.15)); background: rgba(0, 0, 0, .25); font-size: 13px; opacity: .8; }
+.shop-locks .lk small { color: var(--muted, #a3b5a7); font-size: 11px; }
+.shop-locks .lk.open { opacity: 1; border-color: var(--accent-hi, #f2d98e); box-shadow: 0 0 8px rgba(242, 217, 142, .25); }
+
+/* 殿堂入りしたお手馬（js/ui/hallui.js） */
+.hall-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 10px; }
+.hall-card { display: flex; gap: 12px; align-items: center; text-align: left; padding: 10px 12px; border-radius: 12px; cursor: pointer; color: inherit; font: inherit;
+  border: 1px solid var(--accent-hi, #f2d98e); background: linear-gradient(135deg, rgba(242, 217, 142, .16), rgba(0, 0, 0, .3)); box-shadow: 0 4px 14px rgba(0, 0, 0, .35); animation: hall-in .4s ease-out both; animation-delay: calc(var(--i, 0) * 40ms); }
+.hall-card:hover, .hall-card.navsel { box-shadow: 0 0 0 2px var(--accent-hi, #f2d98e), 0 6px 18px rgba(0, 0, 0, .4); }
+.hall-card .thumb { width: 112px; height: 75px; border-radius: 8px; flex: none; }
+.hall-card .hc-body { display: grid; gap: 2px; min-width: 0; }
+.hall-card .nm { font: 700 18px "Noto Serif JP", serif; color: var(--accent-hi, #f2d98e); }
+.hall-card .hc-rec { font-size: 13px; }
+.hall-card .chip small, .hall-modal .chip small { opacity: .75; font-size: 10px; }
+.hall-modal .hm-head { display: flex; gap: 14px; align-items: center; }
+.hall-modal .hm-head .thumb { width: 168px; height: 112px; border-radius: 10px; flex: none; }
+.hall-modal .hm-badge { display: inline-block; font-size: 11px; letter-spacing: .2em; padding: 1px 10px; border-radius: 999px; background: var(--accent-hi, #f2d98e); color: #2a2208; font-weight: 700; }
+.hall-modal h4 { margin: 14px 0 6px; color: var(--accent-hi, #f2d98e); }
+.hall-modal .hm-res { max-height: 300px; overflow: auto; }
+.hall-modal tr.win td { color: var(--accent-hi, #f2d98e); }
+@keyframes hall-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }

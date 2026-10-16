@@ -375,7 +375,7 @@
   App.weekSummary = function (report) {
     const G = W.get();
     const mine = report.races.filter(r => r.hasMine);
-    const g1 = report.races.filter(r => r.race.grade === 'G1' && !r.hasMine);
+    const g1 = report.races.filter(r => (r.race.grade === 'G1' || r.race.invite) && !r.hasMine).sort((a, b) => (b.race.invite ? 1 : 0) - (a.race.invite ? 1 : 0)); // 出なかったグランドフィナーレも観戦できる（先頭に）
     // この週に起きたこと（週の処理のあとで暦が進むので、次の週の頭に出たものも含める）
     const fresh = G.news.filter(n => n.kind !== 'g1race' && ((n.y === report.y && n.m === report.m && n.w === report.w) || (n.y === G.year && n.m === G.month && n.w === G.week))).slice(0, 10);
     const items = [];

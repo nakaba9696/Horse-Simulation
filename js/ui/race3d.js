@@ -1323,7 +1323,8 @@
 
     // ---- コースの形 ----
     const slopeH = ({ '急': 2.1, '中': 1.6, '小': 0.9, '平': 0 })[course.slope] || 0;
-    const elev = s => {
+    // 実際の高低差があるコース（data/layouts.js）はその高さ。無ければゴール前の坂の強さで作る
+    const elev = tr.hAt && !tr.flat ? s => tr.hAt(s) : s => {
       if (!slopeH) return 0;
       s = ((s % L) + L) % L;
       if (s < 100) return slopeH;

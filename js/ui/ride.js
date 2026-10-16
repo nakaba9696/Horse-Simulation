@@ -16,13 +16,14 @@
   // LT・RT＝左右を向く、LB・RB＝レーダーの照準、Back＝視点
   const PAD = { up: [12], down: [13], left: [14], right: [15], whipR: [1], whipL: [2], swap: [0], pose: [3], lookL: [6], lookR: [7], tgtPrev: [4], tgtNext: [5], view: [8] };
   const STYLES = ['逃げ', '先行', '差し', '追込'];
+  const UI_DIFF = d => d == null ? '' : `${d < 0 ? '−' : '+'}${Math.abs(d).toFixed(1)}`;
 
   // card：W.cards() の1レース。戻り値：S.finish の結果（Promise）
   RD.ride = function (el, card, opts) {
     opts = opts || {};
     return new Promise(resolve => {
       const race = card.race;
-      const sim = HS.World.startSim(card, { ride: true });
+      const sim = opts.makeSim ? opts.makeSim() : HS.World.startSim(card, { ride: true }); // フリーレースは自分の種で作る（opts.makeSim）
       RD.cur = sim; // 確かめ用（いま走っているレース）
       const me = sim.st[sim.me];
       const course = HS.DATA.courses[race.course] || HS.DATA.courses['東京'];
@@ -54,7 +55,8 @@
       const msgEl = el.querySelector('.ride-msg');
       const AU = HS.Audio;
       const meta = sim.st.map(s => ({ silks: HS.RaceView.silksOf(s.h), cap: FC()[(s.r.frame - 1) % 8], capText: FT()[(s.r.frame - 1) % 8] }));
-      const record = HS.World.courseRecord ? HS.World.courseRecord(race) : null;
+      const record = 'record' in opts ? opts.record : HS.World.courseRecord ? HS.World.courseRecord(race) : null;
+      let recFx = null; // 勝ち馬がレコードを破ったら、ゴールの後に「RECORD」と前のレコードとの差
       // 3D（WebGL が使えるとき）。計器は上の 2D の canvas に重ねる
       let r3 = null;
       const cv3 = el.querySelector('.ride-3d');
@@ -198,6 +200,10 @@
             myPos = sim.st.filter(s => s.done && s.finishT <= me.finishT).length;
             if (myPos !== 1) say(ordinal(myPos), '');
           }
+          if (record && !recFx) {
+            const first = sim.st.filter(s => s.done).sort((a, b) => a.finishT - b.finishT)[0];
+            if (first) { const chk = HS.World.recordCheck(race, first.finishT, record); recFx = chk.beat ? Object.assign(chk, { at: performance.now(), mine: !!first.me }) : { none: true }; if (recFx.beat && AU) AU.se('skill'); }
+          }
           if (AU) { const lead = Math.max(...sim.st.map(s => s.x)); AU.raceUpdate(sim.D - lead, sim.D - lead < sim.straight, sim.st.filter(s => !s.done).length, sim.st.filter(s => s.done).length); }
         }
         const k = clock < 0 ? 0 : U.clamp(acc / 0.1, 0, 1);
@@ -299,6 +305,7 @@
           if (poseAt == null) txt('Y／G／2回タップ：ガッツポーズ', VW / 2, VH * 0.36 + 58, `12px ${FONT}`, '#ffe9a6', 'center');
           ctx.globalAlpha = 1;
         }
+        if (recFx && recFx.beat) drawRecord(recFx);
         // 短い言葉（スタート・好スタート・視点など）：大きく出さず、下寄りに小さな札で
         if (flash && flash.text && performance.now() - flash.t < 1200) {
           const a = 1 - (performance.now() - flash.t) / 1200;
@@ -309,6 +316,17 @@
           txt(flash.text, VW / 2, fy + 1, `bold 15px ${FONT}`, flash.cls === 'bad' ? '#ffa48a' : flash.cls === 'good' || flash.cls === 'go' ? HUD.gold : '#fff', 'center', 'middle');
           ctx.globalAlpha = 1;
         }
+      }
+      // RECORD の札（ゴールの後だけ。合図なので英語）：上寄りに、光の帯と差
+      function drawRecord(f) {
+        const a = U.clamp((performance.now() - f.at) / 350, 0, 1), y = VH * 0.2;
+        const pulse = 0.75 + 0.25 * Math.sin(performance.now() / 160);
+        ctx.save(); ctx.globalAlpha = a;
+        const g = ctx.createLinearGradient(0, y - 34, 0, y + 30); g.addColorStop(0, 'rgba(255,90,60,0)'); g.addColorStop(0.5, `rgba(200,30,20,${0.55 * pulse})`); g.addColorStop(1, 'rgba(255,90,60,0)');
+        ctx.fillStyle = g; ctx.fillRect(0, y - 34, VW, 64);
+        outlined('RECORD', VW / 2, y + 8, `900 ${Math.round(44 + 16 * (1 - a))}px "Noto Serif JP", serif`, '#ffe08a', 'center');
+        txt(`${U.time(f.t)}　${UI_DIFF(f.diff)}`, VW / 2, y + 30, `bold 15px ${FONT}`, '#fff', 'center');
+        ctx.restore();
       }
       // ペースの札：予想（逃げ馬の数から）→ 判定（決まった地点を通ったとき）。判定のあとは小さくして出し続ける。目盛りでスロー〜ハイのどこか
       const nNige = sim.st.filter(s => s.h.style === '逃げ').length;
