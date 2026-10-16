@@ -77,7 +77,7 @@
         silks: opts.silks || { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, money: Math.round((opts.money || 30000) * U.priceIndex(year0) / 10) * 10,
       },
       difficulty: opts.difficulty || 'normal',
-      horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, edits,
+      horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, edits, bond: {},
       records: { g1: {}, graded: {}, awards: {}, pts: {}, course: {}, hall: [], player: { starts: 0, wins: 0, earn: 0, g1: [] } },
       news: [], entries: {}, rides: {}, mode: opts.mode === 'jockey' ? 'jockey' : 'owner', lastWeek: null, market: { gen: [], genMares: [], month: 0 },
       farmLevel: 1, stats: {}, settings: { animSpeed: 1, showHistNote: true }, broke: 0, gameOver: null, reserve: [], dc: null,
@@ -518,7 +518,13 @@
   };
   W.cardOf = key => W.cards().find(c => c.race.key === key);
   // レースの模擬を始める（騎乗するときは ride: true）。乱数はレースごとの種から
-  W.startSim = (card, opts) => S.create(card.race, card.runners, W.prepareWeek().wIdx, new U.RNG(card.seed), Object.assign({ frames: true }, opts || {}));
+  // 自分で乗るときは、その馬に自分で乗った回数（絆。G.bond）を渡す。折り合いのつきやすさに効く（js/core/racesim.js の S.bondF）
+  W.bondOf = h => (h && G && G.bond && G.bond[h.id]) || 0;
+  W.startSim = (card, opts) => {
+    opts = Object.assign({ frames: true }, opts || {});
+    if (opts.ride && opts.bond == null) { const me = card.runners.find(r => r.rider === 'P'); if (me) opts.bond = W.bondOf(me.horse); }
+    return S.create(card.race, card.runners, W.prepareWeek().wIdx, new U.RNG(card.seed), opts);
+  };
 
   // played：{ raceKey: S.finish の結果 }（プレイヤーが乗ったレース）
   W.finishWeek = function (played) {
@@ -536,6 +542,7 @@
       const hasMine = runners.some(x => x.mine) || card.ride;
       const watch = hasMine || race.grade === 'G1' || !!race.invite;
       const sim = played[race.key] || S.run(race, runners, wIdx, new U.RNG(card.seed), { frames: watch });
+      if (played[race.key]) { const me = runners.find(r => r.rider === 'P'); if (me && me.horse.id) { G.bond = G.bond || {}; G.bond[me.horse.id] = (G.bond[me.horse.id] || 0) + 1; } } // 絆：自分で乗った回数
       if (HS.Jockey) HS.Jockey.record(race, sim, runners);
       W.applyResults(race, sim, runners, wIdx);
       const rec = W.noteRecord(race, sim);
@@ -1111,7 +1118,7 @@
     g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, course: {}, hall: [], player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
-    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; g.lineup = g.lineup || {}; g.unlocked = g.unlocked || []; if (g.eraless && !g.shopKeys) g.shopKeys = HS.Eraless ? HS.Eraless.migrateKeys(g) : []; /* 前のセーブは、自分の馬の勝ち鞍で馬の店を開けておく */ g.trophies = g.trophies || {}; g.hallOwn = g.hallOwn || []; if (g.eraless && !g.startYear) g.startYear = 2025; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
+    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; g.lineup = g.lineup || {}; g.unlocked = g.unlocked || []; if (g.eraless && !g.shopKeys) g.shopKeys = HS.Eraless ? HS.Eraless.migrateKeys(g) : []; /* 前のセーブは、自分の馬の勝ち鞍で馬の店を開けておく */ g.trophies = g.trophies || {}; g.hallOwn = g.hallOwn || []; if (g.eraless && !g.startYear) g.startYear = 2025; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {}; g.bond = g.bond || {}; /* 絆：馬ごとの、自分で乗った回数 */
     if (g.dc && HS.Season && HS.Season.dcUpgrade) HS.Season.dcUpgrade(g); // 前の形の招待（GF が1つだった頃）を、距離ごとの GF の形に
     if (g.eraless && !g.gfShop && HS.Eraless && HS.Eraless.gfKeys) { for (const k of HS.Eraless.gfKeys(g)) if (!g.shopKeys.includes(k)) g.shopKeys.push(k); g.gfShop = 1; } // 前のセーブ（GF の馬の段より前）：自分の馬が勝った GF の区分を開けておく
     for (const h of Object.values(g.horses)) {

@@ -1298,6 +1298,7 @@ check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中�
 
 require('./extra_replay.js')(check, assert, HS); // レコード・リプレイ・フリーレース
 require('./extra_owners.js')(check, assert, HS); // 馬主と騎乗依頼
+require('./extra_rivals.js')(check, assert, HS); // ライバル騎手
 require('./extra_audio.js')(check, assert, HS); // BGM の曲の書式と長さ
 require('./extra_rumble.js')(check, assert, HS); // コントローラーの振動
 require('./extra_balance.js')(check, assert, HS); // 立ち回りの噛み合い・競り合いの気合
