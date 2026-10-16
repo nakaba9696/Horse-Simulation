@@ -1,6 +1,6 @@
 // レースの3D：Three.js（lib/three.min.js、r128。グローバルの THREE）で、コース・馬・騎手を立体で描く
 // 使い方：
-//   const r3 = HS.Race3D.create(canvas, setup)  // setup = { D, surface, ground, course, track, horses:[{num,frame,cap,silks,coat,name,mine}] }
+//   const r3 = HS.Race3D.create(canvas, setup)  // setup = { D, surface, ground, course, track, horses:[{num,frame,cap,silks,coat,name,age,mine}] }
 //   r3.render(view, cam, orbit)   // view = { t, horses:[{x,lane,v,push?,whip?（ムチを入れてからの秒）,pose?（ガッツポーズからの秒）}], me, phase:'gate'|'race'|'finish' }、cam = 'ride'|'tv'|'gate'
 //   orbit = { yaw, pitch, zoom }（カメラの回転。yaw は左右の回り込み[rad]、pitch は上下[-0.3〜1.2]、zoom は距離の倍率）
 //   r3.resize(w, h, dpr) / r3.dispose() / r3.info()
