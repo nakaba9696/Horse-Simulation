@@ -328,16 +328,19 @@
     const col = this.c ? lin(o.color || '#ffffff') : null;
     for (let i = 0; i < P.count; i++) {
       V.fromBufferAttribute(P, i).applyMatrix4(m); this.p.push(V.x, V.y, V.z);
+      // o.uvf(P)・o.skinf(P)：頂点の位置から uv と骨（[骨a, 骨b, bの重み]）を決める
+      const uvP = o.uvf ? o.uvf(V) : null, skP = o.skinf ? o.skinf(V) : null;
       if (N) { V.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); this.n.push(V.x, V.y, V.z); } else this.n.push(0, 1, 0);
       let a = 0, b = 0;
-      if (o.uv) { a = o.uv[0]; b = o.uv[1]; }
+      if (uvP) { a = uvP[0]; b = uvP[1]; }
+      else if (o.uv) { a = o.uv[0]; b = o.uv[1]; }
       else if (T) {
         a = T.getX(i); b = T.getY(i);
         if (o.rect) { a = o.rect[0] + a * (o.rect[2] - o.rect[0]); b = o.rect[1] + b * (o.rect[3] - o.rect[1]); }
       }
       this.uv.push(a, b);
       if (col) this.c.push(col.r, col.g, col.b);
-      if (this.k) this.k.push(o.bone || 0, o.bone || 0, 0);
+      if (this.k) { if (skP) this.k.push(skP[0], skP[1], skP[2]); else this.k.push(o.bone || 0, o.bone || 0, 0); }
     }
     const flip = m.determinant() < 0;
     const cnt = g.index ? g.index.count : P.count;
@@ -414,8 +417,8 @@
   // ---- 馬と騎手の形（全頭で共有） ----
   // 馬の向き：+X が前、+Y が上、+Z が右。地面が y=0。頂点ごとに骨を2本まで混ぜ、関節でなめらかに曲がる
   // 胴・首・頭・脚・尾・たてがみ・騎手は、断面（楕円）を並べてつないだ形（ロフト）で作る
-  // 三角形の数の目安（騎手・鞍・馬具を含む1頭）：近くの形 4,500 まで・遠くの形 2,500 まで（28m で切り替える）。
-  //   16頭がみな近くにいても 7 万ほどで、スマホでも重くならない。形は全頭で共有し、馬ごとに違うのは小さな絵（256×256）だけ
+  // 三角形の数の目安（騎手・鞍・馬具を含む1頭）：近くの形 6,000 まで（PC だけなので）・遠くの形 2,500 まで（28m で切り替える）。
+  //   16頭がみな近くにいても 9 万ほど。形は全頭で共有し、馬ごとに違うのは小さな絵（256×256）だけ
   // 骨：0 根元、1 胴、2・3 首、4 頭、5〜7 尾、8〜11 左前・12〜15 右前（肩・肘・膝・球節）、16〜19 左後・20〜23 右後（股・後膝・飛節・球節）
   //     24 騎手の腰、25 上体、26 頭、27・28 左腕（上・下）、29・30 右腕、31 ムチ、32〜35 馬具（シャドーロール・ブリンカー・メンコ・チークピーシーズ）
   const FJ = [[0.60, 1.26], [0.47, 0.97], [0.485, 0.53], [0.495, 0.215]];   // 前脚の関節：肩・肘・膝・球節
@@ -461,18 +464,18 @@
   ];
   // 脚の断面（上から）：[x, y, 前後の半径, 横の半幅, 骨a, 骨b, bの重み]（骨は肩・股から 0〜3）
   const FLEG_T = [
-    [0.62, 1.34, 0.13, 0.085, 0, 0, 0], [0.58, 1.2, 0.15, 0.095, 0, 0, 0], [0.52, 1.07, 0.13, 0.09, 0, 1, 0.3], [0.48, 0.96, 0.11, 0.082, 0, 1, 0.75],
-    [0.47, 0.86, 0.095, 0.075, 1, 1, 0], [0.474, 0.74, 0.075, 0.064, 1, 1, 0], [0.479, 0.62, 0.056, 0.054, 1, 1, 0], [0.483, 0.55, 0.06, 0.058, 1, 2, 0.35],
-    [0.486, 0.5, 0.058, 0.055, 1, 2, 0.8], [0.488, 0.42, 0.048, 0.044, 2, 2, 0], [0.49, 0.31, 0.047, 0.04, 2, 2, 0], [0.493, 0.24, 0.054, 0.05, 2, 3, 0.4],
-    [0.5, 0.19, 0.055, 0.05, 2, 3, 0.85], [0.52, 0.135, 0.044, 0.043, 3, 3, 0], [0.542, 0.085, 0.048, 0.048, 3, 3, 0], [0.556, 0.04, 0.058, 0.054, 3, 3, 0],
-    [0.566, 0.004, 0.064, 0.058, 3, 3, 0],
+    [0.62, 1.34, 0.13, 0.085, 0, 0, 0], [0.58, 1.2, 0.15, 0.095, 0, 0, 0], [0.52, 1.07, 0.14, 0.095, 0, 1, 0.3], [0.48, 0.96, 0.115, 0.085, 0, 1, 0.75],
+    [0.47, 0.86, 0.095, 0.075, 1, 1, 0], [0.474, 0.74, 0.075, 0.064, 1, 1, 0], [0.479, 0.62, 0.056, 0.054, 1, 1, 0], [0.483, 0.55, 0.066, 0.062, 1, 2, 0.35],
+    [0.486, 0.5, 0.062, 0.058, 1, 2, 0.8], [0.488, 0.42, 0.046, 0.042, 2, 2, 0], [0.49, 0.31, 0.045, 0.039, 2, 2, 0], [0.491, 0.24, 0.062, 0.054, 2, 3, 0.4],
+    [0.498, 0.19, 0.062, 0.055, 2, 3, 0.85], [0.52, 0.135, 0.042, 0.041, 3, 3, 0], [0.545, 0.085, 0.052, 0.05, 3, 3, 0], [0.56, 0.04, 0.062, 0.058, 3, 3, 0],
+    [0.57, 0.004, 0.068, 0.062, 3, 3, 0],
   ];
   const HLEG_T = [
     [-0.66, 1.42, 0.23, 0.12, 0, 0, 0], [-0.64, 1.28, 0.27, 0.145, 0, 0, 0], [-0.61, 1.14, 0.26, 0.14, 0, 0, 0], [-0.6, 1.02, 0.2, 0.115, 0, 1, 0.4],
-    [-0.62, 0.92, 0.14, 0.09, 0, 1, 0.85], [-0.66, 0.82, 0.105, 0.075, 1, 1, 0], [-0.7, 0.71, 0.08, 0.058, 1, 1, 0], [-0.73, 0.63, 0.07, 0.05, 1, 2, 0.2],
-    [-0.745, 0.575, 0.072, 0.055, 1, 2, 0.5], [-0.74, 0.52, 0.06, 0.05, 1, 2, 0.85], [-0.73, 0.44, 0.05, 0.044, 2, 2, 0], [-0.718, 0.32, 0.048, 0.041, 2, 2, 0],
-    [-0.708, 0.24, 0.055, 0.05, 2, 3, 0.4], [-0.7, 0.19, 0.055, 0.05, 2, 3, 0.85], [-0.682, 0.135, 0.045, 0.043, 3, 3, 0], [-0.662, 0.085, 0.048, 0.048, 3, 3, 0],
-    [-0.648, 0.04, 0.057, 0.054, 3, 3, 0], [-0.638, 0.004, 0.062, 0.057, 3, 3, 0],
+    [-0.62, 0.92, 0.14, 0.09, 0, 1, 0.85], [-0.66, 0.82, 0.105, 0.075, 1, 1, 0], [-0.7, 0.71, 0.08, 0.058, 1, 1, 0], [-0.73, 0.63, 0.075, 0.054, 1, 2, 0.2],
+    [-0.745, 0.575, 0.08, 0.06, 1, 2, 0.5], [-0.74, 0.52, 0.062, 0.052, 1, 2, 0.85], [-0.73, 0.44, 0.048, 0.043, 2, 2, 0], [-0.718, 0.32, 0.046, 0.04, 2, 2, 0],
+    [-0.708, 0.24, 0.062, 0.054, 2, 3, 0.4], [-0.7, 0.19, 0.062, 0.055, 2, 3, 0.85], [-0.682, 0.135, 0.043, 0.042, 3, 3, 0], [-0.66, 0.085, 0.05, 0.05, 3, 3, 0],
+    [-0.646, 0.04, 0.06, 0.057, 3, 3, 0], [-0.636, 0.004, 0.066, 0.061, 3, 3, 0],
   ];
   // 尾（付け根から）：[x, y, 上下の半径, 横の半幅, 骨a, 骨b, bの重み]
   const TAIL_T = [
@@ -610,6 +613,23 @@
   });
   const neckPt = (i, th, off) => { const s = NECK[i]; return ellPt(s.c, s.u, vZ(), s.h, s.w, 0.28, 0.95, th, off); };
 
+  // 胴の面の筋肉のふくらみ：[中心 x, y, 長い向きの半径, 短い向きの半径, 長い向きの傾き(rad), 高さ(m), 横を向いた面だけ(1)か前も(0)]
+  const MUSCLES = [
+    [0.6, 1.36, 0.28, 0.1, 1.15, 0.045, 1],    // 肩（き甲から肩の先へ斜め）
+    [0.8, 1.12, 0.13, 0.09, 0.3, 0.05, 0],     // 胸前（前脚の付け根）
+    [0.69, 1.07, 0.1, 0.06, 1.4, 0.028, 1],     // 上腕
+    [-0.64, 1.3, 0.26, 0.17, 1.2, 0.046, 1],   // 尻から太もも
+    [-0.5, 1.56, 0.22, 0.1, 0.1, 0.014, 0],    // 腰の張り
+  ];
+  function muscle(P, c) {
+    const d = P.clone().sub(c); d.x = 0; const l = d.length() || 1; d.multiplyScalar(1 / l);
+    let h = 0;
+    for (const [mx, my, ra, rb, a, amp, side] of MUSCLES) {
+      const dx = P.x - mx, dy = P.y - my, u = dx * Math.cos(a) + dy * Math.sin(a), v = -dx * Math.sin(a) + dy * Math.cos(a);
+      h += amp * Math.exp(-(u * u) / (ra * ra) - (v * v) / (rb * rb)) * (side ? Math.abs(d.z) : 1);
+    }
+    return P.addScaledVector(d, h);
+  }
   // o.noJockey：騎手を描かない（騎手は素材の形で別に描くとき。鐙・手綱・ムチは残す）
   // o.bare：鞍・ゼッケン・鐙・手綱・ムチも描かない（肖像用。頭絡と馬具は残す。騎手も描かない）
   function horseGeometry(q, o) {
@@ -618,11 +638,15 @@
     const X = V3(1, 0, 0), Y = V3(0, 1, 0), Z = V3(0, 0, 1);
     const cell = k => { const uv = cellUV(CELL[k]); return () => uv; };
     const rig = b => [b, b, 0];
-    const mBody = hi ? 16 : 10, mNeck = hi ? 12 : 8, mHead = hi ? 12 : 8, mLeg = hi ? 8 : 6, mTail = hi ? 8 : 5;
+    const mBody = hi ? 20 : 10, mNeck = hi ? 12 : 8, mHead = hi ? 12 : 8, mLeg = hi ? 8 : 6, mTail = hi ? 8 : 5;
 
-    // 胴
-    loft(B, BODY_T.map(([x, top, bot, w, k]) => ell(V3(x, (top + bot) / 2, 0), Y, Z, (top - bot) / 2, w, mBody, k, 0.92)),
-      BODY_T.map(() => rig(1)), (i, j, P) => sideUV(P), { cap0: true, cap1: true });
+    // 胴（近くの形は、肩・胸前・尻の筋肉のふくらみを面に足す）
+    {
+      // 近くの形は断面を細かく取り直す（筋肉のふくらみが面に出るように）
+      const rows = hi ? (() => { const out = [BODY_T[0]], x0 = BODY_T[0][0], x1 = BODY_T[BODY_T.length - 1][0], n = 26; for (let i = 1; i < n; i++) out.push(lerpRow(BODY_T.slice().reverse(), x0 + (x1 - x0) * i / n)); out.push(BODY_T[BODY_T.length - 1]); return out; })() : BODY_T;
+      loft(B, rows.map(([x, top, bot, w, k]) => { const c = V3(x, (top + bot) / 2, 0), r = ell(c, Y, Z, (top - bot) / 2, w, mBody, k, 0.92); return hi ? r.map(P => muscle(P, c)) : r; }),
+        rows.map(() => rig(1)), (i, j, P) => sideUV(P), { cap0: true, cap1: true });
+    }
     // 首
     loft(B, NECK.map(s => ell(s.c, s.u, Z, s.h, s.w, mNeck, 0.28, 0.95)), NECK.map(s => s.sk), (i, j, P) => sideUV(P), { cap0: true, cap1: true });
     // 頭
@@ -646,16 +670,28 @@
       loft(B, ft.map((t, i) => { const s = headSec(Math.max(0, t)); const o = arc(s.c, vHU(), Z, s.h, s.w, s.k, 0.9, Math.PI - 0.38, Math.PI + 0.38, hi ? 4 : 3, 0.02 + (i ? 0 : 0.01)); const n = arc(s.c, vHU(), Z, s.h, s.w, s.k, 0.9, Math.PI + 0.38, Math.PI - 0.38, hi ? 4 : 3, 0.003); return o.concat(n); }),
         ft.map(() => rig(4)), (i, j) => rUV(R_HAIR, 0.1 + (j % 4) * 0.08, 1 - i / 3), { cap1: true });
     }
-    // たてがみ（首の右側に寝る）
+    // たてがみ（首の右側に寝る）。近くの形は輪の間にも輪を足し、下の縁を房のようにぎざぎざに
     {
       const n = hi ? 5 : 3;
       const rings = [], sk = [];
-      for (let i = 1; i < NECK.length; i++) {
-        const lo = Math.PI - 0.72 - 0.08 * hash01(i, 77);
+      const ring = (i, lo, th0, off) => {
         const o = [], inn = [];
-        for (let j = 0; j < n; j++) { const th = Math.PI + 0.1 - (Math.PI + 0.1 - lo) * j / (n - 1); o.push(neckPt(i, th, 0.022 - 0.01 * j / (n - 1))); }
-        for (let j = n - 1; j >= 0; j--) { const th = Math.PI + 0.1 - (Math.PI + 0.1 - lo) * j / (n - 1); inn.push(neckPt(i, th, 0.004)); }
-        rings.push(o.concat(inn)); sk.push(NECK[i].sk);
+        for (let j = 0; j < n; j++) { const th = th0 - (th0 - lo) * j / (n - 1); o.push(neckPt(i, th, off - 0.012 * j / (n - 1))); }
+        for (let j = n - 1; j >= 0; j--) { const th = th0 - (th0 - lo) * j / (n - 1); inn.push(neckPt(i, th, 0.004)); }
+        return o.concat(inn);
+      };
+      for (let i = 1; i < NECK.length; i++) {
+        if (!hi) { rings.push(ring(i, Math.PI - 0.72 - 0.08 * hash01(i, 77), Math.PI + 0.1, 0.022)); sk.push(NECK[i].sk); continue; }
+        // 近くの形：i と i+1 の間を3つに分けて、房の長さを変える
+        const steps = i < NECK.length - 1 ? 3 : 1;
+        for (let q = 0; q < steps; q++) {
+          const a = ring(i, Math.PI - 0.62 - 0.4 * hash01(i * 3 + q, 77), Math.PI + 0.12, 0.03);
+          if (q === 0) { rings.push(a); sk.push(NECK[i].sk); continue; }
+          const b = ring(i + 1, Math.PI - 0.62 - 0.4 * hash01(i * 3 + q, 77), Math.PI + 0.12, 0.03), f = q / steps;
+          rings.push(a.map((P, j) => P.lerp(b[j], f)));
+          const s0 = NECK[i].sk, s1 = NECK[i + 1].sk;
+          sk.push(f < 0.5 ? s0 : s1);
+        }
       }
       loft(B, rings, sk, (i, j) => rUV(R_HAIR, (j % n) / n * 0.45, i / (rings.length - 1)), { cap0: true, cap1: true });
     }
@@ -675,6 +711,27 @@
       loft(B, rows.map(([x, y, h, w]) => ell(V3(x, y, sd * (z0 - (y < 0.9 ? 0.012 * (0.9 - y) : 0))), X, Z, h, w, mLeg, -0.08, 1)),
         rows.map(r => [b0 + r[4], b0 + r[5], r[6]]), (i, j, P) => legUV(k, P), { cap0: true, cap1: true });
     });
+    // 近くの形だけ：飛節の角、頬とのど、たてがみと尾の房（肩・胸前・尻の筋肉は胴の面のふくらみ MUSCLE で）
+    if (hi) {
+      // y0 より上は骨 a、y1 より下は骨 b
+      for (const sd of [-1, 1]) {
+        const h0 = sd < 0 ? 16 : 20;
+        blob(B, V3(-0.795, 0.6, sd * HZ * 0.95), 0.032, 0.05, 0.03, 6, 4, { uvf: P => legUV(sd < 0 ? 2 : 3, P), bone: h0 + 2 }); // 飛節の角
+        // 頬（下あごの丸み）
+        const hc = headSec(0.17).c.clone().addScaledVector(vHU(), -0.055).addScaledVector(Z, sd * 0.042);
+        blob(B, hc, 0.085, 0.085, 0.06, 8, 6, { uv: rUV(R_HEAD, 0.17, 0.25), bone: 4 });
+      }
+      // のど（首と頭のつなぎ）
+      blob(B, V3(1.045, 1.72, 0), 0.1, 0.1, 0.082, 8, 6, { uvf: sideUV, skinf: () => [3, 4, 0.5] }, -0.6);
+      // 尾の房：付け根から3本に分かれて下へ流れる
+      for (const [dz, dy, ext] of [[-0.04, 0.0, 0.16], [0.04, 0.01, 0.12], [0, -0.03, 0.22]]) {
+        const pts = [], rr = [], sks = [];
+        TAIL_T.forEach((r, i) => { if (i < 2) return; const f = (i - 2) / (TAIL_T.length - 3); pts.push(V3(r[0] - 0.01, r[1] + dy * f, dz * f)); rr.push(r[3] * 0.62 * (1 - 0.3 * f)); sks.push([r[4], r[5], r[6]]); });
+        const e = pts[pts.length - 1];
+        pts.push(e.clone().add(V3(-ext * 0.45, -ext, dz * 0.5))); rr.push(0.008); sks.push([7, 7, 0]);
+        tube(B, pts, rr, 4, sks, (i, j, P) => rUV(R_HAIR, 0.5 + (j % 4) * 0.12, 1 - i / (pts.length - 1)), { cap0: true });
+      }
+    }
     if (!bare) {
       // ゼッケン（鞍の下の布。両脇に番号。外から読めるように）
       {
@@ -1047,8 +1104,8 @@
         const front = b0 < 16, K = front ? FK : HK, phi = ((ph - T[b0]) % 1 + 1) % 1;
         for (let i = 0; i < 4; i++) b[b0 + i].rotation.z = k * cyc(K[i], phi);
       }
-      bob = 0.02 * k * cyc(BOB, ph);
-      pitch = 0.05 * k * cyc(PITCH, ph);
+      bob = 0.035 * k * cyc(BOB, ph);
+      pitch = 0.065 * k * cyc(PITCH, ph);
       b[1].position.y = 1.25 + bob;
       b[1].rotation.z = pitch;
       b[1].updateMatrix();
@@ -1062,12 +1119,15 @@
         if (phi < duty) { const w = Math.sin(phi / duty * Math.PI); ws += w; wy += w * y; }
       }
       const al = Math.min(1, ws * 1.5);
-      b[1].position.y -= al * (ws > 0 ? wy / ws : 0) + (1 - al) * (lo - 0.05 * k);
+      b[1].position.y -= al * (ws > 0 ? wy / ws : 0) + (1 - al) * (lo - 0.1 * k); // 4本とも浮く間は蹄が 10cm ほど上がる
       // 首：前脚が着く頃に下げ、後脚で押す頃に上げる。走るほど前へ伸ばす
       const nod = cyc(NOD, ph) * k;
-      b[2].rotation.z = -0.14 * k + 0.09 * nod;
-      b[3].rotation.z = -0.05 * k + 0.06 * nod;
-      b[4].rotation.z = 0.12 * k - 0.1 * nod - pitch;
+      b[2].rotation.z = -0.14 * k + 0.13 * nod;
+      b[3].rotation.z = -0.05 * k + 0.08 * nod;
+      b[4].rotation.z = 0.12 * k - 0.15 * nod - pitch;
+      // 手前の側へ少しだけ首を振る
+      b[2].rotation.y = 0.03 * k * Math.sin(ph * TAU + (H.lead > 0 ? 0 : Math.PI));
+      b[4].rotation.y = -0.6 * b[2].rotation.y;
       // 尾：走ると後ろへ流れる
       b[5].rotation.z = 0.46 - 0.1 * k + 0.05 * Math.sin(ph * TAU * 2 + seed);
       b[6].rotation.z = 0.05 * Math.sin(ph * TAU + 1 + seed); b[7].rotation.z = 0.08 * Math.sin(ph * TAU + 2 + seed);

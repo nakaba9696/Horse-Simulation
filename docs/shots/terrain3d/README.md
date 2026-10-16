@@ -9,3 +9,5 @@
 - `dirt_*`：東京 ダート1600（土の塊と蹄の跡・影）
 - `compare_*`：左が Godot の試作（docs/shots/compare の左半分）、右がこの枝のブラウザ版。同じ東京 芝2400 の同じ場面（馬の並びは別の模擬）
 - `result_bg.jpg`：結果の画面の背景にした止め絵（assets/ui_bg_result.js）
+
+馬の作り込み（区切り2）：`docs/shots/horse3d_v2/before_after.jpg`（左が前・右が後。横からの襲歩6コマ・頭と首・脚・後ろ・肖像）と `portrait.jpg`。`compare_*` はこの区切りで撮り直した。
