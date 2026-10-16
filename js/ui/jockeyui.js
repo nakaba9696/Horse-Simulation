@@ -214,7 +214,7 @@
         <td class="num"><b style="color:var(--gold2)">${U.money(it.price)}</b></td></tr>`;
     }).join('');
     return `<h2 class="sec">馬の店<span class="r">資金 ${U.money(G.player.money)}・お手馬 ${T.ownCount()}/${T.MAX_OWN}${full ? '（いっぱい）' : ''}</span></h2>
-      <div class="small muted">1989〜2026年に走った馬で、いま走っていない馬を、デビュー前の2歳として売る。${T.FH_NAME}（伸びきったときの強さ。史実馬は45〜90で、オリジナルホースは99まで）の芝・ダートの高いほうの順。倒したスペシャルホースは上に並ぶ。行を押すと馬の画面が開き、そこで買えます。</div>
+      <div class="small muted">1989〜2026年に走った馬で、いま走っていない馬を、デビュー前の2歳として売る。${T.FH_NAME}（伸びきったときの強さ。史実馬は45〜85で、オリジナルホースは99まで）の芝・ダートの高いほうの順。倒したスペシャルホースは上に並ぶ。行を押すと馬の画面が開き、そこで買えます。</div>
       ${items.length ? `<div class="tblwrap mt"><table class="t shop"><tr><th>馬名</th><th>性別</th><th class="num">年齢</th><th class="num">芝</th><th class="num">ダ</th><th class="num">値段</th></tr>${rows}</table></div>
         ${items.length > lim ? `<div class="center mt"><button class="btn" data-act="mmore">もっと見る（残り${items.length - lim}頭）</button></div>` : ''}`
         : '<div class="panel empty">いま買えるデビュー前の史実馬はいません。毎年3月に新しい世代が生まれます。</div>'}`;

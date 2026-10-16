@@ -182,6 +182,7 @@
     return `${kind}（${min}〜${max}m）`;
   };
 
+  H.LEGEND_MUL = 1.035;
   // 史実馬のデータから、能力の素質を作る（名前ごとに毎回同じ）
   H.fromHistoric = function (d, id) {
     const rng = U.hashRng('hist:' + d.name);
@@ -197,6 +198,8 @@
       slope: r - 5 + rng.normal(0, 5) + (dirt ? 3 : 0),
     };
     for (const k of Object.keys(pot)) pot[k] = U.clamp(pot[k], 30, 106);
+    // 伝説級（data/legends.js の tier:'legend'。キンチェム・セントサイモンなど）は、史実馬のいちばん上よりもうひとつ強い
+    if (d.tier === 'legend') for (const k of Object.keys(pot)) pot[k] = U.clamp(pot[k] * H.LEGEND_MUL, 30, 112);
     // エディットで能力を個別に決めた馬（前の版の形でも読む）
     let custom = null;
     if (d.pot) {
