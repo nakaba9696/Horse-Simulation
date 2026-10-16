@@ -630,6 +630,7 @@ check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデ�
   assert(hist.length >= E.CROP * 4, `史実馬が少ない ${hist.length}`);
   for (const h of hist) { const d = W.histByName.get(h.name); assert(d && E.isPool(d), `${h.name} は1990〜2026年の馬ではない`); }
   // 生年をずらしても、勝ち鞍は本当の年の分だけ前に持つ
+  G.shopKeys = E.locks().map(l => l.key); // 値段の開きを見るため、店を全部開ける（開き方は 'shop:' で見る）
   const shop = W.marketHistoric();
   const act = E.activeNames();
   assert(shop.length > 1000 && !shop.some(it => act.has(it.horse.name)), '走っている馬が店に並んでいる');
@@ -653,6 +654,38 @@ check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデ�
   if (old && !W.horse(old.id)) assert(W.marketHistoric().some(x => x.horse.name === old.name), '引退した馬が店に戻らない');
   const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1 && U.ERA === E.ERA, 'セーブの往復で中身が変わる');
   return `史実馬 ${hist.length}頭・店 ${shop.length}頭・2年目の2歳 ${crop}頭`;
+});
+
+check('shop: 馬の店は少しずつ開く（はじめは G3 まで。G1・G2・地方・国のレースを勝つとその馬が並ぶ）', () => {
+  const E = HS.Eraless;
+  W.newGame({ seed: 22, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get();
+  const by = n => W.histByName.get(n) || E.pool().find(d => d.name === n);
+  const lk = n => E.lockOf(by(n));
+  assert(lk('ディープインパクト') === 'g1' && lk('フリオーソ') === 'local' && lk('デインドリーム') === 'c:独' && lk('エネイブル') === 'c:英', `鍵 ${['ディープインパクト', 'フリオーソ', 'デインドリーム', 'エネイブル'].map(lk).join(',')}`);
+  const names = () => new Set(W.marketHistoric().map(x => x.horse.name));
+  let shop = names();
+  const lockedNow = E.pool().filter(d => E.lockOf(d) && !E.activeNames().has(d.name));
+  assert(lockedNow.every(d => !shop.has(d.name)), 'まだ開いていない馬が並んでいる');
+  assert(shop.size > 500, `はじめの店が少ない ${shop.size}`);
+  const g1 = E.pool().find(d => E.lockOf(d) === 'g1' && !E.activeNames().has(d.name));
+  const de = E.pool().find(d => E.lockOf(d) === 'c:独' && !E.activeNames().has(d.name));
+  // G1 を勝つと G1馬と G2馬、ドイツのレースを勝つとドイツの馬
+  E.unlockWin({ grade: 'G1', region: 'JRA', course: '東京' });
+  shop = names();
+  assert(shop.has(g1.name) && !shop.has(de.name), 'G1 を勝っても G1馬が並ばない（か、ドイツの馬まで並ぶ）');
+  assert(G.shopKeys.includes('g2'), 'G1 を勝つと G2馬も並ぶ');
+  const deRace = HS.DATA.races.find(r => (HS.DATA.courses[r.course] || {}).country === '独');
+  E.unlockWin(deRace);
+  assert(names().has(de.name), 'ドイツのレースを勝ってもドイツの馬が並ばない');
+  const locks = E.locks();
+  assert(locks.find(l => l.key === 'g1').open && !locks.find(l => l.key === 'local').open && locks.find(l => l.key === 'local').hint === '地方のレースを勝つ', '解放の表が違う');
+  // 前のセーブ：自分の馬の勝ち鞍から開ける
+  const h = W.mine()[0] || Object.values(G.horses)[0];
+  const g = { eraless: true, horses: { a: { owner: 'P', gradedWins: [{ grade: 'G2', region: 'JRA' }], results: [{ pos: 1, course: '大井' }] } } };
+  const k = E.migrateKeys(g);
+  assert(k.includes('g2') && k.includes('local') && !k.includes('g1'), `前のセーブの鍵 ${k}`);
+  return `はじめの店 ${new Set(W.marketHistoric().map(x => x.horse.name)).size}頭（G1 とドイツを開けたあと）・鍵 ${locks.map(l => l.label + l.n).join(' ')}`;
 });
 
 check('special: 1989年より前の名馬はグループごとの条件にリーチで出てきて、勝つと店に並ぶ', () => {
