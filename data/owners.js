@@ -8,7 +8,8 @@
 //   likes：好み（sprint 短距離・mile マイル・long 長距離・dirt ダート・turf 芝・filly 牝馬・front 逃げ馬・closer 差し追込・
 //          foreign 海外の馬・overseas 海外のレース・local 地方のレース・classic クラシック・young 2歳・veteran 古馬・blood 史実の血統）
 //   memory：思い出の名馬（スペシャルホース。最後のご褒美で譲ってくれる）
-//   face：顔の絵（js/ui/ownersui.js の UI.ownerFace が描く）
+//   portrait：持ち主が作った絵（assets/owners_<id>.js）の顔の中心（横・縦の％）と、札で切り抜く幅（％）
+//   face：絵が読めないときの顔（js/ui/ownersui.js の UI.ownerFace が SVG で描く）
 //   voice：口調の表（一人称・呼び方・語尾・言わないこと）。書き足すときはこれに合わせる
 //   only：これ以外の馬は持たない（filly＝牝馬だけ）
 //   lines：場面ごとの台詞。頭に [ダ]・[芝]・[短]（1400m まで）・[長]（2400m から）・[逃]・[差]（差し・追込）・[牝] を付けると、その時だけ使う。near＝顔見知り・信頼、close＝主戦・相棒。{me}＝騎手の名前、{horse}＝馬名、{race}＝レース名
@@ -17,13 +18,14 @@
   const HS = globalThis.HS = globalThis.HS || {}; HS.DATA = HS.DATA || {};
   HS.DATA.owners = [
     {
-      id: 'takenouchi', name: '竹之内 源三郎', kana: 'たけのうち げんざぶろう', age: 74, title: '老舗の料亭のご隠居',
-      note: '六十年、競馬場に通っている。話が長い。長い距離のレースに目がない。',
+      id: 'takenouchi', name: '竹之内 源三郎', kana: 'たけのうち げんざぶろう', age: 68, title: '老舗の料亭のご隠居',
+      note: '紋付きの羽織で競馬場に来る。五十年、通い続けている。話が長い。長い距離のレースに目がない。',
       silks: { base: '#1f5f3a', sub: '#ffffff', pattern: 'cross' }, cap: '#ffffff',
       likes: ['long', 'veteran', 'turf'], memory: 'シンザン',
-      face: { skin: '#f1d2b6', hair: '#d9d9de', style: 'gray', eyes: '#4a3a2c', eye: 'narrow', brow: 'thick', cloth: '#3b4a3f', collar: 'kimono', accent: '#8a7a5a', extras: ['glasses-round', 'mustache', 'wrinkles'] },
+      portrait: { x: 50, y: 17, w: 44 },
+      face: { skin: '#f1d2b6', hair: '#b8b8be', style: 'gray', eyes: '#4a3a2c', eye: 'narrow', brow: 'thick', cloth: '#3a3f55', collar: 'kimono', accent: '#e8e8e8', extras: ['wrinkles'] },
       voice: { me: 'わたし', you: '{me}くん', end: '〜ですな・〜かね・〜なさい', never: ['若者言葉', '人の悪口', '勝ち負けで声を荒げる'] },
-      intro: '竹之内と申します。府中に通って六十年になります。長いところの馬ばかり持っておりましてな。',
+      intro: '竹之内と申します。府中に通って五十年になります。長いところの馬ばかり持っておりましてな。',
       lines: {
         offer: {
           near: ['{race}に{horse}を出します。乗ってくれますかな。', '若い人の腕を見たくてね。{horse}で{race}、どうです。', '[長]{horse}は長いところで味が出る馬でして。{race}をお願いしたい。'],
@@ -38,7 +40,7 @@
           close: ['{me}くん、また一つ思い出が増えた。', 'ゴール前で立ち上がってしまったよ。膝が痛い。', 'きみが乗ると、馬が一回り大きく見えるのです。'],
         },
         bigwin: {
-          near: ['{race}を勝つ日が来るとは。六十年通って、いちばんの景色です。'],
+          near: ['{race}を勝つ日が来るとは。五十年通って、いちばんの景色です。'],
           close: ['わたしの代で{race}の口取りに立てるとは。ありがとう、{me}くん。', '{race}。家内に報告します。あれも喜ぶ。'],
         },
         good: {
@@ -65,10 +67,11 @@
     },
     {
       id: 'saginomiya', name: '鷺ノ宮 澪', kana: 'さぎのみや みお', age: 22, title: '三代続く馬主の家の跡取り',
-      note: '大学で血統を研究している。まじめで負けず嫌い。レースのたびにノートをつける。',
+      note: '大学で血統を研究している。長い黒髪に丸い眼鏡。まじめで負けず嫌い。レースのたびにノートをつける。',
       silks: { base: '#ffffff', sub: '#1d2b5a', pattern: 'hoops' }, cap: '#1d2b5a',
       likes: ['classic', 'blood', 'turf'], memory: 'シンボリルドルフ',
-      face: { skin: '#f8dcc8', hair: '#1c1c26', style: 'long', eyes: '#2c3e78', eye: 'sharp', brow: 'thin', cloth: '#1d2b5a', collar: 'blazer', accent: '#ffffff', extras: ['headband'] },
+      portrait: { x: 48, y: 22, w: 44 },
+      face: { skin: '#f8dcc8', hair: '#1c1c26', style: 'long', eyes: '#2c3e78', eye: 'sharp', brow: 'thin', cloth: '#1d2b5a', collar: 'blazer', accent: '#ffffff', extras: ['glasses-round'] },
       voice: { me: 'わたし', you: '{me}さん', end: '〜です・〜ません（短く言い切る）', never: ['「ですわ」などのお嬢さま言葉', 'くだけた若者言葉', '根拠のない楽観'] },
       intro: '鷺ノ宮です。家の馬の騎手を探しています。記録を見て、あなたに声をかけました。',
       lines: {
@@ -112,10 +115,11 @@
     },
     {
       id: 'makino', name: '牧野 ひなた', kana: 'まきの ひなた', age: 20, title: '北海道の小さな牧場の娘',
-      note: '地方の競馬場で一頭走らせたのが始まり。元気で、思ったことがすぐ顔に出る。砂の上を走る馬が好き。',
+      note: '三つ編みに緑の前掛け。地方の競馬場で一頭走らせたのが始まり。元気で、思ったことがすぐ顔に出る。砂の上を走る馬が好き。',
       silks: { base: '#2e8b3a', sub: '#ffd23f', pattern: 'stars' }, cap: '#ffd23f',
       likes: ['dirt', 'local', 'sprint'], memory: 'ハイセイコー',
-      face: { skin: '#f6d2b2', hair: '#9a5a2a', style: 'ponytail', eyes: '#5a3a1a', eye: 'round', brow: 'thin', cloth: '#4a6fa5', collar: 'overall', accent: '#e8e2d0', extras: ['bandana', 'freckles'] },
+      portrait: { x: 50, y: 19, w: 44 },
+      face: { skin: '#f6d2b2', hair: '#9a5a2a', style: 'ponytail', eyes: '#5a3a1a', eye: 'round', brow: 'thin', cloth: '#1f8a7a', collar: 'overall', accent: '#ffffff', extras: ['freckles'] },
       voice: { me: 'あたし', you: '騎手さん（仲良くなると{me}さん）', end: '〜っしょ・〜だべ・なまら・したっけ（北海道のことば）', never: ['ていねいすぎる敬語', '人を見下す言い方', '馬を道具のように言う'] },
       intro: '牧野ひなたです！ 北海道の牧場から来ました。うちの子たち、砂ならなまら走るんです。',
       lines: {
@@ -159,10 +163,11 @@
     },
     {
       id: 'kirishima', name: '霧島 玲', kana: 'きりしま れい', age: 36, title: '海外帰りの元騎手',
-      note: 'フランスで十年乗った。落馬で鞍を降り、馬主になった。口数が少なく、騎乗には厳しい。褒めるときは短く褒める。',
+      note: '銀髪に眼鏡、紺のコート。フランスで十年乗った。落馬で鞍を降り、馬主になった。口数が少なく、騎乗には厳しい。褒めるときは短く褒める。',
       silks: { base: '#16181e', sub: '#b71c1c', pattern: 'yoke' }, cap: '#b71c1c',
       likes: ['overseas', 'foreign', 'long', 'closer'], memory: 'ダンシングブレーヴ',
-      face: { skin: '#f3d6c4', hair: '#b8bcc8', style: 'bob', eyes: '#3a4a5a', eye: 'sharp', brow: 'thin', cloth: '#22252c', collar: 'shirt', accent: '#f4f4f4', extras: ['earring'] },
+      portrait: { x: 50, y: 22, w: 44 },
+      face: { skin: '#f3d6c4', hair: '#b8bcc8', style: 'bob', eyes: '#3a4a5a', eye: 'sharp', brow: 'thin', cloth: '#2a3048', collar: 'shirt', accent: '#f4f4f4', extras: ['glasses'] },
       voice: { me: '私', you: '君（仲良くなると{me}と呼び捨て）', end: '〜だ・〜だね・〜して（短い）', never: ['長いお世辞', '大げさに騒ぐ', '自分の昔の勝ちの自慢'] },
       intro: '霧島だ。向こうで十年乗っていた。いい騎手を探している。',
       lines: {
@@ -205,11 +210,12 @@
       },
     },
     {
-      id: 'sengoku', name: '千石 悠斗', kana: 'せんごく ゆうと', age: 29, title: 'アプリで当てた会社の若社長',
-      note: '家計簿のアプリが当たり、馬主になって二年目。せっかちで明るい。話は結論から。短い距離の速い馬が好き。',
+      id: 'sengoku', name: '千石 悠斗', kana: 'せんごく ゆうと', age: 26, title: 'アプリで当てた会社の若社長',
+      note: '家計簿のアプリが当たり、馬主になって二年目。白いシャツにベストで、ネクタイは締めない。せっかちで明るい。話は結論から。短い距離の速い馬が好き。',
       silks: { base: '#00a3e0', sub: '#ffffff', pattern: 'diamonds' }, cap: '#ffffff',
       likes: ['sprint', 'mile', 'young'], memory: 'ニホンピロウイナー',
-      face: { skin: '#f4d4bc', hair: '#3a2a22', style: 'short', eyes: '#3a2a1a', eye: 'round', brow: 'thick', cloth: '#ff7a1a', collar: 'hoodie', accent: '#2a2a2a', extras: ['glasses'] },
+      portrait: { x: 50, y: 18, w: 44 },
+      face: { skin: '#f4d4bc', hair: '#16161c', style: 'short', eyes: '#5a3a1a', eye: 'sharp', brow: 'thick', cloth: '#8a4a1e', collar: 'shirt', accent: '#ffffff', extras: [] },
       voice: { me: '僕', you: 'ジョッキー（仲良くなると{me}さん）', end: '〜です・〜っす（仕事の言葉を混ぜる：結論から・次の打ち手・アップデート）', never: ['年寄りくさい言い回し', '長い前置き', 'お金で人を測る言い方'] },
       intro: '千石です。結論から言うと、速い馬が好きです。乗ってくれる人を探してます。',
       lines: {
@@ -253,10 +259,11 @@
     },
     {
       id: 'hanabusa', name: '花房 つむぎ', kana: 'はなぶさ つむぎ', age: 25, title: '和菓子屋の若おかみ',
-      note: '創業百年の和菓子屋を継ぎ、先代から馬も受け継いだ。ふだんはおっとりしているのに、逃げ馬の話になると止まらない。',
+      note: '着物でそろばんを抱えて店に立つ。創業百年の和菓子屋を継ぎ、先代から馬も受け継いだ。ふだんはおっとりしているのに、逃げ馬の話になると止まらない。',
       silks: { base: '#e04e9a', sub: '#ffffff', pattern: 'stripes' }, cap: '#ffffff',
       likes: ['front', 'turf', 'mile'], memory: 'カブラヤオー',
-      face: { skin: '#f9dccb', hair: '#2a1c18', style: 'bun', eyes: '#4a2a22', eye: 'soft', brow: 'thin', cloth: '#c94f7c', collar: 'kimono', accent: '#f6e6c8', extras: ['hairpin'] },
+      portrait: { x: 50, y: 19, w: 44 },
+      face: { skin: '#f9dccb', hair: '#e8d8b8', style: 'bob', eyes: '#4a2a22', eye: 'soft', brow: 'thin', cloth: '#c94f7c', collar: 'kimono', accent: '#f6e6c8', extras: ['hairpin'] },
       voice: { me: 'わたし', you: '{me}さん', end: '〜ですね・〜しましょ（やわらかい。逃げ馬の話だけ熱い）', never: ['乱暴な言葉', '人をせかす言い方', '後ろから行く作戦をすすめる'] },
       intro: '花房と申します。和菓子屋をしております。うちの子たちは、みんな前に行きたがるんです。',
       lines: {
@@ -299,11 +306,12 @@
       },
     },
     {
-      id: 'takarada', name: '宝田 マリエ', kana: 'たからだ まりえ', age: 47, title: '宝石店の社長',
-      note: '銀座で宝石店を営む。牝馬しか買わず、自分の馬を「お嬢さん」と呼ぶ。華やかで世話好き。',
+      id: 'takarada', name: '宝田 マリエ', kana: 'たからだ まりえ', age: 38, title: '宝石店の社長',
+      note: '銀座で宝石店を営む。黒髪を結い上げ、えんじの服に扇子。牝馬しか買わず、自分の馬を「お嬢さん」と呼ぶ。華やかで世話好き。',
       silks: { base: '#d9b23a', sub: '#7a2182', pattern: 'sash' }, cap: '#7a2182',
       likes: ['filly', 'mile', 'turf'], only: 'filly', memory: 'メジロラモーヌ',
-      face: { skin: '#f7d8c6', hair: '#7a2a3a', style: 'wavy', eyes: '#5a2a4a', eye: 'soft', brow: 'thin', cloth: '#6a2c8a', collar: 'dress', accent: '#e8d27a', extras: ['earring', 'lashes', 'necklace'] },
+      portrait: { x: 52, y: 22, w: 44 },
+      face: { skin: '#f7d8c6', hair: '#1a1a24', style: 'bun', eyes: '#5a2a4a', eye: 'soft', brow: 'thin', cloth: '#7a1e2a', collar: 'dress', accent: '#e8d27a', extras: ['earring', 'lashes', 'necklace'] },
       voice: { me: 'わたし', you: 'あなた（仲良くなると{me}ちゃん）', end: '〜なのよ・〜かしら・〜ちょうだい', never: ['乱暴な言葉', '牡馬を買う話', '値段で馬を語る'] },
       intro: '宝田マリエよ。うちのお嬢さんたちに似合う騎手を探しているの。',
       lines: {

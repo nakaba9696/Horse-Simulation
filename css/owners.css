@@ -76,3 +76,10 @@ button.own-face:hover .oface { transform: translateY(-2px); transition: transfor
 @media (prefers-reduced-motion: reduce) { .own-talk p, .own-reward, .own-scene-face, .own-offers .own-offer { animation: none; opacity: 1; } }
 .own-card .own-silks { position: absolute; top: 10px; right: 10px; }
 .own-card .own-who { padding-right: 30px; }
+
+/* 持ち主が作った絵：札は顔を丸く切り抜き、場面と一人ずつの画面は胸から上 */
+.oport { position: relative; display: block; overflow: hidden; background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--oc, var(--accent)) 45%, #fff 10%), color-mix(in srgb, var(--oc, var(--accent)) 60%, #000 30%)); }
+.oport img { position: absolute; max-width: none; user-select: none; pointer-events: none; }
+.oport:not(.big) { border-radius: 50%; }
+.oport.big { border-radius: var(--r-xl); }
+.oport.big img { position: absolute; left: -20%; top: 0; width: 140%; height: auto; }
