@@ -601,7 +601,6 @@
         if (sim.winnerT == null) sim.winnerT = s.finishT;
       }
     }
-    if (HS.Rivals) HS.Rivals.tactics(sim, order); // ライバル騎手の作戦（js/core/rivals.js）
     if (HS.Skills && sim.step % 2 === 1) HS.Skills.step(sim, order, DT * 2);
     // スキルの発動（見せるため）：直線に入ったら、このレースで効いている特殊能力
     for (const s of st) {
