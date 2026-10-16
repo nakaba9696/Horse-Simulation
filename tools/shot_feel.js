@@ -80,7 +80,7 @@ async function main() {
   await until(() => { const s = HS.Ride.cur; return s.D - s.st[s.me].x < 380; }, 3000, 100);
   // 動画のコマ（50ms ごとに1枚）
   const frames = video ? { p: fs.mkdtempSync(path.join(require('os').tmpdir(), 'feel-')), n: 0 } : null;
-  const vstep = async () => { await step(50); if (frames) await page.screenshot({ path: path.join(frames.p, String(++frames.n).padStart(4, '0') + '.jpg'), type: 'jpeg', quality: 80, timeout: 180000 }); };
+  const vstep = async () => { await step(frames ? 50 : 100); if (frames) await page.screenshot({ path: path.join(frames.p, String(++frames.n).padStart(4, '0') + '.jpg'), type: 'jpeg', quality: 80, timeout: 180000 }); };
   await key('x');
   await wait(0.1);
   await shot('whip');
