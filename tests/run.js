@@ -939,6 +939,20 @@ check('look: 毛色の表に抜けがない・芦毛は年を取ると白い・�
     out.push(`${q ? '近く' : '遠く'} ${tri}`);
     geo.dispose();
   }
+  // 体の比（サラブレッド）：胴の長さ ≒ き甲の高さ、脚（肘から地面）は胴の深さ（き甲から腹）より短くない
+  {
+    const geo = HS.Race3D.horseGeometry(1, { bare: true }), P = geo.attributes.position, si = geo.attributes.skinIndex.array;
+    let x0 = 9, x1 = -9, top = 0, belly = 9;
+    for (let i = 0; i < P.count; i++) if (si[i * 4] === 1 && si[i * 4 + 1] === 1) { x0 = Math.min(x0, P.getX(i)); x1 = Math.max(x1, P.getX(i)); top = Math.max(top, P.getY(i)); if (Math.abs(P.getX(i) - 0.35) < 0.08) belly = Math.min(belly, P.getY(i)); }
+    geo.dispose();
+    const elbow = HS.Race3D.BONE_AT(9)[1];
+    assert(Math.abs((x1 - x0) / top - 1) < 0.08, `胴の長さ ${(x1 - x0).toFixed(2)}m と体高 ${top.toFixed(2)}m の比が違う`);
+    assert(elbow >= (top - belly) * 0.95, `脚 ${elbow.toFixed(2)}m が胴の深さ ${(top - belly).toFixed(2)}m より短い`);
+    out.push(`体長 ${(x1 - x0).toFixed(2)}m・体高 ${top.toFixed(2)}m・胴の深さ ${(top - belly).toFixed(2)}m・肘の高さ ${elbow.toFixed(2)}m`);
+  }
+  // 芦毛の連銭は若いうちに出て、年を取るほど薄い
+  const dp = [3, 5, 7, 9].map(a => HS.Art.coatLook('芦毛', a).dapple);
+  assert(dp[0] > 0.3 && dp[1] < dp[0] + 0.2 && dp[2] < dp[1] && dp[3] < 0.05, `連銭の濃さ ${dp.map(v => v.toFixed(2))}`);
   return `毛色 ${coats.size}・馬具 ${Object.keys(g).length}頭・三角形 ${out.join(' / ')}`;
 });
 
