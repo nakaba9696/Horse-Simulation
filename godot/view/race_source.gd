@@ -45,6 +45,9 @@ func _init(path := "res://assets/replay_race.json") -> void:
 func _ft(j: int) -> float:
 	return finish_t[j] if finish_t[j] >= 0.0 else 1e9
 
+func started() -> bool:
+	return true
+
 func end_t() -> float:
 	return (frames.size() - 1) * dt
 

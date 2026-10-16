@@ -5,7 +5,7 @@ class_name UiRideHud
 extends CanvasLayer
 
 var race: Dictionary
-var src: ViewReplay
+var src   # ViewLive か ViewReplay
 var tr: ViewTrack
 var root: Control
 var top_left: Control
@@ -30,7 +30,7 @@ var telop: Label
 var telop_panel: PanelContainer
 var mode := "ride"
 
-func setup(r: Dictionary, s: ViewReplay, track: ViewTrack) -> void:
+func setup(r: Dictionary, s, track: ViewTrack) -> void:
 	race = r
 	src = s
 	tr = track
@@ -162,6 +162,13 @@ func _build_board() -> void:
 	board_rows = VBoxContainer.new()
 	board_rows.add_theme_constant_override("separation", 3)
 	v.add_child(board_rows)
+
+# 確定の表の行（模擬のときは終わってから結果が決まるので、出す時に作る）
+var _board_built := false
+func _fill_board() -> void:
+	if _board_built:
+		return
+	_board_built = true
 	var res: Array = race.results
 	for k in mini(res.size(), 8):
 		var r: Dictionary = res[k]
@@ -236,7 +243,7 @@ func update(st: Dictionary) -> void:
 	var t: float = st.t
 	var phase: String = st.phase
 	var ride := mode != "tv"
-	var D := src.D
+	var D: float = src.D
 	var rem := maxf(0.0, D - float(st.me_x))
 	dist_l.text = _comma(int(ceil(rem))) if rem > 0.0 else "0"
 	top_left.visible = phase == "run" or phase == "gate"
@@ -279,8 +286,9 @@ func update(st: Dictionary) -> void:
 		finish_sub.modulate.a = clampf((a - 0.4) / 0.4, 0.0, 1.0)
 		var up := clampf((a - 2.2) / 0.5, 0.0, 1.0)
 		finish_box.position.x = -420.0 * (1.0 - pow(1.0 - up, 3.0))
-	board.visible = at >= 5.2
+	board.visible = at >= 5.2 and race.get("results", []).size() > 0
 	if board.visible:
+		_fill_board()
 		var b := clampf((at - 5.2) / 0.45, 0.0, 1.0)
 		board.modulate.a = b
 		board.position = Vector2(root.size.x - 640 + 80.0 * pow(1.0 - b, 3.0), root.size.y / 2.0 - board.size.y / 2.0)
@@ -301,7 +309,7 @@ func update(st: Dictionary) -> void:
 			var nl: Label = tv_rows[k][1]
 			nl.text = String(info.name)
 			nl.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT if j == src.me else UiTheme.IVORY)
-		var tl := src.telop_at(t)
+		var tl: Array = src.telop_at(t)
 		telop_panel.visible = String(tl[0]) != "" and t - float(tl[1]) < 6.0
 		telop.text = tl[0]
 

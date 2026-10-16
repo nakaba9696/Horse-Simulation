@@ -329,6 +329,9 @@ func _parse_args() -> void:
 		elif a.begins_with("--video="):
 			var q := a.substr(8).split(":")
 			video = {"t0": float(q[0]), "t1": float(q[1]), "fps": float(q[2]), "name": q[3]}
+		elif a == "--fast":
+			get_viewport().msaa_3d = Viewport.MSAA_DISABLED
+			RenderingServer.directional_shadow_atlas_set_size(2048, true)
 
 func _capture() -> void:
 	DirAccess.make_dir_recursive_absolute(out_dir)

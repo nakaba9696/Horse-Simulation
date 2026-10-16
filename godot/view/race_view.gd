@@ -16,7 +16,7 @@ const AFTER_END := 9.0     # ゴールしてからこの秒で表を出しきる
 const VIEWS := ["behind", "jockey", "tv"]
 const VIEW_NAME := {"behind": "BEHIND", "jockey": "JOCKEY", "tv": "TV"}
 
-var src: ViewReplay
+var src   # ViewLive（模擬）か ViewReplay（記録の再生）
 var race: Dictionary
 var tr: ViewTrack
 var course: ViewCourse
@@ -46,11 +46,13 @@ var video := {}
 var out_dir := "res://out"
 var hud_on := true
 var _last_order: Array = []
+var _fight_on := false
+var _t_prev := -99.0
 
 func _ready() -> void:
 	ViewRideInput.ensure_actions()
 	font = UiTheme.font()
-	src = ViewReplay.new()
+	src = ViewReplay.new() if (OS.get_cmdline_user_args().has("--replay") or not ResourceLoader.exists("res://core/hs_sim.gd")) else ViewLive.new()
 	race = src.race
 	D = src.D
 	me = src.me
@@ -134,32 +136,52 @@ func u_of(lane: float) -> float:
 
 # ---- 操作 ----
 func _on_act(name: String, arg) -> void:
+	var live: bool = src.get("live") == true
 	match name:
 		"up":
 			if phase == "gate":
-				# ゲートの中：スタートの合図（開く直前〜直後ならよいスタート）
+				# ゲートの中：開く直前（0.6 秒前から）に押せばよいスタート。早すぎる合図は数えない
 				if ctl.start == "" and T > -0.6:
 					ctl.start = "good" if T > -0.25 else "early"
 				return
 			if phase == "run":
+				if live:
+					var was_started: bool = src.started()
+					var r = src.ctl("up")
+					if not was_started:
+						_start_cue(r)
 				ctl.gear = minf(1.0, ctl.gear + 0.12)
 				ctl.pushes += 1
 		"down":
 			if phase == "run":
+				if live:
+					src.ctl("down")
 				ctl.gear = maxf(-1.0, ctl.gear - 0.12)
 		"lane":
 			if phase == "run" or phase == "gate":
-				ctl.lane_want = clampf(ctl.lane_want + float(arg), -6.0, 10.0)
+				if live:
+					src.ctl("lane", arg)
+				else:
+					ctl.lane_want = clampf(ctl.lane_want + float(arg), -6.0, 10.0)
 		"whip":
 			if phase == "run":
 				var side := 1 if arg == "R" else 0
-				if side != ctl.hand:
+				if live:
+					var r2 = src.ctl("whip", arg)
+					if r2 == "swap":
+						ctl.hand = side
+					elif r2 != null:
+						ctl.whip_t = T
+						input.fx("bad" if r2 == "yore" else "whip")
+				elif side != ctl.hand:
 					ctl.hand = side
 				else:
 					ctl.whip_t = T
 					input.fx("whip")
 		"swap":
 			if phase == "run":
+				if live:
+					src.ctl("swap")
 				ctl.hand = 1 - ctl.hand
 		"view":
 			view = VIEWS[(VIEWS.find(view) + 1) % VIEWS.size()]
@@ -167,6 +189,13 @@ func _on_act(name: String, arg) -> void:
 			hud.show_cue(VIEW_NAME[view], T, 1.0)
 		"pause":
 			paused = not paused
+
+func _start_cue(r) -> void:
+	if r == "good":
+		hud.show_cue("GOOD START", T, 1.4)
+	elif r == "late":
+		hud.show_cue("LATE START", T, 1.4)
+		input.fx("bad")
 
 # ---- 1コマ進める（遊ぶときも撮るときも同じ） ----
 func advance(dt: float) -> void:
@@ -176,7 +205,13 @@ func advance(dt: float) -> void:
 		if t0 < 0.0 and T >= 0.0:
 			phase = "run"
 			input.fx("gate")
-			hud.show_cue("GOOD START" if ctl.start == "good" else ("LATE START" if ctl.start == "late" else "START"), T, 1.4)
+			if src.get("live") == true:
+				if ctl.start == "good":
+					_start_cue(src.ctl("up"))
+				else:
+					hud.show_cue("START", T, 1.0)
+			else:
+				hud.show_cue("GOOD START" if ctl.start == "good" else "START", T, 1.4)
 	else:
 		T += dt
 	if phase == "run" and src.finish_t[me] >= 0.0 and T >= src.finish_t[me]:
@@ -195,7 +230,11 @@ func advance(dt: float) -> void:
 	ctl.lane_off = move_toward(ctl.lane_off, ctl.lane_want, dt * 2.2)
 	if phase == "gate":
 		ctl.lane_off = 0.0
-	var H := src.horses_at(T)
+	var was: bool = src.started() if src.get("live") == true else true
+	var H: Array = src.horses_at(T)
+	if not was and src.started():
+		_start_cue(src.start_ret)
+	_feel(H)
 	place(H, dt)
 	update_camera(H, dt)
 	update_hud(H)
@@ -207,18 +246,33 @@ func advance(dt: float) -> void:
 	if course.gate.visible:
 		course.set_doors(0.0 if T <= 0.0 else clampf(T / 0.35, 0.0, 1.0) * 1.35)
 
+# 振動：特殊能力・競り合い（模擬のとき）
+func _feel(_H: Array) -> void:
+	if src.get("live") != true:
+		_t_prev = T
+		return
+	for f in src.skills_between(_t_prev, T):
+		if int(f.i) == me:
+			input.fx("skill")
+	var m: Dictionary = src.me_at(T)
+	var on: bool = float(m.get("fight", 0.0)) > 30.0 and bool(m.get("duel", false))
+	if on and not _fight_on:
+		input.fx("fight")
+	_fight_on = on
+	_t_prev = T
+
 # ---- 馬を置く ----
 func place(H: Array, dt: float) -> void:
 	var gate_now := T <= 0.0
 	var gk := 0.0 if gate_now else ViewTrack.smooth(T / GATE_OPEN)
-	var rec := src.me_at(T)
+	var rec: Dictionary = src.me_at(T)
 	for j in horses.size():
 		var h := horses[j]
 		var st: Array = H[j]
 		var x: float = st[0]
 		var lane: float = st[1]
 		var v: float = st[2]
-		if j == me:
+		if j == me and src.get("live") != true:
 			lane = maxf(0.0, lane + ctl.lane_off)
 		var u_goal := u_of(lane) if gk >= 1.0 else LANE0 + lane / 0.5 * GATE_P * (1.0 - gk) + (u_of(lane) - LANE0) * gk
 		var u: float = u_goal if lane_vis[j] == null or dt <= 0.0 else lerpf(lane_vis[j], u_goal, minf(1.0, dt * 6.0))
@@ -381,13 +435,13 @@ func tv_target(H: Array) -> Array:
 	return [cp, lk, fov]
 
 func update_hud(H: Array) -> void:
-	var order := src.ranking(T, H)
-	var rec := src.me_at(T)
+	var order: Array = src.ranking(T, H)
+	var rec: Dictionary = src.me_at(T)
 	var m: Array = H[me]
 	hud.mode = "tv" if view == "tv" else "ride"
 	hud.visible = hud_on
 	hud.update({"t": T, "H": H, "me_x": m[0], "me_v": m[2], "rank": order.find(me) + 1, "order": order,
-		"gear": ctl.gear if ctl.pushes > 0 else float(rec.gear), "E": rec.E, "tension": rec.tension, "hand": ctl.hand,
+		"gear": float(rec.gear) if src.get("live") == true or ctl.pushes == 0 else ctl.gear, "E": rec.E, "tension": rec.tension, "hand": int(rec.hand) if src.get("live") == true else ctl.hand,
 		"whip_age": T - ctl.whip_t, "phase": phase, "after_t": after_t if phase == "after" or phase == "result" else -1.0,
 		"place": src.place_of(me), "my_time": src.finish_t[me]})
 	# 内馬場の大きな画面
@@ -432,6 +486,8 @@ func parse_args() -> void:
 			out_dir = a.substr(6)
 		elif a == "--nohud":
 			hud_on = false
+		elif a == "--fast":
+			_fast()
 		elif a.begins_with("--shot="):
 			var p := a.substr(7).split(":")
 			shots.append({"t": float(p[0]), "cam": p[1], "name": p[2]})
@@ -441,6 +497,16 @@ func parse_args() -> void:
 		elif a.begins_with("--press="):
 			var r := a.substr(8).split(":")
 			presses.append({"t": float(r[0]), "a": r[1], "done": false})
+
+# 動画を撮るとき（CPU の Vulkan で重いので）：画面の後処理と影を軽く
+func _fast() -> void:
+	env.ssil_enabled = false
+	env.ssr_enabled = false
+	env.ssao_enabled = false
+	get_viewport().msaa_3d = Viewport.MSAA_DISABLED
+	RenderingServer.directional_shadow_atlas_set_size(2048, true)
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	sun.directional_shadow_max_distance = 120.0
 
 # 撮影：はじめ（ゲートの中）から決まった刻みで進め、撮る秒で絵を保存する。操作（--press）も同じ刻みで入れる
 func run_capture() -> void:
@@ -478,6 +544,7 @@ func run_capture() -> void:
 		img.save_png(out_dir.path_join(String(sh.name) + ".png"))
 		if not String(sh.name).contains("_0"):
 			print("shot ", sh.name, " t=", snappedf(T, 0.01), " phase=", phase)
+	print("me: finish=%.2f place=%d start=%s" % [src.finish_t[me], src.place_of(me), str(src.get("start_ret"))])
 	print("done")
 	OS.kill(OS.get_process_id())
 
