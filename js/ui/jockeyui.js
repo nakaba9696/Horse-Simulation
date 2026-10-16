@@ -405,8 +405,10 @@
         const bg = App.modal('<div class="ride-holder"></div>', { wide: true, noClose: true });
         const AU = HS.Audio;
         if (AU && AU.ready() && AU.settings.bgm > 0 && card.race.graded) {
-          bg.querySelector('.ride-holder').innerHTML = `<div class="panel gold center" style="padding:40px 10px"><div class="serif" style="font-size:22px;font-weight:900;color:var(--gold2)">${e(R.label(card.race))}</div><div class="mt">ファンファーレ</div><button class="btn sm mt" data-x="skipfan">飛ばす</button></div>`;
-          await Promise.race([AU.playOnce('fanfare', card.race), new Promise(res => { bg.querySelector('[data-x=skipfan]').onclick = () => { AU.stopBgm(); res(); }; })]);
+          bg.querySelector('.ride-holder').innerHTML = `<div class="panel gold center" style="padding:40px 10px"><div class="serif" style="font-size:22px;font-weight:900;color:var(--gold2)">${e(R.label(card.race))}</div><div class="mt">ファンファーレ</div><button class="btn sm mt" data-x="skipfan">飛ばす（A／Enter）</button></div>`;
+          let offSkip = null; // パッドとキーでも飛ばせる（js/ui/ride.js の RD.onSkip）
+          await Promise.race([AU.playOnce('fanfare', card.race), new Promise(res => { const go = () => { if (offSkip) offSkip(); AU.stopBgm(); res(); }; offSkip = HS.Ride.onSkip(go); bg.querySelector('[data-x=skipfan]').onclick = go; })]);
+          if (offSkip) offSkip();
         }
         played[card.race.key] = await HS.Ride.ride(bg.querySelector('.ride-holder'), card);
         App.closeModal();

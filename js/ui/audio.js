@@ -776,6 +776,13 @@
     else if (name === 'whip') { noise(bus, t, 0.05, 'highpass', 3000, 0.5); noise(bus, t + 0.01, 0.08, 'bandpass', 1800, 0.35, 2); }
     else if (name === 'skill') { ['E6', 'B6', 'E7'].forEach((n, i) => V.bell(bus, [freq(n)], t + i * 0.05, 0.18, 1.7)); }
     else if (name === 'fight') { blip(220, 660, 0.22, 'sawtooth', 0.07); blip(330, 990, 0.22, 'square', 0.04); noise(bus, t, 0.18, 'bandpass', 1200, 0.25, 1.2); } // 競り合いで気合が乗った：駆け上がる音と、どよめき
+    // 騎乗の手ごたえ（js/ui/ride.js）：数え・進路・ぶつかり・ゴール板・着順の表示
+    else if (name === 'count') blip(880, null, 0.07, 'square', 0.05);
+    else if (name === 'lane') noise(bus, t, 0.09, 'bandpass', 700, 0.18, 1.4);
+    else if (name === 'bump') { noise(bus, t, 0.12, 'lowpass', 220, 0.6, 1); blip(110, 60, 0.12, 'sine', 0.12); }
+    else if (name === 'goal') { V.bell(bus, [freq('A6')], t, 0.08, 1.6); noise(bus, t, 0.5, 'bandpass', 1100, 0.3, 0.8); }
+    else if (name === 'rank1') { ['G5', 'C6', 'E6', 'G6'].forEach((n, i) => V.lead(bus, [freq(n)], t + i * 0.07, i === 3 ? 0.45 : 0.08, 1.1)); V.bell(bus, [freq('C7')], t + 0.28, 0.4, 1.4); }
+    else if (name === 'rank') { V.bell(bus, [freq('E6')], t, 0.1, 1.1); V.bell(bus, [freq('B5')], t + 0.09, 0.2, 0.9); }
     else if (name === 'gate') { V.bell(bus, [1568], t, 0.05, 3); V.bell(bus, [2093], t, 0.05, 2); noise(bus, t, 0.25, 'bandpass', 900, 0.35, 1.5); }
   };
 
