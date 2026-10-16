@@ -142,7 +142,7 @@ func _on_act(name: String, arg) -> void:
 			if phase == "gate":
 				# ゲートの中：開く直前（0.6 秒前から）に押せばよいスタート。早すぎる合図は数えない
 				if ctl.start == "" and T > -0.6:
-					ctl.start = "good" if T > -0.25 else "early"
+					ctl.start = "good"
 				return
 			if phase == "run":
 				if live:
@@ -562,14 +562,15 @@ func _apply_presses() -> void:
 				"ride_whip_l": _on_act("whip", "L")
 				"ride_view": _on_act("view", null)
 
-# 早送り：途中の形は作らずに秒だけ進め、出来事（ゲート・ゴール）はそろえる
+# 早送り：0.5 秒ずつ進める（操作を入れる秒では止まる）。出来事（ゲート・ゴール）はそろう
 func _jump_to(t: float) -> void:
-	if T < 0.0 and t >= 0.0:
-		advance(-T + 1e-3)
 	var guard := 0
-	while T < t and guard < 10000:
+	while T < t - 1e-6 and guard < 10000:
 		guard += 1
-		var d := minf(0.5, t - T)
+		var nt := minf(t, T + 0.5)
+		for pr in presses:
+			if not pr.done and float(pr.t) > T and float(pr.t) < nt:
+				nt = float(pr.t)
+		advance(maxf(1e-4, nt - T))
 		_apply_presses()
-		advance(d)
 	cam_state.clear()

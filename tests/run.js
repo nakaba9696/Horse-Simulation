@@ -1292,6 +1292,7 @@ require('./extra_audio.js')(check, assert, HS); // BGM の曲の書式と長さ
 require('./extra_rumble.js')(check, assert, HS); // コントローラーの振動
 require('./extra_balance.js')(check, assert, HS); // 立ち回りの噛み合い・競り合いの気合
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
+require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
 
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
