@@ -2633,7 +2633,7 @@
     try { if (h.born != null && HS.World && HS.World.wIdx && HS.Horse && HS.Horse.ageAt) return HS.Horse.ageAt(h, HS.World.wIdx()); } catch (e) { /* 分からなければ */ }
     return ageOf(h);
   }
-  R3.portrait = function (canvas, horse) {
+  R3.portrait = function (canvas, horse, view) {
     if (!canvas || !horse || typeof document === 'undefined' || !R3.supported()) return false;
     if (!imgOk('grass_col') || !imgOk('sky_clear')) return false;
     const w = canvas.width | 0, hgt = canvas.height | 0;
@@ -2642,7 +2642,7 @@
     const age = portraitAge(horse), gear = gearOf(horse);
     const coat = horse.coat || '鹿毛';
     const HRG = HS.HorseRigged, rigged = !!(HRG && HRG.use());
-    const key = [w, hgt, coat, coat === '芦毛' ? Math.min(12, age || 0) : '', small ? '' : (horse.name || horse.id || ''), JSON.stringify(gear), rigged ? 'r' : 'h'].join('|');
+    const key = [w, hgt, coat, coat === '芦毛' ? Math.min(12, age || 0) : '', small ? '' : (horse.name || horse.id || ''), JSON.stringify(gear), rigged ? 'r' : 'h', view ? JSON.stringify(view) : ''].join('|');
     let img = PT.cache.get(key);
     if (!img) {
       const K = portraitKit();
@@ -2674,6 +2674,8 @@
       const vf = Math.tan(camera.fov * Math.PI / 360), need = Math.max(2.55 / (2 * vf), 4.3 / (2 * vf * asp));
       const tgt = V3(0.1, small ? 1.18 : 1.12, 0), dir = V3(0.28, 0.06, 1).normalize();
       camera.position.copy(tgt).addScaledVector(dir, need * (small ? 0.9 : 1.05));
+      // 寄りの絵（view：{ tgt, dir, dist, fov }。確かめ用）
+      if (view) { camera.fov = view.fov || 24; camera.updateProjectionMatrix(); tgt.set(...view.tgt); camera.position.copy(tgt).addScaledVector(V3(...view.dir).normalize(), view.dist); }
       camera.lookAt(tgt);
       renderer.render(scene, camera);
       img = canvasOf(w, hgt);

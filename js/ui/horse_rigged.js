@@ -181,8 +181,8 @@
     // 尾の先の骨も、尾の2つめと同じ向きに回す
     { const b = bones[byRole('tail3')], q = new THREE.Quaternion(); b.getWorldQuaternion(q); q.invert(); P.axis.tail3 = { z: new THREE.Vector3(-1, 0, 0).applyQuaternion(q), y: new THREE.Vector3(0, 1, 0).applyQuaternion(q) }; }
     P.scene = g.scene; P.mesh = mesh; P.role = role;
-    P.hair = hairCards(vs, dom, W2, byRole, bones);
-    P.bridle = bridleGeo(vs, dom, W2, byRole);
+    P.hair = hairCards(vs, dom, W2, byRole, bones, G);
+    P.bridle = bridleGeo(vs, dom, W2, byRole, G);
     // 陰影の絵は色でなく数（線形のまま読む）
     if (mesh.material.map) { P.tex = mesh.material.map; P.tex.encoding = THREE.LinearEncoding; P.tex.anisotropy = 4; P.tex.needsUpdate = true; }
     // 置き方：鞍の下の背の高さと、胸の前を、手作りの馬に合わせる（手作りの馬の寸法は race3d から）
@@ -281,22 +281,18 @@ float hrN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     const A = HS.Art, L = A && A.coatLook ? A.coatLook(h.coat || '鹿毛', h.age) : { mane: '#16100c' };
     return L.mane || '#16100c';
   }
-  // 毛の筋の絵（白。毛色は材質の色で付ける）。下ほど毛先がばらけて透ける
+  // 毛の束の絵（細い板1枚に、細い毛を十数本。白で描き、毛色は材質の色で付ける）。毛先は長さがばらけて透ける
   function hairTexture() {
-    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+    const c = document.createElement('canvas'); c.width = 64; c.height = 256;
     const g = c.getContext('2d');
-    g.clearRect(0, 0, 256, 256);
-    for (let i = 0; i < 340; i++) {
-      // 真ん中に多く、端は少なく短く（板の縁が見えないように）。根元も少しずつずらす
-      const xr = hash01(i, 11), x = 128 + Math.sign(xr - 0.5) * Math.pow(Math.abs(xr - 0.5) * 2, 1.6) * 128, edge = 1 - Math.abs(x - 128) / 128;
-      const len = (90 + hash01(i, 12) * 166) * (0.55 + 0.45 * edge), w = 1 + hash01(i, 13) * 2.2, l = 120 + Math.floor(hash01(i, 14) * 135);
-      const gr = g.createLinearGradient(0, 0, 0, len);
-      const al = 0.55 + 0.45 * hash01(i, 16);
-      gr.addColorStop(0, `rgba(${l},${l},${l},${al})`); gr.addColorStop(0.75, `rgba(${l},${l},${l},${al})`); gr.addColorStop(1, `rgba(${l},${l},${l},0)`);
+    g.clearRect(0, 0, 64, 256);
+    for (let i = 0; i < 46; i++) {
+      const x = 6 + hash01(i, 11) * 52, len = 120 + hash01(i, 12) * 136, w = 1 + hash01(i, 13) * 1.6, l = 150 + Math.floor(hash01(i, 14) * 105);
+      const al = 0.7 + 0.3 * hash01(i, 16), y0 = hash01(i, 17) * 10, sway = (hash01(i, 15) - 0.5) * 10;
+      const gr = g.createLinearGradient(0, y0, 0, y0 + len);
+      gr.addColorStop(0, `rgba(${l},${l},${l},${al})`); gr.addColorStop(0.6, `rgba(${l},${l},${l},${al})`); gr.addColorStop(1, `rgba(${l},${l},${l},0)`);
       g.strokeStyle = gr; g.lineWidth = w;
-      const sway = (hash01(i, 15) - 0.5) * 18;
-      const y0 = hash01(i, 17) * 24;
-      g.beginPath(); g.moveTo(x, y0); g.quadraticCurveTo(x + sway * 0.5, y0 + len * 0.5, x + sway, y0 + len); g.stroke();
+      g.beginPath(); g.moveTo(x, y0); g.quadraticCurveTo(x + sway * 0.4, y0 + len * 0.5, x + sway, y0 + len); g.stroke();
     }
     const t = new THREE.CanvasTexture(c);
     t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
@@ -313,145 +309,197 @@ float hrN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     const a = idx[best], b = idx[Math.min(idx.length - 1, best + 1)];
     return [a, b, bt];
   }
-  function hairCards(vs, dom, W2, byRole, bones) {
-    const pos = [], nor = [], uv = [], si = [], sw = [], ix = [];
-    const card = (rows, skin) => {
-      // rows：[左の点, 右の点, v]。上（根元）から毛先へ
-      const base = pos.length / 3;
-      rows.forEach(([a, b, v]) => {
-        for (const [P, u] of [[a, 0], [b, 1]]) {
-          pos.push(P.x, P.y, P.z); uv.push(u, v);
-          const k = skin(P); si.push(k[0], k[1], 0, 0); sw.push(1 - k[2], k[2], 0, 0);
-        }
-      });
-      for (let i = 0; i < rows.length - 1; i++) { const q = base + i * 2; ix.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }
-      // 法線：板の向き
-      for (let i = 0; i < rows.length; i++) {
-        const a = rows[i][0], b = rows[i][1], c = rows[Math.min(rows.length - 1, i + 1)][0], d0 = rows[Math.max(0, i - 1)][0];
-        const n = b.clone().sub(a).cross(c.clone().sub(d0)).normalize();
-        nor.push(n.x, n.y, n.z, n.x, n.y, n.z);
-      }
+  // 体の面：点 o から向き d へ線を飛ばして、最初に当たる所（点と法線）。当たらなければ null
+  function surfacer(G) {
+    const m = new THREE.Mesh(G, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })), rc = new THREE.Raycaster();
+    m.updateMatrixWorld(true);
+    const PA = G.attributes.position, SI = G.attributes.skinIndex, SW = G.attributes.skinWeight, tri = new THREE.Triangle(), bc = new THREE.Vector3();
+    // 当たった面の 3 点の骨の重みを、当たった所の割合で混ぜる（毛や革が体の面といっしょに動くように）
+    const skinAt = (h) => {
+      const f = h.face, vv = [f.a, f.b, f.c], acc = {};
+      tri.set(...vv.map(i => new THREE.Vector3().fromBufferAttribute(PA, i)));
+      tri.getBarycoord(h.point, bc);
+      const ws = [bc.x, bc.y, bc.z];
+      vv.forEach((vi, j) => { for (let c = 0; c < 4; c++) { const w = comp(SW, vi, c) * ws[j]; if (w > 0) { const b = comp(SI, vi, c); acc[b] = (acc[b] || 0) + w; } } });
+      const top = Object.entries(acc).sort((a, b) => b[1] - a[1]).slice(0, 4), sum = top.reduce((s, x) => s + x[1], 0) || 1;
+      const idx = [0, 0, 0, 0], w = [0, 0, 0, 0];
+      top.forEach(([b, x], c) => { idx[c] = +b; w[c] = x / sum; });
+      return [idx, w];
     };
-    const R = r => W2[byRole(r)].clone();
-    // たてがみ：き甲（首の付け根）からうなじまでの首すじに、右（素材の -X）へ寝る房を2層
+    return (o, d) => { rc.set(o, d.clone().normalize()); const h = rc.intersectObject(m, false)[0]; if (!h) return null; const n = h.face.normal.clone(); if (n.dot(rc.ray.direction) > 0) n.negate(); return { p: h.point.clone(), n, sk: skinAt(h) }; };
+  }
+  // 細い板（毛の束）をつなげる道具。rows：[中心の点, 幅の向き(単位), 半幅, v, 外向き]
+  function cardBuilder() {
+    const pos = [], nor = [], uv = [], si = [], sw = [], col = [], ix = [];
+    const card = (rows, skin, shade) => {
+      const base = pos.length / 3;
+      for (const [c, w, hw, v, n, sk] of rows) for (const [sg, u] of [[-1, 0], [1, 1]]) {
+        const P = c.clone().addScaledVector(w, sg * hw);
+        pos.push(P.x, P.y, P.z); uv.push(u, v); nor.push(n.x, n.y, n.z); col.push(shade, shade, shade);
+        if (sk) { si.push(...sk[0]); sw.push(...sk[1]); continue; }
+        const k = skin(P); si.push(k[0], k[1], 0, 0); sw.push(1 - k[2], k[2], 0, 0);
+      }
+      for (let i = 0; i < rows.length - 1; i++) { const q = base + i * 2; ix.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }
+    };
+    const build = () => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
+      g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+      g.setIndex(ix); g.computeBoundingSphere();
+      return g;
+    };
+    return { card, build };
+  }
+  function hairCards(vs, dom, W2, byRole, bones, G) {
+    const surf = surfacer(G), CB = cardBuilder(), card = CB.card;
+    const R = r => W2[byRole(r)].clone(), S = new THREE.Vector3(-1, 0, 0);
+    // ---- たてがみ：き甲からうなじまで、首すじに沿って右（素材の -X。肖像のカメラの側）へ垂れる細い毛の束 ----
     const nb = R('neck'), n1 = R('neck1'), hd = R('head');
     const chainP = [nb, n1, hd], chainI = [byRole('neck'), byRole('neck1'), byRole('head')];
-    const ax = hd.clone().sub(nb).normalize();
-    const crest = t => {
-      const c = nb.clone().lerp(hd, t);
-      let top = null;
-      for (let k = 0; k < vs.length; k++) {
-        const p = vs[k];
-        if (Math.abs(p.x) > 0.07 || Math.abs(p.clone().sub(c).dot(ax)) > 0.035) continue;
-        if (!top || p.y - p.z * ax.y * 0 > top.y) top = p;
-      }
-      return top ? top.clone() : c;
-    };
-    // 首の断面（中心・首すじの向き・高さの半分・幅の半分）に沿って、首すじから右側（素材の -X）へ寝かせる
-    const section = t => {
-      const c = nb.clone().lerp(hd, t), sl = [];
-      for (let k = 0; k < vs.length; k++) { const p = vs[k], d = p.clone().sub(c); if (Math.abs(d.dot(ax)) < 0.07 && d.length() < 0.32 && !(LEG_UP[dom[k]] || LEG_LO[dom[k]])) sl.push(p); }
-      if (sl.length < 4) return null;
-      const cen = sl.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / sl.length);
-      const up = new THREE.Vector3(0, 1, 0).addScaledVector(ax, -ax.y).normalize();
-      let hh = 0, ww = 0;
-      for (const p of sl) { const d = p.clone().sub(cen); hh = Math.max(hh, d.dot(up)); ww = Math.max(ww, Math.abs(d.x)); }
-      // 向き dir の面までの距離（その向きの ±25° にある頂点のいちばん遠い所）
-      const rad = dir => { let r = 0; for (const p of sl) { const d = p.clone().sub(cen), l = d.length() || 1; if (d.dot(dir) / l > 0.9) r = Math.max(r, d.dot(dir)); } return r || Math.max(hh, ww); };
-      return { cen, up, hh, ww, rad };
-    };
-    const N = 32, S = new THREE.Vector3(-1, 0, 0);
-    // 断面は荒い形なので、となりと平均してならす
-    const raw = [];
-    for (let i = 0; i < N; i++) raw.push(section(-0.22 + 1.18 * i / (N - 1)));
-    const secs = raw.map((sc, i) => {
-      const nb3 = [raw[i - 1], sc, raw[i + 1]].filter(Boolean);
-      if (!sc || !nb3.length) return null;
-      const m = k => nb3.reduce((a, x) => a + x[k], 0) / nb3.length;
-      return { cen: nb3.reduce((a, x) => a.add(x.cen), new THREE.Vector3()).multiplyScalar(1 / nb3.length), up: sc.up, hh: m('hh'), ww: m('ww') };
-    });
-    for (let i = 0; i < N; i++) {
-      const t = -0.22 + 1.18 * i / (N - 1), sc = secs[i];
-      if (!sc) continue;
-      const kt = t < 0 ? 0.55 : t > 0.8 ? 0.6 : 1;
-      for (const [layer, off, th1, w] of [[0, 0.004, (0.8 + 0.4 * hash01(i, 21)) * kt, 0.075], [1, 0.011, (0.5 + 0.35 * hash01(i, 22)) * kt, 0.06]]) {
-        const rows = [];
-        for (let r = 0; r <= 4; r++) {
-          const f = r / 4, th = -0.08 + (th1 + 0.08) * f;
-          const p = sc.cen.clone().addScaledVector(sc.up, (sc.hh * 0.92 + off) * Math.cos(th)).addScaledVector(S, (sc.ww + off + 0.006 * f) * Math.sin(th));
-          const ww = w * (1 - 0.2 * f);
-          rows.push([p.clone().addScaledVector(ax, -ww / 2), p.clone().addScaledVector(ax, ww / 2), 1 - f]);
+    const len = hd.distanceTo(nb), ax = hd.clone().sub(nb).normalize();
+    const up = new THREE.Vector3(0, 1, 0).addScaledVector(ax, -ax.y).normalize();
+    const skinN = P => chainSkin(P, chainP, chainI);
+    // 首の中の点（骨の線）から、断面の向き th（0＝首の上・+＝右へ）の面
+    const onNeck = (c, th) => { const d = up.clone().multiplyScalar(Math.cos(th)).addScaledVector(S, Math.sin(th)); return surf(c.clone().addScaledVector(d, 0.6), d.clone().negate()); };
+    const NT = 100;
+    for (let i = 0; i < NT; i++) {
+      const tt = -0.42 + 1.82 * i / (NT - 1), c = nb.clone().addScaledVector(ax, tt * len);
+      if (tt > 1.4) break;
+      // 骨の線は首の上寄りなので、首の上と下の面のまん中を断面の中心にする
+      const top = onNeck(c, 0), bot = onNeck(c, Math.PI);
+      if (!top) continue;
+      if (top.p.z > hd.z - 0.01) break;   // うなじ（耳の後ろ）まで
+      if (bot) c.copy(top.p).add(bot.p).multiplyScalar(0.5);
+      // き甲の後ろは短く、うなじも短く
+      const k = tt < -0.15 ? 0.45 + 0.55 * (tt + 0.42) / 0.27 : tt > 1.0 ? Math.max(0.55, 1 - (tt - 1.0) * 2) : 1;
+      for (let q = 0; q < 3; q++) {
+        const id = i * 3 + q, L = (0.08 + 0.07 * hash01(id, 31)) * k, th0 = -0.04 + 0.06 * hash01(id, 32), jit = (hash01(id, 33) - 0.5) * 0.012;
+        const cq = c.clone().addScaledVector(ax, jit), rows = [];
+        // 長さは首の上の線からの垂れ（上下の落ち）で測る。首の上は平たいので、面に沿った長さだと横に寝てしまう
+        let th = th0, prev = null;
+        for (let r = 0; r < 80; r++, th += 0.03) {
+          const h = onNeck(cq, th); if (!h) break;
+          const drop = top.p.clone().sub(h.p).dot(up), f = Math.min(1, Math.max(0, drop / L));
+          if (prev && h.p.distanceTo(prev) < 0.012 && f < 1) continue;
+          prev = h.p;
+          rows.push([h.p.clone().addScaledVector(h.n, 0.004 + 0.012 * f), ax, 0.011 * (1 - 0.3 * f), 1 - f, h.n, h.sk]);
+          if (f >= 1) break;
         }
-        card(rows, P => chainSkin(P, chainP, chainI));
+        if (rows.length >= 2) { rows[rows.length - 1][3] = 0; card(rows, skinN, 0.85 + 0.3 * hash01(id, 34)); }
       }
     }
-    // 尾：付け根から房が広がり、毛先は細く。尾の骨の並びに沿った板を、尾のまわりに6枚
+    // ---- 前髪：うなじから額へ短い房 ----
+    {
+      const hp = R('head'), hax = P.info.nose.clone().sub(hp).normalize();
+      const face = new THREE.Vector3(0, 1, 0).addScaledVector(hax, -hax.y).normalize();
+      const front = face.clone().multiplyScalar(-1); // 額は頭の軸の上（うなじ側から見て前）
+      for (let q = 0; q < 13; q++) {
+        // 額のまんなかから少し扇に開き、長さはまちまち。毛先へ細く
+        const lat0 = (q - 6) * 0.006, rows = [], L = 0.08 + 0.07 * hash01(q, 41), t0 = 0.0 + 0.03 * hash01(q, 43);
+        let prev = null, acc = 0;
+        for (let r = 0; r < 14 && acc < L; r++) {
+          const f0 = Math.min(1, acc / L), lat = lat0 * (1 + 0.6 * f0) + (hash01(q, 44) - 0.5) * 0.006 * f0;
+          const pp = hp.clone().addScaledVector(hax, t0 + r * 0.02); pp.x = hp.x + lat;
+          const h = surf(pp.clone().addScaledVector(face, 0.5), face.clone().negate()); if (!h) break;
+          if (prev) acc += h.p.distanceTo(prev);
+          prev = h.p;
+          const f = Math.min(1, acc / L);
+          rows.push([h.p.clone().addScaledVector(h.n, 0.004 + 0.004 * f), S, 0.007 * (1 - 0.4 * f), 1 - f, h.n, h.sk]);
+        }
+        if (rows.length >= 2) { rows[rows.length - 1][3] = 0; card(rows, () => [byRole('head'), byRole('head'), 0], 0.85 + 0.3 * hash01(q, 42)); }
+      }
+      void front;
+    }
+    // ---- 尾：尾根（付け根）から毛が生え、上から房になって飛節の下まで ----
     {
       const tp = ['tail', 'tail1', 'tail2', 'tail3'].map(R), ti = ['tail', 'tail1', 'tail2', 'tail3'].map(byRole);
-      const last = tp[3].clone().sub(tp[2]).normalize();
-      const pts = tp.slice(1).concat([tp[3].clone().addScaledVector(last, 0.3)]);
-      const along = (f) => { const x = f * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(x)); return pts[i].clone().lerp(pts[i + 1], x - i); };
-      for (let k = 0; k < 6; k++) {
-        const a = k / 6 * Math.PI;
+      const last = tp[3].clone().sub(tp[2]).normalize(), tipY = P.info.hockY - 0.22;
+      const ext = Math.max(0.1, (tp[3].y - tipY) / Math.max(0.3, -last.y));
+      // 付け根の少し前（尾根の中）から生やして、こぶを毛で包む
+      const back = tp[0].clone().sub(tp[1]).normalize();
+      const pts = [tp[0].clone().addScaledVector(back, 0.035)].concat(tp, [tp[3].clone().addScaledVector(last, ext)]);
+      const lens = [0]; for (let i = 1; i < pts.length; i++) lens.push(lens[i - 1] + pts[i].distanceTo(pts[i - 1]));
+      const total = lens[lens.length - 1];
+      const along = f => { const d = f * total; let i = 1; while (i < lens.length - 1 && lens[i] < d) i++; const k = (d - lens[i - 1]) / (lens[i] - lens[i - 1] || 1); return pts[i - 1].clone().lerp(pts[i], k); };
+      const NC = 32;
+      for (let kq = 0; kq < NC; kq++) {
+        const a = kq / NC * Math.PI * 2 + hash01(kq, 51) * 0.3, rr = 0.03 + 0.025 * hash01(kq, 52), f0 = 0.03 * hash01(kq, 53), f1 = 0.82 + 0.18 * hash01(kq, 54);
         const rows = [];
-        for (let r = 0; r <= 6; r++) {
-          const f = r / 6, c = along(f), d = along(Math.min(1, f + 0.05)).sub(along(Math.max(0, f - 0.05))).normalize();
+        for (let r = 0; r <= 8; r++) {
+          const f = f0 + (f1 - f0) * r / 8, c = along(f), d = along(Math.min(1, f + 0.03)).sub(along(Math.max(0, f - 0.03))).normalize();
           const s0 = new THREE.Vector3(1, 0, 0), s1 = d.clone().cross(s0).normalize();
-          const sv = s0.clone().multiplyScalar(Math.cos(a)).addScaledVector(s1, Math.sin(a));
-          const wdt = (0.025 + 0.1 * Math.sin(Math.min(1, f * 1.6) * Math.PI * 0.5)) * (1 - 0.7 * f * f);
-          rows.push([c.clone().addScaledVector(sv, -wdt), c.clone().addScaledVector(sv, wdt), 1 - f]);
+          const out = s0.clone().multiplyScalar(Math.cos(a)).addScaledVector(s1, Math.sin(a));
+          // 付け根は尾根を包み、なかほどで広がり、毛先へ細く
+          const spread = rr * (1.15 + 1.1 * Math.sin(Math.min(1, f * 2.2) * Math.PI * 0.5)) * (1 - 0.75 * f * f);
+          const wdir = d.clone().cross(out).normalize();
+          rows.push([c.clone().addScaledVector(out, spread), wdir, 0.016, 1 - (r / 8), out]);
         }
-        card(rows, P => chainSkin(P, tp, ti));
+        card(rows, P => chainSkin(P, tp, ti), 0.75 + 0.5 * hash01(kq, 55));
       }
+    }
+    P.hairTex = hairTexture();
+    return CB.build();
+  }
+
+  // ---- 頭絡（素材の頭の面に沿う細い革。幅 2.4cm・厚み 4mm）と小さな金具 ----
+  function bridleGeo(vs, dom, W2, byRole, G) {
+    const surf = surfacer(G);
+    const hp = W2[byRole('head')].clone(), nose = P.info.nose.clone(), hax = nose.clone().sub(hp), hl = hax.length(); hax.normalize();
+    const S = new THREE.Vector3(1, 0, 0), up = new THREE.Vector3(0, 1, 0).addScaledVector(hax, -hax.y).normalize();
+    const pos = [], nor = [], col = [], ix = [];
+    const LEATHER = lin('#4a2c18'), METAL = lin('#b9b4a8');
+    const hb = byRole('head'), HSK = [[hb, 0, 0, 0], [1, 0, 0, 0]], si = [], sw = [];
+    const push = (P, n, c, sk) => { sk = sk || HSK; pos.push(P.x, P.y, P.z); nor.push(n.x, n.y, n.z); col.push(c.r, c.g, c.b); si.push(...sk[0]); sw.push(...sk[1]); return pos.length / 3 - 1; };
+    // 面の上の点の並び（pts＝[点, 法線]）を、幅 hw・厚み th の革にする（上の面と両の縁）
+    const strap = (pts, wdirOf, hw, th) => {
+      const rows = pts.map(([p, n, sk], i) => { const w = wdirOf(p, n, i); const top = p.clone().addScaledVector(n, th); return [p.clone().addScaledVector(w, -hw), p.clone().addScaledVector(w, hw), top.clone().addScaledVector(w, -hw), top.clone().addScaledVector(w, hw), n, w, sk]; });
+      for (let i = 0; i < rows.length - 1; i++) {
+        const A = rows[i], B = rows[i + 1];
+        const q = [A[2], A[3], B[3], B[2]].map((P, j) => push(P, (j < 2 ? A : B)[4], LEATHER, (j < 2 ? A : B)[6])); ix.push(q[0], q[1], q[2], q[0], q[2], q[3]);
+        for (const [s0, s1, sg] of [[0, 2, -1], [1, 3, 1]]) {
+          const nn = A[5].clone().multiplyScalar(sg);
+          const e = [A[s0], A[s1], B[s1], B[s0]].map((P, j) => push(P, nn, LEATHER, (j < 2 ? A : B)[6])); ix.push(e[0], e[1], e[2], e[0], e[2], e[3]);
+        }
+      }
+    };
+    const ring = (c, n, r, sk) => {
+      const tg = new THREE.TorusGeometry(r, r * 0.22, 6, 14), m = new THREE.Matrix4().compose(c, new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), n), new THREE.Vector3(1, 1, 1));
+      tg.applyMatrix4(m);
+      const base = pos.length / 3, P = tg.attributes.position, N = tg.attributes.normal;
+      for (let i = 0; i < P.count; i++) push(new THREE.Vector3().fromBufferAttribute(P, i), new THREE.Vector3().fromBufferAttribute(N, i), METAL, sk);
+      for (let i = 0; i < tg.index.count; i++) ix.push(base + tg.index.getX(i));
+      tg.dispose();
+    };
+    const onHead = (t, th) => { const c = hp.clone().addScaledVector(hax, t * hl), d = up.clone().multiplyScalar(Math.cos(th)).addScaledVector(S, Math.sin(th)); return surf(c.clone().addScaledVector(d, 0.5), d.clone().negate()); };
+    const loop = (t, th0, th1, n) => { const out = []; for (let j = 0; j <= n; j++) { const h = onHead(t, th0 + (th1 - th0) * j / n); if (h) out.push([h.p, h.n, h.sk]); } return out; };
+    const across = () => hax;
+    // 項革（耳の後ろ）・額革（顔の前）・鼻革（ぐるり）
+    strap(loop(-0.05, -1.6, 1.6, 18), across, 0.012, 0.004);
+    strap(loop(0.1, -1.25, 1.25, 12), across, 0.009, 0.004);
+    strap(loop(0.62, -Math.PI, Math.PI, 28), across, 0.012, 0.004);
+    // 頬革：項革の横から鼻革の横へ（顔の横の面に沿って）
+    for (const sd of [-1, 1]) {
+      const pts = [];
+      // 項革の横（耳の下）から、口の端のハミの輪まで
+      // 頬の面に、項革の横とハミの輪を結ぶまっすぐな線を写す（横から面へ線を飛ばす）
+      const A = onHead(-0.05, sd * 1.5), B = onHead(0.8, sd * (Math.PI / 2 + 0.05)), side = S.clone().multiplyScalar(sd);
+      for (let i = 0; A && B && i <= 16; i++) { const q = A.p.clone().lerp(B.p, i / 16), h = surf(q.clone().addScaledVector(side, 0.4), side.clone().negate()); if (h) pts.push([h.p, h.n, h.sk]); }
+      strap(pts, (p, n, i) => { const nx = pts[Math.min(pts.length - 1, i + 1)][0].clone().sub(pts[Math.max(0, i - 1)][0]).normalize(); return nx.cross(n).normalize(); }, 0.011, 0.004);
+      // 金具：額革と頬革のつなぎ、ハミの輪（口の端）
+      const b = onHead(0.1, sd * 1.3), m = onHead(0.8, sd * (Math.PI / 2 + 0.05));
+      if (b) ring(b.p.clone().addScaledVector(b.n, 0.006), b.n, 0.01, b.sk);
+      if (m) ring(m.p.clone().addScaledVector(m.n, 0.008), m.n, 0.016, m.sk);
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
     g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
-    g.setIndex(ix);
-    g.computeBoundingSphere();
-    P.hairTex = hairTexture();
-    return g;
-  }
-
-  // ---- 頭絡（素材の頭に合わせる）：項革（耳の後ろ）・額革・鼻革の輪と、両の頬革。頭の骨だけで動く ----
-  function bridleGeo(vs, dom, W2, byRole) {
-    const hp = W2[byRole('head')].clone(), nose = P.info.nose.clone(), ax = nose.clone().sub(hp), len = ax.length(); ax.normalize();
-    const S = new THREE.Vector3(1, 0, 0), up = new THREE.Vector3(0, 1, 0).addScaledVector(ax, -ax.y).normalize();
-    // 頭の断面 t（うなじ 0 → 鼻先 1）：中心と、向きごとの半径（その向きに近い頂点のいちばん遠い所）
-    const sec = t => {
-      const c = hp.clone().addScaledVector(ax, t * len), sl = [];
-      for (let k = 0; k < vs.length; k++) if (HEAD[dom[k]] && Math.abs(vs[k].clone().sub(c).dot(ax)) < 0.035) sl.push(vs[k]);
-      if (sl.length < 3) return null;
-      const cen = sl.reduce((a, p) => a.add(p), new THREE.Vector3()).multiplyScalar(1 / sl.length).addScaledVector(ax, -cen0(sl, ax, c));
-      const rad = th => { const d = up.clone().multiplyScalar(Math.cos(th)).addScaledVector(S, Math.sin(th)); let r = 0; for (const p of sl) { const v = p.clone().sub(cen); v.addScaledVector(ax, -v.dot(ax)); const l = v.length() || 1; if (v.dot(d) / l > 0.82) r = Math.max(r, v.dot(d)); } return r; };
-      return { cen, rad };
-    };
-    const cen0 = (sl, a, c) => sl.reduce((s, p) => s + p.clone().sub(c).dot(a), 0) / sl.length;
-    const pos = [], nor = [], ix = [];
-    // 法線は頭の軸から外向き（なめらかに。板ごとに向きが変わって明暗がまだらにならないように）
-    const quad = (a, b, c, d) => { const q = pos.length / 3; for (const P of [a, b, c, d]) { const v = P.clone().sub(hp); v.addScaledVector(ax, -v.dot(ax)).normalize(); pos.push(P.x, P.y, P.z); nor.push(v.x, v.y, v.z); } ix.push(q, q + 1, q + 2, q, q + 2, q + 3); };
-    const M = 24, OFF = 0.007;
-    const ringPts = (t, th0, th1, n) => { const s = sec(t); if (!s) return null; const out = []; let last = 0.08; for (let j = 0; j <= n; j++) { const th = th0 + (th1 - th0) * j / n, d = up.clone().multiplyScalar(Math.cos(th)).addScaledVector(S, Math.sin(th)); let r = s.rad(th); if (!(r > 0.02)) r = last; last = r; out.push(s.cen.clone().addScaledVector(d, r + OFF)); } return out; };
-    const band = (pts, w) => { for (let j = 0; j < pts.length - 1; j++) { const a = pts[j], b = pts[j + 1]; quad(a.clone().addScaledVector(ax, -w), b.clone().addScaledVector(ax, -w), b.clone().addScaledVector(ax, w), a.clone().addScaledVector(ax, w)); } };
-    // 項革（耳の後ろを回る）・鼻革（ぐるり）・額革（顔の前だけ）
-    const head = ringPts(0.06, 0, 2 * Math.PI, M), nb = ringPts(0.6, 0, 2 * Math.PI, M), brow = ringPts(0.15, -1.2, 1.2, 8);
-    if (head) band(head, 0.009);
-    if (nb) band(nb, 0.011);
-    if (brow) band(brow, 0.007);
-    // 頬革：項革の横から鼻革の横へ（頭の面に沿って）
-    for (const sd of [-1, 1]) {
-      const pts = [];
-      for (let i = 0; i <= 8; i++) { const t = 0.06 + 0.54 * i / 8, s = sec(t); if (!s) continue; const th = sd * (Math.PI / 2 + 0.25), d = up.clone().multiplyScalar(Math.cos(th)).addScaledVector(S, Math.sin(th)); pts.push(s.cen.clone().addScaledVector(d, (s.rad(th) || 0.07) + OFF)); }
-      for (let j = 0; j < pts.length - 1; j++) { const a = pts[j], b = pts[j + 1], dir = b.clone().sub(a).normalize(), side = dir.clone().cross(S.clone().multiplyScalar(sd)).normalize().multiplyScalar(0.007); quad(a.clone().sub(side), b.clone().sub(side), b.clone().add(side), a.clone().add(side)); }
-    }
-    const g = new THREE.BufferGeometry(), n = pos.length / 3, hb = byRole('head');
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
-    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(new Array(n).fill(0).flatMap(() => [hb, hb, 0, 0]), 4));
-    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(new Array(n).fill(0).flatMap(() => [1, 0, 0, 0]), 4));
     g.setIndex(ix);
     g.computeBoundingSphere();
     return g;
@@ -476,13 +524,13 @@ float hrN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     const rest = {};
     for (const r of Object.keys(bones)) rest[r] = bones[r].quaternion.clone();
     // たてがみ・尾の房：同じ骨で動く別の形
-    const hairMat = new THREE.MeshStandardMaterial({ map: P.hairTex, color: lin(hairColor(h)).lerp(lin(bodyColor(h)), 0.12).multiplyScalar(1.3), alphaTest: 0.5, side: THREE.DoubleSide, skinning: true, roughness: 0.7, metalness: 0, envMapIntensity: 0.5 });
+    const hairMat = new THREE.MeshStandardMaterial({ map: P.hairTex, color: lin(hairColor(h)).lerp(lin(bodyColor(h)), 0.12).multiplyScalar(1.3), vertexColors: true, alphaTest: 0.3, side: THREE.DoubleSide, skinning: true, roughness: 0.7, metalness: 0, envMapIntensity: 0.5 });
     const hairMesh = new THREE.SkinnedMesh(P.hair, hairMat);
     hairMesh.frustumCulled = false;
     mesh.parent.add(hairMesh);
     hairMesh.position.copy(mesh.position); hairMesh.quaternion.copy(mesh.quaternion); hairMesh.scale.copy(mesh.scale);
     hairMesh.bind(mesh.skeleton, mesh.bindMatrix);
-    const bridleMat = new THREE.MeshStandardMaterial({ color: lin('#3a2416'), skinning: true, roughness: 0.85, metalness: 0, envMapIntensity: 0.3, side: THREE.DoubleSide });
+    const bridleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, skinning: true, roughness: 0.7, metalness: 0, envMapIntensity: 0.3, side: THREE.DoubleSide });
     const bridle = new THREE.SkinnedMesh(P.bridle, bridleMat);
     bridle.frustumCulled = false; bridle.castShadow = true;
     mesh.parent.add(bridle);
