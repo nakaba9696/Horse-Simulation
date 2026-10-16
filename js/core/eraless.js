@@ -1,7 +1,7 @@
 // 年代なしのゲーム（騎手のゲーム。持ち主の決定 2026-10-16）
 // - 番組・物価・走りの速さは U.ERA の年で固定する。年は「n年目」で見せる
-// - 1990〜2026年に走った史実馬（＝馬の店に並ぶ馬）から、毎年ランダムにデビューさせる。生年をずらして世界に出す（G.lineup にずらした年数）
-// - デビューした馬は、引退するまで馬の店に並ばない。1990年より前に走った馬（伝説の名馬）は js/core/trophy.js が扱う
+// - 1989〜2026年に走った史実馬（＝馬の店に並ぶ馬）から、毎年ランダムにデビューさせる。生年をずらして世界に出す（G.lineup にずらした年数）
+// - デビューした馬は、引退するまで馬の店に並ばない。1989年より前に走り終えた馬（スペシャルホース）は js/core/special.js が扱う
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const U = HS.U, H = HS.Horse, W = HS.World;
@@ -13,8 +13,8 @@
   E.AGES = [2, 3, 4, 5, 6]; // 始めたときにいる世代
 
   const lastYear = d => d.retire || d.born + 5;
-  E.isPool = d => lastYear(d) >= 1990 && d.born <= 2023;
-  E.isLegend = d => lastYear(d) < 1990;
+  E.isPool = d => lastYear(d) >= 1989 && d.born <= 2023;
+  E.isLegend = d => lastYear(d) < 1989;
   let poolCache = null;
   E.pool = () => poolCache || (poolCache = (HS.DATA.historic || []).filter(E.isPool));
 
@@ -62,7 +62,7 @@
     W.news(`今年は${list.length}頭の史実馬がデビューに向けて動き出した。`, 'info');
   };
 
-  // ---------- 馬の店：走っていない馬（とトロフィーで呼べるようになった伝説の名馬）を、デビュー前の2歳として売る ----------
+  // ---------- 馬の店：走っていない馬（と、倒したスペシャルホース）を、デビュー前の2歳として売る ----------
   const priceOf = (d, legend) => Math.round((1000 + Math.max(0, (d.rating || 80) - 78) * 110) * U.priceIndex() * 1.3 * (legend ? 1.6 : 1) / 10) * 10;
   let mk = null;
   E.market = function () {
@@ -82,7 +82,7 @@
       items.push({ kind: 'pool', horse: h, data: d, price: priceOf(d, legend), legend: !!legend });
     };
     for (const d of E.pool()) add(d, false);
-    for (const name of G.unlocked || []) { const d = HS.Trophy && HS.Trophy.legendData(name); if (d) add(d, true); }
+    for (const name of G.unlocked || []) { const d = HS.Special && HS.Special.data(name); if (d) add(d, true); }
     return items;
   };
   // 店の馬（id が pool:馬名）を引く。馬の画面を開くため

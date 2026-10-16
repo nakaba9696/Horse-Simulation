@@ -344,3 +344,4 @@ html[data-theme="green"] .tenkai { background: #0e2a1a; }
 .chip.legend { background: linear-gradient(90deg, #5a1f8a, #b8862a); color: #fff; }
 .panel.trophy .cup { font-size: 22px; } .panel.trophy:not(.got) { opacity: .85; } .panel.trophy.got { border-color: var(--gold); }
 .legend-call { margin-top: 6px; padding: 6px 10px; border-radius: 8px; background: linear-gradient(90deg, rgba(90,31,138,.6), rgba(184,134,42,.5)); color: #fff; font-size: 13px; }
+.sp-reach { color: #ffd34d; font-weight: 700; }

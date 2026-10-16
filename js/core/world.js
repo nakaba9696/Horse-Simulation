@@ -422,8 +422,8 @@
     }
     // 招待のレース（ドリームクラシック）は招待馬で組む
     for (const rc of allRaces) if (rc.invite && HS.Season) field[rc.key] = HS.Season.dcField(rc);
-    // トロフィーのかかったレースには、伝説の名馬が出てくる（trophy.js）
-    if (G.eraless && HS.Trophy) for (const rc of allRaces) { const lg = HS.Trophy.legendsFor(rc, field[rc.key] || []); if (lg.length) field[rc.key] = (field[rc.key] || []).concat(lg); }
+    // 自分の馬がスペシャルホースの条件にリーチをかけて出るレースには、その名馬が出てくる（special.js）
+    if (G.eraless && HS.Special) for (const rc of allRaces) { const lg = HS.Special.forRace(rc, field[rc.key] || []); if (lg.length) field[rc.key] = (field[rc.key] || []).concat(lg); }
     // レースごとの出走表（G1 は出走が無くても実施）。レースごとに乱数の種を分ける
     const cards = [];
     for (const race of allRaces) {
@@ -445,7 +445,7 @@
     entr = entr.filter(e => e.horse && !seen.has(e.horse.id) && seen.add(e.horse.id));
     // 地方：JRA 所属は7頭まで
     const max = R.maxField(race);
-    entr.sort((a, b) => ((b.legend ? 1 : 0) - (a.legend ? 1 : 0)) || (R.priority(b.horse, race, year, r) - R.priority(a.horse, race, year, r))); // 伝説の名馬は必ず出る
+    entr.sort((a, b) => ((b.legend ? 1 : 0) - (a.legend ? 1 : 0)) || (R.priority(b.horse, race, year, r) - R.priority(a.horse, race, year, r))); // スペシャルホースは必ず出る
     const limit = race.region === '地方' ? Math.min(max, 7) : max;
     const excluded = entr.slice(limit).filter(e => e.mine).map(e => e.horse.id);
     entr = entr.slice(0, limit);
@@ -470,7 +470,7 @@
       if (x.jockey || !x.horse.hist) continue;
       const nm = W.histJockey(x.horse, year);
       if (!nm || taken.has(nm)) continue;
-      // 年代なしのゲームは1990〜2026年の騎手なら乗れる（伝説の名馬は、その時代の主戦騎手）
+      // 年代なしのゲームは1990〜2026年の騎手なら乗れる（スペシャルホースは、その時代の主戦騎手）
       if (!(HS.DATA.jockeys || []).some(j => j.name === nm && (x.horse.legend || (U.ERA ? (j.to || 9999) >= 1990 && j.from <= 2026 : j.from <= year && year <= (j.to || 9999))))) continue;
       x.jockey = W.jockey(nm); taken.add(nm);
     }
@@ -602,7 +602,7 @@
       const h = res.horse;
       const x = runners.find(r => r.horse === h);
       res.odds = x.odds; res.pop = x.pop; res.mine = !!(x.mine || x.rider === 'P');
-      if (h.legend) continue; // 伝説の名馬はその場限り（記録だけ残る）
+      if (h.legend) continue; // スペシャルホースはその場限り（記録だけ残る）
       if (h.filler) {
         // 重賞を勝った・G1で3着以内の「その場限りの馬」は名を残して走り続ける
         if (race.graded && (res.pos === 1 || (race.grade === 'G1' && res.pos <= 3)) && race.region === 'JRA') W.promote(h, race, res, wIdx);
@@ -652,6 +652,7 @@
         }
       }
     }
+    if (G.eraless && HS.Special) HS.Special.afterRace(race, sim);
     // 記録（G1 は全部、ほかの重賞は勝ち馬だけ）
     if (race.graded) {
       const win = sim.results[0];

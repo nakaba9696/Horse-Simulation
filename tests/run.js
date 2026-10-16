@@ -509,30 +509,40 @@ check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデ�
   return `史実馬 ${hist.length}頭・店 ${shop.length}頭・2年目の2歳 ${crop}頭`;
 });
 
-check('trophy: 三冠の最後の菊花賞に伝説の名馬が出て、勝つとトロフィーと店に並ぶ', () => {
-  const TR = HS.Trophy, S = HS.Sim;
+check('special: 1989年より前の名馬は戦績に合わせた条件を持ち、リーチで最後のレースに出てきて、勝つと店に並ぶ', () => {
+  const SP = HS.Special;
   W.newGame({ seed: 33, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
+  // 条件は戦績から：シンボリルドルフは七冠、セントサイモンは無敗の連勝とアスコットGC
+  const sr = SP.byName('シンボリルドルフ'), ss = SP.byName('セントサイモン');
+  assert(sr && sr.cond.total === 7 && sr.cond.req['有馬記念'] === 2 && sr.cond.req['皐月賞'] === 1, `シンボリルドルフの条件 ${sr && sr.text}`);
+  assert(ss && ss.cond.streak === 9 && ss.cond.req['アスコットGC'] === 1, `セントサイモンの条件 ${ss && ss.text}`);
+  assert(!SP.list().some(x => HS.Eraless.isPool(x.d)), '1989年以降の馬がスペシャルホースになっている');
+  // 皐月賞と日本ダービーを勝った馬が菊花賞に出ると、三冠などの名馬が出てくる
   const kk = R.gradedYear(G.year).find(r => r.short === '菊花賞');
   const h = W.all().find(x => x.hist && x.sex !== '牝' && !x.gelding && G.year - x.born === 3 && x.loc === 'stable' && !x.injury);
   h.owner = 'P'; h.auto = false; h.fatigue = 0; h.injury = null; h.earn = 30000; h.wins = 4; h.starts = 5;
   h.gradedWins.push({ y: G.year, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year, race: '東京優駿', short: '日本ダービー', grade: 'G1' });
+  assert(SP.reachInfo(h).some(r => r.name === 'セントライト' && r.need === '菊花賞'), 'リーチが出ない');
   for (const k of H.STATS) h.pot[k] = 150;
   h.distMin = 1600; h.distMax = 3200; h.kire = 6; h.apt.turf = 100;
   G.month = kk.month; G.week = kk.week; W.dirty(); W._cache = null; W._week = null;
   const race = W.weekRaces().find(r => r.short === '菊花賞');
   assert(!W.enter(h.id, race.key), '菊花賞に登録できない');
   const card = W.cards().find(c => c.race.key === race.key);
-  const legends = card.runners.filter(x => x.horse.legend).map(x => x.horse.name);
-  assert(legends.includes('シンボリルドルフ') && legends.includes('シンザン'), `伝説の名馬が出ない（${legends.join('・')}）`);
+  const sps = card.runners.filter(x => x.horse.legend).map(x => x.horse.name);
+  assert(sps.includes('セントライト') && sps.length <= SP.MAX_IN_RACE, `スペシャルホースが出ない（${sps.join('・')}）`);
   const rep = W.finishWeek({});
   const res = rep.races.find(r => r.race.key === race.key).sim.results;
   assert(res[0].horse === h, `勝てなかった（1着 ${res[0].horse.name}）`);
-  assert(G.trophies.triple && G.unlocked.includes('シンボリルドルフ'), 'トロフィーが付かない');
-  const shop = W.marketHistoric();
-  assert(shop.some(x => x.horse.name === 'シンボリルドルフ' && x.legend), '伝説の名馬が店に並ばない');
-  assert(!W.all().some(x => x.legend), '伝説の名馬が世界に残る');
-  return `菊花賞の伝説の名馬 ${legends.join('・')}`;
+  assert(sps.every(n => G.unlocked.includes(n)), '倒したのに店に並ばない');
+  assert(G.trophies.triple, 'トロフィー「三冠」が付かない');
+  assert(W.marketHistoric().some(x => x.horse.name === 'セントライト' && x.legend), 'セントライトが店に並ばない');
+  assert(!W.all().some(x => x.legend), 'スペシャルホースが世界に残る');
+  // 無敗の連勝：8連勝の馬がアスコットGCに出ると、セントサイモンが出てくる
+  const g = Object.assign({}, h, { owner: 'P', wins: 8, starts: 8, gradedWins: [] });
+  assert(SP.reach(g, ss, { short: 'アスコットGC' }) && !SP.reach(Object.assign({}, g, { starts: 9 }), ss, { short: 'アスコットGC' }), '無敗の連勝のリーチが合わない');
+  return `${SP.list().length}頭・菊花賞に ${sps.join('・')}`;
 });
 
 // ---------- 騎手のゲーム ----------
