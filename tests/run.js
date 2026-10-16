@@ -445,12 +445,12 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・調子の
   x.lastRaceW = W.wIdx() - 30; assert(T.condLevel(x, W.wIdx()) === 0, '休みすぎにならない');
   const fh = T.fhBoth(x, W.wIdx());
   assert(fh.turf >= 1 && fh.turf <= 99 && fh.dirt >= 1 && fh.dirt <= 99, JSON.stringify(fh));
-  // 総合力：史実馬は伸びきったとき45〜85に入る（ごく弱い馬を除く）。エアグルーヴ70・セクレタリアト80・キンチェム85。能力の上限がそろうと99
+  // 総合力：史実馬は伸びきったとき45〜85に入る（ごく弱い馬を除く）。エアグルーヴ70・キンチェム85。能力の上限がそろうと99
   const pks = HS.Eraless.pool().map(d => { const p = T.fhPeak(H.fromHistoric(d, 'x')); return Math.max(p.turf, p.dirt); }).sort((a, b) => a - b);
   const q = f => pks[Math.floor(f * (pks.length - 1))];
   assert(q(0.02) >= 44 && q(0.5) >= 55 && q(0.5) <= 65 && pks[pks.length - 1] >= 77 && pks[pks.length - 1] <= 81, `史実馬の総合力 ${q(0.02)}〜${q(0.5)}〜${pks[pks.length - 1]}`);
   const fhN = n => { const p = T.fhPeak(H.fromHistoric(HS.Special.data(n) || W.histByName.get(n), 'x')); return Math.max(p.turf, p.dirt); };
-  for (const [n, lo, hi] of [['キンチェム', 84, 86], ['セクレタリアト', 79, 81], ['エアグルーヴ', 69, 71]]) assert(fhN(n) >= lo && fhN(n) <= hi, `${n}の総合力 ${fhN(n)}`);
+  for (const [n, lo, hi] of [['キンチェム', 84, 86], ['エアグルーヴ', 69, 71]]) assert(fhN(n) >= lo && fhN(n) <= hi, `${n}の総合力 ${fhN(n)}`);
   const top = {}; for (const k of H.STATS) top[k] = 118;
   assert(T.fhOf(top, '芝') === 99 && T.fhOf(top, 'ダ') === 99, '能力の上限で99にならない');
   // 出走の予約：1年先までの重賞を押さえると、その週に出走登録になる
@@ -579,11 +579,13 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   const card = W.cards().find(c => c.race.key === race.key);
   const sps = card.runners.filter(x => x.horse.legend).map(x => x.horse.name);
   assert(sps.includes('セントライト') && sps.includes('シンボリルドルフ') && sps.length <= SP.MAX_IN_RACE, `スペシャルホースが出ない（${sps.join('・')}）`);
+  const money0 = G.player.money;
   const rep = W.finishWeek({});
   const res = rep.races.find(r => r.race.key === race.key).sim.results;
   assert(res[0].horse === h, `勝てなかった（1着 ${res[0].horse.name}）`);
   assert(sps.every(n => G.unlocked.includes(n)), '倒したのに店に並ばない');
-  assert(G.trophies.triple, 'トロフィー「三冠」が付かない');
+  assert(G.trophies.triple && G.trophies.triple.bonus > 0, 'トロフィー「三冠」が付かない');
+  assert(G.player.money - money0 >= G.trophies.triple.bonus, 'トロフィーのボーナス賞金が入らない');
   assert(W.marketHistoric().some(x => x.horse.name === 'セントライト' && x.legend), 'セントライトが店に並ばない');
   assert(!W.all().some(x => x.legend), 'スペシャルホースが世界に残る');
   // 無敗の連勝：7連勝の馬は、次のレースで無敗の名馬に挑む

@@ -327,6 +327,8 @@ html[data-theme="green"] .apt > div { background: #0e2a1a; border: 1px solid #24
 html[data-theme="navy"] .pd-band { background: linear-gradient(180deg, #1d3a63, #10223a); }
 .pd-band .nm { font-size: 17px; } .pd-band .nm.me { color: #ff8a7a; }
 .pd-band .md { padding: 1px 8px; border-radius: 999px; background: rgba(255,255,255,.12); } .pd-band .md.good { color: #9ff0b8; } .pd-band .md.bad { color: #ff9a7a; }
+.pd-band .pd-skills { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px; }
+.pd-myskills .sk-row { display: flex; gap: 8px; align-items: baseline; margin-top: 4px; } .pd-myskills .sk-row .chip { flex: none; }
 html[data-theme="green"] .entry-head { background: linear-gradient(90deg, #14472b, #1f6a40); }
 html[data-theme="green"] .tenkai { background: #0e2a1a; }
 /* 馬の店（フリーハンデ順の一覧） */
