@@ -158,17 +158,22 @@ check('jockeys: 毎年 JRA の騎手が足りる・主戦騎手が実在する',
 });
 
 check('layouts: 競馬場の形（コーナー・直線・高低差）がそろっている', () => {
-  // index.html でまだ読んでいなければ、ここで読む
-  if (!D.layouts) { const fs = require('fs'), path = require('path'), vm = require('vm'); const f = path.join(__dirname, '..', 'data', 'layouts.js'); vm.runInThisContext(fs.readFileSync(f, 'utf8'), { filename: f }); }
-  const L = D.layouts; assert(L, 'data/layouts.js がない');
+  // index.html でまだ読んでいなければ、ここで読み、終わったら外す（ほかの確かめはゲームと同じ読み込みで動かす）
+  const own = !D.layouts;
+  if (own) { const fs = require('fs'), path = require('path'), vm = require('vm'); const f = path.join(__dirname, '..', 'data', 'layouts.js'); vm.runInThisContext(fs.readFileSync(f, 'utf8'), { filename: f }); }
+  try { return checkLayouts(D.layouts); } finally { if (own) delete D.layouts; }
+});
+function checkLayouts(L) {
+  assert(L, 'data/layouts.js がない');
   const RAD = Math.PI / 180, bad = [];
-  // 走る向きにたどって、ゴールに戻るかを見る（半径は角度に沿って直線的に変わる）
+  // 走る向きにたどって、ゴールに戻るかを見る（半径は角度に沿って入口から出口へ直線的に変わる。track.js の fromLayout と同じ読み方）
+  const arcLen = s => Math.abs(s[3]) * RAD * (s[1] + s[2]) / 2;
   const closeErr = segs => {
     let x = 0, y = 0, h = 0;
     for (const s of segs.slice().reverse()) {
       if (s[0] === 'S') { x += s[1] * Math.cos(h); y += s[1] * Math.sin(h); continue; }
-      const n = 360, dphi = s[3] * RAD / n;
-      for (let i = 0; i < n; i++) { const r = s[1] + (s[2] - s[1]) * (i + 0.5) / n, hm = h + dphi / 2; x += r * Math.abs(dphi) * Math.cos(hm); y += r * Math.abs(dphi) * Math.sin(hm); h += dphi; }
+      const m = 360, dphi = s[3] * RAD / m;
+      for (let i = 0; i < m; i++) { const r = s[1] + (s[2] - s[1]) * (i + 0.5) / m, hm = h + dphi / 2; x += r * Math.abs(dphi) * Math.cos(hm); y += r * Math.abs(dphi) * Math.sin(hm); h += dphi; }
     }
     return Math.hypot(x, y);
   };
@@ -188,7 +193,7 @@ check('layouts: 競馬場の形（コーナー・直線・高低差）がそろ�
         let len = 0, ang = 0;
         for (const s of o.segs) {
           if (s[0] === 'S' && s.length === 2 && s[1] >= 0) len += s[1];
-          else if (s[0] === 'C' && s.length === 5 && s[1] > 0 && s[2] > 0 && s[3] !== 0) { len += Math.abs(s[3]) * RAD * (s[1] + s[2]) / 2; ang += s[3]; }
+          else if (s[0] === 'C' && s.length === 5 && s[1] > 0 && s[2] > 0 && s[3] !== 0) { len += arcLen(s); ang += s[3]; }
           else bad.push(`${kk}:segs の形 ${JSON.stringify(s)}`);
         }
         if (o.segs[0][0] !== 'S' || Math.abs(o.segs[0][1] - o.straight) > 1) bad.push(`${kk}:最初の直線が straight と違う`);
@@ -200,6 +205,7 @@ check('layouts: 競馬場の形（コーナー・直線・高低差）がそろ�
           const e = closeErr(o.segs); maxErr = Math.max(maxErr, e / o.lap);
           if (e > o.lap * 0.02) bad.push(`${kk}:形が閉じない（${e.toFixed(1)}m）`);
         }
+        if (HS.Track && HS.Track.fromLayout && !o.open) { const tr = HS.Track.fromLayout(o, co.dir); if (Math.abs(tr.L - o.lap) > o.lap * 0.01) bad.push(`${kk}:fromLayout の長さ ${tr.L.toFixed(1)} が lap と1%より違う`); }
         const ev = o.elev || [];
         if (ev.length < 2 || ev[0][0] !== 0 || Math.abs(ev[ev.length - 1][0] - o.lap) > 0.5) bad.push(`${kk}:elev が残り0から lap まででない`);
         for (let i = 1; i < ev.length; i++) if (!(ev[i][0] > ev[i - 1][0])) { bad.push(`${kk}:elev の並び`); break; }
@@ -217,10 +223,12 @@ check('layouts: 競馬場の形（コーナー・直線・高低差）がそろ�
       for (const d of need) if (!uses.has(d)) bad.push(`${k}:${d}m の回りが無い`);
     }
   }
+  // courses.js の全部の場・馬場に形がある
+  for (const [name, co] of Object.entries(D.courses)) for (const sf of ['turf', 'dirt']) if (co[sf] && !(L[name] && L[name][sf] && L[name][sf].length)) bad.push(`${name}${sf === 'turf' ? '芝' : 'ダ'}:形が無い`);
   assert(!bad.length, bad.slice(0, 15).join(', '));
   const all = Object.keys(D.courses).length, has = Object.keys(L).length;
   return `${has}/${all}場・${n}の回り・閉じ方の誤差は最大 ${(maxErr * 100).toFixed(2)}%`;
-});
+}
 
 // ---------- 模擬 ----------
 check('sim: 走破タイムが現実的', () => {
@@ -934,6 +942,59 @@ check('look: 毛色の表に抜けがない・芦毛は年を取ると白い・�
   return `毛色 ${coats.size}・馬具 ${Object.keys(g).length}頭・三角形 ${out.join(' / ')}`;
 });
 
+check('terrain: 3D の地面がコースの高さに合う（坂・楕円でない形・直線・馬蹄形）', () => {
+  // race3d.js は前の 'look:' の確かめで読んである
+  const T = HS.Track, R3 = HS.Race3D, out = [];
+  const cases = [
+    ['楕円・急坂', T.make(1667, 310, '右'), { slope: '急', dirt: false, hasOther: true }],
+    ['周回の実際の形', T.fromLayout({ id: '内', lap: 1667, straight: 310, segs: [['S', 310], ['C', 120, 95, 180, 3], ['S', 420], ['C', 100, 100, 180, 1], ['S', 300]], elev: [[0, 4.6], [110, 4.0], [330, 0.6], [900, 1.0], [1350, 5.3], [1667, 4.6]] }, '右'), { dirt: true, hasOther: true }],
+    ['直線', T.fromLayout({ id: '直線', line: true, lap: 1000, straight: 1000, segs: [['S', 1000]], elev: [[0, 0.3], [400, 0], [1000, 0.6]] }, '左'), { hasOther: false }],
+    ['馬蹄形', T.fromLayout({ id: '馬蹄', line: true, lap: 2414, straight: 600, segs: [['S', 620], ['C', 260, 200, 110, 3], ['S', 380], ['C', 400, 400, 40, 1], ['S', 600], ['C', 500, 500, 30, 1], ['S', 300]], elev: [[0, 6], [150, 4], [700, 12], [1100, 26], [1600, 40], [2414, 1]] }, '左'), { hasOther: false }],
+  ];
+  // data/layouts.js の回りも全部（QUICK のときは各場の最初の回りだけ）
+  const C = HS.DATA.courses, LY = HS.DATA.layouts || {};
+  for (const [k, v] of Object.entries(LY)) for (const sf of ['turf', 'dirt']) (v[sf] || []).slice(0, QUICK ? 1 : 99).forEach(lay => {
+    if (QUICK && sf === 'dirt' && v.turf && v.turf.length) return;
+    cases.push([`${k}${sf === 'dirt' ? 'ダ' : '芝'}${lay.id || ''}`, T.fromLayout(lay, (C[k] || {}).dir), { dirt: sf === 'dirt', hasOther: !lay.line && !lay.open && !!(sf === 'dirt' ? (C[k] || {}).turf : (C[k] || {}).dirt) }, true]);
+  });
+  let nData = 0;
+  for (const [name, tr, o, data] of cases) {
+    const R = R3.terrain(tr, o), G = R.grid(), CS = 8, nx = Math.round((G.x1 - G.x0) / CS) + 1;
+    for (let i = 0; i < G.pos.length; i++) assert(isFinite(G.pos[i]), `${name}：地面に NaN`);
+    assert(G.idx.length > 3000, `${name}：地面の三角形が少ない`);
+    // 升目の高さ（上から見た x, y。三角形の中は平面）
+    const gridH = (x, y) => {
+      const fx = (x - G.x0) / CS, fy = (y - G.y0) / CS, i = Math.floor(fx), j = Math.floor(fy), a = fx - i, b = fy - j, h = (ii, jj) => G.pos[(jj * nx + ii) * 3 + 1];
+      return a + b <= 1 ? h(i, j) + (h(i + 1, j) - h(i, j)) * a + (h(i, j + 1) - h(i, j)) * b : h(i + 1, j + 1) + (h(i, j + 1) - h(i + 1, j + 1)) * (1 - a) + (h(i + 1, j) - h(i + 1, j + 1)) * (1 - b);
+    };
+    let worst = 0, hMin = Infinity, hMax = -Infinity;
+    // ほかの所のコース（重なる回り・すぐ横を通る別の区間）がほぼ同じ近さにある所は、高さがどちらかに決まらないので除く
+    const crowded = (p, f) => { const d = Math.hypot(f.x - p.x, f.y - p.y) + 12; return R.S.some(g => Math.abs(g.s - f.s) > 40 && Math.hypot(g.x - p.x, g.y - p.y) < d); };
+    for (let k = 0; k < R.S.length; k += data ? 7 : 3) {
+      const f = R.S[k];
+      hMin = Math.min(hMin, f.e); hMax = Math.max(hMax, f.e);
+      // 馬場の下は、地面がコースの帯より下
+      const c = R.wpt(f, 12), nc = R.nearest(c.x, c.y);
+      if (nc && !crowded(c, f)) assert(R.ground(c.x, c.y) <= f.e - 0.05, `${name}：残り ${f.s.toFixed(0)}m で地面が馬場から出る`);
+      // 帯の内と外の縁で、地面がコースの高さとつながる（浮かない・埋まらない）
+      for (const u of [R.bandI - 0.5, R.bandO0 + 0.5]) {
+        const p = R.wpt(f, u), n = R.nearest(p.x, p.y);
+        if (!n || Math.abs(n.u - u) > 1 || crowded(p, f)) continue;
+        const d = gridH(p.x, p.y) - f.e;
+        worst = Math.max(worst, Math.abs(d));
+        assert(d < 0.08 && d > -0.3, `${name}：残り ${f.s.toFixed(0)}m の帯の縁（${u.toFixed(0)}m）で地面が ${d.toFixed(2)}m ずれる`);
+      }
+    }
+    // 池は内馬場の中で、コースから離れている
+    if (R.pond) {
+      assert(R.loop, `${name}：直線のコースに池がある`);
+      const n = R.nearest(R.pond.x, R.pond.y);
+      assert(n && n.u < R.bandI - R.pond.rz, `${name}：池がコースに近い`);
+    }
+    if (data) nData++; else out.push(`${name} 高低差 ${(hMax - hMin).toFixed(1)}m・縁のずれ ${(worst * 100).toFixed(0)}cm`);
+  }
+  return out.join('／') + `／data/layouts.js の回り ${nData}`;
+});
 check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中・騎手の GLB の形・騎手が手綱と鐙に届く', () => {
   const vm = require('vm'), fs = require('fs'), path = require('path');
   const ROOT = path.join(__dirname, '..'), dir = path.join(ROOT, 'assets');
@@ -1024,6 +1085,7 @@ check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中�
 
 require('./extra_replay.js')(check, assert, HS); // レコード・リプレイ・フリーレース
 require('./extra_owners.js')(check, assert, HS); // 馬主と騎乗依頼
+require('./extra_audio.js')(check, assert, HS); // BGM の曲の書式と長さ
 
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);

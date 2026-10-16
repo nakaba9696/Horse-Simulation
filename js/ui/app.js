@@ -14,7 +14,7 @@
     const app = $('#app');
     const st = App.st;
     if (titleAnim) { cancelAnimationFrame(titleAnim); titleAnim = null; }
-    if (HS.Audio && !App.inRace) HS.Audio.bgm(st.screen === 'game' ? 'home' : 'title');
+    if (HS.Audio && !App.inRace) HS.Audio.bgm(HS.Audio.songFor(st));
     const anim = App.navAnim; App.navAnim = null;
     document.body.dataset.screen = st.screen;
     if (st.screen === 'title') { App.setScene('title'); app.innerHTML = UI.screens.title(App.st.titleOpen); App.enter(app, anim); App.titleCanvas(); return; }
@@ -361,6 +361,7 @@
       const msg = mine.map(x => x.pos === 1 ? (r.race.graded ? `<div class="hero"><canvas class="winner-cv" width="960" height="560" data-name="${e(x.name)}"></canvas></div>` : `<div class="panel gold center"><div class="serif" style="font-size:24px;font-weight:900;color:var(--gold2)">🏆 ${e(x.name)} 優勝！</div></div>`) : `<div class="panel center">${e(x.name)}は${x.pos}着</div>`).join('');
       const bg = App.modal(`${msg}${UI.resultTable(slim)}<div class="btns mt"><button class="btn gold" data-x="ok">次へ</button></div>`, { noClose: true, scene: 'result' });
       if (AU && !won && mine.some(x => x.pos === 1)) { App.inRace = true; AU.playOnce('victory').then(() => { App.inRace = false; AU.bgm('home'); }); }
+      else if (AU && !won && mine.length && !replay) { App.inRace = true; AU.playOnce('lose').then(() => { App.inRace = false; AU.bgm('home'); }); }
       bg.querySelectorAll('.winner-cv').forEach(cv => {
         const run = r.runners.find(x => x.horse.name === cv.dataset.name);
         const win = r.sim.results[0];
