@@ -2490,8 +2490,8 @@
         const walk = ww > 0 ? { ph: ((x / WALK_STRIDE + Hh.num * 0.37) % 1 + 1) % 1, w: ww } : null;
         // 掛かり・耳（模擬の値。無ければ掛からず、耳は軽く前）。1コマで跳ばないよう寄せる
         const kf = dt > 0 ? Math.min(1, dt * 3) : 1;
-        Hh.fight += ((st.fight || 0) - Hh.fight) * kf;
-        Hh.ears += ((st.ears != null ? st.ears : 0.3) - Hh.ears) * Math.min(1, kf * 2);
+        Hh.fight += (clamp(st.fight || 0, 0, 1) - Hh.fight) * kf;
+        Hh.ears += (clamp(st.ears != null ? st.ears : 0.3, -1, 1) - Hh.ears) * Math.min(1, kf * 2);
         poseHorse(Hh, ph, sp, push, t, Hh.seed, st.whip, st.pose, walk);
         // 骨入りの馬：角度を写し、蹄を地面へ・頭の馬具を頭へ（遠い馬ははじめの1回のあとは合わせ直さない）
         if (Hh.rig) {
