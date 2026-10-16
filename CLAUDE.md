@@ -37,6 +37,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `data/jockeys.js`・`jockeys_old.js`・`jockeys_extra.js` | 実在の騎手（1987〜／1960年代〜と海外・地方／記録から見積もった騎手＝`node tools/build_jockeys_extra.js`） | D |
 | `data/famous_old.js`・`famous_1.js`・`famous_2.js`・`famous_world.js` | 名馬の解説（史実だけ。馬主・調教師の名は書かない）・脚の切れ・特殊能力。`js/core/datafix.js` が史実馬に合わせる | D |
 | `data/historic_jockeys.js` | 史実馬の主戦騎手（手で確かめたもの。ほかは馬のデータの jockey と記録から） | D |
+| `js/core/fictional.js` | 騎手の名前を架空にする（実名 → 架空の名前を一対一で。データの後・datafix の前に読む） | C |
 | `js/core/datafix.js` | 読み込んだ史実馬をまとめる（重複・小さいカナ・勝ち鞍のレース名を暦にそろえる） | C |
 | `js/core/util.js` | 乱数（種で固定）・書式 | C |
 | `js/core/track.js` | コースの形（直線と半円）。ミニマップと騎乗の映像で使う | C |
@@ -81,7 +82,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 - **コミット・PR・コメントにモデル名を書かない。** Claude Code が自動で付ける `Co-Authored-By` 行は `.claude/settings.json` で切ってある（`includeCoAuthoredBy: false`）。
 
 ## 決まり（このゲーム）
-- **馬名・レース名・競馬場名・種牡馬名・騎手名は実名。** 騎手は年代ごとに実在の騎手（`data/jockeys.js`）、史実馬は主戦騎手（`data/historic_jockeys.js`）が乗る。調教師・馬主は架空で、史実馬の馬主名も出さない。
+- **馬名・レース名・競馬場名・種牡馬名は実名。騎手名は架空**（持ち主の決定 2026-10-16「騎手の名前は全部架空でいい」）。データ（`data/jockeys.js`・`data/historic_jockeys.js`）は実在の騎手のまま持ち、`js/core/fictional.js` が読み込んだときに実名 → 架空の名前に一対一で置き換える（腕前・年代・主戦の組み合わせ・解説の文の中の名前も）。ゲームの中に騎手の実名は出さない。調教師・馬主は架空で、史実馬の馬主名も出さない。
 - **頭数合わせの馬（モブ）は架空の名前。** 実名にするのは史実馬だけ。
 - **絵は canvas と 3D（Three.js）でコードから作る**（`js/ui/art.js`・`js/ui/race3d.js`）。画像ファイル・画像生成・3D モデルのファイルは使わない（持ち主が変えるまで）。3D にしたのは持ち主の決定 2026-10-15（Godot も許されたが、ブラウザでそのまま遊べる Three.js を選んだ）。
 - **音は Web Audio で作る**（`js/ui/audio.js`）。音のファイルは使わない。曲は書き下ろしで、実在のファンファーレ・既存曲のメロディは使わない。音のための雑音だけは `Math.random` でよい（ゲームの結果に関わらない）。

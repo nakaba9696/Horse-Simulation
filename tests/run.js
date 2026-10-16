@@ -92,6 +92,17 @@ if (D.stallions) {
   });
 }
 
+check('fictional: 騎手の名前は全部架空（実名は出ない）・一対一', () => {
+  const F = HS.Fictional, real = new Set(F.map.keys());
+  assert(F.map.size > 500 && new Set(F.map.values()).size === F.map.size, '置き換えが一対一でない');
+  const bad = (D.jockeys || []).filter(j => real.has(j.name)).map(j => j.name);
+  for (const v of Object.values(D.historicJockeys || {})) for (const n of (typeof v === 'string' ? [v] : Object.values(v))) if (real.has(n)) bad.push(n);
+  const texts = (D.famous || []).map(f => f.text).filter(Boolean).join('\n');
+  for (const n of real) if (n.length >= 3 && texts.includes(n)) bad.push('解説:' + n);
+  assert(!bad.length, '実名が残っている: ' + bad.slice(0, 8).join(', '));
+  return `${F.map.size}人・例 ${['武豊', 'C.ルメール'].map(n => n + '→' + F.map.get(n)).join('・')}`;
+});
+
 check('jockeys: 毎年 JRA の騎手が足りる・主戦騎手が実在する', () => {
   const J = D.jockeys || [];
   assert(J.length > 0, '騎手のデータがない');
@@ -218,7 +229,7 @@ check('edits: エディットが新しいゲームとセーブに効く', () => 
   E.apply({}); W.index();
   // clean：元と同じ値は残さない
   const o = D.historic.find(x => x.name === 'キタサンブラック');
-  assert(E.clean(o.name, { rating: o.rating, jockey: '武豊' }) === null, 'clean が同じ値を残した');
+  assert(E.clean(o.name, { rating: o.rating, jockey: HS.Fictional.map.get('武豊') }) === null, 'clean が同じ値を残した');
 });
 
 // ---------- 能力の形・脚の切れ・坂・特殊能力 ----------
