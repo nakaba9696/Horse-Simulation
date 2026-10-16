@@ -150,7 +150,9 @@ module.exports = function (check, assert, HS) {
     }
     const tiers = O.list().map(o => O.of(o.id).tier);
     const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
-    assert(tiers.some(t => t >= 1), '段階が一度も上がらない');
+    // 1年（QUICK）では「信頼」まで届かないことがある（レースの釣り合いしだい）。好感度が上がっていることだけ見る
+    if (QUICK) assert(O.list().some(o => O.of(o.id).pts > 0), '好感度が一度も上がらない');
+    else assert(tiers.some(t => t >= 1), '段階が一度も上がらない');
     return `${years}年・受けた ${acc}・断った ${dec}・段階 ${tiers.join('/')}`;
   });
 };
