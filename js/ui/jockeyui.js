@@ -33,10 +33,22 @@
       <button class="btn-next" data-act="next">${n ? 'レースへ' : '次の週へ'}<small>▶ ${n ? `${n}鞍に騎乗` : (G.week === 4 ? (G.month === 12 ? '新年' : (G.month + 1) + '月') : G.month + '月' + (G.week + 1) + '週')}</small></button>
     </div>`;
   };
+  // 線のアイコン（24×24。色は字の色に合わせる）
+  const ICONS = {
+    home: '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/>',
+    stable: '<path d="M6.5 3.5v7.5a5.5 5.5 0 0 0 11 0V3.5"/><path d="M4.5 3.5h4M15.5 3.5h4"/><path d="M6.6 7.5h1.6M15.8 7.5h1.6M7.4 12h1.5M15.1 12h1.5"/>',
+    market: '<path d="M4.5 8.5h15l-1.2 11.5H5.7z"/><path d="M8.8 8.5V7a3.2 3.2 0 0 1 6.4 0v1.5"/><path d="M9.5 13.5h5"/>',
+    breed: '<path d="M12 20.5v-8"/><path d="M12 12.5c0-4.2-2.8-6.5-7-6.5 0 4.2 2.8 6.5 7 6.5z"/><path d="M12 10.5c0-3.4 2.2-5.5 6-5.5 0 3.4-2.2 5.5-6 5.5z"/><path d="M8 20.5h8"/>',
+    races: '<path d="M8 4h8v5.5a4 4 0 0 1-8 0z"/><path d="M8 6H5.2a3 3 0 0 0 3.2 4.2"/><path d="M16 6h2.8a3 3 0 0 1-3.2 4.2"/><path d="M12 13.5V17"/><path d="M8.5 20h7l-.8-3h-5.4z"/>',
+    jrecord: '<path d="M4 20h16"/><path d="M6.5 20v-6.5h3V20M10.5 20V6h3v14M14.5 20v-9h3v9"/>',
+    records: '<path d="M6 4h10.5A2.5 2.5 0 0 1 19 6.5V20H8.5A2.5 2.5 0 0 1 6 17.5z"/><path d="M6 17.5A2.5 2.5 0 0 1 8.5 15H19"/><path d="M9.5 8h6"/>',
+    menu: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
+  };
+  UI.icon = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k] || ''}</svg>`;
   UI.nav = function (tab) {
     if (!isJ()) return nav0(tab);
-    const items = [['home', '🏠', 'ホーム'], ['stable', '🐎', '厩舎'], ['market', '💰', '馬の店'], ['breed', '🐣', '生産'], ['races', '🏆', 'レース'], ['jrecord', '🏇', 'データ'], ['menu', '⚙', 'メニュー']];
-    return `<nav class="nav"><div class="in">${items.map(([k, ic, lb]) => `<button data-act="tab" data-tab="${k}" class="${tab === k ? 'on' : ''}"><span class="ic">${ic}</span>${lb}</button>`).join('')}</div></nav>`;
+    const items = [['home', 'ホーム'], ['stable', '厩舎'], ['market', '馬の店'], ['breed', '生産'], ['races', 'レース'], ['jrecord', 'データ'], ['menu', 'メニュー']];
+    return `<nav class="nav"><div class="in">${items.map(([k, lb]) => `<button data-act="tab" data-tab="${k}" class="${tab === k ? 'on' : ''}"><span class="ic">${UI.icon(k)}</span>${lb}</button>`).join('')}</div></nav>`;
   };
 
   // ---------- 生産：オリジナルホース（引退させた牡馬と牝馬から） ----------
@@ -142,7 +154,7 @@
     // 今週のおもなレース（乗るレースがあればその競馬場）の天気と馬場
     const main = rides.length ? rides[0].card.race : (W.cards().map(c => c.race).find(r => r.region === 'JRA' && r.graded) || (W.cards()[0] || {}).race);
     const wx = main ? T.weather(G.seed, G.year, G.month, G.week, main.course, main.ground) : null;
-    const cmds = [['stable', '🐎', '出走登録', '厩舎とレース'], ['market', '💰', '馬の店', `お手馬 ${T.ownCount()}/${T.MAX_OWN}`], ['breed', '🐣', '生産', 'オリジナルホース'], ['jrecord', '🏇', 'データ', '成績・スペシャル・トロフィー'], ['records', '📜', '記録', '年代記・表彰'], ['menu', '⚙', 'システム', 'セーブ・音・色']];
+    const cmds = [['stable', '出走登録', '厩舎とレース'], ['market', '馬の店', `お手馬 ${T.ownCount()}/${T.MAX_OWN}`], ['breed', '生産', 'オリジナルホース'], ['jrecord', 'データ', '成績・スペシャル・トロフィー'], ['records', '記録', '年代記・表彰'], ['menu', 'システム', 'セーブ・音・色']];
     const over = G.gameOver;
     return `
       ${over ? `<div class="panel over mt"><div class="big">シーズン終了</div><div>${W.yLabel(over.y)}${over.m}月、資金が尽きた（${U.money(over.money)}）。</div><div class="small muted">記録はここまでの分が残っています。</div><div class="btns mt"><button class="btn gold" data-act="newgame-form">はじめから</button><button class="btn" data-act="tab" data-tab="jrecord">成績を見る</button></div></div>` : ''}
@@ -157,7 +169,7 @@
           <div class="wx">${wx ? `<div class="ic">${T.weatherIcon(wx)}</div><div><div class="small">${e(main.course)}</div><b>${wx}・${main.ground}</b></div>` : ''}</div>
           <button class="go ${rides.length ? 'on' : ''}" data-act="next" ${over ? 'disabled' : ''}>${rides.length ? 'レースへ' : '次の週へ'}<small>${rides.length ? `${rides.length}鞍に騎乗` : ''}</small></button>
         </div>
-        <div class="mgr-cmds">${cmds.map(([k, ic, lb, sub]) => `<button data-act="tab" data-tab="${k}"><span class="ic">${ic}</span><b>${lb}</b><small>${sub}</small></button>`).join('')}</div>
+        <div class="mgr-cmds">${cmds.map(([k, lb, sub]) => `<button data-act="tab" data-tab="${k}"><span class="ic">${UI.icon(k)}</span><b>${lb}</b><small>${sub}</small></button>`).join('')}</div>
         <div class="mgr-foot small">今年 ${yr.rides}戦${yr.wins}勝（2着${yr.w2}・3着${yr.w3}）・通算 ${j.total.rides}戦${j.total.wins}勝・評判 ${J.repLabel(j.rep)}・騎乗技術 ${Math.round(j.skill)}</div>
       </div>
       ${!W.mine().length && !over ? `<div class="panel gold mt">📌 <a href="#" data-act="tab" data-tab="market">馬の店でデビュー前の史実馬を買おう</a>（2歳の4月から自動で入厩し、レースに出られる）。お手馬は${T.MAX_OWN}頭まで。毎月の費用がかかり、資金がマイナスのまま2か月続くとシーズンが終わる。</div>` : ''}
