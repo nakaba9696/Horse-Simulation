@@ -9,6 +9,8 @@
   RD.speed = 1; // 確かめ用に速く進める倍率
   const FC = () => HS.DATA.frameColors, FT = () => HS.DATA.frameText;
   const FONT = '"Noto Sans JP", sans-serif';
+  // 計器の色（css/style.css の方針に合わせる：暗い板・金の細い線・控えめな字）
+  const HUD = { panel: 'rgba(5,16,11,0.74)', line: 'rgba(242,217,142,0.55)', label: '#b8cdbf', gold: '#f2d98e', off: 'rgba(255,255,255,0.12)' };
 
   // ゲームパッド（標準の並び）：十字の上＝しごく・下＝引く・左右＝進路、B＝右ムチ、X＝左ムチ、A＝持ち替え、Y＝ガッツポーズ、
   // LT・RT＝左右を向く、LB・RB＝レーダーの照準、Back＝視点
@@ -232,7 +234,11 @@
 
       // ---------- 計器 ----------
       function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
-      function panel(x, y, w, h) { ctx.fillStyle = 'rgba(6,28,18,0.78)'; rr(x, y, w, h, 6); ctx.fill(); ctx.strokeStyle = 'rgba(214,178,74,0.85)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+      function panel(x, y, w, h) {
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
+        ctx.fillStyle = HUD.panel; rr(x, y, w, h, 9); ctx.fill(); ctx.restore();
+        ctx.strokeStyle = HUD.line; ctx.lineWidth = 1; rr(x + 0.5, y + 0.5, w - 1, h - 1, 8.5); ctx.stroke();
+      }
       function txt(s, x, y, font, col, align, base) { ctx.font = font; ctx.fillStyle = col; ctx.textAlign = align || 'left'; ctx.textBaseline = base || 'alphabetic'; ctx.fillText(s, x, y); }
       function outlined(s, x, y, font, col, align) { ctx.font = font; ctx.textAlign = align || 'left'; ctx.textBaseline = 'alphabetic'; ctx.strokeStyle = 'rgba(0,0,0,0.75)'; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.strokeText(s, x, y); ctx.fillStyle = col; ctx.fillText(s, x, y); }
       function hud(view) {
@@ -246,13 +252,13 @@
         outlined(`/ ${sim.st.length}`, 24 + rw, 58, `bold 24px ${FONT}`, '#fff');
         outlined(clock < 0 ? `発走まで ${Math.ceil(-clock)}` : me.done ? 'ゴール' : `残り ${rem}m`, 20, 88, `bold 20px ${FONT}`, '#fff');
         // 右上：コースレコードと時計
-        const tw = 196, tx = VW - tw - 10;
-        panel(tx, 10, tw, 50);
-        txt('レコード', tx + 10, 30, `12px ${FONT}`, '#cfe3c9');
-        txt(record ? U.time(record.t) : '－', tx + tw - 10, 30, `bold 14px monospace`, '#ffd34d', 'right');
-        txt('タイム', tx + 10, 51, `12px ${FONT}`, '#cfe3c9');
+        const tw = narrow ? 172 : 196, tx = VW - tw - 10;
+        panel(tx, 10, tw, 52);
+        txt('レコード', tx + 12, 31, `12px ${FONT}`, HUD.label);
+        txt(record ? U.time(record.t) : '－', tx + tw - 12, 31, `bold 14px ${FONT}`, HUD.gold, 'right');
+        txt('タイム', tx + 12, 53, `12px ${FONT}`, HUD.label);
         const now = clock > 0 ? Math.min(clock, me.done ? me.finishT : 999) : 0;
-        txt(U.time(now), tx + tw - 10, 51, `bold 16px monospace`, record && me.done && me.finishT < record.t ? '#ff7a6a' : '#fff', 'right');
+        txt(U.time(now), tx + tw - 12, 53, `bold 17px ${FONT}`, record && me.done && me.finishT < record.t ? '#ff7a6a' : '#fff', 'right');
         // 右：縦長の馬群レーダーと照準の馬
         radar(view, order);
         // 左下：スタミナ・速さ・脚質・気性
@@ -309,11 +315,12 @@
       const paceCol = v => v === 'ハイペース' ? '#ff8a6a' : v === 'スローペース' ? '#7fc8ff' : '#ffe9a6';
       function drawPace() {
         if (clock < 0 || me.done) return;
-        const bw = 300, bx = VW / 2 - bw / 2, by = 12;
+        // 狭い画面では右上のレコードの板と重ならない幅にする
+        const bw = narrow ? 250 : 300, bx = VW / 2 - bw / 2, by = 10;
         if (!pace) {
           panel(bx, by, bw, 40);
           txt(`予想 ${guess}`, VW / 2, by + 18, `bold 14px ${FONT}`, paceCol(guess), 'center', 'middle');
-          txt(`逃げ馬${nNige}頭・${sim.checkAt}m地点で判定`, VW / 2, by + 32, `11px ${FONT}`, '#cfe3c9', 'center', 'middle');
+          txt(`逃げ馬${nNige}頭・${sim.checkAt}m地点で判定`, VW / 2, by + 32, `11px ${FONT}`, HUD.label, 'center', 'middle');
           return;
         }
         const age = performance.now() - pace.t, big = age < 3200;
@@ -328,7 +335,7 @@
         const k = U.clamp((sim.paceF - 0.982) / 0.036, 0, 1);
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(gx + gw * k, gy + 5); ctx.lineTo(gx + gw * k - 5, gy + 11); ctx.lineTo(gx + gw * k + 5, gy + 11); ctx.closePath(); ctx.fill();
         txt('スロー', gx - 4, gy + 4, `9px ${FONT}`, '#7fc8ff', 'right', 'middle'); txt('ハイ', gx + gw + 4, gy + 4, `9px ${FONT}`, '#ff8a6a', 'left', 'middle');
-        if (big) txt(pace.text, bx + bw - 8, by + 14, `10px ${FONT}`, '#cfe3c9', 'right', 'middle');
+        if (big) txt(pace.text, bx + bw - 8, by + 14, `11px ${FONT}`, HUD.label, 'right', 'middle');
       }
       // ムチ：打った側の端から光の筋、少しの揺れ、寄った向きの矢印（右回りは右ムチで外、左ムチで内）
       function drawWhip() {
@@ -399,29 +406,29 @@
         const w = 250, h = 112, x = 10, y = VH - h - 10;
         panel(x, y, w, h);
         // スタミナ：8つのブロック。使うたびに1つずつ消える
-        txt('スタミナ', x + 10, y + 20, `12px ${FONT}`, '#cfe3c9');
+        txt('スタミナ', x + 10, y + 20, `12px ${FONT}`, HUD.label);
         const nB = me.E <= 0 ? 0 : Math.ceil(U.clamp(me.E, 0, 1) * 8);
         for (let i = 0; i < 8; i++) {
-          ctx.fillStyle = i < nB ? (nB <= 2 ? '#ff6a4d' : nB <= 4 ? '#ffd34d' : '#57d17f') : 'rgba(255,255,255,0.12)';
+          ctx.fillStyle = i < nB ? (nB <= 2 ? '#ff6a4d' : nB <= 4 ? '#ffd34d' : '#57d17f') : HUD.off;
           ctx.fillRect(x + 70 + i * 21, y + 9, 17, 14);
         }
         // 速さ：今の速さを青い棒で（巡航の速さが真ん中）
-        txt('速さ', x + 10, y + 42, `12px ${FONT}`, '#cfe3c9');
+        txt('速さ', x + 10, y + 42, `12px ${FONT}`, HUD.label);
         const nV = Math.round(U.clamp((me.v / me.vc - 0.9) / 0.2, 0, 1) * 16);
-        for (let i = 0; i < 16; i++) { ctx.fillStyle = i < nV ? (i >= 12 ? '#7fe0ff' : '#3a8fe0') : 'rgba(255,255,255,0.12)'; ctx.fillRect(x + 70 + i * 10.5, y + 32, 8, 12); }
+        for (let i = 0; i < 16; i++) { ctx.fillStyle = i < nV ? (i >= 12 ? '#7fe0ff' : '#3a8fe0') : HUD.off; ctx.fillRect(x + 70 + i * 10.5, y + 32, 8, 12); }
         // 手綱の段（しごく▲・引く▼）とムチの手
         const gTxt = c.gear > 0.05 ? '▲'.repeat(Math.ceil(c.gear * 4)) : c.gear < -0.05 ? '▼'.repeat(Math.ceil(-c.gear * 4)) : '－';
-        txt(`手綱 ${gTxt}`, x + 10, y + 64, `12px ${FONT}`, c.gear > 0.05 ? '#ffd34d' : c.gear < -0.05 ? '#7fc8ff' : '#cfe3c9');
-        txt(`ムチ ${c.hand === 'R' ? '右' : '左'}手${c.whips ? '・' + c.whips : ''}`, x + 120, y + 64, `12px ${FONT}`, '#cfe3c9');
+        txt(`手綱 ${gTxt}`, x + 10, y + 64, `12px ${FONT}`, c.gear > 0.05 ? '#ffd34d' : c.gear < -0.05 ? '#7fc8ff' : HUD.label);
+        txt(`ムチ ${c.hand === 'R' ? '右' : '左'}手${c.whips ? '・' + c.whips : ''}`, x + 120, y + 64, `12px ${FONT}`, HUD.label);
         // 脚質の矢印：光っているのがこの馬の得意な位置。白い枠が今の位置
-        txt('脚質', x + 10, y + 92, `12px ${FONT}`, '#cfe3c9');
+        txt('脚質', x + 10, y + 92, `12px ${FONT}`, HUD.label);
         const nowK = Math.min(3, Math.floor((rank - 1) / Math.max(1, sim.st.length) * 4));
         STYLES.forEach((st, i) => {
           const ax = x + 52 + i * 34, ay = y + 82, lit = me.h.style === st;
           ctx.fillStyle = lit ? '#ffd34d' : 'rgba(255,255,255,0.18)';
           ctx.beginPath(); ctx.moveTo(ax + 26, ay + 8); ctx.lineTo(ax + 4, ay); ctx.lineTo(ax + 4, ay + 16); ctx.closePath(); ctx.fill();
           if (i === nowK) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(ax + 1, ay - 2, 28, 20); }
-          txt(st[0], ax + 11, ay + 12, `bold 10px ${FONT}`, lit ? '#3a2a00' : '#cfe3c9', 'center', 'middle');
+          txt(st[0], ax + 11, ay + 12, `bold 10px ${FONT}`, lit ? '#3a2a00' : HUD.label, 'center', 'middle');
         });
         // 気性：針と色（青＝落ち着き、緑、黄、赤＝掛かり）
         const cx = x + w - 30, cy = y + 96, r = 20;
@@ -429,7 +436,7 @@
         seg(0, 0.35, '#3d8bfd'); seg(0.35, 0.55, '#4cc27a'); seg(0.55, 0.75, '#ffd34d'); seg(0.75, 1, '#ff5a4d');
         const v = U.clamp(c.tension / 100, 0, 1), ang = Math.PI + v * Math.PI;
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(ang) * (r + 3), cy + Math.sin(ang) * (r + 3)); ctx.stroke();
-        txt('気性', cx, cy - r - 6, `11px ${FONT}`, '#cfe3c9', 'center');
+        txt('気性', cx, cy - r - 6, `11px ${FONT}`, HUD.label, 'center');
       }
       // 縦長の馬群レーダー：上が前。先頭から最後方までを1本に。紫が自分、白い輪が照準。内ラチは回る向きの側
       function radar(view, order) {
@@ -455,8 +462,8 @@
         const k = order.indexOf(tg) + 1;
         txt(`${tg.r.num}番 ${k}位`, bx + w / 2, by + h + 12, `bold 11px ${FONT}`, target === sim.me ? '#d9a8ff' : '#fff', 'center', 'middle');
         ctx.font = `10px ${FONT}`;
-        txt(tg.h.name.length > 7 ? tg.h.name.slice(0, 7) + '…' : tg.h.name, bx + w / 2, by + h + 25, `10px ${FONT}`, '#cfe3c9', 'center', 'middle');
-        txt('馬群レーダー', bx + w / 2, by - 6, `11px ${FONT}`, '#fff', 'center');
+        txt(tg.h.name.length > 7 ? tg.h.name.slice(0, 7) + '…' : tg.h.name, bx + w / 2, by + h + 25, `11px ${FONT}`, HUD.label, 'center', 'middle');
+        txt('馬群レーダー', bx + w / 2, by - 7, `bold 11px ${FONT}`, '#fff', 'center');
       }
       // 映像が使えないときの簡単な絵（上から見た図を大きく）
       function fallback(view) {
