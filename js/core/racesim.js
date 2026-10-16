@@ -15,7 +15,9 @@
     const g = { '良': 0, '稍重': 1, '重': 2, '不良': 3 }[ground] || 0;
     if (surface === '芝') v *= 1 - [0, 0.006, 0.015, 0.03][g];
     else v *= 1 + [0, 0.004, 0.007, 0.009][g];
-    return v * (1 + (courseAdj || 0));
+    v *= 1 + (courseAdj || 0);
+    // 出だしの加速を速くした分（約2秒）、走りの速さを少し落として走破タイムを保つ
+    return dist / (dist / v + 2.4);
   };
 
   // 1頭の、このレースでの強さ（点）を計算する。内訳も返す（人気・説明に使う）
@@ -89,12 +91,18 @@
   S.DS = 0.68; // スタミナの持ちの全体の倍率
   // ペース（持ち主の指摘 2026-10-16）：スローなら前の馬が楽で、早めに動くのが得。ハイなら前の馬が脚を使い、後ろでためて遅めに動くのが得。
   // paceF が PACE_HI より上でハイ、PACE_LO より下でスロー。道中、隊列の前にいるほど（paceF-1）×PACE_K の割合でスタミナの減りが増える（スローなら減る）
+  // 脚質ごとの居心地のよい位置（前から何割目か。0＝先頭、1＝最後方）。外れた分（割合）× MISFIT が、気分の上がる速さ（毎秒）に足される
+  S.ZONE = { '逃げ': [0, 0.12], '先行': [0.05, 0.4], '差し': [0.3, 0.75], '追込': [0.6, 1] };
+  S.MISFIT = 14; S.TENSE_COST = 0.5;
+  // 気性の荒さ（mind が70より低いほど大きい。45で2倍）
+  S.temperF = s => 1 + Math.max(0, 70 - s.mind) / 25;
+  S.START_ACC = 7.5;
   S.LATE_E = 0.15; // 出遅れた馬は、位置を取り戻すのに脚を使う（スタミナの減り）
   S.PUSH = { base: 0.25 }; // 追い出したあと、しごかずに馬なりで行くときの伸び（段に置き換えた値）
   S.PACE_HI = 1.006; S.PACE_LO = 0.994; S.PACE_K = 70; S.DRAFT = 0.12; S.PACE_TOP = 50; S.PACE_EARLY = 60;
   S.paceVerdict = f => f > S.PACE_HI ? 'ハイペース' : f < S.PACE_LO ? 'スローペース' : '平均ペース';
   S.paceHint = v => v === 'ハイペース' ? '前は苦しい。後ろでためて遅めに' : v === 'スローペース' ? '前が楽。早めに動け' : '力どおりの流れ';
-  S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0, z: 0.0015, top: 2.2 };
+  S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0, cS: 0.035, z: 0.0015, top: 2.2 };
 
   // 本体。runners: [{horse, jockey, weight, num, frame, rider?}]。rider==='P' の馬はプレイヤーが乗る（opts.ride のとき操作を受け付ける）
   // S.create で始め、S.step で 0.1 秒ずつ進め、S.finish で結果を出す。S.run はそれを一度に行う
@@ -136,7 +144,7 @@
       const kakari = rng.chance(Math.max(0, (72 - mind) / 100) * 0.3 + (has('kakari') ? 0.25 : 0));
       return {
         r, h, i, A, vc, Ds, kickS, spurtR, guts, mind, slopeP, x: 0, v: 0, E: late ? 1 - S.LATE_E : 1, delay, late, kakari,
-        acc: K.a0 + K.a1 * kire, zubu: (8 - kire) * K.z + (has('longspurt') ? 0.003 : 0), spurtCost: K.c0 + K.c1 * (kire - 1),
+        acc: K.a0 + K.a1 * kire, zubu: (8 - kire) * K.z + (has('longspurt') ? 0.003 : 0), spurtCost: K.c0 + K.c1 * (kire - 1) + K.cS * (kire - 4.5) * (330 - geo.straight) / 200, // 直線が長いほど切れる馬が、短いほどズブい馬が脚を効率よく使える
         oonige: has('oonige') && h.style === '逃げ', nino: has('nino'), narabu: has('narabu'), sora: has('sora'),
         me: false, fired: {}, boost: null, trig: [], sk: null, passive: [], passiveShown: false,
         lane: (r.num - 1) * 0.5, laneT: 0, spurting: false, done: false, finishT: null, t600: null, blocked: 0, blockedOnce: false,
@@ -298,13 +306,19 @@
         const ahead1 = st.find(o => o !== s && !o.done && o.x > s.x && o.x - s.x < 5 && Math.abs(o.lane - s.lane) < 0.8);
         c.behind = !!ahead1;
         if (!s.spurting) {
-          const ner = (0.3 + Math.max(0, 75 - s.mind) * 0.03 + (s.kakari ? 1.2 : 0)) * (prog < 0.65 ? 1 : 0.4);
+          // 気性が荒い（mind が低い）ほど、気分が動きやすい（上がるのも速い）
+          const tf = S.temperF(s);
+          // 脚質に合った位置にいないと、折り合いを欠いて気分が悪くなる（ペースを見越してわざと位置を変えるなら、そのぶん気分の管理が要る）
+          const zone = S.ZONE[s.h.style] || S.ZONE['先行'];
+          const off = prog > 0.08 && s.rk != null ? Math.max(0, zone[0] - s.rk, s.rk - zone[1]) : 0;
+          c.misfit = off > 0.05;
+          const ner = (0.3 + Math.max(0, 75 - s.mind) * 0.03 + (s.kakari ? 1.2 : 0) + off * S.MISFIT) * tf * (prog < 0.65 ? 1 : 0.4);
           const sides = st.filter(o => o !== s && !o.done && Math.abs(o.x - s.x) < 3 && Math.abs(o.lane - s.lane) < 1.6).length;
           const boxed = sides >= 2 && (s.h.style === '逃げ' || s.h.style === '追込') ? 1.5 : sides ? 0.4 : 0;
           // 掛かり癖の馬は、引いて遅く走らせると余計に行きたがる
           const pull = g < -0.05 ? (H.has(s.h, 'kakari') ? 1.5 : -2.5 * -g) : 0;
-          const calm = ahead1 && s.h.style !== '逃げ' ? 2.6 : 0;
-          c.tension = U.clamp(c.tension + (ner + boxed + pull - calm) * DT, 0, 100);
+          const calm = (ahead1 && s.h.style !== '逃げ' ? 2.6 : 0) / Math.sqrt(tf);
+          c.tension = U.clamp(c.tension + (ner + boxed * tf + pull - calm) * DT, 0, 100);
         } else c.tension = Math.max(0, c.tension - 3 * DT);
         const kakariNow = c.tension > 75 && !s.spurting;
         if (kakariNow && !c.kakariNow && H.has(s.h, 'kakari')) S.fire(sim, s, 'kakari');
@@ -333,6 +347,8 @@
           // 掛かると行きたがって脚を使う。落ち着いていれば脚がもつ
           if (kakariNow) { target *= 1.012; costMul *= 1.35; }
           else if (c.tension < 35 && !s.spurting) costMul *= 0.94;
+          // 折り合いを欠くほど（気分が悪いほど）脚を使う
+          else if (c.tension > 50 && !s.spurting) costMul *= 1 + (c.tension - 50) / 100 * S.TENSE_COST;
           if (R < 250 && (g > 0.3 || s.spurting)) {
             const rival = st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5);
             if (rival) { target *= 1 + 0.004 * (s.guts - 70) / 30 + (s.narabu ? 0.004 : 0); if (s.narabu) S.fire(sim, s, 'narabu'); }
@@ -399,7 +415,8 @@
       }
       if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
       // 加減速の上限
-      const acc = s.v < 10 ? 3.6 : s.acc + s.slopeP * 0.0015;
+      // ゲートを出てすぐは強く加速し、2秒ほどで巡航の速さの9割に乗る（持ち主の指摘「動き出しが遅い」）
+      const acc = s.v < s.vc * 0.9 ? S.START_ACC : s.acc + s.slopeP * 0.0015;
       const dv = U.clamp(target - s.v, -1.4 * DT, acc * DT);
       const vPrev = s.v;
       s.v = Math.max(0, s.v + dv);

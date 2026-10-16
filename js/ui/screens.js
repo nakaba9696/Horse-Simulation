@@ -235,6 +235,10 @@
       <div class="panel small mt">主な勝鞍：${mw.length ? mw.map(e).join('、') : '重賞の勝ち鞍なし'}${d.note ? `<div class="muted">${e(d.note)}</div>` : ''}</div>
       ${d.text ? `<div class="panel mt horse-text">${e(d.text)}</div>` : ''}`;
   };
+  // 特殊能力の一覧（札と、どんなときに効くか）。パドックで自分の馬に
+  UI.skillList = h => (h.skills || []).filter(x => H.SKILLS[x]).map(x => [H.SKILLS[x].label, H.SKILLS[x].note, H.SKILLS[x].bad, false])
+    .concat(UI.trigSkills(h).map(id => { const k = HS.Skills.BY[id]; return [k.label, k.note, k.bad, true]; }))
+    .map(([l, n, bad, trig]) => `<div class="sk-row"><span class="chip skill ${trig ? 'trig' : ''} ${bad ? 'bad' : ''}">${trig ? '⚡' : ''}${e(l)}</span><span class="small">${e(n || '')}</span></div>`).join('');
   function histNote(h) {
     const d = UI.histData(h.name);
     if (!d) return '';
