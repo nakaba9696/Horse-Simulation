@@ -453,7 +453,8 @@
     if (!entr.length && !(race.graded && race.grade === 'G1')) return null;
     // 頭数をそろえる
     const lvl = W.fillerLevel(race, year);
-    const want = race.graded ? Math.max(entr.length, Math.min(max, r.int(max - 4, max))) : Math.max(entr.length, r.int(Math.min(10, max), max));
+    // 招待のレース（グランドフィナーレ）は招待馬だけで走る（頭数合わせの馬を足さない）
+    const want = race.invite ? entr.length : race.graded ? Math.max(entr.length, Math.min(max, r.int(max - 4, max))) : Math.max(entr.length, r.int(Math.min(10, max), max));
     const used = new Set(W.usedNames());
     const runners = entr.map(e => ({ horse: e.horse, jockey: e.jockeyName ? W.jockey(e.jockeyName) : null, mine: !!e.mine, legend: !!e.legend }));
     while (runners.length < want) {

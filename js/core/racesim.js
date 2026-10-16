@@ -66,6 +66,8 @@
       else if (id === 'inner' && ctx && ctx.num && ctx.num <= 4) a += 1.2;
       else if (id === 'travel' && race.region === '海外') a += 2;
       else if (id === 'homebody' && race.region === '海外') a -= 3;
+      else if (id === 'leftB' && course.dir === '左') a -= 1.5;
+      else if (id === 'rightB' && course.dir === '右') a -= 1.5;
       else if (id === 'hipace' && ctx && ctx.paceF > S.PACE_HI) a += 1.8;
       else if (id === 'slowpace' && ctx && ctx.paceF && ctx.paceF < S.PACE_LO) a += 1.8;
     }
@@ -96,14 +98,37 @@
   S.MISFIT = 14; S.TENSE_COST = 0.5;
   // 気性の荒さ（mind が70より低いほど大きい。45で2倍）
   S.temperF = s => 1 + Math.max(0, 70 - s.mind) / 25;
-  S.START_ACC = 7.5;
+  S.START_ACC = 7.5; S.START_SKILL_ACC = 1.35; S.EASY_START = 0.95; // スタートの特殊能力が出たときの、出だしの加速の倍率と、距離の22%までの消耗の倍率
   S.LATE_E = 0.15; // 出遅れた馬は、位置を取り戻すのに脚を使う（スタミナの減り）
   S.PUSH = { base: 0.25 }; // 追い出したあと、しごかずに馬なりで行くときの伸び（段に置き換えた値）
-  S.PACE_HI = 1.006; S.PACE_LO = 0.994; S.PACE_K = 70; S.DRAFT = 0.12; S.PACE_TOP = 50; S.PACE_EARLY = 60;
+  // PACE_K・DRAFT・PACE_NIGE は、頭数合わせの馬の脚質が平均ペースでおおむね釣り合うように合わせた（tools/skills_bench.js style。前は 70・0.12・2頭で +0.009 で、ハイペースが半分を占め、逃げ馬が平均10〜11着だった）
+  S.PACE_HI = 1.006; S.PACE_LO = 0.994; S.PACE_K = 25; S.DRAFT = 0.08; S.PACE_TOP = 50; S.PACE_EARLY = 60;
+  // 逃げ馬の数（0・1・2・3頭以上）で決まるペースの片寄りと、レースごとのぶれ
+  S.PACE_NIGE = [-0.009, -0.002, 0.003, 0.008]; S.PACE_SD = 0.006;
+  // 脚質ごとの、出だし（距離の22%まで）の速さ・隊列での先頭からの差（m）・仕掛けの早さ（m。大きいほど早い）
+  S.STYLE_MULT = { '逃げ': 1.03, '先行': 1.014, '差し': 0.995, '追込': 0.982 };
+  S.STYLE_GAP = { '逃げ': 0, '先行': 6, '差し': 13, '追込': 21 };
+  S.STYLE_SPURT = { '逃げ': 0, '先行': 60, '差し': 120, '追込': 170 };
   S.paceVerdict = f => f > S.PACE_HI ? 'ハイペース' : f < S.PACE_LO ? 'スローペース' : '平均ペース';
   S.paceHint = v => v === 'ハイペース' ? '前は苦しい。後ろでためて遅めに' : v === 'スローペース' ? '前が楽。早めに動け' : '力どおりの流れ';
   // 勾配（比。0.02＝2%）の効き：上りの速さ・上りの消耗・下りの速さ・下りの楽さ
   S.HILL = { v: 0.4, e: 100, dv: 0.25, de: 10, mid: 0.4 };
+  // 二の脚：出だし（距離の22%まで）の速さと消耗の倍率・隊列で前に取る位置（m）。自由自在：ペースを見て位置を変える（スロー・ハイの境目と、そこで取る差 m）・騎乗中の折り合いの崩れにくさ。砂かぶり×：脚の使い方の倍率
+  S.NINO = { spd: 1.01, cost: 0.9, pos: 2 };
+  S.LONGSPURT = { r: 50, z: 0.002 }; // ロングスパート：仕掛けを早める（m）・バテたあとの粘り
+  S.JIYU = { slow: 0.994, hi: 1.006, k: 0.5, misfit: 0.35 };
+  S.SUNA = 1.08;
+  // 道中の位置取り（出だしの速さの倍率・隊列での先頭からの差）。自由自在の馬は、スローならひとつ前の脚質（差し→先行）、ハイならひとつ後ろの脚質の位置へ
+  // JIYU.k の割合だけ寄せて運ぶ（仕掛けの早さは本来の脚質のまま）。jiyu＝寄せた向き（-1 前・1 後ろ・0 そのまま）
+  S.runPos = function (h, paceF) {
+    const st = h.style, i = H.STYLES.indexOf(st);
+    const pos = { mult: S.STYLE_MULT[st] || 1, gap: S.STYLE_GAP[st] != null ? S.STYLE_GAP[st] : 10, jiyu: 0 };
+    if (!H.has(h, 'jiyu') || i < 0) return pos;
+    const to = paceF < S.JIYU.slow && i > 0 ? i - 1 : paceF > S.JIYU.hi && i < H.STYLES.length - 1 ? i + 1 : i;
+    if (to === i) return pos;
+    const t = H.STYLES[to], k = S.JIYU.k;
+    return { mult: pos.mult + (S.STYLE_MULT[t] - pos.mult) * k, gap: pos.gap + (S.STYLE_GAP[t] - pos.gap) * k, jiyu: to < i ? -1 : 1 };
+  };
   S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0, cS: 0.035, z: 0.0015, top: 2.2 };
 
   // 本体。runners: [{horse, jockey, weight, num, frame, rider?}]。rider==='P' の馬はプレイヤーが乗る（opts.ride のとき操作を受け付ける）
@@ -124,7 +149,7 @@
     const v0 = S.baseSpeed(D, race.surface, race.ground, geo.speed) * U.eraSpeed(race.year);
     const straight = Math.min(geo.straight, D * 0.6);
     const nNige = runners.filter(r => r.horse.style === '逃げ').length;
-    const paceF = 1 + (nNige >= 3 ? 0.014 : nNige === 2 ? 0.009 : nNige === 0 ? -0.012 : 0) + rng.normal(0, 0.006);
+    const paceF = 1 + S.PACE_NIGE[Math.min(3, nNige)] + rng.normal(0, S.PACE_SD);
     const st = runners.map((r, i) => {
       const h = r.horse;
       const pw = S.power(h, race, wIdx, Object.assign({ paceF }, r));
@@ -138,21 +163,22 @@
       const kire = U.clamp(h.kire || 4, 1, 8);
       const K = S.KIRE;
       const kickS = K.s0 + K.s1 * (kire - 1) + 0.0006 * (pw.cur.spd - 80);
-      const styleAdd = { '逃げ': 0, '先行': 60, '差し': 120, '追込': 170 }[h.style] || 80;
-      const spurtR = U.clamp(straight + 120 + styleAdd + (4.5 - kire) * K.r + (has('longspurt') ? 80 : 0) + rng.normal(0, 60) * (1.3 - mind / 120), 300, Math.min(1300, D * 0.6));
+      const styleAdd = S.STYLE_SPURT[h.style] != null ? S.STYLE_SPURT[h.style] : 80;
+      const spurtR = U.clamp(straight + 120 + styleAdd + (4.5 - kire) * K.r + (has('longspurt') ? S.LONGSPURT.r : 0) + rng.normal(0, 60) * (1.3 - mind / 120), 300, Math.min(1300, D * 0.6));
       let delay = Math.abs(rng.normal(0, 0.12));
       const lateP = 0.02 + Math.max(0, 75 - mind) * 0.0008 + (has('deokure') ? 0.14 : 0);
       const late = rng.chance(lateP);
       if (late) delay += rng.float(0.5, 1.4);
       const kakari = rng.chance(Math.max(0, (72 - mind) / 100) * 0.3 + (has('kakari') ? 0.25 : 0));
+      const rp = S.runPos(h, paceF); // 道中の位置取り（脚質と自由自在）
       return {
         r, h, i, A, vc, Ds, kickS, spurtR, guts, mind, slopeP, x: 0, v: 0, E: late ? 1 - S.LATE_E : 1, delay, late, kakari,
-        acc: K.a0 + K.a1 * kire, zubu: (8 - kire) * K.z + (has('longspurt') ? 0.003 : 0), spurtCost: K.c0 + K.c1 * (kire - 1) + K.cS * (kire - 4.5) * (330 - geo.straight) / 200, // 直線が長いほど切れる馬が、短いほどズブい馬が脚を効率よく使える
-        oonige: has('oonige') && h.style === '逃げ', nino: has('nino'), narabu: has('narabu'), sora: has('sora'),
+        acc: K.a0 + K.a1 * kire, zubu: (8 - kire) * K.z + (has('longspurt') ? S.LONGSPURT.z : 0), spurtCost: K.c0 + K.c1 * (kire - 1) + K.cS * (kire - 4.5) * (330 - geo.straight) / 200, // 直線が長いほど切れる馬が、短いほどズブい馬が脚を効率よく使える
+        oonige: has('oonige') && h.style === '逃げ', nino: has('nino'), narabu: has('narabu'), sora: has('sora'), sunaB: has('sunaB') && race.surface === 'ダ', jiyu: has('jiyu'),
+        gapAdj: has('nino') ? -S.NINO.pos : 0, driftLane: 0,
         me: false, fired: {}, boost: null, trig: [], sk: null, passive: [], passiveShown: false,
         lane: (r.num - 1) * 0.5, laneT: 0, spurting: false, done: false, finishT: null, t600: null, blocked: 0, blockedOnce: false,
-        styleMult: ({ '逃げ': 1.03, '先行': 1.014, '差し': 0.995, '追込': 0.982 })[h.style] || 1,
-        gap: ({ '逃げ': 0, '先行': 5, '差し': 14, '追込': 24 })[h.style] || 10,
+        styleMult: rp.mult, gap: rp.gap, jiyuMove: rp.jiyu,
       };
     });
     const medVc = st.map(s => s.vc).sort((a, b) => a - b)[Math.floor(st.length / 2)];
@@ -315,7 +341,7 @@
           const zone = S.ZONE[s.h.style] || S.ZONE['先行'];
           const off = prog > 0.08 && s.rk != null ? Math.max(0, zone[0] - s.rk, s.rk - zone[1]) : 0;
           c.misfit = off > 0.05;
-          const ner = (0.3 + Math.max(0, 75 - s.mind) * 0.03 + (s.kakari ? 1.2 : 0) + off * S.MISFIT) * tf * (prog < 0.65 ? 1 : 0.4);
+          const ner = (0.3 + Math.max(0, 75 - s.mind) * 0.03 + (s.kakari ? 1.2 : 0) + off * S.MISFIT * (s.jiyu ? S.JIYU.misfit : 1)) * tf * (prog < 0.65 ? 1 : 0.4);
           const sides = st.filter(o => o !== s && !o.done && Math.abs(o.x - s.x) < 3 && Math.abs(o.lane - s.lane) < 1.6).length;
           const boxed = sides >= 2 && (s.h.style === '逃げ' || s.h.style === '追込') ? 1.5 : sides ? 0.4 : 0;
           // 掛かり癖の馬は、引いて遅く走らせると余計に行きたがる
@@ -334,7 +360,7 @@
             // いつ追い出すかが腕の見せどころ：スローなら早め、ハイなら遅め（脚が残っていれば伸び、無ければバテる）
             const ratioE = Math.cbrt(Math.max(0, s.E) * s.Ds / (0.9 * Math.max(R, 30) * s.spurtCost));
             target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * (1 + (sim.top - 1) * U.clamp(g, S.PUSH.base, 1)));
-          } else if (prog < 0.22) target = pace * s.styleMult * (s.nino && prog < 0.08 ? 1.02 : 1);
+          } else if (prog < 0.22) { target = pace * s.styleMult * (s.nino ? S.NINO.spd : 1); if (s.nino) costMul *= S.NINO.cost; if (s.easyStart) costMul *= S.EASY_START; }
           else target = pace * (1 + U.clamp((leaderX - s.x - s.gap) * 0.0012, -0.02, 0.02));
           // 引く：段の深さだけ下げて、脚をためる（スタミナの減りが小さい）
           if (g < 0) { target *= 1 + g * (prog < 0.15 ? 0.03 : 0.012); costMul *= 1 + 0.1 * g; }
@@ -387,14 +413,17 @@
           // ソラを使う：抜け出すと気を抜く
           if (s.sora && R < 200 && order[0] === s && order[1] && s.x - order[1].x > 2) { target *= 0.985; S.fire(sim, s, 'sora'); }
         } else if (prog < 0.22) {
-          target = pace * s.styleMult * (s.nino && prog < 0.08 ? 1.02 : 1) * (s.oonige ? S.OONIGE.early : 1);
+          target = pace * s.styleMult * (s.nino ? S.NINO.spd : 1) * (s.oonige ? S.OONIGE.early : 1);
+          if (s.nino) costMul *= S.NINO.cost;
+          if (s.easyStart) costMul *= S.EASY_START;
         } else if (s.oonige) {
           target = pace * (s.x - leaderX < S.OONIGE.lead * straight * 2000 / D ? S.OONIGE.mid : 1);
           if (s.x - leaderX > 10) S.fire(sim, s, 'oonige');
         } else {
           // 隊列を保つ：先頭からの目標の差に寄せる
-          const gapNow = leaderX - s.x;
-          const err = gapNow - s.gap;
+          // 特殊能力（スタートダッシュ・出ムチ・二の脚）で目標の差が前へずれる。先頭の馬はそのままのペースで行く（2番手と競り合わない）
+          const g0 = Math.max(0, s.gap + s.gapAdj);
+          const err = pack === s ? 0 : leaderX - s.x - g0;
           target = pace * (1 + U.clamp(err * 0.0012, -0.02, 0.02));
           if (s.kakari && prog < 0.5) { target *= 1.012; if (prog > 0.1 && H.has(s.h, 'kakari')) S.fire(sim, s, 'kakari'); }
         }
@@ -405,8 +434,10 @@
       if (s.spurting && R > straight && sim.paceF > 1) costMul *= 1 + (sim.paceF - 1) * S.PACE_EARLY;
       // （後ろの馬は前の馬を風よけにして、ペースにかかわらず少し楽をする）
       if (!s.spurting && prog > 0.08 && !s.oonige) { const rk = s.rk == null ? 0.5 : s.rk; costMul *= Math.max(0.5, 1 + (sim.paceF - 1) * S.PACE_K * (1 - 2 * rk)) * (1 - S.DRAFT * rk); } // 大逃げは集団と離れて自分のペースで行く
+      // 砂かぶり×：ダートで、すぐ前に馬がいると砂をかぶって嫌がり、脚を使う
+      if (s.sunaB && !s.spurting && prog > 0.05 && st.some(o => o !== s && !o.done && o.x > s.x && o.x - s.x < 4 && Math.abs(o.lane - s.lane) < 0.8)) { costMul *= S.SUNA; s.sunaT = (s.sunaT || 0) + DT; if (s.sunaT > 3) S.fire(sim, s, 'sunaB'); }
       // 発動した特殊能力の、一時の速さ
-      if (s.boost && t < s.boost.until) target *= s.boost.mul;
+      if (s.boost && t < s.boost.until) { target *= s.boost.mul; if (s.boost.free) costMul /= s.boost.mul * s.boost.mul * s.boost.mul; }
       // 坂：ゴール前の上りで脚を使う。坂が弱いほど大きく減る
       // 実際の高低差があるコースは、その場の勾配で（上りは遅く重く、下りは少し速く楽に）。無いコースはゴール前の坂の強さで
       const grade = sim.track && !sim.track.flat ? sim.track.gAt(R) : 0;
@@ -425,7 +456,8 @@
       if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
       // 加減速の上限
       // ゲートを出てすぐは強く加速し、2秒ほどで巡航の速さの9割に乗る（持ち主の指摘「動き出しが遅い」）
-      const acc = s.v < s.vc * 0.9 ? S.START_ACC : s.acc + s.slopeP * 0.0015;
+      // スタートの特殊能力（脚を使わない速さ）が出ている間は、出だしの加速も速い
+      const acc = s.v < s.vc * 0.9 ? S.START_ACC * (s.boost && s.boost.free && t < s.boost.until ? S.START_SKILL_ACC : 1) : s.acc + s.slopeP * 0.0015;
       const dv = U.clamp(target - s.v, -1.4 * DT, acc * DT);
       const vPrev = s.v;
       s.v = Math.max(0, s.v + dv);
@@ -457,6 +489,7 @@
       if (s.done || !s.passive) continue;
       if (!s.passiveShown && D - s.x <= straight) { s.passiveShown = true; for (const id of s.passive) S.fire(sim, s, id); }
       if (s.nino && t > 1.5 && t < 2) S.fire(sim, s, 'nino');
+      if (s.jiyuMove && t > 8 && t < 8.5) S.fire(sim, s, 'jiyu');
     }
     // ペースの目安：先頭がチェックポイントを過ぎたとき
     if (!sim.check && order[0] && order[0].x >= sim.checkAt) {
@@ -478,6 +511,7 @@
         let want = 0;
         const inStraight = D - s.x < straight;
         if (inStraight && (s.h.style === '差し' || s.h.style === '追込')) want = s.trig && s.trig.includes('oosoto') ? 6 : 2 + (s.i % 4);
+        want += s.driftLane; // ささり癖でよれた分
         // すぐ前（2.6m 以内）にいて、もう進路が決まった馬の進路
         near.length = 0;
         for (let q = k - 1; q >= 0 && live[q].x - s.x < 2.6; q--) near.push(live[q] === me ? me.lane : live[q].laneT);
