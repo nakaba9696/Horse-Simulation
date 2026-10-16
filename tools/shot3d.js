@@ -59,6 +59,8 @@ async function main() {
   await page.goto('file://' + path.join(ROOT, 'index.html'));
   await page.waitForFunction(() => globalThis.HS && HS.Race3D && HS.Race3D.assetsReady(), null, { timeout: 60000 });
   await page.evaluate(LY => { HS.DATA.layouts = Object.assign({}, LY, HS.DATA.layouts || {}); }, LAYOUTS);
+  // 馬の形：環境変数 HORSE=rigged|handmade（無ければ設定のまま）
+  if (process.env.HORSE) await page.evaluate(v => HS.HorseRigged && HS.HorseRigged.setModel(v), process.env.HORSE);
   for (const name of names) {
     const sc = SCENES[name];
     if (!sc) { console.log('場面が無い', name); continue; }

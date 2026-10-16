@@ -105,7 +105,7 @@
   };
   const imgOk = k => { const im = IMG[k]; return !!(im && im.complete && im.naturalWidth > 0); };
   // 素材がみな読めたか（読めない素材があれば false のまま。そのときは手作りで描く）
-  R3.assetsReady = () => IMG_KEYS.every(k => !(HS.ASSETS || {})[k] || imgOk(k)) && JK.state !== 'loading';
+  R3.assetsReady = () => IMG_KEYS.every(k => !(HS.ASSETS || {})[k] || imgOk(k)) && JK.state !== 'loading' && !(HS.HorseRigged && HS.HorseRigged.loading());
   R3.assetState = () => ({ images: IMG_KEYS.filter(imgOk), jockey: JK.state });
   if (typeof document !== 'undefined') R3.preload();
   function shade(rgb, k) { return `rgb(${Math.round(clamp(rgb[0] * k, 0, 255))},${Math.round(clamp(rgb[1] * k, 0, 255))},${Math.round(clamp(rgb[2] * k, 0, 255))})`; }
@@ -681,100 +681,103 @@
   // o.noJockey：騎手を描かない（騎手は素材の形で別に描くとき。鐙・手綱・ムチは残す）
   // o.bare：鞍・ゼッケン・鐙・手綱・ムチも描かない（肖像用。頭絡と馬具は残す。騎手も描かない）
   function horseGeometry(q, o) {
-    const bare = !!(o && o.bare), hi = q > 0, rider = !(o && (o.noJockey || o.bare));
+    const bare = !!(o && o.bare), hi = q > 0, rider = !(o && (o.noJockey || o.bare)), tack = !!(o && o.tack);
     const B = new Builder({ skin: true });
     const X = V3(1, 0, 0), Y = V3(0, 1, 0), Z = V3(0, 0, 1);
     const cell = k => { const uv = cellUV(CELL[k]); return () => uv; };
     const rig = b => [b, b, 0];
     const mBody = hi ? 22 : 10, mNeck = hi ? 12 : 8, mHead = hi ? 18 : 8, mLeg = hi ? 8 : 6, mTail = hi ? 8 : 5;
 
-    // 胴（近くの形は、肩・胸前・尻の筋肉のふくらみを面に足す）
-    {
-      // 近くの形は断面を細かく取り直す（筋肉のふくらみが面に出るように）
-      const rows = hi ? (() => { const out = [BODY_T[0]], x0 = BODY_T[0][0], x1 = BODY_T[BODY_T.length - 1][0], n = 26; for (let i = 1; i < n; i++) out.push(lerpRow(BODY_T.slice().reverse(), x0 + (x1 - x0) * i / n)); out.push(BODY_T[BODY_T.length - 1]); return out; })() : BODY_T;
-      loft(B, rows.map(([x, top, bot, w, k]) => { const c = V3(x, (top + bot) / 2, 0), r = ell(c, Y, Z, (top - bot) / 2, w, mBody, k, 0.92); return hi ? r.map(P => muscle(P, c)) : r; }),
-        rows.map(() => rig(1)), (i, j, P) => sideUV(P), { cap0: true, cap1: true });
-    }
-    // 首
-    loft(B, NECK.map(s => ell(s.c, s.u, Z, s.h, s.w, mNeck, 0.28, 0.95)), NECK.map(s => s.sk), (i, j, P) => sideUV(P), { cap0: true, cap1: true });
-    // 頭
-    {
-      const ts = hi ? [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.32, 0.4, 0.48, 0.57, 0.66, 0.75, 0.83, 0.89, 0.94, 0.975, 1] : [0, 0.2, 0.44, 0.72, 0.9, 1];
-      loft(B, ts.map(t => { const s = headSec(t), r = ell(s.c, vHU(), Z, s.h, s.w, mHead, s.k, 0.9); return hi ? r.map((P, j) => carve(P, s.c, t, j / mHead * TAU)) : r; }), ts.map(() => rig(4)),
-        (i, j) => rUV(R_HEAD, ts[i], mth(j, mHead)), { cap0: true, cap1: true });
-      // 耳・目・鼻の穴
-      for (const sd of [-1, 1]) {
-        const base = headPt(0.03, Math.PI - sd * 0.55, -0.02);
-        const dir = vHU().multiplyScalar(0.75).addScaledVector(new THREE.Vector3(-HD[0], -HD[1], 0), 0.55).addScaledVector(Z, sd * 0.2).normalize();
-        const g = new THREE.ConeGeometry(0.042, 0.17, hi ? 6 : 4);
-        g.translate(0, 0.085, 0);
-        const m = new THREE.Matrix4().compose(base, new THREE.Quaternion().setFromUnitVectors(Y, dir), V3(0.62, 1, 1));
-        B.add(g, m, { uv: sideUV(base), bone: 4 });
-        blob(B, headPt(0.21, Math.PI - sd * 1.0, -0.012), 0.03, 0.022, 0.02, hi ? 8 : 5, hi ? 6 : 4, { uv: cellUV(CELL.eye), bone: 4 }, -0.9);
-        if (hi) blob(B, headPt(0.93, Math.PI - sd * 0.78, -0.014), 0.02, 0.026, 0.016, 5, 4, { uv: cellUV(CELL.dark), bone: 4 });
+    // o.tack：馬の体を描かず、鞍・ゼッケン・頭絡・手綱・馬具・騎手だけ（体は骨入りの馬の素材で描くとき。js/ui/horse_rigged.js）
+    if (!tack) {
+      // 胴（近くの形は、肩・胸前・尻の筋肉のふくらみを面に足す）
+      {
+        // 近くの形は断面を細かく取り直す（筋肉のふくらみが面に出るように）
+        const rows = hi ? (() => { const out = [BODY_T[0]], x0 = BODY_T[0][0], x1 = BODY_T[BODY_T.length - 1][0], n = 26; for (let i = 1; i < n; i++) out.push(lerpRow(BODY_T.slice().reverse(), x0 + (x1 - x0) * i / n)); out.push(BODY_T[BODY_T.length - 1]); return out; })() : BODY_T;
+        loft(B, rows.map(([x, top, bot, w, k]) => { const c = V3(x, (top + bot) / 2, 0), r = ell(c, Y, Z, (top - bot) / 2, w, mBody, k, 0.92); return hi ? r.map(P => muscle(P, c)) : r; }),
+          rows.map(() => rig(1)), (i, j, P) => sideUV(P), { cap0: true, cap1: true });
       }
-      // 前髪
-      const ft = [-0.02, 0.07, 0.15, 0.22];
-      loft(B, ft.map((t, i) => { const s = headSec(Math.max(0, t)); const o = arc(s.c, vHU(), Z, s.h, s.w, s.k, 0.9, Math.PI - 0.38, Math.PI + 0.38, hi ? 4 : 3, 0.02 + (i ? 0 : 0.01)); const n = arc(s.c, vHU(), Z, s.h, s.w, s.k, 0.9, Math.PI + 0.38, Math.PI - 0.38, hi ? 4 : 3, 0.003); return o.concat(n); }),
-        ft.map(() => rig(4)), (i, j) => rUV(R_HAIR, 0.1 + (j % 4) * 0.08, 1 - i / 3), { cap1: true });
-    }
-    // たてがみ（首の右側に寝る）。近くの形は輪の間にも輪を足し、下の縁を房のようにぎざぎざに
-    {
-      const n = hi ? 5 : 3;
-      const rings = [], sk = [];
-      const ring = (i, lo, th0, off) => {
-        const o = [], inn = [];
-        for (let j = 0; j < n; j++) { const th = th0 - (th0 - lo) * j / (n - 1); o.push(neckPt(i, th, off - 0.012 * j / (n - 1))); }
-        for (let j = n - 1; j >= 0; j--) { const th = th0 - (th0 - lo) * j / (n - 1); inn.push(neckPt(i, th, 0.004)); }
-        return o.concat(inn);
-      };
-      for (let i = 1; i < NECK.length; i++) {
-        if (!hi) { rings.push(ring(i, Math.PI - 0.72 - 0.08 * hash01(i, 77), Math.PI + 0.1, 0.022)); sk.push(NECK[i].sk); continue; }
-        // 近くの形：i と i+1 の間を3つに分けて、房の長さを変える
-        const steps = i < NECK.length - 1 ? 3 : 1;
-        for (let q = 0; q < steps; q++) {
-          const a = ring(i, Math.PI - 0.62 - 0.4 * hash01(i * 3 + q, 77), Math.PI + 0.12, 0.03);
-          if (q === 0) { rings.push(a); sk.push(NECK[i].sk); continue; }
-          const b = ring(i + 1, Math.PI - 0.62 - 0.4 * hash01(i * 3 + q, 77), Math.PI + 0.12, 0.03), f = q / steps;
-          rings.push(a.map((P, j) => P.lerp(b[j], f)));
-          const s0 = NECK[i].sk, s1 = NECK[i + 1].sk;
-          sk.push(f < 0.5 ? s0 : s1);
+      // 首
+      loft(B, NECK.map(s => ell(s.c, s.u, Z, s.h, s.w, mNeck, 0.28, 0.95)), NECK.map(s => s.sk), (i, j, P) => sideUV(P), { cap0: true, cap1: true });
+      // 頭
+      {
+        const ts = hi ? [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.32, 0.4, 0.48, 0.57, 0.66, 0.75, 0.83, 0.89, 0.94, 0.975, 1] : [0, 0.2, 0.44, 0.72, 0.9, 1];
+        loft(B, ts.map(t => { const s = headSec(t), r = ell(s.c, vHU(), Z, s.h, s.w, mHead, s.k, 0.9); return hi ? r.map((P, j) => carve(P, s.c, t, j / mHead * TAU)) : r; }), ts.map(() => rig(4)),
+          (i, j) => rUV(R_HEAD, ts[i], mth(j, mHead)), { cap0: true, cap1: true });
+        // 耳・目・鼻の穴
+        for (const sd of [-1, 1]) {
+          const base = headPt(0.03, Math.PI - sd * 0.55, -0.02);
+          const dir = vHU().multiplyScalar(0.75).addScaledVector(new THREE.Vector3(-HD[0], -HD[1], 0), 0.55).addScaledVector(Z, sd * 0.2).normalize();
+          const g = new THREE.ConeGeometry(0.042, 0.17, hi ? 6 : 4);
+          g.translate(0, 0.085, 0);
+          const m = new THREE.Matrix4().compose(base, new THREE.Quaternion().setFromUnitVectors(Y, dir), V3(0.62, 1, 1));
+          B.add(g, m, { uv: sideUV(base), bone: 4 });
+          blob(B, headPt(0.21, Math.PI - sd * 1.0, -0.012), 0.03, 0.022, 0.02, hi ? 8 : 5, hi ? 6 : 4, { uv: cellUV(CELL.eye), bone: 4 }, -0.9);
+          if (hi) blob(B, headPt(0.93, Math.PI - sd * 0.78, -0.014), 0.02, 0.026, 0.016, 5, 4, { uv: cellUV(CELL.dark), bone: 4 });
         }
+        // 前髪
+        const ft = [-0.02, 0.07, 0.15, 0.22];
+        loft(B, ft.map((t, i) => { const s = headSec(Math.max(0, t)); const o = arc(s.c, vHU(), Z, s.h, s.w, s.k, 0.9, Math.PI - 0.38, Math.PI + 0.38, hi ? 4 : 3, 0.02 + (i ? 0 : 0.01)); const n = arc(s.c, vHU(), Z, s.h, s.w, s.k, 0.9, Math.PI + 0.38, Math.PI - 0.38, hi ? 4 : 3, 0.003); return o.concat(n); }),
+          ft.map(() => rig(4)), (i, j) => rUV(R_HAIR, 0.1 + (j % 4) * 0.08, 1 - i / 3), { cap1: true });
       }
-      loft(B, rings, sk, (i, j) => rUV(R_HAIR, (j % n) / n * 0.45, i / (rings.length - 1)), { cap0: true, cap1: true });
-    }
-    // 尾
-    {
-      const rings = [], sk = [];
-      TAIL_T.forEach((r, i) => {
-        const a = TAIL_T[Math.max(0, i - 1)], b = TAIL_T[Math.min(TAIL_T.length - 1, i + 1)];
-        const T = V3(b[0] - a[0], b[1] - a[1], 0).normalize(), u = V3(-T.y, T.x, 0);
-        rings.push(ell(V3(r[0], r[1], 0), u, Z, r[2], r[3], mTail, 0, 0.85)); sk.push([r[4], r[5], r[6]]);
+      // たてがみ（首の右側に寝る）。近くの形は輪の間にも輪を足し、下の縁を房のようにぎざぎざに
+      {
+        const n = hi ? 5 : 3;
+        const rings = [], sk = [];
+        const ring = (i, lo, th0, off) => {
+          const o = [], inn = [];
+          for (let j = 0; j < n; j++) { const th = th0 - (th0 - lo) * j / (n - 1); o.push(neckPt(i, th, off - 0.012 * j / (n - 1))); }
+          for (let j = n - 1; j >= 0; j--) { const th = th0 - (th0 - lo) * j / (n - 1); inn.push(neckPt(i, th, 0.004)); }
+          return o.concat(inn);
+        };
+        for (let i = 1; i < NECK.length; i++) {
+          if (!hi) { rings.push(ring(i, Math.PI - 0.72 - 0.08 * hash01(i, 77), Math.PI + 0.1, 0.022)); sk.push(NECK[i].sk); continue; }
+          // 近くの形：i と i+1 の間を3つに分けて、房の長さを変える
+          const steps = i < NECK.length - 1 ? 3 : 1;
+          for (let q = 0; q < steps; q++) {
+            const a = ring(i, Math.PI - 0.62 - 0.4 * hash01(i * 3 + q, 77), Math.PI + 0.12, 0.03);
+            if (q === 0) { rings.push(a); sk.push(NECK[i].sk); continue; }
+            const b = ring(i + 1, Math.PI - 0.62 - 0.4 * hash01(i * 3 + q, 77), Math.PI + 0.12, 0.03), f = q / steps;
+            rings.push(a.map((P, j) => P.lerp(b[j], f)));
+            const s0 = NECK[i].sk, s1 = NECK[i + 1].sk;
+            sk.push(f < 0.5 ? s0 : s1);
+          }
+        }
+        loft(B, rings, sk, (i, j) => rUV(R_HAIR, (j % n) / n * 0.45, i / (rings.length - 1)), { cap0: true, cap1: true });
+      }
+      // 尾
+      {
+        const rings = [], sk = [];
+        TAIL_T.forEach((r, i) => {
+          const a = TAIL_T[Math.max(0, i - 1)], b = TAIL_T[Math.min(TAIL_T.length - 1, i + 1)];
+          const T = V3(b[0] - a[0], b[1] - a[1], 0).normalize(), u = V3(-T.y, T.x, 0);
+          rings.push(ell(V3(r[0], r[1], 0), u, Z, r[2], r[3], mTail, 0, 0.85)); sk.push([r[4], r[5], r[6]]);
+        });
+        loft(B, rings, sk, (i, j) => rUV(R_HAIR, 0.5 + mth(j, mTail) * 0.5, 1 - i / (rings.length - 1)), { cap0: true, cap1: true, tip1: V3(-0.06, -0.03, 0) });
+      }
+      // 脚
+      [[8, FLEG_T, -1, FZ, 0], [12, FLEG_T, 1, FZ, 1], [16, HLEG_T, -1, HZ, 2], [20, HLEG_T, 1, HZ, 3]].forEach(([b0, tab, sd, z0, k]) => {
+        const rows = hi ? tab : tab.filter((r, i) => i % 2 === 0 || i === tab.length - 1 || i < 2);
+        loft(B, rows.map(([x, y, h, w]) => ell(V3(x, y, sd * (z0 - (y < 0.9 ? 0.012 * (0.9 - y) : 0))), X, Z, h, w, mLeg, -0.08, 1)),
+          rows.map(r => [b0 + r[4], b0 + r[5], r[6]]), (i, j, P) => legUV(k, P), { cap0: true, cap1: true });
       });
-      loft(B, rings, sk, (i, j) => rUV(R_HAIR, 0.5 + mth(j, mTail) * 0.5, 1 - i / (rings.length - 1)), { cap0: true, cap1: true, tip1: V3(-0.06, -0.03, 0) });
-    }
-    // 脚
-    [[8, FLEG_T, -1, FZ, 0], [12, FLEG_T, 1, FZ, 1], [16, HLEG_T, -1, HZ, 2], [20, HLEG_T, 1, HZ, 3]].forEach(([b0, tab, sd, z0, k]) => {
-      const rows = hi ? tab : tab.filter((r, i) => i % 2 === 0 || i === tab.length - 1 || i < 2);
-      loft(B, rows.map(([x, y, h, w]) => ell(V3(x, y, sd * (z0 - (y < 0.9 ? 0.012 * (0.9 - y) : 0))), X, Z, h, w, mLeg, -0.08, 1)),
-        rows.map(r => [b0 + r[4], b0 + r[5], r[6]]), (i, j, P) => legUV(k, P), { cap0: true, cap1: true });
-    });
-    // 近くの形だけ：飛節の角、頬とのど、たてがみと尾の房（肩・胸前・尻の筋肉は胴の面のふくらみ MUSCLE で）
-    if (hi) {
-      // y0 より上は骨 a、y1 より下は骨 b
-      for (const sd of [-1, 1]) {
-        const h0 = sd < 0 ? 16 : 20;
-        blob(B, V3(-0.795, 0.6, sd * HZ * 0.95), 0.032, 0.05, 0.03, 6, 4, { uvf: P => legUV(sd < 0 ? 2 : 3, P), bone: h0 + 2 }); // 飛節の角
-      }
-      // のど（首と頭のつなぎ）
-      blob(B, V3(1.045, 1.72, 0), 0.1, 0.1, 0.082, 8, 6, { uvf: sideUV, skinf: () => [3, 4, 0.5] }, -0.6);
-      // 尾の房：付け根から3本に分かれて下へ流れる
-      for (const [dz, dy, ext] of [[-0.04, 0.0, 0.1], [0.04, 0.01, 0.07], [0, -0.03, 0.13]]) {
-        const pts = [], rr = [], sks = [];
-        TAIL_T.forEach((r, i) => { if (i < 2) return; const f = (i - 2) / (TAIL_T.length - 3); pts.push(V3(r[0] - 0.01, r[1] + dy * f, dz * f)); rr.push(r[3] * 0.62 * (1 - 0.3 * f)); sks.push([r[4], r[5], r[6]]); });
-        const e = pts[pts.length - 1];
-        pts.push(e.clone().add(V3(-ext * 0.45, -ext, dz * 0.5))); rr.push(0.022); sks.push([7, 7, 0]);
-        tube(B, pts, rr, 4, sks, (i, j, P) => rUV(R_HAIR, 0.5 + (j % 4) * 0.12, 1 - i / (pts.length - 1)), { cap0: true });
+      // 近くの形だけ：飛節の角、頬とのど、たてがみと尾の房（肩・胸前・尻の筋肉は胴の面のふくらみ MUSCLE で）
+      if (hi) {
+        // y0 より上は骨 a、y1 より下は骨 b
+        for (const sd of [-1, 1]) {
+          const h0 = sd < 0 ? 16 : 20;
+          blob(B, V3(-0.795, 0.6, sd * HZ * 0.95), 0.032, 0.05, 0.03, 6, 4, { uvf: P => legUV(sd < 0 ? 2 : 3, P), bone: h0 + 2 }); // 飛節の角
+        }
+        // のど（首と頭のつなぎ）
+        blob(B, V3(1.045, 1.72, 0), 0.1, 0.1, 0.082, 8, 6, { uvf: sideUV, skinf: () => [3, 4, 0.5] }, -0.6);
+        // 尾の房：付け根から3本に分かれて下へ流れる
+        for (const [dz, dy, ext] of [[-0.04, 0.0, 0.1], [0.04, 0.01, 0.07], [0, -0.03, 0.13]]) {
+          const pts = [], rr = [], sks = [];
+          TAIL_T.forEach((r, i) => { if (i < 2) return; const f = (i - 2) / (TAIL_T.length - 3); pts.push(V3(r[0] - 0.01, r[1] + dy * f, dz * f)); rr.push(r[3] * 0.62 * (1 - 0.3 * f)); sks.push([r[4], r[5], r[6]]); });
+          const e = pts[pts.length - 1];
+          pts.push(e.clone().add(V3(-ext * 0.45, -ext, dz * 0.5))); rr.push(0.022); sks.push([7, 7, 0]);
+          tube(B, pts, rr, 4, sks, (i, j, P) => rUV(R_HAIR, 0.5 + (j % 4) * 0.12, 1 - i / (pts.length - 1)), { cap0: true });
+        }
       }
     }
     if (!bare) {
@@ -1404,6 +1407,26 @@
 
   // テスト用：馬の形（q＝1 近く・0 遠く）と骨の数
   R3.horseGeometry = (q, o) => horseGeometry(q, o);
+  // 手作りの馬の寸法（骨入りの馬の素材を同じ大きさ・位置に置くため）：鞍の下の背の高さ・胸の前
+  let HM_SIZE = null;
+  R3.handmadeSize = function () {
+    if (HM_SIZE) return HM_SIZE;
+    const g = horseGeometry(1, { bare: true }), P = g.attributes.position, si = g.attributes.skinIndex.array;
+    let back = 0, chest = -9;
+    for (let i = 0; i < P.count; i++) {
+      if (si[i * 4] !== 1 || si[i * 4 + 1] !== 1) continue;
+      const x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+      if (x > 0 && x < 0.3 && Math.abs(z) < 0.06) back = Math.max(back, y);
+      if (y > 1.0 && y < 1.35 && Math.abs(z) < 0.1) chest = Math.max(chest, x);
+    }
+    g.dispose();
+    return (HM_SIZE = { back, chest });
+  };
+  // 手作りの馬の頭：うなじ（骨 4 の付け根）と鼻先（体の比を直したあとの座標）
+  R3.handmadeHead = function () {
+    const n = mapBone(HEAD0[0] + HD[0] * HEAD_L, HEAD0[1] + HD[1] * HEAD_L, 0, 4);
+    return { start: new THREE.Vector3(HEADP[0], HEADP[1], 0), nose: new THREE.Vector3(n[0], n[1], 0) };
+  };
   R3.BONES = BONES.length;
   R3.BONE_AT = i => BONES[i].slice(1); // テスト用：骨の付け根（体の比を直したあとの座標）
   R3.GEAR = GEAR;
@@ -1591,6 +1614,8 @@
     if (photo) { renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; }
     const skyImg = photo && imgOk(look.sky) ? IMG[look.sky] : null;
     const useJockey = JK.state === 'ok' && !!THREE.SkeletonUtils && !setup.handmadeJockey;
+    // 骨入りの馬の素材（js/ui/horse_rigged.js）。設定が「素材の馬」で読めているときだけ。手作りの形は鞍・馬具・騎手だけ描く
+    const HRG = HS.HorseRigged, rigged = photo && !setup.handmade && !setup.handmadeHorse && !!(HRG && HRG.use());
     renderer.toneMappingExposure = look.exposure;
     const fogCol = skyImg ? horizonColor(look.sky, skyImg) : look.skyHor;
     renderer.setClearColor(new THREE.Color(fogCol));
@@ -2173,7 +2198,7 @@
     // ---- 馬 ----
     // 形は近く・遠くの2つを全頭で使い回す。馬ごとに違うのは絵（毛色・勝負服・ゼッケン）と、馬具の骨を見せるかだけ
     // 騎手の素材（GLB）があれば、馬の形からは騎手を抜き、騎手は別の形で描く（手綱・ムチ・鐙は馬の形のまま）
-    const hgeo = G(horseGeometry(1, { noJockey: useJockey })), hgeoLo = G(horseGeometry(0, { noJockey: useJockey }));
+    const hgeo = G(horseGeometry(1, { noJockey: useJockey, tack: rigged })), hgeoLo = G(horseGeometry(0, { noJockey: useJockey, tack: rigged }));
     if (photo && !HORSE_NOR) HORSE_NOR = horseNormalCanvas(512);
     const norTex = photo ? T(texOf(HORSE_NOR, false, aniso, true)) : null;
     const H = [];
@@ -2194,13 +2219,15 @@
       // 着けていない馬具は骨を縮めて消す
       for (const [k, bi] of Object.entries(GEAR)) if (!h.gear[k]) bones[bi].scale.set(0, 0, 0);
       mesh.rotation.order = 'YXZ';
+      let rig = null;
+      if (rigged) { try { rig = HRG.make(h, bones); M(rig.mat); } catch (e) { rig = null; } }
       let jockey = null;
       if (useJockey) {
         try { jockey = makeJockey(h, M); mesh.add(jockey.root); } catch (e) { jockey = null; }
       }
       scene.add(mesh);
       const seed = hash01(strHash(h.name || i), 3);
-      H.push({ mesh, bones, jockey, num: h.num != null ? h.num : i + 1, seed, lead: seed < 0.5 ? 1 : -1, lean: 0, yaw: 0, lane: null });
+      H.push({ mesh, bones, jockey, rig, num: h.num != null ? h.num : i + 1, seed, lead: seed < 0.5 ? 1 : -1, lean: 0, yaw: 0, lane: null });
     }
     // 丸い影の板（まとめて1回）
     const shTexC = canvasOf(64, 64), sg = shTexC.getContext('2d');
@@ -2354,6 +2381,11 @@
         const sp = moving ? clamp(v / 16, 0.35, 1.15) : 0;
         const push = st.push != null ? st.push : (moving ? clamp((v - 15.2) / 2, 0, 1) : 0);
         poseHorse(Hh, ph, sp, push, t, Hh.seed, st.whip, st.pose);
+        // 骨入りの馬：角度を写し、蹄を地面へ・頭の馬具を頭へ（遠い馬ははじめの1回のあとは合わせ直さない）
+        if (Hh.rig) {
+          HRG.pose(Hh.rig, Hh.bones);
+          if (d2 < 120 * 120 || !Hh.rigSet) { Hh.mesh.updateMatrixWorld(true); HRG.settle(Hh.rig, Hh.bones, { ph, sp, touch: Hh.lead > 0 ? TOUCH_L : TOUCH_R, duty: [F_DUTY, H_DUTY] }); Hh.rigSet = true; }
+        }
         // 騎手（素材の形）：手作りの骨に合わせる。遠い馬（120m より先）は、はじめの1回のあとは合わせ直さない
         const J = Hh.jockey;
         if (J) {
@@ -2528,7 +2560,7 @@
       renderer.dispose();
       if (renderer.forceContextLoss) renderer.forceContextLoss();
     }
-    const info = () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, photo, jockey: useJockey, shadow: shadowOn && sun.castShadow, dust: !!dust, level: perf.level, crowd: crowdN });
+    const info = () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, photo, jockey: useJockey, shadow: shadowOn && sun.castShadow, dust: !!dust, level: perf.level, crowd: crowdN, horse: rigged ? 'rigged' : 'handmade' });
 
     return { render, resize, dispose, info, renderer, scene, camera };
   };
@@ -2590,7 +2622,7 @@
         scene.add(new THREE.Mesh(tb.build(), new THREE.MeshBasicMaterial({ map: imgTex('tree', false, 4), alphaTest: 0.45, side: THREE.DoubleSide, color: lin('#c6d6b4') })));
       }
       const camera = new THREE.PerspectiveCamera(26, 2, 0.1, 900);
-      PT.r = { renderer, scene, camera, cv, geo: horseGeometry(1, { bare: true }), nor: texOf(HORSE_NOR || (HORSE_NOR = horseNormalCanvas(512)), false, 8, true) };
+      PT.r = { renderer, scene, camera, cv, geo: horseGeometry(1, { bare: true }), geoTack: horseGeometry(1, { bare: true, tack: true }), nor: texOf(HORSE_NOR || (HORSE_NOR = horseNormalCanvas(512)), false, 8, true) };
     } catch (e) { PT.fail = true; PT.r = null; }
     return PT.r;
   }
@@ -2607,7 +2639,8 @@
     const small = w <= 320;
     const age = portraitAge(horse), gear = gearOf(horse);
     const coat = horse.coat || '鹿毛';
-    const key = [w, hgt, coat, coat === '芦毛' ? Math.min(12, age || 0) : '', small ? '' : (horse.name || horse.id || ''), JSON.stringify(gear)].join('|');
+    const HRG = HS.HorseRigged, rigged = !!(HRG && HRG.use());
+    const key = [w, hgt, coat, coat === '芦毛' ? Math.min(12, age || 0) : '', small ? '' : (horse.name || horse.id || ''), JSON.stringify(gear), rigged ? 'r' : 'h'].join('|');
     let img = PT.cache.get(key);
     if (!img) {
       const K = portraitKit();
@@ -2622,12 +2655,15 @@
       const L = coatLook(coat, age), gl = L.gloss || 0;
       // 肖像は毛のつやを薄い上塗り（clearcoat）で出す
       const mat = new THREE.MeshPhysicalMaterial({ map: tex, normalMap: K.nor, skinning: true, roughness: 0.52 - 0.22 * gl, metalness: 0, envMapIntensity: 1.0, clearcoat: 0.18 + 0.25 * gl, clearcoatRoughness: 0.42 });
-      const mesh = new THREE.SkinnedMesh(K.geo, mat);
+      const mesh = new THREE.SkinnedMesh(rigged ? K.geoTack : K.geo, mat);
       const bones = horseBones();
       mesh.add(bones[0]); mesh.updateMatrixWorld(true); mesh.bind(new THREE.Skeleton(bones));
       for (const [k, bi] of Object.entries(GEAR)) if (!gear[k]) bones[bi].scale.set(0, 0, 0);
+      let rig = null;
+      if (rigged) { try { rig = HRG.make(h, bones); } catch (e) { rig = null; } }
       poseHorse({ bones, lead: 1 }, 0, 0, 0, 1.3, hash01(strHash(h.name), 3), null, null);
       bones[2].rotation.z += 0.06; bones[4].rotation.z -= 0.05; // 首を少し上げて前を見る
+      if (rig) { HRG.pose(rig, bones); mesh.updateMatrixWorld(true); HRG.settle(rig, bones, { ph: 0, sp: 0 }); }
       mesh.castShadow = true;
       scene.add(mesh);
       // カメラ：馬の右から少し前寄り・少し下から。横長でも縦長でも馬全体が入る距離
@@ -2640,7 +2676,7 @@
       renderer.render(scene, camera);
       img = canvasOf(w, hgt);
       img.getContext('2d').drawImage(renderer.domElement, 0, 0, w, hgt);
-      scene.remove(mesh); mat.dispose(); tex.dispose(); if (mesh.skeleton.dispose) mesh.skeleton.dispose();
+      scene.remove(mesh); mat.dispose(); tex.dispose(); if (mesh.skeleton.dispose) mesh.skeleton.dispose(); if (rig) rig.mat.dispose();
       PT.cache.set(key, img);
       if (PT.cache.size > 160) PT.cache.delete(PT.cache.keys().next().value);
     }

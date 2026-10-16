@@ -61,3 +61,14 @@ Poly Haven の素材はすべて CC0（https://polyhaven.com/license）。人物
 | `assets/owners_sengoku.js` | 千石 悠斗 | `dil.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
 | `assets/owners_hanabusa.js` | 花房 つむぎ | `shione.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
 | `assets/owners_takarada.js` | 宝田 マリエ | `dorothea.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
+
+## 骨入りの馬（`js/ui/horse_rigged.js`）
+
+CC-BY-4.0 なので、ゲームの中のクレジット（タイトルの「クレジット」。`js/ui/credits.js`）にも作者と作品名を出す。
+書き出しは `python3 tools/pack_horse.py`（元のファイルは `assets/src/horse_rigged/`。絵は 1024 に縮め、毛色を抜いた明るさの陰影と、たてがみ・尾の印にした）。
+
+| ファイル | 中身 | 元の素材 | 作者 | ライセンス | URL | 手を加えたこと |
+|---|---|---|---|---|---|---|
+| `assets/horse_rigged.js` | 骨入りの馬（GLB。2,914 面、骨 42 本） | Sketchfab「Horse Rigged(Game Ready)」 | abhayexe（https://sketchfab.com/abhayexe） | CC-BY-4.0（商用可・作者の表記が要る） | https://sketchfab.com/3d-models/horse-riggedgame-ready-bc64f4ff7966474ca9bacd42fa73a754 | 1つの GLB にまとめ、絵を 1024 の陰影の絵に変えた。読み込んだときにサラブレッドの比へ形を写し直す（脚を長く細く・脚の下の長い毛を消す・胴を浅く・首を細長く・頭を小さく）。毛色は材質の中で塗る |
+
+表記：This work is based on "Horse Rigged(Game Ready)" (https://sketchfab.com/3d-models/horse-riggedgame-ready-bc64f4ff7966474ca9bacd42fa73a754) by abhayexe (https://sketchfab.com/abhayexe) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

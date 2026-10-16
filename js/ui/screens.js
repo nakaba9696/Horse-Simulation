@@ -49,6 +49,7 @@
         <button class="btn ${W.hasLocal() ? '' : 'gold'}" data-act="newgame-form">はじめから</button>
         <button class="btn" data-act="import">セーブを読み込む</button>
         <button class="btn" data-act="editor">競走馬エディット</button>
+        <button class="btn" data-act="credits">クレジット</button>
         <button class="btn" data-act="sound">${HS.Audio && HS.Audio.settings.bgm + HS.Audio.settings.se > 0 ? '🔊 音：あり' : '🔇 音：なし'}</button>
       </div>
       <p class="small muted t-lead">実在の名馬と実在のレースに、騎手として乗る。新人騎手から始めて、リーディングと大レースを目指す。</p>`

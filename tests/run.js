@@ -1059,6 +1059,29 @@ check('terrain: 3D の地面がコースの高さに合う（坂・楕円でな�
   }
   return out.join('／') + `／data/layouts.js の回り ${nData}`;
 });
+check('horse_rigged: 骨入りの馬の素材の形・骨の名前・出典（CC-BY の作者をクレジットに出す）', () => {
+  const fs = require('fs'), path = require('path'), vm = require('vm'), R = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+  const js = R('assets/horse_rigged.js'), b64 = js.slice(js.indexOf('base64,') + 7, js.lastIndexOf("'"));
+  const glb = Buffer.from(b64, 'base64');
+  assert(glb.readUInt32LE(0) === 0x46546C67, 'GLB でない');
+  const jl = glb.readUInt32LE(12), g = JSON.parse(glb.slice(20, 20 + jl).toString('utf8'));
+  const joints = g.skins[0].joints.length, tri = g.accessors[g.meshes[0].primitives[0].indices].count / 3;
+  assert(joints === 42 && tri < 4000, `骨 ${joints}・三角形 ${tri}`);
+  assert(js.length < 3 * 1024 * 1024, `素材の馬が大きすぎる（${(js.length / 1048576).toFixed(1)}MB）`);
+  // js/ui/horse_rigged.js が使う骨の名前が、みな素材にある
+  vm.runInThisContext(R('js/ui/horse_rigged.js'), { filename: 'js/ui/horse_rigged.js' });
+  const HR = HS.HorseRigged, names = new Set(g.nodes.map(n => HR.keyOf(String(n.name || '').replace(/ /g, '_'))));
+  const miss = Object.entries(HR.BN).filter(([k, v]) => !names.has(HR.keyOf(v))).map(([k]) => k);
+  assert(!miss.length, `素材に無い骨 ${miss.join(',')}`);
+  // 出典：CREDITS とゲームの中のクレジット
+  const cr = R('assets/CREDITS.md');
+  assert(cr.includes('horse_rigged') && cr.includes('abhayexe') && cr.includes('CC-BY-4.0'), 'CREDITS に骨入りの馬の出典が無い');
+  vm.runInThisContext(R('js/ui/credits.js'), { filename: 'js/ui/credits.js' });
+  assert(HS.Credits.LIST.some(x => x.by === 'abhayexe' && /CC-BY/.test(x.lic)), 'ゲームの中のクレジットに作者が無い');
+  assert(R('js/ui/screens.js').includes('data-act="credits"'), 'タイトルにクレジットが無い');
+  assert(['rigged', 'handmade'].includes(HR.model()), '馬の形の設定');
+  return `骨 ${joints}・三角形 ${tri}・${(js.length / 1048576).toFixed(2)}MB・既定 ${HR.DEFAULT}`;
+});
 check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中・騎手の GLB の形・騎手が手綱と鐙に届く', () => {
   const vm = require('vm'), fs = require('fs'), path = require('path');
   const ROOT = path.join(__dirname, '..'), dir = path.join(ROOT, 'assets');
