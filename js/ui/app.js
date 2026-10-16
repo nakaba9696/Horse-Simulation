@@ -15,13 +15,50 @@
     const st = App.st;
     if (titleAnim) { cancelAnimationFrame(titleAnim); titleAnim = null; }
     if (HS.Audio && !App.inRace) HS.Audio.bgm(st.screen === 'game' ? 'home' : 'title');
-    if (st.screen === 'title') { app.innerHTML = UI.screens.title(); App.titleCanvas(); return; }
-    if (st.screen === 'newgame') { app.innerHTML = UI.screens.newgame(st.ng); App.drawNgSilks(); return; }
-    if (st.screen === 'editor') { app.innerHTML = UI.screens.editor(st.ed || (st.ed = {})); App.hydrate(app); return; }
+    const anim = App.navAnim; App.navAnim = null;
+    document.body.dataset.screen = st.screen;
+    if (st.screen === 'title') { App.setScene('title'); app.innerHTML = UI.screens.title(App.st.titleOpen); App.enter(app, anim); App.titleCanvas(); return; }
+    if (st.screen === 'newgame') { App.setScene('title'); app.innerHTML = UI.screens.newgame(st.ng); App.enter(app, anim); App.drawNgSilks(); return; }
+    if (st.screen === 'editor') { App.setScene('home'); app.innerHTML = UI.screens.editor(st.ed || (st.ed = {})); App.hydrate(app); return; }
     const view = st.view || { name: st.tab };
     const html = UI.screens[view.name] ? UI.screens[view.name](view) : '';
+    App.setScene(App.sceneOf(view));
     app.innerHTML = UI.header() + `<main>${html}</main>` + UI.nav(st.tab);
+    App.enter(app.querySelector('main'), anim);
     App.hydrate(app);
+  };
+
+  // ---------- 背景の絵と画面の入り（持ち主の決定 2026-10-16「画面はゲームらしく派手に」） ----------
+  // 背景は assets/ui_bg_*.js（HS.ASSETS）。読めないときは色の地のまま
+  // 見た目だけの散らし（土ぼこり・紙吹雪）。ゲームの乱数（U.RNG）は使わず、Math.random も使わない
+  App.fxRand = seed => { let x = (seed | 0) || 1; return () => (x = (x * 16807) % 2147483647) / 2147483647; };
+  App.reduced = () => !!(globalThis.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  App.bgUrl = name => { const a = HS.ASSETS && HS.ASSETS['ui_bg_' + name]; return a ? `url("${a}")` : ''; };
+  const SCENES = { home: 'home', stable: 'home', breed: 'home', farm: 'home', jrecord: 'home', records: 'home', menu: 'home', offers: 'home', market: 'shop', races: 'result' };
+  App.sceneOf = view => {
+    if (view.name === 'horse') { const h = W.horse(view.id); return h && h.owner === 'P' ? 'home' : 'shop'; }
+    return SCENES[view.name] || 'home';
+  };
+  // 2枚の層を重ねて切り替える（ふわっと入れ替わる）
+  App.setScene = function (name) {
+    let el = document.getElementById('scene-bg');
+    if (!el) { el = document.createElement('div'); el.id = 'scene-bg'; el.setAttribute('aria-hidden', 'true'); el.innerHTML = '<i></i><i></i><b></b>'; document.body.prepend(el); }
+    if (el.dataset.scene === name) return;
+    el.dataset.scene = name;
+    const [a, b] = el.querySelectorAll('i');
+    const next = a.classList.contains('on') ? b : a, prev = next === a ? b : a;
+    next.style.backgroundImage = App.bgUrl(name);
+    next.dataset.scene = name;
+    next.classList.add('on'); prev.classList.remove('on');
+  };
+  // 画面の入り：タブを替えたら金の帯がよぎり、中身が下から入る。進むと右から、戻ると左から
+  App.enter = function (el, anim) {
+    if (!el || !anim || App.reduced()) return;
+    el.classList.add('enter-' + anim);
+    if (anim === 'tab') {
+      const w = document.createElement('div'); w.className = 'wipe'; document.body.appendChild(w);
+      setTimeout(() => w.remove(), 700);
+    }
   };
   // 絵を描く
   App.hydrate = function (root) {
@@ -49,7 +86,8 @@
     opts = opts || {};
     const root = $('#modal-root');
     const bg = document.createElement('div');
-    bg.className = 'modal-bg';
+    bg.className = 'modal-bg' + (opts.scene ? ' scene scene-' + opts.scene : '');
+    if (opts.scene && App.bgUrl(opts.scene)) bg.style.setProperty('--scene-img', App.bgUrl(opts.scene));
     bg.innerHTML = `<div class="modal ${opts.wide ? 'wide' : ''}">${opts.noClose ? '' : '<button class="close" data-act="close">×</button>'}${html}</div>`;
     root.appendChild(bg);
     App.hydrate(bg);
@@ -81,14 +119,16 @@
   };
 
   // ---------- 移動 ----------
-  App.go = function (view) { App.st.stack.push(App.st.view || { name: App.st.tab }); App.st.view = view; App.render(); window.scrollTo(0, 0); };
-  App.back = function () { App.st.view = App.st.stack.pop() || { name: App.st.tab }; App.render(); };
+  App.go = function (view) { App.st.stack.push(App.st.view || { name: App.st.tab }); App.st.view = view; App.navAnim = 'push'; App.render(); window.scrollTo(0, 0); };
+  App.back = function () { App.st.view = App.st.stack.pop() || { name: App.st.tab }; App.navAnim = 'back'; App.render(); };
   App.save = function () { if (!W.saveLocal()) App.toast('この端末に保存できませんでした（セーブの書き出しを使ってください）'); };
 
   // ---------- 操作 ----------
   const act = App.act = {};
-  act.title = () => { App.closeAll(); App.st.screen = 'title'; App.render(); };
-  act['newgame-form'] = () => { App.st.screen = 'newgame'; App.st.ng = App.st.ng || { name: '', farm: '', crown: '', year: 1995, diff: 'normal', silks: { base: '#1f4fbf', sub: '#ffd100', pattern: 'hoops' } }; App.render(); };
+  act.title = () => { App.closeAll(); App.st.screen = 'title'; App.navAnim = 'tab'; App.render(); };
+  // タイトル：画面を押すとメニューが出る
+  act['title-open'] = () => { if (App.st.titleOpen) return; App.st.titleOpen = true; if (HS.Audio) HS.Audio.se('ok'); App.render(); };
+  act['newgame-form'] = () => { App.st.screen = 'newgame'; App.navAnim = 'push'; App.st.ng = App.st.ng || { name: '', farm: '', crown: '', year: 1995, diff: 'normal', silks: { base: '#1f4fbf', sub: '#ffd100', pattern: 'hoops' } }; App.render(); };
   const readNg = () => { const ng = App.st.ng; ng.name = $('#ng-name').value; ng.farm = $('#ng-farm').value; ng.crown = $('#ng-crown').value; ng.year = +$('#ng-year').value; ng.diff = $('#ng-diff').value; };
   act['ng-color'] = d => { readNg(); App.st.ng.silks[d.k] = d.c; App.render(); };
   act['ng-pattern'] = d => { readNg(); App.st.ng.silks.pattern = d.p; App.render(); };
@@ -107,14 +147,14 @@
       <ul class="small"><li><b>市場</b>：デビュー前の史実馬や名牝が買える。</li><li><b>牧場</b>：2月〜6月に種付け。2歳の4月から入厩。</li><li><b>厩舎</b>：調教とレースを決める（おまかせもできる）。</li><li>決めたら上の<b>「次の週へ」</b>。</li></ul>
       <div class="btns"><button class="btn gold" data-act="close">はじめる</button></div>`);
   };
-  act.continue = () => { if (!W.loadLocal()) return App.toast('セーブが読めませんでした'); App.st.screen = 'game'; App.st.tab = 'home'; App.st.view = null; App.render(); };
-  act.tab = d => { App.st.tab = d.tab; App.st.view = null; App.st.stack = []; App.render(); window.scrollTo(0, 0); };
+  act.continue = () => { if (!W.loadLocal()) return App.toast('セーブが読めませんでした'); App.st.screen = 'game'; App.st.tab = 'home'; App.st.view = null; App.navAnim = 'tab'; App.render(); };
+  act.tab = d => { App.st.tab = d.tab; App.st.view = null; App.st.stack = []; App.navAnim = 'tab'; App.render(); window.scrollTo(0, 0); };
   act.back = () => App.back();
   act.close = () => App.closeModal();
   act.horse = d => { App.closeAll(); App.go({ name: 'horse', id: d.id }); };
   act.htab = d => { App.st.view.htab = d.tab; App.render(); };
   act.mtab = d => { App.st.view = { name: 'market', mtab: d.tab }; App.render(); };
-  act.mmore = () => { App.st.view.mlimit = (App.st.view.mlimit || 30) + 30; App.render(); };
+  act.mmore = () => { App.st.view = App.st.view || { name: App.st.tab }; App.st.view.mlimit = (App.st.view.mlimit || 30) + 30; App.render(); };
   act.rtab = d => { App.st.view = { name: 'races', rtab: d.tab }; App.render(); };
   act.ctab = d => { App.st.view = { name: 'records', ctab: d.tab }; App.render(); };
   act.menu = d => { const h = W.horse(d.id); h.menu = d.m; h.auto = false; App.save(); App.render(); };
@@ -285,7 +325,7 @@
   App.playRace = async function (r, replay) {
     const G = W.get();
     await new Promise(res => {
-      const bg = App.modal(`${UI.raceCard(r)}<div class="btns mt"><button class="btn gold" data-x="go">${replay ? '再生する' : '発走！'}</button>${replay ? '' : '<button class="btn" data-x="skip">結果だけ見る</button>'}</div>`, { noClose: true });
+      const bg = App.modal(`${UI.raceCard(r)}<div class="btns mt"><button class="btn gold" data-x="go">${replay ? '再生する' : '発走！'}</button>${replay ? '' : '<button class="btn" data-x="skip">結果だけ見る</button>'}</div>`, { noClose: true, scene: 'result' });
       bg.querySelector('[data-x=go]').onclick = () => { App.closeModal(); res(true); };
       const sk = bg.querySelector('[data-x=skip]'); if (sk) sk.onclick = () => { App.closeModal(); r.skip = true; res(false); };
     });
@@ -309,11 +349,17 @@
       App.inRace = false;
     }
     const slim = W.slimResult(r);
+    // 自分の馬が重賞を勝ったら、結果の前に大きな見せ場
+    const won = !replay && r.race.graded && r.sim.results[0] && r.sim.results[0].mine ? r.sim.results[0] : null;
+    if (won && UI.celebrate) {
+      if (AU) { App.inRace = true; AU.playOnce('victory').then(() => { App.inRace = false; AU.bgm('home'); }); }
+      await UI.celebrate(UI.winFx(r.race, won.horse.name, won.time, won.jockey ? won.jockey.name : ''));
+    }
     await new Promise(res => {
       const mine = slim.rows.filter(x => x.mine);
       const msg = mine.map(x => x.pos === 1 ? (r.race.graded ? `<div class="hero"><canvas class="winner-cv" width="960" height="560" data-name="${e(x.name)}"></canvas></div>` : `<div class="panel gold center"><div class="serif" style="font-size:24px;font-weight:900;color:var(--gold2)">🏆 ${e(x.name)} 優勝！</div></div>`) : `<div class="panel center">${e(x.name)}は${x.pos}着</div>`).join('');
-      const bg = App.modal(`${msg}${UI.resultTable(slim)}<div class="btns mt"><button class="btn gold" data-x="ok">次へ</button></div>`, { noClose: true });
-      if (AU && mine.some(x => x.pos === 1)) { App.inRace = true; AU.playOnce('victory').then(() => { App.inRace = false; AU.bgm('home'); }); }
+      const bg = App.modal(`${msg}${UI.resultTable(slim)}<div class="btns mt"><button class="btn gold" data-x="ok">次へ</button></div>`, { noClose: true, scene: 'result' });
+      if (AU && !won && mine.some(x => x.pos === 1)) { App.inRace = true; AU.playOnce('victory').then(() => { App.inRace = false; AU.bgm('home'); }); }
       bg.querySelectorAll('.winner-cv').forEach(cv => {
         const run = r.runners.find(x => x.horse.name === cv.dataset.name);
         const win = r.sim.results[0];
@@ -343,45 +389,50 @@
       <div class="btns mt"><button class="btn gold" data-act="close">閉じる</button></div>`);
   };
 
-  // ---------- タイトルの動く絵 ----------
+  // ---------- タイトルの動く絵：背景の写真の上を、馬群が柵の前を駆け抜ける（地は透明） ----------
   App.titleCanvas = function () {
     const cv = $('#title-cv'); if (!cv) return;
     const ctx = cv.getContext('2d');
-    const w = cv.width, h = cv.height;
+    const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+    const w = 1280, h = 300;
+    cv.width = w * dpr; cv.height = h * dpr; ctx.scale(dpr, dpr);
     const horses = [
-      { coat: '鹿毛', silks: { base: '#1f4fbf', sub: '#ffd100', pattern: 'hoops' }, cap: '#fff', x: 640, lane: 0, sp: 1.0 },
-      { coat: '芦毛', silks: { base: '#ffffff', sub: '#c8102e', pattern: 'cross' }, cap: '#e0312f', x: 520, lane: 1, sp: 1.03 },
-      { coat: '青鹿毛', silks: { base: '#111', sub: '#ffd100', pattern: 'sash' }, cap: '#2a63d4', x: 380, lane: 2, sp: 0.98 },
-      { coat: '栗毛', silks: { base: '#00843d', sub: '#fff', pattern: 'stripes' }, cap: '#f2cf1d', x: 460, lane: 3, sp: 1.01 },
+      { coat: '鹿毛', silks: { base: '#1f4fbf', sub: '#ffd100', pattern: 'hoops' }, cap: '#fff', x: 760, lane: 0, sp: 1.0 },
+      { coat: '芦毛', silks: { base: '#ffffff', sub: '#c8102e', pattern: 'cross' }, cap: '#e0312f', x: 600, lane: 1, sp: 1.03 },
+      { coat: '青鹿毛', silks: { base: '#111', sub: '#ffd100', pattern: 'sash' }, cap: '#2a63d4', x: 420, lane: 2, sp: 0.98 },
+      { coat: '栗毛', silks: { base: '#00843d', sub: '#fff', pattern: 'stripes' }, cap: '#f2cf1d', x: 520, lane: 3, sp: 1.01 },
     ];
+    const dust = [], rnd = App.fxRand(7);
     let t = 0, last = null;
+    const still = App.reduced();
     const draw = ts => {
       if (last == null) last = ts;
-      const dt = Math.min(0.05, (ts - last) / 1000); last = ts; t += dt;
-      const sky = ctx.createLinearGradient(0, 0, 0, h * 0.6);
-      sky.addColorStop(0, '#1b2a55'); sky.addColorStop(0.5, '#e07a3f'); sky.addColorStop(1, '#ffd38a');
-      ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = 'rgba(255,230,160,0.9)'; ctx.beginPath(); ctx.arc(w * 0.72, h * 0.42, 60, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#2b2f4f'; ctx.beginPath(); ctx.moveTo(0, h * 0.55);
-      for (let i = 0; i <= 12; i++) ctx.lineTo(w * i / 12, h * (0.45 + ((i * 7) % 5) / 40)); ctx.lineTo(w, h * 0.55); ctx.closePath(); ctx.fill();
-      // スタンドの影
-      ctx.fillStyle = '#1d2238'; ctx.fillRect(w * 0.05, h * 0.42, w * 0.3, h * 0.14);
-      for (let i = 0; i < 14; i++) { ctx.fillStyle = 'rgba(255,220,150,0.5)'; ctx.fillRect(w * 0.06 + i * w * 0.021, h * 0.45, w * 0.012, h * 0.02); }
-      const g = ctx.createLinearGradient(0, h * 0.55, 0, h);
-      g.addColorStop(0, '#3a6d2e'); g.addColorStop(1, '#1f4419');
-      ctx.fillStyle = g; ctx.fillRect(0, h * 0.55, w, h * 0.45);
-      ctx.fillStyle = '#f2ead8'; ctx.fillRect(0, h * 0.58, w, 5);
-      for (let i = 0; i < 30; i++) ctx.fillRect(((i * 60 - t * 300) % (w + 60) + w + 60) % (w + 60) - 30, h * 0.58, 4, 18);
+      const dt = still ? 0 : Math.min(0.05, (ts - last) / 1000); last = ts; t += dt;
+      ctx.clearRect(0, 0, w, h);
+      // 外の柵（流れて速さが出る）
+      const ry = h * 0.36;
+      ctx.fillStyle = 'rgba(245,240,226,.85)'; ctx.fillRect(0, ry, w, 4);
+      for (let i = 0; i < 26; i++) ctx.fillRect(((i * 56 - t * 420) % (w + 56) + w + 56) % (w + 56) - 28, ry, 4, 20);
       for (const ho of horses) {
-        ho.x += dt * 120 * ho.sp * (1 + 0.05 * Math.sin(t * 1.3 + ho.lane));
+        ho.x += dt * 130 * ho.sp * (1 + 0.06 * Math.sin(t * 1.3 + ho.lane));
         if (ho.x > w + 200) ho.x = -200;
-        const y = h * 0.72 + ho.lane * 34;
-        A.horse(ctx, ho.x, y, 1.45 + ho.lane * 0.08, (t * 1.9 + ho.lane * 0.23) % 1, { coat: ho.coat, marks: A.marks(ho.coat), silks: ho.silks, cap: ho.cap });
+        const y = h * 0.62 + ho.lane * 26;
+        if (!still && rnd() < 0.5) dust.push({ x: ho.x - 50, y: y + 4, vx: -40 - rnd() * 60, vy: -10 - rnd() * 20, life: 1 });
+        A.horse(ctx, ho.x, y, 1.25 + ho.lane * 0.08, (t * 1.9 + ho.lane * 0.23) % 1, { coat: ho.coat, marks: A.marks(ho.coat), silks: ho.silks, cap: ho.cap });
       }
-      titleAnim = requestAnimationFrame(draw);
+      // 蹴り上げた芝の土ぼこり
+      for (let i = dust.length - 1; i >= 0; i--) {
+        const p = dust[i]; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * 1.6;
+        if (p.life <= 0) { dust.splice(i, 1); continue; }
+        ctx.fillStyle = `rgba(214,196,150,${(p.life * 0.35).toFixed(3)})`; ctx.beginPath(); ctx.arc(p.x, p.y, 3 + (1 - p.life) * 6, 0, Math.PI * 2); ctx.fill();
+      }
+      if (!still) titleAnim = requestAnimationFrame(draw);
     };
     titleAnim = requestAnimationFrame(draw);
   };
+  // タイトルは画面のどこを押しても・Enter・空白でもメニューが出る
+  document.addEventListener('click', ev => { if (App.st.screen === 'title' && !App.st.titleOpen && !ev.target.closest('[data-act], #modal-root, .fx')) act['title-open'](); });
+  document.addEventListener('keydown', ev => { if (App.st.screen === 'title' && !App.st.titleOpen && (ev.key === 'Enter' || ev.key === ' ') && !$('#modal-root').children.length) { ev.preventDefault(); act['title-open'](); } });
 
   // 起動
   window.addEventListener('DOMContentLoaded', () => {
