@@ -681,7 +681,7 @@ h2.sec::before { width: 6px; height: 6px; border-radius: 1px; transform: rotate(
 .title.open { padding-bottom: calc(var(--sp-6) + 18vw); }
 .title.open #title-cv { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; pointer-events: none; }
 .t-menu, .t-lead { z-index: 1; }
-.t-menu { position: relative; flex-direction: column; width: min(360px, 100%); margin: var(--sp-2) auto 0; gap: var(--sp-3) !important; }
+.t-menu { position: relative; flex-direction: column; width: min(360px, 100%); margin: var(--sp-5) auto 0; gap: var(--sp-3) !important; }
 .t-menu .btn { min-height: 54px; font-size: var(--fs-md); letter-spacing: .14em; overflow: hidden; border-radius: var(--r); animation: menuin 520ms var(--ease) both; }
 .title .t-menu .btn:not(.gold) { background: linear-gradient(180deg, rgba(20, 44, 30, .92), rgba(8, 22, 14, .92)); border-color: rgba(242, 217, 142, .35); color: #f3ecd6; }
 .t-menu .btn:not(.gold)::after { animation: none; }

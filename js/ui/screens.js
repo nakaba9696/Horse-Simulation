@@ -52,7 +52,7 @@
         <button class="btn" data-act="sound">${HS.Audio && HS.Audio.settings.bgm + HS.Audio.settings.se > 0 ? '🔊 音：あり' : '🔇 音：なし'}</button>
       </div>
       <p class="small muted t-lead">実在の名馬と実在のレースに、騎手として乗る。新人騎手から始めて、リーディングと大レースを目指す。</p>`
-      : '<div class="t-press">画面を押してスタート</div>'}
+      : '<div class="t-press">クリック・Enter でスタート</div>'}
     </div>`;
   };
 

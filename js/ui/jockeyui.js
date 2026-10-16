@@ -578,7 +578,7 @@
         <div class="fx-body"><div class="fx-badge">${o.kind === 'trophy' ? '🏆' : o.kind === 'special' ? '★' : '👑'}</div>
           <div class="fx-kicker">${e(o.kicker || '')}</div><div class="fx-title">${e(o.title || '')}</div>
           ${o.name ? `<div class="fx-name">${e(o.name)}</div>` : ''}${o.sub ? `<div class="fx-sub">${e(o.sub)}</div>` : ''}
-          <div class="fx-tap">画面を押して次へ</div></div>`;
+          <div class="fx-tap">クリック・Enter で次へ</div></div>`;
       document.body.appendChild(el);
       if (AU) { AU.se('skill'); if (o.kind !== 'win') setTimeout(() => AU.se('coin'), 380); }
       // 紙吹雪（動きを減らす設定では、散った形を1枚だけ描く）
@@ -611,6 +611,15 @@
         el.classList.add('out'); setTimeout(() => { el.remove(); res(); }, App.reduced() ? 0 : 280);
       };
       el.addEventListener('click', close); window.addEventListener('keydown', close);
+      // ゲームパッドのボタンでも閉じる（押しっぱなしで開いた分は、いったん離してから）
+      let held = true;
+      const pad = () => {
+        if (!alive) return;
+        const any = [...(navigator.getGamepads ? navigator.getGamepads() : [])].some(g => g && g.buttons.some(b => b.pressed));
+        if (!any) held = false; else if (!held) close();
+        setTimeout(pad, 60);
+      };
+      pad();
     });
   };
 })();

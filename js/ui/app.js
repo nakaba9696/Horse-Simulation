@@ -426,11 +426,13 @@
         if (p.life <= 0) { dust.splice(i, 1); continue; }
         ctx.fillStyle = `rgba(214,196,150,${(p.life * 0.35).toFixed(3)})`; ctx.beginPath(); ctx.arc(p.x, p.y, 3 + (1 - p.life) * 6, 0, Math.PI * 2); ctx.fill();
       }
-      if (!still) titleAnim = requestAnimationFrame(draw);
+      // ゲームパッドのボタンでもメニューが出る
+      if (!App.st.titleOpen && navigator.getGamepads && [...navigator.getGamepads()].some(g => g && g.buttons.some(b => b.pressed))) { act['title-open'](); return; }
+      if (!still || !App.st.titleOpen) titleAnim = requestAnimationFrame(draw);
     };
     titleAnim = requestAnimationFrame(draw);
   };
-  // タイトルは画面のどこを押しても・Enter・空白でもメニューが出る
+  // タイトルは画面のどこをクリックしても・Enter・空白・ゲームパッドのボタンでもメニューが出る
   document.addEventListener('click', ev => { if (App.st.screen === 'title' && !App.st.titleOpen && !ev.target.closest('[data-act], #modal-root, .fx')) act['title-open'](); });
   document.addEventListener('keydown', ev => { if (App.st.screen === 'title' && !App.st.titleOpen && (ev.key === 'Enter' || ev.key === ' ') && !$('#modal-root').children.length) { ev.preventDefault(); act['title-open'](); } });
 
