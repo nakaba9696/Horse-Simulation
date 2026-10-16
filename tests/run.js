@@ -654,7 +654,8 @@ check('season: 年末にグランドフィナーレが距離ごとに5つ開か�
 
 check('dream: GF ごとの資格（G1・前年の勝ち馬・その距離の票）と、出ない／1頭だけ選ぶ・間2週、古いセーブ', () => {
   const T = HS.Season;
-  W.newGame({ seed: 31, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  // 種：11月4週に「票で圏内」の内国産馬がいる世界（史実馬のデータが変わると世界も変わるので、そのときは種を選び直す）
+  W.newGame({ seed: 32, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
   let guard = 0;
   while (!(G.month === 11 && G.week === 4) && guard++ < 60) W.finishWeek({});
@@ -830,7 +831,17 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   assert(SP.members(SP.BY.gf).some(d => d.name === 'セントサイモン') && !SP.members(SP.BY.unbeaten).some(d => d.name === 'セントサイモン'), '伝説級はグランドフィナーレのグループだけ');
   const seen = new Set(); for (const g of SP.GROUPS) for (const d of SP.members(g)) { assert(!seen.has(d.name), `${d.name} が2つ以上のグループにいる`); seen.add(d.name); }
   assert(!SP.members(SP.BY.autumn).some(d => d.name === 'シンボリルドルフ'), 'シンボリルドルフが三冠以外にもいる');
-  assert(SP.list().length < 150 && ['ダンシングブレーヴ', 'ミルリーフ', 'トキノミノル'].every(n => SP.byName(n)), `有名な強い馬だけになっていない（${SP.list().length}頭）`);
+  assert(['ダンシングブレーヴ', 'ミルリーフ', 'トキノミノル'].every(n => SP.byName(n)), '名馬がスペシャルホースにいない');
+  // 強さの下限は無い：評価の低い大レースの勝ち馬も入る
+  assert(SP.list().some(x => (x.d.rating || 0) < 88 && !HS.DATA.isForeign(x.d)), '評価の低い名馬が入っていない');
+  // 新しいグループの顔ぶれ（データの勝ち鞍・地方の印から）
+  const mem = id => SP.members(SP.BY[id]).map(d => d.name);
+  assert(mem('filly').includes('トウメイ') && mem('filly').includes('ガーネツト'), `牡馬を破った名牝 ${mem('filly').join('・')}`);
+  assert(mem('long').includes('グリーングラス'), `長距離の王者 ${mem('long').join('・')}`);
+  assert(mem('allround').includes('タケシバオー'), `万能の名馬 ${mem('allround').join('・')}`);
+  assert(mem('local').includes('ハイセイコー'), `地方から来た名馬 ${mem('local').join('・')}`);
+  assert(mem('arima2').includes('スピードシンボリ') && mem('arc2').includes('リボー') && mem('unbeaten').includes('ラフィアン'), 'スピードシンボリ・リボー・ラフィアンのグループが違う');
+  assert(!SP.list().some(x => x.groups.length !== 1), '2つ以上のグループに入る名馬がいる');
   assert(!SP.list().some(x => HS.Eraless.isPool(x.d)), '1989年以降の馬がスペシャルホースになっている');
   // 皐月賞と日本ダービーを勝った馬が菊花賞に出ると、歴代の三冠馬が出てくる
   const kk = R.gradedYear(G.year).find(r => r.short === '菊花賞');

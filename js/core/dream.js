@@ -102,7 +102,11 @@
       const fh = T.fh(h, wIdx, sf);
       if (!votes && !champ) {
         // 埋め：その距離に向く AI の馬
-        if (!mine && C.dist >= (h.distMin || 0) - 200 && C.dist <= (h.distMax || 9999) + 200 && ((C.surface === 'ダ' ? h.apt.dirt : h.apt.turf) || 0) >= 70) fill.push({ h, tier: 3, votes: 0, champ: false, g1: 0, why: 'その距離の実力', fh });
+        // 距離がぴったり合う馬を先に、足りなければ少し外れる馬（長距離は向く馬が少ないため）
+        const apt = (C.surface === 'ダ' ? h.apt.dirt : h.apt.turf) || 0;
+        const near = C.dist >= (h.distMin || 0) - 200 && C.dist <= (h.distMax || 9999) + 200 && apt >= 70;
+        const loose = C.dist >= (h.distMin || 0) - 600 && C.dist <= (h.distMax || 9999) + 800 && apt >= 60;
+        if (!mine && (near || loose)) fill.push({ h, tier: near ? 3 : 4, votes: 0, champ: false, g1: 0, why: 'その距離の実力', fh });
         continue;
       }
       const tier = champ || (mine && g1.length) ? 0 : 2;
