@@ -1,6 +1,6 @@
 # 画面の上に重ねる表示：レース名・残り・時計・順位・実況の字幕・確定の掲示板・カメラの名前
 # ブラウザ版（js/ui/watch3d.js）と同じ中身を出す
-class_name RaceHud
+class_name UiRaceHud
 extends CanvasLayer
 
 var font: Font

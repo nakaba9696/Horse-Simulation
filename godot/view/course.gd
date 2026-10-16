@@ -1,6 +1,6 @@
 # 競馬場を組む：芝とダートの馬場・柵・ハロン棒・ゴール板・スタンドと観客・内馬場（池と大きな画面）・木・遠くの町と山・発走のゲート
 # 形は track.gd（js/core/track.js と同じ式）から作る。素材は godot/CREDITS.md
-class_name CourseBuilder
+class_name ViewCourse
 extends RefCounted
 
 const TRACK_W := 27.0      # 芝の馬場の幅（m）
@@ -8,7 +8,7 @@ const LANE0 := 1.0
 const GATE_P := 1.25
 const FLAT := 4294967295   # SurfaceTool：面ごとの法線（表と裏を重ねた面で法線が消えないように）
 
-var tr: TrackGeo
+var tr: ViewTrack
 var root: Node3D
 var font: Font
 var S: Array = []          # 2m ごとの地点
@@ -19,7 +19,7 @@ var gate: Node3D
 var gate_doors: Array = []
 var board_labels: Array = []
 
-func _init(track: TrackGeo, parent: Node3D, f: Font) -> void:
+func _init(track: ViewTrack, parent: Node3D, f: Font) -> void:
 	tr = track
 	root = parent
 	font = f
@@ -38,7 +38,7 @@ func tex(p: String) -> Texture2D:
 
 func turf_mat() -> ShaderMaterial:
 	var m := ShaderMaterial.new()
-	m.shader = load("res://shaders/turf.gdshader")
+	m.shader = load("res://view/shaders/turf.gdshader")
 	m.set_shader_parameter("tex_albedo", tex("res://assets/textures/leafy_grass_diff_1k.jpg"))
 	m.set_shader_parameter("tex_normal", tex("res://assets/textures/leafy_grass_nor_gl_1k.jpg"))
 	m.set_shader_parameter("tint", Color(0.30, 0.50, 0.15))
@@ -51,7 +51,7 @@ func turf_mat() -> ShaderMaterial:
 
 func dirt_mat() -> ShaderMaterial:
 	var m := ShaderMaterial.new()
-	m.shader = load("res://shaders/turf.gdshader")
+	m.shader = load("res://view/shaders/turf.gdshader")
 	m.set_shader_parameter("tex_albedo", tex("res://assets/textures/dirt_aerial_02_diff_1k.jpg"))
 	m.set_shader_parameter("tex_normal", tex("res://assets/textures/dirt_aerial_02_nor_gl_1k.jpg"))
 	m.set_shader_parameter("tint", Color(0.55, 0.43, 0.30))
@@ -63,7 +63,7 @@ func dirt_mat() -> ShaderMaterial:
 
 func verge_mat() -> ShaderMaterial:
 	var m := ShaderMaterial.new()
-	m.shader = load("res://shaders/turf.gdshader")
+	m.shader = load("res://view/shaders/turf.gdshader")
 	m.set_shader_parameter("tex_albedo", tex("res://assets/textures/aerial_grass_rock_diff_1k.jpg"))
 	m.set_shader_parameter("tex_normal", tex("res://assets/textures/aerial_grass_rock_nor_gl_1k.jpg"))
 	m.set_shader_parameter("tint", Color(0.26, 0.42, 0.14))
@@ -74,7 +74,7 @@ func verge_mat() -> ShaderMaterial:
 
 func ground_mat() -> ShaderMaterial:
 	var m := ShaderMaterial.new()
-	m.shader = load("res://shaders/ground.gdshader")
+	m.shader = load("res://view/shaders/ground.gdshader")
 	m.set_shader_parameter("tex_albedo", tex("res://assets/textures/aerial_grass_rock_diff_1k.jpg"))
 	m.set_shader_parameter("tex_normal", tex("res://assets/textures/aerial_grass_rock_nor_gl_1k.jpg"))
 	return m
@@ -179,7 +179,6 @@ func build() -> void:
 	build_trees()
 	build_town()
 	build_mountains()
-	build_gate()
 
 # ---- 地面と馬場 ----
 func build_ground() -> void:

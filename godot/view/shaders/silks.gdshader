@@ -4,9 +4,23 @@ uniform vec3 base_col : source_color = vec3(0.1, 0.3, 0.8);
 uniform vec3 sub_col : source_color = vec3(1.0, 0.85, 0.2);
 uniform int pattern = 0; // 0 無地 1 横縞 2 縦縞 3 たすき 4 十字たすき 5 ダイヤ 6 星 7 左右 8 肩
 uniform float sheen = 0.35;
+uniform float fade_near = 2.2;
+uniform float fade_far = 4.6;
+float bayer4(vec2 p) {
+	int x = int(mod(p.x, 4.0));
+	int y = int(mod(p.y, 4.0));
+	const float m[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+	return (m[y * 4 + x] + 0.5) / 16.0;
+}
 varying vec3 lp;
 void vertex() { lp = VERTEX; }
 void fragment() {
+	if (fade_far > 0.0) {
+		float a = clamp((length(VERTEX) - fade_near) / (fade_far - fade_near), 0.0, 1.0);
+		if (a < 0.999 && a <= bayer4(FRAGCOORD.xy)) {
+			discard;
+		}
+	}
 	float k = 0.0;
 	if (pattern == 1) k = step(0.5, fract(lp.y * 7.0));
 	else if (pattern == 2) k = step(0.5, fract(atan(lp.x, lp.z) / 6.2831853 * 10.0));
