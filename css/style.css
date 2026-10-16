@@ -906,3 +906,9 @@ main.enter-back { animation: backin 300ms var(--ease) both; }
 .rp-t .rp-btns .btn + .btn { margin-left: 6px; }
 .page-solo { max-width: var(--w-app, 960px); margin: 0 auto; padding: var(--sp-4); }
 .rv-bar .rv-seek { min-height: 40px; border: 1px solid var(--line-2); background: var(--surface-3); color: var(--text); border-radius: var(--r); padding: 6px var(--sp-4); font-weight: 700; cursor: pointer; margin-left: auto; }
+/* フリーレース（js/ui/freerace.js） */
+.fr-cond { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-2); }
+.fr-f { display: flex; flex-direction: column; gap: 4px; }
+.fr-course .course-svg { width: 100%; max-width: 360px; height: auto; display: block; margin: 0 auto; }
+.fr-t td.right, .fr-picks td.right { text-align: right; white-space: nowrap; }
+.fr #fr-q { min-height: var(--tap, 40px); padding: 6px 10px; border-radius: var(--r); border: 1px solid var(--line-2); background: var(--sunk); color: var(--text); }

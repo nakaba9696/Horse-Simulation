@@ -1,4 +1,6 @@
 // 音：BGM と効果音を Web Audio で鳴らす（音のファイルは使わない。曲はこのゲームのための書き下ろし）
+// 音色は FM 風のブラス・エレピ、リードシンセ、スラップベース、雑音とピッチの下がる正弦で作る太鼓。
+// 全体に軽い響き（雑音で作った ConvolverNode）と、付点8分の山びこ、コンプレッサーをかける。
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const AU = HS.Audio = {};
@@ -7,314 +9,796 @@
   try { Object.assign(AU.settings, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* 既定のまま */ }
   AU.saveSettings = () => { try { localStorage.setItem(KEY, JSON.stringify(AU.settings)); } catch (e) { /* 保存できなくても鳴らせる */ } };
 
-  let ctx = null, master, bgmBus, seBus, noiseBuf = null;
+  let E = null; // 鳴らす仕組み（ctx・バス・響き）。書き出し（AU.render）のときだけ一時的に差し替える
   let wantSong = null, cur = null, timer = null;
+  const BGM_GAIN = 0.6;
 
-  // ブラウザは操作のあとでないと音を出せないので、最初のタップで準備する
+  // 雑音で作った響き（2秒ほど。後ろほど暗く）
+  function impulse(c, sec, decay) {
+    const n = Math.floor(c.sampleRate * sec), buf = c.createBuffer(2, n, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      let y = 0;
+      for (let i = 0; i < n; i++) {
+        const k = i / n, a = 0.85 - 0.7 * k;
+        y += a * ((Math.random() * 2 - 1) - y);
+        d[i] = y * Math.pow(1 - k, decay) * (i < c.sampleRate * 0.008 ? i / (c.sampleRate * 0.008) : 1);
+      }
+    }
+    return buf;
+  }
+  function makeEngine(c, bgmVol) {
+    const e = { ctx: c };
+    const g = v => { const n = c.createGain(); n.gain.value = v; return n; };
+    e.master = g(0.9);
+    const comp = c.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.knee.value = 10; comp.ratio.value = 3; comp.attack.value = 0.006; comp.release.value = 0.2;
+    const lim = c.createDynamicsCompressor();
+    lim.threshold.value = -5; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.12;
+    e.master.connect(comp); comp.connect(lim); lim.connect(c.destination);
+    e.bgmBus = g(bgmVol); e.bgmBus.connect(e.master);
+    e.seBus = g(AU.settings.se); e.seBus.connect(e.master);
+    // 倍音を絞った波形（フィルターを音ごとに置くと重いので、波形の側で丸めておく）
+    const wave = (n, pow, odd) => { const re = new Float32Array(n), im = new Float32Array(n); for (let k = 1; k < n; k++) if (!odd || k % 2) im[k] = 1 / Math.pow(k, pow); return c.createPeriodicWave(re, im); };
+    e.wave = { warm: wave(16, 1.5), soft: wave(10, 2), bright: wave(28, 1.05), reed: wave(14, 1.2, true) };
+    e.noise = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
+    const d = e.noise.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; // 雑音の素（ゲームの乱数とは無関係）
+    // 響き
+    const conv = c.createConvolver(); conv.buffer = impulse(c, 2.2, 3.2);
+    e.rev = g(1); const revOut = g(0.5);
+    e.rev.connect(conv); conv.connect(revOut); revOut.connect(e.bgmBus);
+    // 山びこ（付点8分。曲ごとに速さを合わせる）
+    e.delay = c.createDelay(2); e.delay.delayTime.value = 0.3;
+    const fb = g(0.3), dlf = c.createBiquadFilter(); dlf.type = 'lowpass'; dlf.frequency.value = 2600;
+    e.dly = g(1); const dlyOut = g(0.45);
+    e.dly.connect(e.delay); e.delay.connect(dlf); dlf.connect(fb); fb.connect(e.delay); dlf.connect(dlyOut); dlyOut.connect(e.bgmBus);
+    return e;
+  }
+
+  // ブラウザは操作のあとでないと音を出せないので、最初の操作で準備する
   AU.unlock = function () {
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    if (E) { if (E.ctx.state === 'suspended') E.ctx.resume(); return; }
     const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
     if (!AC) return;
-    try { ctx = new AC(); } catch (e) { ctx = null; return; }
-    master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
-    bgmBus = ctx.createGain(); bgmBus.connect(master);
-    seBus = ctx.createGain(); seBus.connect(master);
-    AU.applyVolume();
-    noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-    const d = noiseBuf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; // 雑音の素（ゲームの乱数とは無関係）
-    if (wantSong) { const s = wantSong; wantSong = null; AU.bgm(s); }
+    let c;
+    try { c = new AC(); } catch (e) { return; }
+    E = makeEngine(c, AU.settings.bgm * BGM_GAIN);
+    if (wantSong) { const [s, r] = wantSong; wantSong = null; AU.bgm(s, r); }
   };
-  AU.ready = () => !!ctx;
+  AU.ready = () => !!E;
   AU.applyVolume = function () {
-    if (!ctx) return;
-    bgmBus.gain.setTargetAtTime(AU.settings.bgm * 0.55, ctx.currentTime, 0.05);
-    seBus.gain.setTargetAtTime(AU.settings.se, ctx.currentTime, 0.05);
+    if (!E) return;
+    E.bgmBus.gain.setTargetAtTime(AU.settings.bgm * BGM_GAIN, E.ctx.currentTime, 0.05);
+    E.seBus.gain.setTargetAtTime(AU.settings.se, E.ctx.currentTime, 0.05);
   };
-  ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, () => AU.unlock(), { passive: true }));
+  if (globalThis.document && document.addEventListener) ['pointerdown', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, () => AU.unlock(), { passive: true }));
+
+  // ---------- 音の高さ ----------
+  const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+  const midi = n => { const m = /^([A-G])([#b]?)(-?\d)$/.exec(n); if (!m) return null; return NOTE[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + (+m[3] + 1) * 12; };
+  const nname = m => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  const freq = n => { const m = midi(n); return m == null ? null : hz(m); };
+  // 旋律を半音 k だけ移す（T(旋律, -12) で1オクターブ下）
+  const T = (seq, k) => seq.replace(/([A-G][#b]?)(-?\d)/g, s => nname(midi(s) + k));
 
   // ---------- 音の部品 ----------
-  const NOTE = { C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11 };
-  const freq = n => { const m = /^([A-G](?:#|b)?)(-?\d)$/.exec(n); if (!m) return null; return 440 * Math.pow(2, (NOTE[m[1]] + (+m[2] + 1) * 12 - 69) / 12); };
-
-  function env(g, t, a, peak, d, sus, dur, r) {
-    g.gain.cancelScheduledValues(t);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(peak, t + a);
-    g.gain.linearRampToValueAtTime(peak * sus, t + a + d);
-    g.gain.setValueAtTime(peak * sus, t + Math.max(a + d, dur));
-    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(a + d, dur) + r);
+  function osc(type, f, t, end) { const o = E.ctx.createOscillator(); if (E.wave[type]) o.setPeriodicWave(E.wave[type]); else o.type = type; o.frequency.setValueAtTime(f, t); o.start(t); o.stop(end); return o; }
+  function gn(v) { const g = E.ctx.createGain(); g.gain.value = v; return g; }
+  function filt(type, f, q) { const b = E.ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q) b.Q.value = q; return b; }
+  // 音量の形：a 秒で peak、d 秒ほどで sus まで下がり、離したら r 秒ほどで消える
+  function amp(g, t, dur, a, peak, d, sus, r) {
+    const p = g.gain;
+    p.setValueAtTime(0, t); p.linearRampToValueAtTime(peak, t + a);
+    p.setTargetAtTime(peak * sus, t + a, Math.max(0.005, d / 3));
+    p.setTargetAtTime(0, t + Math.max(dur, a), Math.max(0.005, r / 4));
   }
-  // 楽器
-  const INST = {
-    lead: { type: 'square', vol: 0.09, a: 0.01, d: 0.08, s: 0.6, r: 0.08, vib: 5 },
-    flute: { type: 'triangle', vol: 0.2, a: 0.03, d: 0.1, s: 0.7, r: 0.15, vib: 4 },
-    brass: { type: 'sawtooth', vol: 0.09, a: 0.04, d: 0.12, s: 0.75, r: 0.12, lp: 2400 },
-    bass: { type: 'triangle', vol: 0.28, a: 0.005, d: 0.08, s: 0.7, r: 0.05 },
-    pad: { type: 'triangle', vol: 0.05, a: 0.12, d: 0.2, s: 0.7, r: 0.4 },
-    bell: { type: 'sine', vol: 0.12, a: 0.005, d: 0.3, s: 0.2, r: 0.6 },
-    // 90年代のロック・フュージョンの音色
-    guitar: { type: 'sawtooth', vol: 0.07, a: 0.008, d: 0.15, s: 0.75, r: 0.12, vib: 5.5, dist: 1, lp: 3200, det: 6 },
-    power: { type: 'sawtooth', vol: 0.045, a: 0.004, d: 0.06, s: 0.6, r: 0.05, dist: 1, lp: 2200, det: 9 },
-    slap: { type: 'square', vol: 0.16, a: 0.002, d: 0.09, s: 0.35, r: 0.05, lp: 1400, pluck: 1 },
-    ebass: { type: 'sawtooth', vol: 0.16, a: 0.004, d: 0.1, s: 0.7, r: 0.05, lp: 700 },
-    epiano: { type: 'sine', vol: 0.09, a: 0.004, d: 0.4, s: 0.35, r: 0.3, bellh: 1 },
-    synth: { type: 'sawtooth', vol: 0.05, a: 0.01, d: 0.12, s: 0.7, r: 0.15, lp: 2600, det: 8, vib: 5 },
-  };
-  // 歪み（ギター）
+  // 遅れてかかるビブラート
+  function vib(oscs, f, t, rate, depth, delay, end) {
+    const l = osc('sine', rate, t, end), lg = gn(0);
+    lg.gain.setValueAtTime(0, t + delay); lg.gain.linearRampToValueAtTime(f * depth, t + delay + 0.3);
+    l.connect(lg); for (const o of oscs) lg.connect(o.frequency);
+  }
   let distCurve = null;
-  const getDist = () => {
+  const dist = () => {
     if (distCurve) return distCurve;
-    const n = 1024, k = 28; distCurve = new Float32Array(n);
+    const n = 1024, k = 24; distCurve = new Float32Array(n);
     for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; distCurve[i] = (1 + k) * x / (1 + k * Math.abs(x)); }
     return distCurve;
   };
-  function tone(bus, f, t, dur, instName, volMul) {
-    const I = INST[instName] || INST.lead;
-    const stopAt = t + dur + I.r + 0.05;
-    const mix = ctx.createGain();
-    const oscs = [];
-    const mk = (type, fq, det) => { const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(fq, t); if (det) o.detune.value = det; o.connect(mix); oscs.push(o); return o; };
-    mk(I.type, f, 0);
-    if (I.det) mk(I.type, f, I.det).detune.value = I.det; // 少しずらして厚く
-    if (I.bellh) { const o = mk('sine', f * 4, 0); const hg = ctx.createGain(); o.disconnect(); o.connect(hg); hg.connect(mix); hg.gain.setValueAtTime(0.35, t); hg.gain.exponentialRampToValueAtTime(0.001, t + 0.25); }
-    if (I.vib) { const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = I.vib; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.005, t + Math.min(0.25, dur)); l.connect(lg); for (const o of oscs) lg.connect(o.frequency); l.start(t); l.stop(stopAt); }
-    let node = mix;
-    if (I.dist) { const ws = ctx.createWaveShaper(); ws.curve = getDist(); ws.oversample = '2x'; node.connect(ws); node = ws; }
-    if (I.lp) {
-      const f2 = ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.setValueAtTime(I.pluck ? I.lp * 3 : I.lp, t);
-      if (I.pluck) f2.frequency.exponentialRampToValueAtTime(I.lp * 0.5, t + 0.12);
-      node.connect(f2); node = f2;
-    }
-    const g = ctx.createGain(); node.connect(g); g.connect(bus);
-    env(g, t, I.a, I.vol * (volMul || 1), I.d, I.s, dur, I.r);
-    for (const o of oscs) { o.start(t); o.stop(stopAt); }
-  }
-  function noise(bus, t, dur, type, fq, vol, q) {
-    const s = ctx.createBufferSource(); s.buffer = noiseBuf;
-    const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = fq; if (q) f.Q.value = q;
-    const g = ctx.createGain(); s.connect(f); f.connect(g); g.connect(bus);
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.02);
-  }
-  function kick(bus, t, vol) {
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
-    g.gain.setValueAtTime(vol || 0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-    o.connect(g); g.connect(bus); o.start(t); o.stop(t + 0.2);
-  }
-  const DRUM = {
-    k: t => kick(bgmBus, t, 0.45),
-    s: t => noise(bgmBus, t, 0.12, 'bandpass', 1800, 0.25, 0.8),
-    h: t => noise(bgmBus, t, 0.03, 'highpass', 7000, 0.08),
-    x: t => { kick(bgmBus, t, 0.45); noise(bgmBus, t, 0.03, 'highpass', 7000, 0.08); },
-    t: t => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(70, t + 0.25); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3); o.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + 0.35); },
-    // ロックの太鼓：強いスネア・クラッシュ・オープンハイハット・低いタム
-    S: t => { noise(bgmBus, t, 0.16, 'bandpass', 1500, 0.36, 0.7); const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.08); g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1); o.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + 0.12); },
-    c: t => { kick(bgmBus, t, 0.5); noise(bgmBus, t, 1.1, 'highpass', 5000, 0.16); },
-    o: t => noise(bgmBus, t, 0.18, 'highpass', 6500, 0.07),
-    l: t => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(80, t); o.frequency.exponentialRampToValueAtTime(52, t + 0.3); g.gain.setValueAtTime(0.38, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); o.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + 0.4); },
-    K: t => { kick(bgmBus, t, 0.5); noise(bgmBus, t, 0.16, 'bandpass', 1500, 0.32, 0.7); },
+  // 楽器：V[名前](出口, 周波数の並び, 時刻, 長さ, 強さ)
+  const V = {};
+  const each = fn => (out, fs, t, dur, v) => { for (const f of fs) fn(out, f, t, dur, v / Math.sqrt(Math.max(1, fs.length) * 0.7)); };
+  // リードシンセ：のこぎりと矩形を少しずらして重ね、明るいフィルター
+  V.lead = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.25;
+    const a = osc('bright', f, t, end), b = osc('reed', f, t, end); a.detune.value = -6; b.detune.value = 6;
+    const bg = gn(0.55), g = gn(0); a.connect(g); b.connect(bg); bg.connect(g); g.connect(out);
+    if (dur > 0.25) vib([a, b], f, t, 5.6, 0.005, 0.22, end);
+    amp(g, t, dur, 0.008, 0.1 * v, 0.2, 0.8, 0.14);
+  });
+  // やわらかいリード（ホーム）
+  V.soft = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.35;
+    const a = osc('triangle', f, t, end), b = osc('soft', f, t, end); b.detune.value = 4;
+    const bg = gn(0.4), g = gn(0); a.connect(g); b.connect(bg); bg.connect(g); g.connect(out);
+    if (dur > 0.3) vib([a, b], f, t, 5, 0.004, 0.25, end);
+    amp(g, t, dur, 0.02, 0.2 * v, 0.3, 0.75, 0.2);
+  });
+  // FM 風のブラス：変調の深さが立ち上がりで開いて、少し戻る。下からしゃくり上げる。のこぎりの層で厚く
+  V.brass = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.3;
+    const car = osc('sine', f, t, end), mod = osc('sine', f, t, end), mg = gn(0);
+    car.frequency.setValueAtTime(f * 0.97, t); car.frequency.exponentialRampToValueAtTime(f, t + 0.05);
+    mg.gain.setValueAtTime(0, t); mg.gain.linearRampToValueAtTime(f * 3.6, t + 0.05); mg.gain.setTargetAtTime(f * 1.8, t + 0.05, 0.15); mg.gain.setTargetAtTime(f * 0.4, t + dur, 0.06);
+    mod.connect(mg); mg.connect(car.frequency);
+    const s1 = osc('warm', f, t, end); s1.detune.value = 8;
+    const sg = gn(0); s1.connect(sg);
+    sg.gain.setValueAtTime(0.15, t); sg.gain.linearRampToValueAtTime(0.5, t + 0.06); sg.gain.setTargetAtTime(0.38, t + 0.06, 0.2);
+    const cg = gn(0.6); car.connect(cg);
+    if (dur > 0.45) vib([car, s1], f, t, 5.2, 0.004, 0.3, end);
+    const g = gn(0); cg.connect(g); sg.connect(g); g.connect(out);
+    amp(g, t, dur, 0.035, 0.12 * v, 0.25, 0.75, 0.16);
+  });
+  // FM 風のエレピ：胴の鳴り（1:1）と、叩いた瞬間の金属の音（1:14）
+  V.epiano = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.45;
+    const c1 = osc('sine', f, t, end), m1 = osc('sine', f, t, end), g1 = gn(0);
+    g1.gain.setValueAtTime(f * 1.6 * v, t); g1.gain.setTargetAtTime(f * 0.25, t, 0.35);
+    m1.connect(g1); g1.connect(c1.frequency);
+    const c2 = osc('sine', f, t, t + 0.4), m2 = osc('sine', f * 14, t, t + 0.4), g2 = gn(0);
+    g2.gain.setValueAtTime(f * 1.4, t); g2.gain.setTargetAtTime(0, t, 0.025);
+    m2.connect(g2); g2.connect(c2.frequency);
+    const tg = gn(0); tg.gain.setValueAtTime(0.35, t); tg.gain.setTargetAtTime(0, t, 0.06); c2.connect(tg);
+    const g = gn(0); c1.connect(g); tg.connect(g); g.connect(out);
+    const p = g.gain, peak = 0.13 * v;
+    p.setValueAtTime(0, t); p.linearRampToValueAtTime(peak, t + 0.003);
+    p.setTargetAtTime(0, t + 0.003, f < 300 ? 0.9 : 0.6);
+    p.setTargetAtTime(0, t + dur, 0.08);
+  });
+  // ベル（きらめき）
+  V.bell = each((out, f, t, dur, v) => {
+    const end = t + dur + 1.6;
+    const c = osc('sine', f, t, end), m = osc('sine', f * 3.5, t, end), mg = gn(0);
+    mg.gain.setValueAtTime(f * 2, t); mg.gain.setTargetAtTime(f * 0.2, t, 0.3);
+    m.connect(mg); mg.connect(c.frequency);
+    const g = gn(0); c.connect(g); g.connect(out);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.09 * v, t + 0.003); g.gain.setTargetAtTime(0, t + 0.003, 0.45);
+  });
+  // パッド・ストリングス
+  V.pad = each((out, f, t, dur, v) => {
+    const end = t + dur + 1.0;
+    const a = osc('soft', f, t, end), b = osc('soft', f, t, end); a.detune.value = -10; b.detune.value = 10;
+    const g = gn(0); a.connect(g); b.connect(g); g.connect(out);
+    amp(g, t, dur, 0.35, 0.045 * v, 0.4, 0.9, 0.7);
+  });
+  V.strings = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.8;
+    const os = [-10, 10].map(dt => { const o = osc('warm', f, t, end); o.detune.value = dt; return o; });
+    const g = gn(0); for (const o of os) o.connect(g); g.connect(out);
+    vib(os, f, t, 5.4, 0.004, 0.3, end);
+    amp(g, t, dur, 0.1, 0.05 * v, 0.3, 0.9, 0.45);
+  });
+  // ひずんだギター（単音）・刻み（和音をまとめてひずませる）
+  V.guitar = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.25;
+    const a = osc('sawtooth', f, t, end), b = osc('sawtooth', f, t, end); a.detune.value = -8; b.detune.value = 8;
+    const pre = gn(0.5); a.connect(pre); b.connect(pre);
+    const ws = E.ctx.createWaveShaper(); ws.curve = dist(); pre.connect(ws);
+    const fl = filt('lowpass', 3600, 1); ws.connect(fl);
+    if (dur > 0.25) vib([a, b], f, t, 5.8, 0.006, 0.18, end);
+    const g = gn(0); fl.connect(g); g.connect(out);
+    amp(g, t, dur, 0.005, 0.06 * v, 0.2, 0.85, 0.1);
+  });
+  V.power = (out, fs, t, dur, v) => {
+    const end = t + dur + 0.2, pre = gn(0.5);
+    fs.forEach((f, i) => { const o = osc('sawtooth', f, t, end); o.detune.value = i % 2 ? 7 : -7; o.connect(pre); });
+    const ws = E.ctx.createWaveShaper(); ws.curve = dist(); pre.connect(ws);
+    const fl = filt('lowpass', 2300, 0.9); ws.connect(fl);
+    const g = gn(0); fl.connect(g); g.connect(out);
+    amp(g, t, dur, 0.003, 0.05 * v, 0.12, 0.5, 0.05);
   };
+  // アルペジオ（短く弾く矩形）
+  V.arp = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.3;
+    const a = osc('square', f, t, end), fl = filt('lowpass', f * 8, 3);
+    fl.frequency.setValueAtTime(Math.min(f * 8, 9000), t); fl.frequency.setTargetAtTime(f * 2, t, 0.05);
+    a.connect(fl);
+    const g = gn(0); fl.connect(g); g.connect(out);
+    amp(g, t, dur, 0.002, 0.06 * v, 0.15, 0.15, 0.06);
+  });
+  // ベース：スラップ（叩いた瞬間にフィルターが開く）・ピック弾き
+  V.slap = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.2;
+    const a = osc('sawtooth', f, t, end), s = osc('sine', f, t, end);
+    const fl = filt('lowpass', f, 4.5);
+    fl.frequency.setValueAtTime(Math.min(f * 28, 5200), t); fl.frequency.setTargetAtTime(f * 2.5, t, 0.045);
+    a.connect(fl);
+    const sg = gn(0.7); s.connect(sg);
+    const g = gn(0); fl.connect(g); sg.connect(g); g.connect(out);
+    amp(g, t, dur, 0.002, 0.24 * v, 0.25, 0.5, 0.05);
+  });
+  V.bass = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.2;
+    const a = osc('sawtooth', f, t, end), s = osc('sine', f, t, end);
+    const fl = filt('lowpass', f * 3, 1.2);
+    fl.frequency.setValueAtTime(Math.min(f * 9, 3000), t); fl.frequency.setTargetAtTime(f * 3, t, 0.08);
+    a.connect(fl);
+    const sg = gn(0.6); s.connect(sg);
+    const g = gn(0); fl.connect(g); sg.connect(g); g.connect(out);
+    amp(g, t, dur, 0.004, 0.2 * v, 0.2, 0.8, 0.06);
+  });
 
-  // ---------- 曲（拍は8分音符を1とする。「音:長さ」、和音は「+」、休符は R、「*回数」でくり返し） ----------
-  // どれもこのゲームのための書き下ろし。90年代後半の家庭用競馬ゲームのような、ギターとブラスのロック・フュージョンの調子
-  // コード名から、1小節ぶんの伴奏を作る道具
-  const PC = { D: 'D3+A3', A: 'A2+E3', Bm: 'B2+F#3', G: 'G2+D3', Em: 'E3+B3', 'F#m': 'F#2+C#3', Bb: 'Bb2+F3', C: 'C3+G3', B: 'B2+F#3', Am: 'A2+E3', F: 'F2+C3', E: 'E3+B3', Dm: 'D3+A3' };
-  const BS = { D: 'D2', A: 'A1', Bm: 'B1', G: 'G1', Em: 'E2', 'F#m': 'F#1', Bb: 'Bb1', C: 'C2', B: 'B1', Am: 'A1', F: 'F1', E: 'E2', Dm: 'D2' };
-  const power = chords => chords.map(c => `${PC[c]}*8`).join(' | ');
-  const rockBass = chords => chords.map(c => `${BS[c]}*8`).join(' | ');
-  // フュージョンのスラップ（根音・オクターブ上・7度）
-  const slapBar = (r, o, s7) => `${r}2 R:1 ${o}3 ${r}2 R:1 ${r}2 ${s7} ${o}3`;
-  // エレピの刻み（裏拍）
-  const comp = v => `R:1 ${v}:1 R:2 ${v}:1 R:1 ${v}:2`;
-  const ROCK = 'k.h.S.h.k.k.S.h.', ROCK2 = 'k.h.S.hkk.h.S.h.', CRASH = 'c.h.S.h.k.k.S.h.';
-  const FILL = 'k.h.S.h.SSSSllll', FILL2 = 'SSSSSSllllllK.K.';
-  const FUNK = 'k.h.S.hkh.k.S.ho', FUNKF = 'k.h.S.hkS.SSS.l.';
-  const SONGS = {
-    // タイトル：ニ長調、明るく駆け出すロック
-    title: {
-      bpm: 152, loop: true,
-      tracks: [
-        { inst: 'guitar', seq: 'D5:2 E5:1 F#5:1 A5:3 F#5:1 | E5:2 C#5:2 A4:4 | B4:2 D5:1 F#5:1 B5:3 A5:1 | G5:4 F#5:2 E5:2 | E5:2 G5:1 B5:1 E6:3 D6:1 | C#6:2 B5:2 A5:2 E5:2 | F#5:2 A5:2 D6:2 C#6:1 D6:1 | E6:6 R:2 | D6:3 B5:1 G5:2 D6:2 | E6:3 C#6:1 A5:2 E6:2 | F#6:3 E6:1 C#6:2 A5:2 | B5:4 F#5:4 | G5:2 B5:2 D6:2 G6:2 | F#6:2 E6:2 C#6:2 A5:2 | Bb5:2 D6:2 F6:2 D6:2 | E6:4 C#6:2 A5:2' },
-        { inst: 'power', seq: power(['D', 'A', 'Bm', 'G', 'Em', 'A', 'D', 'A', 'G', 'A', 'F#m', 'Bm', 'G', 'A', 'Bb', 'A']) },
-        { inst: 'ebass', seq: rockBass(['D', 'A', 'Bm', 'G', 'Em', 'A', 'D', 'A', 'G', 'A', 'F#m', 'Bm', 'G', 'A', 'Bb', 'A']) },
-        { inst: 'brass', seq: 'D4+F#4+A4:2 R:6 | R:8 | R:8 | G4+B4+D5:1 R:1 G4+B4+D5:1 R:5 | E4+G4+B4:2 R:6 | R:8 | R:8 | A4+C#5+E5:1 R:1 A4+C#5+E5:1 R:1 A4+C#5+E5:4 | G4+B4+D5:2 R:6 | R:8 | R:8 | B4+D5+F#5:1 R:1 B4+D5+F#5:1 R:5 | G4+B4+D5:2 R:6 | R:8 | Bb4+D5+F5:2 R:2 Bb4+D5+F5:2 R:2 | A4+C#5+E5:6 R:2', vol: 0.8 },
-        { drum: CRASH + ROCK.repeat(6) + FILL + CRASH + ROCK2.repeat(6) + FILL2 },
-      ],
-    },
-    // ホーム：ヘ長調のフュージョン。スラップベースとエレピ、シンセの歌
-    home: {
-      bpm: 116, loop: true,
-      tracks: [
-        { inst: 'synth', seq: 'R:2 D5:1 F5:1 G5:2 Bb5:2 | A5:1 G5:1 E5:2 C5:2 R:2 | R:1 C5:1 E5:1 F5:1 A5:3 G5:1 | F5:4 R:2 A4:1 C5:1 | D5:2 F5:1 A5:1 Bb5:2 D6:2 | C6:1 Bb5:1 G5:2 E5:2 G5:2 | A5:3 G5:1 E5:2 C5:2 | F#5:4 A5:2 C6:2 | D6:3 C6:1 A5:2 F5:2 | G5:2 Bb5:1 C6:1 E5:2 G5:2 | A5:2 C6:1 E6:1 D6:2 C6:2 | A5:4 R:2 F5:1 G5:1 | Bb5:2 A5:1 G5:1 F5:2 D5:2 | C#5:2 E5:1 G5:1 A5:2 C#6:2 | D6:3 C6:1 A5:2 F5:2 | E5:2 G5:2 Bb5:2 C6:2' },
-        { inst: 'epiano', seq: [comp('F4+Bb4+D5'), comp('E4+Bb4+D5'), comp('E4+A4+C5'), comp('F4+A4+C5'), comp('F4+Bb4+D5'), comp('E4+Bb4+D5'), comp('G4+C5+E5'), comp('F#4+C5+E5'), comp('D4+F4+A4'), comp('E4+Bb4+D5'), comp('G4+C5+E5'), comp('F4+A4+C5'), comp('F4+Bb4+D5'), comp('G4+C#5+E5'), comp('F4+A4+C5'), comp('E4+Bb4+D5')].join(' | ') },
-        { inst: 'slap', seq: [slapBar('G', 'G', 'F3'), slapBar('C', 'C', 'Bb2'), slapBar('F', 'F', 'E3'), slapBar('D', 'D', 'C3'), slapBar('G', 'G', 'F3'), slapBar('C', 'C', 'Bb2'), slapBar('A', 'A', 'G3'), slapBar('D', 'D', 'C3'), slapBar('Bb', 'Bb', 'A2'), slapBar('C', 'C', 'Bb2'), slapBar('A', 'A', 'G3'), slapBar('D', 'D', 'C3'), slapBar('G', 'G', 'F3'), slapBar('A', 'A', 'G3'), slapBar('D', 'D', 'C3'), slapBar('C', 'C', 'Bb2')].join(' | ') },
-        { drum: FUNK.repeat(7) + FUNKF + FUNK.repeat(7) + FUNKF },
-      ],
-    },
-    // パドック：イ短調、少し張りつめて
-    paddock: {
-      bpm: 126, loop: true,
-      tracks: [
-        { inst: 'synth', seq: 'A4 C5 E5 A5 E5 C5 A4 C5 | F4 A4 C5 F5 C5 A4 F4 A4 | G4 B4 D5 G5 D5 B4 G4 B4 | E4 G#4 B4 E5 B4 G#4 E4 G#4 | A4 C5 E5 A5 E5 C5 A4 C5 | F4 A4 C5 F5 C5 A4 F4 A4 | D4 F4 A4 D5 A4 F4 D4 F4 | E4 G#4 B4 E5 G#5:2 B5:2', vol: 0.8 },
-        { inst: 'guitar', seq: 'R:8 | R:8 | R:8 | R:4 B5:2 G#5:2 | A5:6 C6:2 | F5:6 A5:2 | D6:4 C6:2 A5:2 | B5:6 R:2', vol: 0.8 },
-        { inst: 'ebass', seq: 'A1:3 A1:1 R:2 A1:2 | F1:3 F1:1 R:2 F1:2 | G1:3 G1:1 R:2 G1:2 | E2:3 E2:1 R:2 E2:2 | A1:3 A1:1 R:2 A1:2 | F1:3 F1:1 R:2 F1:2 | D2:3 D2:1 R:2 D2:2 | E2:3 E2:1 R:2 E2:2' },
-        { drum: ('k...h...S...h.h.').repeat(7) + 'k...h...S.S.SSll' },
-      ],
-    },
-    // レース：ホ短調、速いロック
-    race: {
-      bpm: 172, loop: true,
-      tracks: [
-        { inst: 'guitar', seq: 'E5 G5 B5 E6 D6 B5 G5 B5 | C6:2 B5:1 G5:1 E5:2 G5:2 | D6 A5 F#5 D5 F#5 A5 D6 E6 | F#6:3 E6:1 D#6:2 B5:2 | E6:2 B5:1 G5:1 E5:2 G5:1 B5:1 | C6:2 E6:2 G6:2 E6:2 | A5:2 C6:1 E6:1 D6:2 C6:2 | B5:2 D#6:2 F#6:4 | G5:3 A5:1 B5:2 D6:2 | F#5:3 G5:1 A5:2 D6:2 | E6:4 D6:2 B5:2 | C6:4 E6:2 G6:2 | A5:3 G5:1 E5:2 C6:2 | D6:3 E6:1 F#6:2 A5:2 | B5:4 A5:2 F#5:2 | D#6:2 F#6:2 B6:4' },
-        { inst: 'power', seq: power(['Em', 'C', 'D', 'B', 'Em', 'C', 'Am', 'B', 'G', 'D', 'Em', 'C', 'Am', 'D', 'B', 'B']) },
-        { inst: 'ebass', seq: rockBass(['Em', 'C', 'D', 'B', 'Em', 'C', 'Am', 'B', 'G', 'D', 'Em', 'C', 'Am', 'D', 'B', 'B']) },
-        { inst: 'brass', seq: 'E4+G4+B4:2 R:6 | R:8 | R:8 | B3+D#4+F#4:1 R:1 B3+D#4+F#4:1 R:5 | R:8 | R:8 | R:8 | B3+D#4+F#4:2 R:2 B3+D#4+F#4:4 | G4+B4+D5:2 R:6 | R:8 | R:8 | R:8 | R:8 | R:8 | B3+D#4+F#4:2 R:2 B3+D#4+F#4:2 R:2 | B3+D#4+F#4:8', vol: 0.8 },
-        { drum: CRASH + ROCK2.repeat(6) + FILL + CRASH + ROCK2.repeat(6) + FILL2 },
-      ],
-    },
-    // 発走前のファンファーレ（書き下ろし）
-    fanfare: {
-      bpm: 116, loop: false,
-      tracks: [
-        { inst: 'brass', seq: 'Bb4:1 D5:1 F5:1 Bb5:3 R:2 | F5:1 Bb5:1 D6:1 C6:2 Bb5:2 R:1 | A5:2 C6:2 F6:4 | Eb6:2 D6:2 C6:2 A5:2 | Bb5+D6+F6:10 R:2' },
-        { inst: 'brass', seq: 'R:8 | R:8 | F5:2 A5:2 C6:4 | C6:2 Bb5:2 A5:2 F5:2 | D5+F5+Bb5:10 R:2', vol: 0.7 },
-        { inst: 'bass', seq: 'Bb2:6 R:2 | Bb2:6 R:2 | F2:8 | F2:8 | Bb1:10 R:2' },
-        { drum: '................................t.t.t.t.t.t.t.t.ttttttttx.......' },
-      ],
-    },
-    // 勝ったとき：ギターとブラスで駆け上がる
-    victory: {
-      bpm: 150, loop: false,
-      tracks: [
-        { inst: 'guitar', seq: 'C5 E5 G5 C6 E6:2 D6:2 | C6:2 A5:2 B5:2 D6:2 | C6:8' },
-        { inst: 'brass', seq: 'C5+E5+G5:2 R:2 C5+E5+G5:1 R:1 D5+F5+A5:2 | F5+A5+C6:4 G5+B5+D6:4 | C5+E5+G5+C6:8' },
-        { inst: 'power', seq: 'C3+G3*8 | F2+C3*4 G2+D3*4 | C3+G3:8' },
-        { inst: 'ebass', seq: 'C2:4 C2:2 D2:2 | F1:4 G1:4 | C2:8' },
-        { drum: 'c.h.S.h.k.k.S.h.' + 'k.k.S.k.SSSSllll' + 'c...............' },
-      ],
-    },
+  // ---------- 太鼓（雑音とピッチの下がる正弦） ----------
+  function hit(out, t, dur, type, f, vol, tc, q) {
+    const s = E.ctx.createBufferSource(); s.buffer = E.noise;
+    const fl = filt(type, f, q), g = gn(0);
+    s.connect(fl); fl.connect(g); g.connect(out);
+    g.gain.setValueAtTime(vol, t); g.gain.setTargetAtTime(0, t, tc);
+    s.start(t, Math.random() * 1.5); s.stop(t + dur);
+  }
+  function drop(out, t, f0, f1, fall, vol, tc, type) {
+    const o = osc(type || 'sine', f0, t, t + tc * 6 + 0.05), g = gn(0);
+    o.frequency.exponentialRampToValueAtTime(f1, t + fall);
+    o.connect(g); g.connect(out);
+    g.gain.setValueAtTime(vol, t); g.gain.setTargetAtTime(0, t + 0.005, tc);
+  }
+  const DR = {
+    k: (o, t, v) => { drop(o, t, 160, 46, 0.09, 0.9 * v, 0.1); hit(o, t, 0.03, 'highpass', 2500, 0.25 * v, 0.006); },
+    s: (o, t, v) => { hit(o, t, 0.3, 'highpass', 1100, 0.45 * v, 0.055); hit(o, t, 0.15, 'bandpass', 2800, 0.25 * v, 0.03, 0.8); drop(o, t, 220, 170, 0.05, 0.35 * v, 0.035, 'triangle'); },
+    h: (o, t, v) => hit(o, t, 0.07, 'highpass', 7500, 0.14 * v, 0.012),
+    o: (o, t, v) => hit(o, t, 0.4, 'highpass', 7000, 0.12 * v, 0.09),
+    c: (o, t, v) => { hit(o, t, 2.4, 'highpass', 3800, 0.22 * v, 0.5); hit(o, t, 1.2, 'bandpass', 5500, 0.12 * v, 0.25, 0.6); },
+    r: (o, t, v) => hit(o, t, 0.7, 'bandpass', 7200, 0.12 * v, 0.14, 1.2),
+    t: (o, t, v) => { drop(o, t, 220, 140, 0.3, 0.55 * v, 0.11); hit(o, t, 0.05, 'lowpass', 1800, 0.12 * v, 0.015); },
+    m: (o, t, v) => { drop(o, t, 160, 100, 0.3, 0.55 * v, 0.12); hit(o, t, 0.05, 'lowpass', 1500, 0.12 * v, 0.015); },
+    l: (o, t, v) => { drop(o, t, 112, 70, 0.32, 0.6 * v, 0.14); hit(o, t, 0.05, 'lowpass', 1200, 0.12 * v, 0.015); },
+    T: (o, t, v) => { drop(o, t, 96, 88, 0.5, 0.6 * v, 0.3); drop(o, t, 146, 140, 0.4, 0.2 * v, 0.2); hit(o, t, 0.1, 'lowpass', 320, 0.3 * v, 0.04); },
   };
-  AU.SONGS = SONGS;
+  const VEL = { X: 1, x: 0.7, g: 0.28 };
+  // 太鼓の置き場所（左右・響き）
+  const DMIX = { k: { rev: 0.04 }, s: { rev: 0.28 }, h: { pan: 0.25, vol: 0.9, rev: 0.04 }, o: { pan: 0.25, rev: 0.06 }, c: { pan: -0.3, rev: 0.25 }, r: { pan: -0.2, rev: 0.1 }, t: { pan: -0.25, rev: 0.2 }, m: { pan: 0, rev: 0.2 }, l: { pan: 0.25, rev: 0.2 }, T: { rev: 0.35 } };
 
-  // 「音:長さ」を [{f:[周波数], len}] に
-  function parse(seq) {
-    const out = [];
+  // ---------- 曲の書式 ----------
+  // 旋律：「音:長さ」を空白で並べる。長さは8分音符を1とする（0.5 で16分）。和音は「+」、休符は R、「*回数」でくり返し、
+  //       「@楽器」で以後の楽器を替える。小節の区切り「|」は読み飛ばす（長さの確かめに使う）
+  // 太鼓：{ k: 'X...x...', s: ..., h: ... } のように太鼓ごとの列。1文字が16分音符。X 強く・x 普通・g 弱く・. 休み
+  // 曲（SONGS）は { bpm, loop, loopStart（くり返しの始まり。8分音符で数える）, length, tracks: [{ name, mix, seq } | { name, drum }] }
+  function parseSeq(seq, inst0) {
+    const out = []; let p = 0, inst = inst0 || 'lead';
     for (const tok0 of seq.replace(/\|/g, ' ').split(/\s+/).filter(Boolean)) {
-      // 「音:長さ*回数」でくり返し
+      if (tok0[0] === '@') { inst = tok0.slice(1); continue; }
       const [tok, rep] = tok0.split('*');
       const [n, l] = tok.split(':');
       const len = l ? +l : 1;
-      for (let i = 0; i < (rep ? +rep : 1); i++) out.push({ f: n === 'R' ? [] : n.split('+').map(freq).filter(Boolean), len });
+      const notes = n === 'R' ? [] : n.split('+').map(midi);
+      for (let i = 0; i < (rep ? +rep : 1); i++) {
+        if (notes.length) out.push({ p, len, notes, inst, bad: notes.some(x => x == null) || !(len > 0) });
+        else if (!(len > 0)) out.push({ p, len, notes, inst, bad: true });
+        p += len;
+      }
     }
-    return out;
-  }
-  function compile(song) {
-    return song.tracks.map(tr => tr.drum ? { drum: tr.drum.split(''), pos: 0 } : { inst: tr.inst, vol: tr.vol || 1, notes: parse(tr.seq), pos: 0 });
+    return { events: out, length: p };
   }
 
-  // ---------- BGM の順番待ち（先読みで音を置く） ----------
-  AU.bgm = function (name) {
-    if (!ctx) { wantSong = name; return; }
-    if (cur && cur.name === name) return;
-    AU.stopBgm();
-    const song = SONGS[name];
-    if (!song) return;
-    const eighth = 60 / song.bpm / 2;
-    const tracks = compile(song);
-    const t0 = ctx.currentTime + 0.08;
-    for (const tr of tracks) tr.next = t0;
-    cur = { name, song, tracks, eighth, ended: false };
-    const tick = () => {
-      if (!cur) return;
-      const until = ctx.currentTime + 0.25;
-      let alive = false;
-      for (const tr of cur.tracks) {
-        if (tr.drum) {
-          const step = cur.eighth / 2; // 打楽器は16分
-          while (tr.next < until) {
-            if (tr.pos >= tr.drum.length) { if (!cur.song.loop) break; tr.pos = 0; }
-            const c = tr.drum[tr.pos++];
-            if (DRUM[c]) DRUM[c](tr.next);
-            tr.next += step;
-          }
-          if (tr.pos < tr.drum.length || cur.song.loop) alive = true;
-        } else {
-          while (tr.next < until) {
-            if (tr.pos >= tr.notes.length) { if (!cur.song.loop) break; tr.pos = 0; }
-            const n = tr.notes[tr.pos++];
-            const dur = n.len * cur.eighth;
-            for (const f of n.f) tone(bgmBus, f, tr.next, dur * 0.92, tr.inst, tr.vol);
-            tr.next += dur;
-          }
-          if (tr.pos < tr.notes.length || cur.song.loop) alive = true;
+  // ---------- 伴奏を作る道具（コードの並びと型から） ----------
+  const QUAL = {
+    '': [0, 4, 7], m: [0, 3, 7], 7: [0, 4, 7, 10], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10], sus: [0, 5, 7], sus4: [0, 5, 7], '7sus': [0, 5, 7, 10],
+    add9: [0, 4, 7, 14], 6: [0, 4, 7, 9], m6: [0, 3, 7, 9], 9: [0, 4, 7, 10, 14], maj9: [0, 4, 7, 11, 14], m9: [0, 3, 7, 10, 14], m7b5: [0, 3, 6, 10], dim: [0, 3, 6], 5: [0, 7],
+  };
+  const PCS = s => { const m = midi(s + '4'); return m == null ? null : m % 12; };
+  function parseChord(sym) {
+    const m = /^([A-G][#b]?)([^/]*)(?:\/([A-G][#b]?))?$/.exec(sym);
+    if (!m || !QUAL[m[2]] || PCS(m[1]) == null) return null;
+    const root = PCS(m[1]);
+    return { sym, root, bass: m[3] ? PCS(m[3]) : root, iv: QUAL[m[2]] };
+  }
+  // 「C G/B | Am」：小節は | で区切り、小節の中は空白で等分（「C:6 D:2」と長さも書ける）
+  function parseChords(str, errs, where) {
+    return str.split('|').map(b => {
+      const toks = b.trim().split(/\s+/).filter(Boolean);
+      const out = []; let p = 0;
+      toks.forEach(tk => {
+        const [s, l] = tk.split(':');
+        const len = l ? +l : 8 / toks.length;
+        const c = parseChord(s);
+        if (!c) errs.push(`${where}: コードが読めない ${s}`);
+        out.push({ c: c || parseChord('C'), p, len }); p += len;
+      });
+      if (p !== 8) errs.push(`${where}: 小節の長さが ${p}（8 のはず）`);
+      return out;
+    });
+  }
+  const lowest = (pc, lo) => { let n = lo + ((pc - lo) % 12 + 12) % 12; return n; };
+  const voicing = (c, lo) => c.iv.map(i => lowest((c.root + i) % 12, lo)).sort((a, b) => a - b);
+  const bassNote = (c, kind) => {
+    const r = lowest(c.bass, 28);
+    if (kind === 'o') return r + 12;
+    if (kind === '5') { const f = lowest((c.root + 7) % 12, r); return f; }
+    return r;
+  };
+  const LO = { brass: 60, epiano: 55, pad: 52, strings: 55, arp: 64, power: 40, bell: 72, soft: 60, lead: 64, guitar: 60 };
+  // 型：[位置, 長さ, 何を鳴らすか]（位置と長さは8分音符で、1小節＝8）
+  const PAT = {
+    // ベース
+    rock8: [0, 1, 2, 3, 4, 5, 6, 7].map(p => [p, 1, p === 7 ? 'o' : 'r']),
+    drive: [[0, 1, 'r'], [1, 1, 'r'], [2, 1, 'o'], [3, 1, 'r'], [4, 1, 'r'], [5, 1, 'r'], [6, 1, 'o'], [7, 1, '5']],
+    gallop: [0, 2, 4, 6].flatMap(q => [[q, 1, 'r'], [q + 1, 0.5, 'r'], [q + 1.5, 0.5, q === 6 ? 'o' : 'r']]),
+    slap: [[0, 0.75, 'r'], [1, 0.5, 'o'], [1.5, 0.5, 'r'], [2.5, 0.5, 'r'], [3, 0.5, 'o'], [4, 0.75, 'r'], [5, 0.5, '5'], [5.5, 0.5, 'o'], [6.5, 0.5, 'r'], [7, 0.5, 'o'], [7.5, 0.5, '5']],
+    pump: [[0, 1.5, 'r'], [1.5, 0.5, 'r'], [2, 1, 'o'], [3, 1, '5'], [4, 1.5, 'r'], [5.5, 0.5, 'r'], [6, 1, 'o'], [7, 1, '5']],
+    anthem: [[0, 2, 'r'], [2, 1, 'r'], [3, 1, '5'], [4, 2, 'o'], [6, 1, '5'], [7, 1, 'r']],
+    half: [[0, 3, 'r'], [3, 1, 'r'], [4, 4, '5']],
+    whole: [[0, 8, 'r']],
+    // 和音
+    ep: [[1, 1, 'c'], [2.5, 0.5, 'c'], [3.5, 1, 'c'], [5, 1, 'c'], [6.5, 1.5, 'c']],
+    stab: [[0, 1, 'c'], [3, 1, 'c'], [5, 0.5, 'c'], [6, 1, 'c']],
+    hit: [[0, 2, 'c']],
+    power8: [0, 1, 2, 3, 4, 5, 6, 7].map(p => [p, 1, 'p']),
+    arp16: [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1, 2, 3].map((k, i) => [i * 0.5, 0.5, 'a' + k]),
+    arp8: [0, 1, 2, 3, 4, 3, 2, 1].map((k, i) => [i, 1, 'a' + k]),
+    sus: 'sus',
+  };
+  function genTrack(pat, bars, inst) {
+    const lo = LO[inst] || 55;
+    return bars.map(bar => {
+      if (pat === 'sus') return bar.map(s => `${voicing(s.c, lo).map(nname).join('+')}:${s.len}`).join(' ');
+      let cur = 0; const toks = [];
+      for (const [p, l, w] of pat) {
+        const si = bar.findIndex(s => p >= s.p && p < s.p + s.len), slot = bar[si];
+        const len = Math.min(l, slot.p + slot.len - p); // コードの変わり目で切る
+        let kind = w;
+        if ((kind === 'o' || kind === '5') && p === slot.p && si > 0) kind = 'r'; // 変わり目は根音から
+        let notes;
+        if (kind === 'c') notes = voicing(slot.c, lo);
+        else if (kind === 'p') { const r = lowest(slot.c.root, lo); notes = [r, r + 7, r + 12]; }
+        else if (kind[0] === 'a') { const vc = voicing(slot.c, lo), k = +kind.slice(1); notes = [vc[k % vc.length] + 12 * Math.floor(k / vc.length)]; }
+        else notes = [bassNote(slot.c, kind)];
+        if (p > cur) toks.push(`R:${p - cur}`);
+        toks.push(`${notes.map(nname).join('+')}:${len}`);
+        cur = p + len;
+      }
+      if (cur < 8) toks.push(`R:${8 - cur}`);
+      return toks.join(' ');
+    }).join(' | ');
+  }
+  // 太鼓の型（1小節＝16文字）
+  const DRUMS = {
+    rock: { main: { k: 'X.....x.X.x.....', s: '....X.......X...', h: 'X.x.X.x.X.x.X.x.' } },
+    funk: { main: { k: 'X.....x...X..x..', s: '....X..g.g..X..g', h: 'XxXxXxXxXxXxXx.x', o: '..............X.' }, fill: { k: 'X.....x...X.....', s: '....X..g.XgXXgXX', h: 'XxXxXxXx........' } },
+    half: { main: { k: 'X.....x...x.....', s: '........X.......', h: 'X.x.X.x.X.x.X.x.' } },
+    race: { main: { k: 'X.x...x.X.x...x.', s: '....X......gX...', h: 'X.xxX.xxX.xxX.xx' }, fill: { k: 'X.x...x.X.......', s: '....X...XxXxXXXX', h: 'X.xxX.xx........' } },
+    tension: { main: { k: 'X.....x.X.......', s: '........X.......', h: 'x.X.x.X.x.X.x.X.' } },
+    epic: { main: { k: 'X.......X.....x.', s: '........X.......', r: 'x...x...x...x...', T: 'X...............' }, fill: { k: 'X.......X.......', s: '........ggggXXXX', T: 'X.......XxXxXXXX' } },
+  };
+  const FILL = { k: 'X.....x.X.......', s: '....X...XX......', t: '..........XX....', m: '............XX..', l: '..............XX', h: 'X.x.X.x.........' };
+  const MIX = { lead: { vol: 1, rev: 0.18, dly: 0.2 }, lead2: { vol: 0.8, pan: -0.12, rev: 0.22, dly: 0.06 }, comp: { vol: 0.8, pan: 0.22, rev: 0.2 }, pad: { vol: 0.75, pan: -0.2, rev: 0.35 }, bass: { vol: 1, rev: 0.02 } };
+  const errors = [];
+  const rests = n => Array(n).fill('R:8').join(' | ');
+
+  // 曲を組み立てる：parts（部分ごとのコード・旋律）を intro・form の順に並べ、伴奏と太鼓を型から作る
+  function arrange(name, sp) {
+    const band = Object.assign({ lead: 'lead', lead2: 'brass', comp: null, compInst: 'epiano', pad: null, padInst: 'pad', bass: 'rock8', bassInst: 'bass', drum: 'rock' }, sp.band);
+    const part = k => { const p = sp.parts[k]; if (!p) { errors.push(`${name}: 部分 ${k} が無い`); return { ch: 'C' }; } return p.from ? Object.assign({}, part(p.from), p, { from: null }) : p; };
+    const order = (sp.intro || []).concat(sp.form);
+    const seqs = { lead: [], lead2: [], comp: [], pad: [], bass: [] };
+    const lanes = {}; let bars = 0, loopBars = 0;
+    order.forEach((k, idx) => {
+      if (idx === (sp.intro || []).length) loopBars = bars;
+      const P = Object.assign({}, band, part(k));
+      const where = `${name}.${k}`;
+      const cb = parseChords(P.ch, errors, where), nb = cb.length;
+      const fit = (tr, s, inst) => {
+        const ln = parseSeq(s).length;
+        if (Math.abs(ln - nb * 8) > 1e-6) errors.push(`${where}.${tr}: 長さ ${ln}（${nb * 8} のはず）`);
+        seqs[tr].push(`@${inst} ${s}`);
+      };
+      fit('lead', P.mel || rests(nb), P.lead);
+      fit('lead2', P.mel2 || rests(nb), P.lead2);
+      for (const [tr, inst] of [['comp', P.compInst], ['pad', P.padInst], ['bass', P.bassInst]]) {
+        const v = P[tr];
+        fit(tr, !v ? rests(nb) : PAT[v] ? genTrack(PAT[v], cb, inst) : v, inst);
+      }
+      // 太鼓
+      const L = {};
+      if (P.dr) Object.assign(L, P.dr);
+      else if (P.drum && DRUMS[P.drum]) {
+        const st = DRUMS[P.drum];
+        for (let b = 0; b < nb; b++) {
+          const pat = b === nb - 1 && P.fill !== false ? (st.fill || FILL) : st.main;
+          for (const ln of new Set([...Object.keys(L), ...Object.keys(pat)])) L[ln] = (L[ln] || '.'.repeat(b * 16)) + (pat[ln] || '.'.repeat(16));
+        }
+        if (P.crash !== false) { L.c = 'X' + (L.c || '.'.repeat(nb * 16)).slice(1); L.k = 'X' + (L.k || '.'.repeat(nb * 16)).slice(1); if (L.h) L.h = '.' + L.h.slice(1); }
+      } else if (P.drum && !DRUMS[P.drum]) errors.push(`${where}: 太鼓の型 ${P.drum} が無い`);
+      for (const ln of Object.keys(L)) if (L[ln].length !== nb * 16) errors.push(`${where}.drum.${ln}: 長さ ${L[ln].length}（${nb * 16} のはず）`);
+      for (const ln of new Set([...Object.keys(lanes), ...Object.keys(L)])) lanes[ln] = (lanes[ln] || '.'.repeat(bars * 16)) + (L[ln] || '.'.repeat(nb * 16));
+      bars += nb;
+    });
+    const tracks = Object.keys(seqs).map(k => ({ name: k, mix: Object.assign({}, MIX[k], (sp.mix || {})[k]), seq: seqs[k].join(' | ') }));
+    tracks.push({ name: 'drums', drum: lanes, mix: Object.assign({ vol: 1 }, (sp.mix || {}).drums) });
+    return { bpm: sp.bpm, loop: !!sp.loop, loopStart: sp.loop ? loopBars * 8 : 0, length: bars * 8, tracks };
+  }
+
+  // ---------- 曲（どれもこのゲームのための書き下ろし） ----------
+  // 90年代後半の家庭用ゲームの、ブラスとリードシンセが歌うフュージョン・ロックの調子
+  const MEL = {};
+  // タイトル：ニ長調。堂々と始まり、サビへ向けて高まる
+  MEL.tA = 'F#5:1.5 E5:0.5 F#5:1 A5:3 F#5:1 E5:1 | G#5:2 F#5:1 E5:1 C#5:2 A#4:2 | B4:1.5 C#5:0.5 D5:1 F#5:3 E5:1 D5:1 | E5:2 C5:1 A4:1 F#4:2 A4:1 C5:1 | B4:1.5 D5:0.5 F#5:1 B5:3 A5:1 F#5:1 | A5:2 E5:1 C#5:1 D5:2 F#5:2 | G5:1 F#5:1 E5:1 D5:1 E5:2 B4:2 | D5:3 C#5:1 E5:2 G5:2';
+  MEL.tC = 'B5:3 A5:1 B5:2 D6:2 | C#6:3 B5:1 C#6:2 E6:2 | F#6:4 E6:2 C#6:2 | D6:6 B5:1 C#6:1 | D6:3 E6:1 D6:2 B5:2 | C#6:3 D6:1 E6:2 A5:2 | D6:3 F6:1 E6:3 G6:1';
+  // レース：ホ短調。速く、ハイハットとベースが駆ける
+  MEL.rA = T('E5:1 G5:1 B5:1 E6:2 D6:1 B5:1 G5:1 | F#5:1.5 A5:1.5 D6:3 A5:1 F#5:1 | G5:1.5 E5:1.5 C5:1 E5:1 G5:1 C6:1 E6:1 | D6:3 C6:1 B5:1 A5:1 F#5:2 | E5:1 G5:1 B5:1 E6:2 F#6:1 G6:2 | F#6:3 E6:1 D6:2 A5:2 | C6:2 B5:1 A5:1 G5:2 E5:2 | D#5:2 F#5:2 A5:2 B5:2', -12);
+  MEL.rC = T('E6:3 D6:1 E6:2 G6:2 | F#6:3 E6:1 D6:2 A5:2 | B5:3 A5:1 B5:2 D6:2 | E6:6 R:2 | G6:3 F#6:1 E6:2 C6:2 | D6:3 E6:1 F#6:2 A6:2 | E6:4 F#6:2 E6:2 | D#6:4 B5:2 F#5:2', -12);
+  MEL.hA = 'R:1 C5:1 F5:1 G5:1 A5:2 G5:1 F5:1 | E5:2 G5:1 E5:1 C#5:2 A4:2 | D5:1 E5:1 F5:1 A5:1 C6:2 A5:2 | Bb5:2 G5:1 Eb5:1 A5:2 F5:2 | R:1 D5:1 F5:1 A5:1 C6:3 A5:1 | G5:2 E5:1 C5:1 F#5:2 A5:2 | Bb5:1.5 A5:0.5 G5:1 F5:1 D5:2 F5:2 | G5:4 E5:2 R:2';
+  MEL.pA = 'B4:6 G4:1 A4:1 | B4:3 C5:1 D5:4 | E5:6 D5:1 C5:1 | B4:4 D#5:4 | G5:6 F#5:1 E5:1 | F#5:3 E5:1 D5:4 | C5:3 E5:1 A5:4 | F#5:4 D#5:4';
+  MEL.fA = 'G4:3 C5:1 Eb5:3 D5:1 | C5:6 Eb5:1 F5:1 | G5:3 F5:1 Eb5:2 Bb4:2 | D5:6 F5:1 G5:1 | G5:3 Eb5:1 C6:3 Bb5:1 | Ab5:6 G5:1 F5:1 | Eb5:2 F5:2 Ab5:2 C6:2 | C6:4 B5:4';
+  MEL.fC = 'C6:6 Bb5:1 Ab5:1 | Bb5:6 Ab5:1 G5:1 | G5:8 | R:4 G5:1 C6:1 D6:1 Eb6:1 | Eb6:6 D6:1 C6:1 | D6:6 C6:1 D6:1 | C6:8 | B5:6 R:2';
+  MEL.gA = 'D5:2 F5:2 Bb5:3 A5:1 | A5:3 G5:1 F5:4 | G5:2 Bb5:2 D6:3 C6:1 | Bb5:6 G5:1 Bb5:1 | C6:3 Bb5:1 G5:2 Eb5:2 | F5:3 G5:1 A5:2 C6:2 | D6:3 C6:1 Bb5:2 G5:2 | Bb5:4 A5:4';
+
+  const SPEC = {
+    title: {
+      bpm: 148, loop: true,
+      band: { lead: 'lead', comp: 'ep', bass: 'drive', drum: 'rock' },
+      intro: ['I'], form: ['A', 'A2', 'B', 'C', 'C2'],
+      parts: {
+        I: {
+          ch: 'Bb C | D | Bb C | A7', lead: 'brass', comp: null, pad: 'sus', padInst: 'strings', bass: 'rock8',
+          mel: 'D5+F5:3 D5+F5:1 E5+G5:3 E5+G5:1 | D5+F#5+A5:6 R:2 | D5+F5:3 D5+F5:1 E5+G5:3 E5+A5:1 | E5 F#5 G5 A5 B5 C#6 D6 E6',
+          dr: {
+            k: 'X.....X.X.....X.X...............X.....X.X.....X.X...X...X...X...',
+            s: '......X.......X...........g.g.g.......X.......X.X.X.X.X.XXXXXXXX',
+            c: 'X.......X.......X...............X.......X.......................',
+            T: '................X.......XxXxXXXX................................',
+          },
+        },
+        A: { ch: 'Dmaj7 | C#m7 F#7 | Bm7 | Am7 D7 | Gmaj7 | F#m7 Bm7 | Em7 | A7sus A7', mel: MEL.tA },
+        A2: { from: 'A', mel2: T(MEL.tA, 12), lead2: 'bell' },
+        B: {
+          ch: 'Em7 | F#m7 | Gmaj7 | A/G | F#m7 | Bm7 | Em7 A/G | A7sus A7', drum: 'half',
+          mel: 'B4:1 D5:1 E5:2 R:1 D5:1 E5:1 G5:1 | A5:2 R:1 E5:1 F#5:2 R:2 | B4:1 D5:1 G5:2 R:1 F#5:1 G5:1 B5:1 | C#6:2 R:1 A5:1 B5:2 R:2 | C#6:1.5 B5:0.5 A5:1 F#5:1 A5:2 C#6:2 | D6:1.5 C#6:0.5 B5:1 F#5:1 B5:2 D6:2 | E6:2 D6:1 B5:1 C#6:2 A5:2 | B5:2 A5:1 B5:1 C#6:1 D6:1 E6:2',
+          mel2: 'R:8 | R:6 C#5+E5+A5:1 C#5+E5+A5:1 | R:8 | R:6 E5+A5+C#6:1 E5+A5+C#6:1 | R:8 | R:8 | E5+G5+B5:4 E5+A5+C#6:4 | D5+E5+A5:4 C#5+E5+G5+A5:4',
+        },
+        C: { ch: 'G | A | F#m7 | Bm7 | Em7 | A | Bb C | D', comp: 'power8', compInst: 'power', pad: 'sus', padInst: 'strings', bass: 'rock8', mel: T(MEL.tC + ' | F#6:6 R:2', -12), mel2: T(MEL.tC + ' | F#6:6 R:2', -12) },
+        C2: { from: 'C', ch: 'G | A | F#m7 | Bm7 | Em7 | A | Bb C | A7sus A7', mel: T(MEL.tC + ' | E6:4 D6:2 C#6:2', -12), mel2: T(MEL.tC + ' | E6:4 D6:2 C#6:2', -12) },
+      },
+    },
+    // ホーム・厩舎：ヘ長調のフュージョン。スラップベースとエレピに、やわらかいリードが歌う
+    home: {
+      bpm: 112, loop: true,
+      band: { lead: 'soft', comp: 'ep', bass: 'slap', bassInst: 'slap', drum: 'funk' },
+      form: ['A', 'B', 'A2', 'C'],
+      parts: {
+        A: { ch: 'Fmaj7 | Em7 A7 | Dm7 | Cm7 F7 | Bbmaj7 | Am7 D7 | Gm7 | C7sus C7', mel: MEL.hA },
+        B: {
+          ch: 'Bbmaj7 | C/Bb | Am7 | Dm7 | Gm7 | C7 | Fmaj7 Dm7 | Gm7 C7',
+          mel: 'F5:3 G5:1 A5:2 F5:2 | E5:3 F5:1 G5:2 E5:2 | C5:1 E5:1 G5:1 A5:1 C6:2 B5:1 A5:1 | A5:6 R:2 | Bb5:1 A5:1 G5:1 F5:1 D5:2 Bb4:2 | C5:1 D5:1 E5:1 G5:1 Bb5:2 G5:2 | A5:2 C6:2 D6:2 A5:2 | G5:2 F5:1 D5:1 E5:2 G5:2',
+        },
+        A2: { from: 'A', mel2: T(MEL.hA, -12) },
+        C: { ch: 'Dm7 | Dm7/C | Bbmaj7 | Bbmaj7 | Gm7 | Am7 | Bbmaj7 | C7sus C7', lead: 'bell', bass: 'pump', mel: 'A5:6 R:2 | G5:2 F5:2 E5:4 | D5:6 R:2 | F5:2 E5:2 C5:4 | D5:4 Bb4:4 | C5:4 E5:4 | F5:4 A5:4 | G5:6 R:2', pad: 'sus' },
+      },
+      mix: { lead2: { vol: 0.55 } },
+    },
+    // パドック：ホ短調。歩く馬を見ながら、少し張りつめて
+    paddock: {
+      bpm: 120, loop: true,
+      band: { lead: 'soft', comp: 'arp16', compInst: 'arp', pad: 'sus', padInst: 'strings', bass: 'rock8', drum: 'tension' },
+      form: ['A', 'B', 'A2', 'C'],
+      parts: {
+        A: { ch: 'Em | Em/D | Cmaj7 | B7 | Em | Em/D | Am7 | B7sus B7', mel: MEL.pA },
+        B: {
+          ch: 'Cmaj7 | D | Bm7 | Em | Am7 | D | Gmaj7 | B7', lead: 'brass',
+          mel: 'E5:1 G5:1 B5:2 A5:2 G5:2 | F#5:3 E5:1 D5:4 | D5:1 F#5:1 A5:2 G5:2 F#5:2 | G5:6 R:2 | C6:2 B5:2 A5:2 G5:2 | F#5:2 A5:2 D6:4 | B5:3 A5:1 G5:2 F#5:2 | D#5:2 F#5:2 A5:2 B5:2',
+        },
+        A2: { from: 'A', lead: 'lead', mel2: T(MEL.pA, -12), lead2: 'strings' },
+        C: {
+          ch: 'Em | Em | C | C | Am | Am | B7sus | B7', lead: 'strings', pad: null,
+          mel: 'E4:8 | F#4:8 | G4:8 | E4:8 | A4:8 | C5:8 | B4:8 | D#5:8',
+          mel2: 'R:8 | R:8 | R:8 | R:8 | R:8 | R:8 | B3+E4+F#4:2 R:2 B3+E4+F#4:2 R:2 | B3+D#4+F#4+A4:6 R:2',
+        },
+      },
+      mix: { comp: { vol: 0.6, dly: 0.15 }, bass: { vol: 0.8 } },
+    },
+    // 年末の大レース（グランドフィナーレ）のパドック：ハ短調。重い太鼓と弦とブラスで特別に
+    paddockGF: {
+      bpm: 96, loop: true,
+      band: { lead: 'strings', lead2: 'strings', comp: 'arp8', compInst: 'bell', pad: 'sus', padInst: 'pad', bass: 'anthem', drum: 'epic' },
+      form: ['A', 'B', 'A2', 'C'],
+      parts: {
+        A: { ch: 'Cm | Ab | Eb | Bb | Cm | Ab | Fm7 | G7sus G7', mel: MEL.fA },
+        B: { ch: 'Ab | Bb | Gm7 | Cm | Fm7 | Bb7 | Ebmaj7 | G7sus G7', lead: 'brass', mel: 'C5:2 Eb5:2 Ab5:3 G5:1 | F5:3 D5:1 Bb5:4 | Bb5:2 F5:2 D5:2 G5:2 | Eb5:6 D5:1 Eb5:1 | F5:3 G5:1 Ab5:2 C6:2 | Bb5:3 Ab5:1 F5:2 D5:2 | Eb5:2 G5:2 Bb5:2 D6:2 | C6:4 B5:4' },
+        A2: { from: 'A', lead: 'brass', mel2: T(MEL.fA, -12) },
+        C: { ch: 'Ab | Bb | Cm | Cm | Ab | Bb | G7sus | G7', lead: 'brass', comp: 'stab', compInst: 'brass', mel: MEL.fC, mel2: T(MEL.fC, -12) },
+      },
+      mix: { comp: { vol: 0.5, dly: 0.2 } },
+    },
+    // レースの間（自分で乗るとき）：ホ短調、速いロック。ハイハットとベースが駆け足の拍子
+    race: {
+      bpm: 166, loop: true,
+      band: { lead: 'lead', comp: 'power8', compInst: 'power', bass: 'gallop', drum: 'race' },
+      intro: ['I'], form: ['A', 'A2', 'B', 'C', 'C2', 'D'],
+      parts: {
+        I: { ch: 'Em | Em | C D | B7', lead: 'brass', comp: null, mel: 'E4+G4+B4+E5:2 R:1 E4+G4+B4+E5:1 R:2 E4+G4+B4+E5:2 | R:2 D4+G4+B4+D5:1 R:1 E4+G4+B4+E5:4 | E4+G4+C5+E5:3 E4+G4+C5+E5:1 F#4+A4+D5+F#5:3 F#4+A4+D5+F#5:1 | F#4+A4+B4+D#5:8' },
+        A: { ch: 'Em | D | C | D | Em | D | C | B7', mel: MEL.rA },
+        A2: { from: 'A', mel2: MEL.rA },
+        B: { ch: 'Am7 | Bm7 | Cmaj7 | D | Am7 | Bm7 | Cmaj7 | D', drum: 'half', bass: 'drive', comp: 'stab', compInst: 'brass', mel: T('R:2 A5:1 B5:1 C6:2 B5:1 A5:1 | B5:4 F#5:2 D5:2 | R:2 E5:1 G5:1 B5:2 C6:1 B5:1 | A5:4 D6:4 | R:2 A5:1 B5:1 C6:2 D6:1 E6:1 | F#6:4 D6:2 B5:2 | G6:3 F#6:1 E6:2 D6:2 | F#6:4 A5:2 D6:2', -12) },
+        C: { ch: 'C | D | Bm7 | Em | C | D | B7sus | B7', bass: 'rock8', pad: 'sus', padInst: 'strings', mel: MEL.rC, mel2: MEL.rC },
+        C2: { from: 'C' },
+        D: {
+          ch: 'Em | Em | C | C | Am | Am | B7sus | B7', lead: 'guitar', comp: 'stab', compInst: 'brass',
+          mel: 'E5:1 D5:1 B4:1 G4:1 A4:1 B4:1 D5:1 E5:1 | G5:2 E5:1 D5:1 E5:4 | E5:1 G5:1 E5:1 C5:1 D5:1 E5:1 G5:1 A5:1 | B5:2 A5:1 G5:1 E5:4 | A5:1 G5:1 E5:1 C5:1 D5:1 E5:1 A5:2 | C6:2 B5:1 A5:1 E5:4 | F#5:1 E5:1 F#5:1 A5:1 B5:2 E6:2 | D#6:4 B5:2 F#5:2',
+        },
+      },
+      mix: { comp: { vol: 0.7 } },
+    },
+    // 本馬場入場・発走前のファンファーレ：変ロ長調のブラス
+    fanfare: {
+      bpm: 112,
+      band: { lead: 'brass', lead2: 'brass', pad: 'sus', padInst: 'strings', bass: 'whole', drum: null },
+      form: ['F'],
+      parts: {
+        F: {
+          ch: 'Bb | Cm7 | F | Gm Eb | F7sus F7 | Bb',
+          mel: 'F4:1 Bb4:1 D5:1 F5:3 D5:1 F5:1 | G5:3 F5:1 Eb5:2 C5:2 | D5:1 Eb5:1 F5:1 A5:3 F5:1 A5:1 | Bb5:3 A5:1 G5:2 Bb5:2 | C6:4 A5:4 | Bb5:8',
+          mel2: 'D4:1 F4:1 Bb4:1 D5:3 Bb4:1 D5:1 | Eb5:3 D5:1 C5:2 G4:2 | Bb4:1 C5:1 C5:1 F5:3 C5:1 F5:1 | D5:3 D5:1 Eb5:2 G5:2 | F5:4 Eb5:4 | D5+F5:8',
+          dr: {
+            k: 'X.......X.......X.......X.......X.......X.......X.......X.......X...............X...............',
+            s: '................................................................xxxxxxxxXXXXXXXX................',
+            c: 'X...............................................................................X...............',
+            T: 'X.......X.......X.......X.......X.......X.......X.....X.X.......X.x.X.x.XxXxXXXXX...............',
+          },
+        },
+      },
+    },
+    // グランドフィナーレのファンファーレ：ハ長調で、より大きく
+    fanfareGF: {
+      bpm: 100,
+      band: { lead: 'brass', lead2: 'brass', pad: 'sus', padInst: 'strings', bass: 'whole', drum: null },
+      form: ['F'],
+      parts: {
+        F: {
+          ch: 'C | Am | F | G | Ab Bb | C',
+          mel: 'G4:1 C5:1 E5:1 G5:3 E5:1 G5:1 | A5:3 G5:1 E5:2 C5:2 | F5:1 A5:1 C6:1 F6:3 E6:1 C6:1 | D6:6 B5:1 D6:1 | Eb6:3 C6:1 F6:3 D6:1 | E6:8',
+          mel2: 'E4:1 G4:1 C5:1 E5:3 C5:1 E5:1 | E5:3 E5:1 C5:2 A4:2 | C5:1 F5:1 A5:1 C6:3 A5:1 A5:1 | B5:6 G5:1 B5:1 | C6:3 Ab5:1 D6:3 Bb5:1 | G5+C6:8',
+          dr: {
+            k: 'X.......X.......X.......X.......X.......X.......X.......X.......X.......X.......X...............',
+            s: '........................................................gggggggg....X.......X...XxXxXXXX........',
+            c: 'X...............................................................................X...............',
+            T: 'X.......X.......X.......X.......X.......X.......X.......XxXxXxXxX.......X.......XxXxXxXxX.......',
+            l: '................................................................................................',
+          },
+        },
+      },
+      mix: { lead2: { vol: 0.9 } },
+    },
+    // 勝ったとき：駆け上がって、大きな和音で締める
+    victory: {
+      bpm: 144,
+      band: { lead: 'lead', lead2: 'brass', pad: 'sus', padInst: 'strings', drum: null },
+      form: ['V'],
+      parts: {
+        V: {
+          ch: 'C | F G | Ab Bb | C',
+          mel: 'G4:1 C5:1 E5:1 G5:1 C6:2 B5:1 C6:1 | A5:2 C6:2 B5:2 D6:2 | Eb6:2 C6:2 F6:2 D6:2 | E6:8',
+          mel2: 'G3:1 C4:1 E4:1 G4:1 C5:2 B4:1 C5:1 | A4+C5+F5:2 R:2 B4+D5+G5:2 R:2 | C5+Eb5+Ab5:2 R:2 D5+F5+Bb5:2 R:2 | C5+E5+G5+C6:8',
+          bass: 'C2 C2 C2 C2 C2 C2 C2 C2 | F1 F1 F1 F1 G1 G1 G1 G1 | Ab1 Ab1 Ab1 Ab1 Bb1 Bb1 Bb1 Bb1 | C2:8',
+          dr: {
+            k: 'X.x.X.x.X.x.X.x.X.x.X.x.X.x.X.x.X...X...X...X...X...............',
+            s: '....X.......X.......X.......X...X.XXX.XXXXXXXXXX................',
+            h: 'x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.................................',
+            c: 'X...............................................X...............',
+          },
+        },
+      },
+      mix: { lead: { vol: 0.75 } },
+    },
+    // 負けたとき：短く、次へ向かう明るさで
+    lose: {
+      bpm: 120,
+      band: { lead: 'soft', comp: 'sus', compInst: 'epiano', bass: 'half', bassInst: 'slap', drum: null },
+      form: ['L'],
+      parts: {
+        L: {
+          ch: 'Bbmaj7 | C7 | Fmaj7',
+          mel: 'D5:1 F5:1 A5:2 G5:2 F5:2 | E5:2 F5:1 G5:1 Bb5:2 A5:1 G5:1 | A5:8',
+          dr: { k: 'X.......X.......X.......X...X...X...............', s: '....g.......X.......g.......X...................', h: 'x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.x.................' },
+        },
+      },
+    },
+    // 結果・表彰・記録：変ロ長調、誇らしく
+    glory: {
+      bpm: 92, loop: true,
+      band: { lead: 'brass', lead2: 'strings', comp: 'ep', pad: 'sus', padInst: 'strings', bass: 'anthem', drum: 'rock' },
+      form: ['A', 'B', 'A2'],
+      parts: {
+        A: { ch: 'Bb | F/A | Gm7 | Ebmaj7 | Cm7 | F | Bb/D Eb | F7sus F7', mel: MEL.gA },
+        B: { ch: 'Ebmaj7 | F | Dm7 | Gm7 | Cm7 | F/Eb | Dm7 G7 | Cm7 F7', lead: 'lead', pad: null, mel: 'Eb5:1 F5:1 G5:1 Bb5:1 D6:3 C6:1 | C6:4 A5:2 F5:2 | D5:1 F5:1 A5:2 C6:2 A5:2 | Bb5:6 R:2 | Eb5:1 G5:1 Bb5:2 C6:2 Eb6:2 | C6:3 A5:1 F5:2 Eb5:2 | F5:2 A5:2 B5:2 D6:2 | Eb6:2 C6:2 A5:2 F5:2' },
+        A2: { from: 'A', mel2: T(MEL.gA, -12) },
+      },
+      mix: { lead: { vol: 1.1 }, pad: { vol: 0.6 } },
+    },
+  };
+  const SONGS = {};
+  for (const [k, sp] of Object.entries(SPEC)) SONGS[k] = arrange(k, sp);
+  AU.SONGS = SONGS;
+  AU.T = T;
+
+  // 曲を、鳴らす形（トラックごとの出来事の並び）にする
+  function compile(song) {
+    const tracks = [];
+    for (const tr of song.tracks) {
+      if (tr.drum) {
+        for (const [ln, str] of Object.entries(tr.drum)) {
+          const ev = [];
+          for (let i = 0; i < str.length; i++) if (VEL[str[i]]) ev.push({ p: i / 2, v: VEL[str[i]] });
+          tracks.push({ drum: ln, mix: Object.assign({}, DMIX[ln] || {}, { vol: (DMIX[ln] && DMIX[ln].vol || 1) * (tr.mix.vol || 1) }), events: ev, length: str.length / 2, bad: !DR[ln] || /[^Xxg.]/.test(str) });
+        }
+      } else {
+        const r = parseSeq(tr.seq);
+        tracks.push({ name: tr.name, mix: tr.mix, events: r.events, length: r.length });
+      }
+    }
+    return { bpm: song.bpm, loop: song.loop, loopStart: song.loopStart, length: song.length, tracks };
+  }
+  AU.compile = compile;
+  // 曲の確かめ（テスト用）：書式の誤り・長さ
+  AU.check = function () {
+    const errs = errors.slice(), info = {};
+    for (const [k, s] of Object.entries(SONGS)) {
+      const c = compile(s), sec = 60 / s.bpm / 2;
+      for (const tr of c.tracks) {
+        if (Math.abs(tr.length - s.length) > 1e-6) errs.push(`${k}.${tr.name || tr.drum}: 長さ ${tr.length}（${s.length} のはず）`);
+        if (tr.bad) errs.push(`${k}.${tr.drum}: 太鼓が読めない`);
+        for (const ev of tr.events) {
+          if (ev.bad) errs.push(`${k}.${tr.name}: 音が読めない（${ev.p} 拍目）`);
+          if (!tr.drum && !V[ev.inst]) errs.push(`${k}.${tr.name}: 楽器 ${ev.inst} が無い`);
+          if (ev.notes && ev.notes.some(n => n < 24 || n > 108)) errs.push(`${k}.${tr.name}: 音域の外（${ev.notes.map(nname)}）`);
         }
       }
-      if (!alive && !cur.ended) {
-        cur.ended = true;
-        const endAt = Math.max(...cur.tracks.map(t => t.next));
-        const done = cur.onEnd; const me = cur;
-        setTimeout(() => { if (cur === me) { AU.stopBgm(); if (done) done(); } }, Math.max(0, (endAt - ctx.currentTime) * 1000) + 300);
+      info[k] = { seconds: s.length * sec, loopSeconds: s.loop ? (s.length - s.loopStart) * sec : 0, loop: s.loop, tracks: c.tracks.length, notes: c.tracks.reduce((a, t) => a + t.events.length, 0) };
+    }
+    return { errors: errs, info };
+  };
+
+  // ---------- BGM の順番待ち（先読みで音を置く） ----------
+  function channel(mix) {
+    const c = E.ctx, inp = gn(mix.vol == null ? 1 : mix.vol);
+    let node = inp;
+    if (mix.pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = mix.pan; inp.connect(p); node = p; }
+    node.connect(E.bgmBus);
+    if (mix.rev) { const s = gn(mix.rev); node.connect(s); s.connect(E.rev); }
+    if (mix.dly) { const s = gn(mix.dly); node.connect(s); s.connect(E.dly); }
+    return inp;
+  }
+  function startSong(name, t0) {
+    const song = SONGS[name], c = compile(song), eighth = 60 / song.bpm / 2;
+    E.delay.delayTime.setValueAtTime(eighth * 1.5, t0);
+    const tracks = c.tracks.map(tr => ({ tr, out: channel(tr.mix), i: 0, base: 0, first: tr.events.findIndex(ev => ev.p >= song.loopStart) }));
+    for (const x of tracks) if (x.first < 0) x.first = x.tr.events.length;
+    return { name, song, eighth, t0, tracks, endAt: t0 + song.length * eighth };
+  }
+  function pump(st, until) {
+    const s = st.song, span = s.length - s.loopStart;
+    for (const x of st.tracks) {
+      const ev = x.tr.events;
+      for (let guard = 0; guard < 4096; guard++) {
+        if (x.i >= ev.length) {
+          if (!s.loop || span <= 0 || x.first >= ev.length) break;
+          x.base += span; x.i = x.first;
+        }
+        const e = ev[x.i], at = st.t0 + (x.base + e.p) * st.eighth;
+        if (at >= until) break;
+        if (x.tr.drum) DR[x.tr.drum](x.out, at, e.v);
+        else V[e.inst](x.out, e.notes.map(hz), at, e.len * st.eighth * 0.92, 1);
+        x.i++;
       }
+    }
+  }
+  function fadeOut(st) {
+    const now = E.ctx.currentTime;
+    for (const x of st.tracks) { x.out.gain.cancelScheduledValues(now); x.out.gain.setTargetAtTime(0, now, 0.06); }
+    setTimeout(() => { for (const x of st.tracks) try { x.out.disconnect(); } catch (e) { /* 外れている */ } }, 1500);
+  }
+  // 年末の大レース（GF）には、その場面の特別な曲があればそちらを鳴らす
+  const pick = (name, race) => (race && race.grade === 'GF' && SONGS[name + 'GF']) ? name + 'GF' : name;
+  AU.bgm = function (name0, race) {
+    const name = pick(name0, race);
+    if (!E) { wantSong = [name0, race]; return; }
+    if (cur && cur.name === name) return;
+    AU.stopBgm();
+    if (!SONGS[name]) return;
+    cur = startSong(name, E.ctx.currentTime + 0.08);
+    const me = cur;
+    const tick = () => {
+      if (cur !== me) return;
+      const ahead = globalThis.document && document.hidden ? 1.5 : 0.3;
+      pump(me, E.ctx.currentTime + ahead);
+      if (!me.song.loop && E.ctx.currentTime > me.endAt + 0.5) { const done = me.onEnd; AU.stopBgm(); if (done) done(); }
     };
     tick();
     timer = setInterval(tick, 50);
   };
-  AU.stopBgm = function () { if (timer) clearInterval(timer); timer = null; cur = null; };
+  AU.stopBgm = function () { if (timer) clearInterval(timer); timer = null; if (cur && E) fadeOut(cur); cur = null; };
   AU.current = () => cur && cur.name;
   // 終わりのある曲を鳴らし、終わったら resolve
-  AU.playOnce = function (name) {
+  AU.playOnce = function (name, race) {
     return new Promise(res => {
-      if (!ctx || AU.settings.bgm <= 0) return res();
-      AU.stopBgm(); AU.bgm(name);
+      if (!E || AU.settings.bgm <= 0) return res();
+      AU.stopBgm(); AU.bgm(name, race);
       if (cur) cur.onEnd = res; else res();
     });
   };
+  // 画面ごとの曲
+  AU.songFor = st => st.screen === 'title' || st.screen === 'newgame' ? 'title'
+    : st.screen === 'game' && st.view && (st.view.name === 'jrecord' || st.view.name === 'records') ? 'glory' : 'home';
+  // 曲を音の波形に書き出す（確かめ用。OfflineAudioContext がある所だけ）
+  AU.render = function (name, sec) {
+    const OAC = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext;
+    const s = SONGS[name];
+    if (!OAC || !s) return Promise.reject(new Error('書き出せない'));
+    const eighth = 60 / s.bpm / 2;
+    sec = sec || s.length * eighth + 3;
+    const oc = new OAC(2, Math.ceil(44100 * sec), 44100);
+    // 実際に鳴らすときと同じく、少し先までずつ音を置く（一度に全部置くと、重さを測り違える）
+    const keep = E, eng = makeEngine(oc, BGM_GAIN);
+    const run = fn => { const k = E; E = eng; try { fn(); } finally { E = k; } };
+    let st;
+    run(() => { st = startSong(name, 0.05); pump(st, 0.6); });
+    for (let t = 0.25; t < sec - 0.3; t += 0.25) { const at = t; oc.suspend(at).then(() => { run(() => pump(st, at + 0.6)); oc.resume(); }); }
+    E = keep;
+    return oc.startRendering();
+  };
 
   // ---------- 効果音 ----------
+  function noise(bus, t, dur, type, fq, vol, q) {
+    const s = E.ctx.createBufferSource(); s.buffer = E.noise;
+    const f = filt(type, fq, q), g = gn(0);
+    s.connect(f); f.connect(g); g.connect(bus);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.02);
+  }
   AU.se = function (name) {
-    if (!ctx || AU.settings.se <= 0) return;
-    const t = ctx.currentTime + 0.01;
+    if (!E || AU.settings.se <= 0) return;
+    const c = E.ctx, t = c.currentTime + 0.01, bus = E.seBus;
     const blip = (f1, f2, dur, type, vol) => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
+      const o = c.createOscillator(), g = c.createGain();
       o.type = type || 'square'; o.frequency.setValueAtTime(f1, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
       g.gain.setValueAtTime(vol || 0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.connect(g); g.connect(seBus); o.start(t); o.stop(t + dur + 0.02);
+      o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 0.02);
     };
     if (name === 'click') blip(900, 1300, 0.045, 'square', 0.05);
     else if (name === 'tab') blip(600, 800, 0.05, 'triangle', 0.15);
     else if (name === 'ok') { blip(880, null, 0.06, 'square', 0.06); setTimeout(() => AU.se('_ok2'), 70); }
     else if (name === '_ok2') blip(1320, null, 0.09, 'square', 0.06);
-    else if (name === 'coin') { tone(seBus, freq('B5'), t, 0.07, 'lead', 1.2); tone(seBus, freq('E6'), t + 0.08, 0.3, 'lead', 1.2); }
+    else if (name === 'coin') { V.lead(bus, [freq('B5')], t, 0.07, 1.2); V.lead(bus, [freq('E6')], t + 0.08, 0.3, 1.2); }
     else if (name === 'error') blip(180, 120, 0.25, 'sawtooth', 0.08);
     else if (name === 'week') { blip(500, 760, 0.12, 'triangle', 0.18); }
-    else if (name === 'birth') { ['C6', 'E6', 'G6', 'C7'].forEach((n, i) => tone(seBus, freq(n), t + i * 0.08, 0.25, 'bell', 1.2)); }
-    else if (name === 'whip') { noise(seBus, t, 0.05, 'highpass', 3000, 0.5); noise(seBus, t + 0.01, 0.08, 'bandpass', 1800, 0.35, 2); }
-    else if (name === 'skill') { ['E6', 'B6', 'E7'].forEach((n, i) => tone(seBus, freq(n), t + i * 0.05, 0.18, 'bell', 1.4)); }
-    else if (name === 'gate') { tone(seBus, 1568, t, 0.05, 'bell', 2.5); tone(seBus, 2093, t, 0.05, 'bell', 1.5); noise(seBus, t, 0.25, 'bandpass', 900, 0.35, 1.5); }
+    else if (name === 'birth') { ['C6', 'E6', 'G6', 'C7'].forEach((n, i) => V.bell(bus, [freq(n)], t + i * 0.08, 0.25, 1.5)); }
+    else if (name === 'whip') { noise(bus, t, 0.05, 'highpass', 3000, 0.5); noise(bus, t + 0.01, 0.08, 'bandpass', 1800, 0.35, 2); }
+    else if (name === 'skill') { ['E6', 'B6', 'E7'].forEach((n, i) => V.bell(bus, [freq(n)], t + i * 0.05, 0.18, 1.7)); }
+    else if (name === 'gate') { V.bell(bus, [1568], t, 0.05, 3); V.bell(bus, [2093], t, 0.05, 2); noise(bus, t, 0.25, 'bandpass', 900, 0.35, 1.5); }
   };
 
   // ---------- レースの音（蹄・歓声） ----------
   let race = null;
   AU.raceStart = function () {
-    if (!ctx) return;
+    if (!E) return;
     AU.raceEnd();
-    const crowdSrc = ctx.createBufferSource(); crowdSrc.buffer = noiseBuf; crowdSrc.loop = true;
-    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 0.6;
-    const cg = ctx.createGain(); cg.gain.value = 0.02;
-    crowdSrc.connect(bp); bp.connect(cg); cg.connect(seBus); crowdSrc.start();
-    race = { crowdSrc, cg, next: ctx.currentTime + 0.1, rate: 0, step: 0, timer: null, crowd: 0.02 };
+    const c = E.ctx;
+    const crowdSrc = c.createBufferSource(); crowdSrc.buffer = E.noise; crowdSrc.loop = true;
+    const bp = filt('bandpass', 900, 0.6);
+    const cg = gn(0.02);
+    crowdSrc.connect(bp); bp.connect(cg); cg.connect(E.seBus); crowdSrc.start();
+    race = { crowdSrc, cg, next: c.currentTime + 0.1, rate: 0, step: 0, timer: null, crowd: 0.02 };
     race.timer = setInterval(() => {
       if (!race || race.rate <= 0) return;
-      const until = ctx.currentTime + 0.2;
+      const until = c.currentTime + 0.2;
       // 蹄：4拍の駆け足（タ・タ・タ・タン）
       const cycle = 0.42 / race.rate;
       const offs = [0, 0.13, 0.26, 0.42];
       while (race.next < until) {
         const k = race.step % 4;
         const tt = race.next + offs[k] * cycle;
-        noise(seBus, tt, 0.06, 'lowpass', 260 + (k === 3 ? 0 : 60), k === 3 ? 0.5 : 0.32, 1);
+        noise(E.seBus, tt, 0.06, 'lowpass', 260 + (k === 3 ? 0 : 60), k === 3 ? 0.5 : 0.32, 1);
         race.step++;
         if (k === 3) race.next += cycle;
       }
@@ -327,13 +811,13 @@
     let lvl = 0.03;
     if (running) lvl = remain < straight ? 0.06 + 0.22 * (1 - remain / straight) : 0.05;
     if (finished) lvl = 0.3;
-    race.cg.gain.setTargetAtTime(lvl, ctx.currentTime, finished ? 0.1 : 0.4);
-    if (finished && !race.cheered) { race.cheered = true; setTimeout(() => { if (race) race.cg.gain.setTargetAtTime(0.05, ctx.currentTime, 1.2); }, 1800); }
+    race.cg.gain.setTargetAtTime(lvl, E.ctx.currentTime, finished ? 0.1 : 0.4);
+    if (finished && !race.cheered) { race.cheered = true; setTimeout(() => { if (race) race.cg.gain.setTargetAtTime(0.05, E.ctx.currentTime, 1.2); }, 1800); }
   };
   AU.raceEnd = function () {
     if (!race) return;
     clearInterval(race.timer);
-    try { race.cg.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.2); const s = race.crowdSrc; setTimeout(() => { try { s.stop(); } catch (e) { /* 止まっている */ } }, 600); } catch (e) { /* 何もしない */ }
+    try { race.cg.gain.setTargetAtTime(0.0001, E.ctx.currentTime, 0.2); const s = race.crowdSrc; setTimeout(() => { try { s.stop(); } catch (e) { /* 止まっている */ } }, 600); } catch (e) { /* 何もしない */ }
     race = null;
   };
 })();

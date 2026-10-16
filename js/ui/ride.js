@@ -64,9 +64,9 @@
         try {
           cv3.style.aspectRatio = `${VW} / ${VH}`;
           r3 = HS.Race3D.create(cv3, {
-            D: sim.D, surface: race.surface, ground: race.ground, track: sim.track,
+            D: sim.D, surface: race.surface, ground: race.ground, weather: race.weather, track: sim.track,
             course: { name: race.course, dir: course.dir, lap: sim.geo.lap, straight: sim.geo.straight, slope: sim.geo.slope },
-            horses: sim.st.map((s, j) => ({ num: s.r.num, frame: s.r.frame, cap: meta[j].cap, silks: meta[j].silks, coat: s.h.coat, name: s.h.name, age: (HS.World.get() ? HS.World.get().year : race.year) - s.h.born, mine: !!s.me })),
+            horses: sim.st.map((s, j) => ({ num: s.r.num, frame: s.r.frame, cap: meta[j].cap, silks: meta[j].silks, coat: s.h.coat, name: s.h.name, age: (HS.World.get() && !race.free ? HS.World.get().year : race.year) - s.h.born, mine: !!s.me })),
           });
           r3.resize(cv3.clientWidth || VW, cv3.clientHeight || VH, dpr);
         } catch (err) { console.warn('3D を使えないので 2D で描く', err); r3 = null; }

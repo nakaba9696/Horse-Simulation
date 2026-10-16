@@ -391,7 +391,7 @@
         const AU = HS.Audio;
         if (AU && AU.ready() && AU.settings.bgm > 0 && card.race.graded) {
           bg.querySelector('.ride-holder').innerHTML = `<div class="panel gold center" style="padding:40px 10px"><div class="serif" style="font-size:22px;font-weight:900;color:var(--gold2)">${e(R.label(card.race))}</div><div class="mt">ファンファーレ</div><button class="btn sm mt" data-x="skipfan">飛ばす</button></div>`;
-          await Promise.race([AU.playOnce('fanfare'), new Promise(res => { bg.querySelector('[data-x=skipfan]').onclick = () => { AU.stopBgm(); res(); }; })]);
+          await Promise.race([AU.playOnce('fanfare', card.race), new Promise(res => { bg.querySelector('[data-x=skipfan]').onclick = () => { AU.stopBgm(); res(); }; })]);
         }
         played[card.race.key] = await HS.Ride.ride(bg.querySelector('.ride-holder'), card);
         App.closeModal();
@@ -434,7 +434,7 @@
     return { text: '落ち着いている', cls: 'good', jitter: 0, slow: 1 };
   };
   function paddock(card, runner) {
-    if (HS.Audio) HS.Audio.bgm('paddock');
+    if (HS.Audio) HS.Audio.bgm('paddock', card.race);
     return new Promise(res => {
       const h = runner.horse;
       const wIdx = W.prepareWeek().wIdx;
@@ -533,7 +533,7 @@
   UI.kyakuArrows = st => `<span class="ka" title="${e(st)}">${['逃げ', '先行', '差し', '追込'].map(k => `<i class="${k === st ? 'on' : ''}"></i>`).join('')}</span>`;
   UI.entryTable = function (card) {
     const { race, runners } = card;
-    const G = W.get();
+    const G = race.free || !W.get() ? { year: race.year, month: race.month, week: race.week, seed: 0 } : W.get(); // フリーレースはセーブの年でなく、そのレースの年で
     const rows = runners.slice().sort((a, b) => a.num - b.num);
     const cnt = { '逃げ': 0, '先行': 0, '差し': 0, '追込': 0 };
     for (const x of runners) cnt[x.horse.style] = (cnt[x.horse.style] || 0) + 1;
@@ -542,7 +542,7 @@
     const recent = h => (h.results || []).slice(-3).map(r => `<span class="${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos > 9 ? '×' : r.pos}</span>`).join('') || '<span class="muted">新</span>';
     return `<div class="entry">
       <div class="entry-head"><div>${UI.gradeTag(race)} <b class="serif" style="font-size:20px">${e(race.short || race.name)}</b></div>
-        <div class="small">${W.yLabel(G.year)}${race.month}月 ${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　${(w => `${T.weatherIcon(w)}${w}`)(T.weather(G.seed, G.year, G.month, G.week, race.course, race.ground))}・${race.ground}　${runners.length}頭</div></div>
+        <div class="small">${race.free ? '' : `${W.yLabel(G.year)}${race.month}月 `}${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　${(w => `${T.weatherIcon(w)}${w}`)(race.weather || T.weather(G.seed, G.year, G.month, G.week, race.course, race.ground))}・${race.ground}　${runners.length}頭</div></div>
       <div class="entry-top">${UI.courseSvg(race)}
         <div class="tenkai"><div class="small muted">展開予想</div><div class="big">${pace}</div><div class="small">${favor}</div>
           <div class="kyaku-cnt">${Object.entries(cnt).map(([k, v]) => `<span class="kyaku ${STYLE_CLS[k]}">${k[0]}</span>${v}`).join(' ')}</div></div></div>
@@ -565,12 +565,13 @@
       const head = me && me.pos === 1
         ? (r.race.graded ? '<div class="hero"><canvas class="winner-cv" width="960" height="560"></canvas></div>' : `<div class="panel gold center"><div class="serif" style="font-size:24px;font-weight:900;color:var(--gold2)">🏆 ${e(me.horse.name)}で1着！</div></div>`)
         : `<div class="panel center">${me ? `${e(me.horse.name)}は${me.pos}着` : ''}</div>`;
-      if (me && me.pos === 1 && AU) { App.inRace = true; AU.playOnce('victory').then(() => { App.inRace = false; AU.bgm('home'); }); }
+      let open = true; // 結果を見ている間は、勝った曲のあとに表彰の曲
+      if (me && AU) { App.inRace = true; AU.playOnce(me.pos === 1 ? 'victory' : 'lose').then(() => { App.inRace = false; AU.bgm(open && me.pos === 1 ? 'glory' : AU.songFor(App.st)); }); }
       const show = () => {
         const bg = App.modal(`${head}${UI.resultTable(slim)}<div class="btns mt"><button class="btn gold" data-x="ok">次へ</button></div>`, { noClose: true, scene: 'result' });
         const cv = bg.querySelector('.winner-cv');
         if (cv && me) A.winner(cv, me.horse, HS.RaceView.silksOf(me.horse), `${r.race.short || r.race.name} 優勝`, `${me.horse.name}　${U.time(me.time)}　騎手 ${J.me().name}`);
-        bg.querySelector('[data-x=ok]').onclick = () => { App.closeModal(); res(); };
+        bg.querySelector('[data-x=ok]').onclick = () => { open = false; App.closeModal(); res(); };
       };
       if (me && me.pos === 1 && r.race.graded) UI.celebrate(UI.winFx(r.race, me.horse.name, me.time, J.me().name)).then(show);
       else show();
