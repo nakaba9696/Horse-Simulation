@@ -69,6 +69,77 @@
   E.PRICE_BASE = 2000; E.PRICE_DOUBLE = 4;
   E.priceOf = (d, legend) => Math.round(Math.max(300, E.PRICE_BASE * Math.pow(2, ((d.rating || 80) - 80) / E.PRICE_DOUBLE)) * U.priceIndex() * 1.3 * (legend ? 1.6 : 1) / 10) * 10;
   const priceOf = E.priceOf;
+
+  // ---------- 馬の店の解放（持ち主の指摘 2026-10-16「ショップに並ぶ馬は徐々に解放。G1勝ったらG1馬、地方レース勝ったら地方馬、ドイツのレース勝ったらドイツ馬」）----------
+  // 馬ごとに要る鍵は1つ。日本の馬は史実の勝ち鞍のいちばん上の格（G3以下は初めから、G2馬は G2 以上を、G1馬は G1 を勝つと並ぶ）。
+  // 地方の勝ちが中央より多い馬は地方馬（地方のレースを勝つと並ぶ）。外国の馬は調教された国（その国のレースを勝つと並ぶ）。
+  // レースの無い国の馬は、近い国（ニュージーランド→豪、イタリア→仏）か、海外のどこかのレースを勝つと並ぶ
+  E.COUNTRY_NEAR = { '新': '豪', '伊': '仏' };
+  E.COUNTRY_NAME = { '英': 'イギリス', '仏': 'フランス', '米': 'アメリカ', '愛': 'アイルランド', '独': 'ドイツ', '豪': 'オーストラリア', '香港': '香港', 'UAE': 'UAE', 'サウジ': 'サウジアラビア', '加': 'カナダ', '星': 'シンガポール', '海外': 'そのほかの国' };
+  const GRADE_RANK = { G1: 3, G2: 2, G3: 1 };
+  let raceCountries = null;
+  const countryOfRace = r => (HS.DATA.courses[r.course] || {}).country || r.country || '海外';
+  const lockCache = new Map();
+  E.lockOf = function (d) {
+    if (lockCache.has(d.name)) return lockCache.get(d.name);
+    let key = '';
+    if (HS.DATA.isForeign(d)) {
+      if (!raceCountries) { raceCountries = new Set(); for (const r of HS.DATA.races || []) if (r.region === '海外') raceCountries.add(countryOfRace(r)); }
+      const c = E.COUNTRY_NEAR[d.country] || d.country;
+      key = 'c:' + (raceCountries.has(c) ? c : '海外');
+    } else {
+      const ws = H.winRaces(d);
+      const loc = ws.filter(r => r.region === '地方').length, jra = ws.filter(r => r.region === 'JRA').length;
+      if (loc > 0 && loc >= jra) key = 'local';
+      else { const b = ws.reduce((m, r) => Math.max(m, GRADE_RANK[r.grade] || 0), 0); key = b >= 3 ? 'g1' : b === 2 ? 'g2' : ''; }
+    }
+    lockCache.set(d.name, key);
+    return key;
+  };
+  // 鍵の名前と開け方
+  E.lockLabel = k => k === 'g1' ? 'G1馬' : k === 'g2' ? 'G2馬' : k === 'local' ? '地方馬' : k.startsWith('c:') ? `${E.COUNTRY_NAME[k.slice(2)] || k.slice(2)}の馬` : '';
+  E.lockHint = k => k === 'g1' ? 'G1を勝つ' : k === 'g2' ? 'G2かG1を勝つ' : k === 'local' ? '地方のレースを勝つ' : k === 'c:海外' ? '海外のレースを勝つ' : k.startsWith('c:') ? `${E.COUNTRY_NAME[k.slice(2)] || k.slice(2)}のレースを勝つ` : '';
+  // 勝ったレースで開く鍵
+  E.keysOfWin = function (race) {
+    const out = [], g = GRADE_RANK[race.grade] || 0;
+    if (g >= 2) out.push('g2');
+    if (g >= 3) out.push('g1');
+    if (race.region === '地方') out.push('local');
+    if (race.region === '海外') { out.push('c:' + countryOfRace(race)); out.push('c:海外'); }
+    return out;
+  };
+  E.isOpen = d => { const k = E.lockOf(d); return !k || (W.get().shopKeys || []).includes(k); };
+  // 自分の馬が勝ったとき（world.js から）。新しく開いた鍵を返す
+  E.unlockWin = function (race) {
+    const G = W.get();
+    if (!G.eraless) return [];
+    G.shopKeys = G.shopKeys || [];
+    const fresh = E.keysOfWin(race).filter(k => !G.shopKeys.includes(k));
+    if (!fresh.length) return [];
+    G.shopKeys.push(...fresh);
+    const shown = fresh.filter(k => k !== 'c:海外' || !fresh.some(x => x.startsWith('c:') && x !== 'c:海外'));
+    const n = E.pool().filter(d => fresh.includes(E.lockOf(d))).length;
+    if (n) W.news(`馬の店に${shown.map(E.lockLabel).join('・')}が並ぶようになった！（${n}頭）`, 'g1');
+    return fresh;
+  };
+  // 店の上に出す表：まだ開いていない鍵と開け方・頭数（開いたものも）
+  E.locks = function () {
+    const G = W.get(), cnt = new Map();
+    for (const d of E.pool()) { const k = E.lockOf(d); if (k) cnt.set(k, (cnt.get(k) || 0) + 1); }
+    const order = k => k === 'g2' ? 0 : k === 'g1' ? 1 : k === 'local' ? 2 : k === 'c:海外' ? 99 : 3;
+    return [...cnt.entries()].map(([k, n]) => ({ key: k, label: E.lockLabel(k), hint: E.lockHint(k), n, open: (G.shopKeys || []).includes(k) }))
+      .sort((a, b) => order(a.key) - order(b.key) || b.n - a.n);
+  };
+  // 前のセーブ：自分の馬の勝ち鞍から開けておく
+  E.migrateKeys = function (g) {
+    const keys = new Set();
+    for (const h of Object.values(g.horses || {})) {
+      if (h.owner !== 'P') continue;
+      for (const w of h.gradedWins || []) for (const k of E.keysOfWin({ grade: w.grade, region: w.region, course: '' })) if (k !== 'c:海外') keys.add(k);
+      for (const r of h.results || []) if (r.pos === 1) { const c = (HS.DATA.courses[r.course] || {}); if (c.region === '地方') keys.add('local'); if (c.region === '海外') { keys.add('c:' + (c.country || '海外')); keys.add('c:海外'); } }
+    }
+    return [...keys];
+  };
   let mk = null;
   E.market = function () {
     const G = W.get();
@@ -86,7 +157,7 @@
       }
       items.push({ kind: 'pool', horse: h, data: d, price: priceOf(d, legend), legend: !!legend });
     };
-    for (const d of E.pool()) add(d, false);
+    for (const d of E.pool()) if (E.isOpen(d)) add(d, false);
     for (const name of G.unlocked || []) { const d = HS.Special && HS.Special.data(name); if (d) add(d, true); }
     return items;
   };

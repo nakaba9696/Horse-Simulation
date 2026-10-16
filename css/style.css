@@ -874,3 +874,9 @@ main.enter-back { animation: backin 300ms var(--ease) both; }
 .dc-card > .btn { flex: none; align-self: center; }
 @media (max-width: 640px) { .dc-card { flex-wrap: wrap; } .dc-card > .btn { width: 100%; } }
 .dc-ask .btns { justify-content: center; }
+
+/* 馬の店の解放の表（js/core/eraless.js の E.locks） */
+.shop-locks { display: flex; flex-wrap: wrap; gap: 6px; }
+.shop-locks .lk { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line, rgba(255,255,255,.15)); background: rgba(0, 0, 0, .25); font-size: 13px; opacity: .8; }
+.shop-locks .lk small { color: var(--muted, #a3b5a7); font-size: 11px; }
+.shop-locks .lk.open { opacity: 1; border-color: var(--accent-hi, #f2d98e); box-shadow: 0 0 8px rgba(242, 217, 142, .25); }
