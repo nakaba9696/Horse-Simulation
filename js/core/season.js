@@ -102,7 +102,7 @@
     if (!now.length) return fresh;
     G.records.hall = G.records.hall || [];
     let e = G.records.hall.find(x => x.id === h.id);
-    if (!e) { e = { id: h.id, name: h.name, born: h.born, sex: h.sex, since: year }; G.records.hall.push(e); if (fresh.length) HS.World.news(`${h.name}が殿堂入りした。`, 'g1'); }
+    if (!e) { e = { id: h.id, name: h.name, born: h.born, sex: h.sex, since: year }; G.records.hall.push(e); }
     Object.assign(e, { titles: now, starts: h.starts || 0, wins: h.wins || 0, g1: (h.gradedWins || []).filter(g => g.grade === 'G1').length, prize: h.prize || 0, last: year });
     return fresh;
   };

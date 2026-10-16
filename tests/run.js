@@ -688,6 +688,25 @@ check('shop: 馬の店は少しずつ開く（はじめは G3 まで。G1・G2�
   return `はじめの店 ${new Set(W.marketHistoric().map(x => x.horse.name)).size}頭（G1 とドイツを開けたあと）・鍵 ${locks.map(l => l.label + l.n).join(' ')}`;
 });
 
+check('hall: トロフィーを2つ以上手にした自分の馬は、引退したときに殿堂入りし、記録が残る', () => {
+  const HL = HS.Hall, J = HS.Jockey;
+  W.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get();
+  G.player.money = 1e9; G.shopKeys = HS.Eraless.locks().map(l => l.key);
+  const shop = W.marketHistoric().sort((a, b) => b.price - a.price);
+  W.buy(shop[0]); W.buy(shop[1]);
+  const [a, b] = W.mine();
+  a.results = [{ y: G.year, m: 5, w: 4, race: '日本ダービー', course: '東京', surface: '芝', dist: 2400, pos: 1, n: 18, time: 143.5, jockey: 'テスト騎手' }]; a.starts = 1; a.wins = 1;
+  G.trophies = { triple: { y: G.year, horse: a.name, hid: a.id, bonus: 1 }, autumn: { y: G.year, horse: a.name, bonus: 1 }, spring: { y: G.year, horse: b.name, hid: b.id, bonus: 1 } }; // autumn は前のセーブの形（名前だけ）
+  assert(HL.trophiesOf(a).length === 2 && HL.eligible(a) && !HL.eligible(b), 'トロフィーの数え方が違う');
+  assert(!(J.retire(a.id) || {}).err && !(J.retire(b.id) || {}).err, '引退できない');
+  const x = HL.byId(a.id);
+  assert(x && x.trophies.length === 2 && x.results.length === 1 && x.results[0].race === '日本ダービー' && !HL.byId(b.id), '殿堂の写しが違う');
+  J.retire(a.id); assert(G.hallOwn.length === 1, '二度入る');
+  const s1 = W.serialize(); W.load(s1); assert(W.get().hallOwn.length === 1, 'セーブの往復で殿堂が消える');
+  return `${x.name}：トロフィー ${x.trophies.map(t => t.label).join('・')}`;
+});
+
 check('special: 1989年より前の名馬はグループごとの条件にリーチで出てきて、勝つと店に並ぶ', () => {
   const SP = HS.Special;
   W.newGame({ seed: 33, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });

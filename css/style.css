@@ -880,3 +880,21 @@ main.enter-back { animation: backin 300ms var(--ease) both; }
 .shop-locks .lk { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line, rgba(255,255,255,.15)); background: rgba(0, 0, 0, .25); font-size: 13px; opacity: .8; }
 .shop-locks .lk small { color: var(--muted, #a3b5a7); font-size: 11px; }
 .shop-locks .lk.open { opacity: 1; border-color: var(--accent-hi, #f2d98e); box-shadow: 0 0 8px rgba(242, 217, 142, .25); }
+
+/* 殿堂入りしたお手馬（js/ui/hallui.js） */
+.hall-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 10px; }
+.hall-card { display: flex; gap: 12px; align-items: center; text-align: left; padding: 10px 12px; border-radius: 12px; cursor: pointer; color: inherit; font: inherit;
+  border: 1px solid var(--accent-hi, #f2d98e); background: linear-gradient(135deg, rgba(242, 217, 142, .16), rgba(0, 0, 0, .3)); box-shadow: 0 4px 14px rgba(0, 0, 0, .35); animation: hall-in .4s ease-out both; animation-delay: calc(var(--i, 0) * 40ms); }
+.hall-card:hover, .hall-card.navsel { box-shadow: 0 0 0 2px var(--accent-hi, #f2d98e), 0 6px 18px rgba(0, 0, 0, .4); }
+.hall-card .thumb { width: 112px; height: 75px; border-radius: 8px; flex: none; }
+.hall-card .hc-body { display: grid; gap: 2px; min-width: 0; }
+.hall-card .nm { font: 700 18px "Noto Serif JP", serif; color: var(--accent-hi, #f2d98e); }
+.hall-card .hc-rec { font-size: 13px; }
+.hall-card .chip small, .hall-modal .chip small { opacity: .75; font-size: 10px; }
+.hall-modal .hm-head { display: flex; gap: 14px; align-items: center; }
+.hall-modal .hm-head .thumb { width: 168px; height: 112px; border-radius: 10px; flex: none; }
+.hall-modal .hm-badge { display: inline-block; font-size: 11px; letter-spacing: .2em; padding: 1px 10px; border-radius: 999px; background: var(--accent-hi, #f2d98e); color: #2a2208; font-weight: 700; }
+.hall-modal h4 { margin: 14px 0 6px; color: var(--accent-hi, #f2d98e); }
+.hall-modal .hm-res { max-height: 300px; overflow: auto; }
+.hall-modal tr.win td { color: var(--accent-hi, #f2d98e); }
+@keyframes hall-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
