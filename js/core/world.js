@@ -71,7 +71,7 @@
     U.ERA = eraless ? HS.Eraless.ERA : null;
     const year0 = eraless ? HS.Eraless.START : (opts.year || 1995);
     G = {
-      v: SAVE_VERSION, seed, rngState: seed, year: year0, month: 1, week: 1, eraless, startYear: year0, lineup: {}, unlocked: [], trophies: {},
+      v: SAVE_VERSION, seed, rngState: seed, year: year0, month: 1, week: 1, eraless, startYear: year0, lineup: {}, unlocked: [], shopKeys: [], trophies: {},
       player: {
         name: opts.name || 'プレイヤー', farm: opts.farm || '新星牧場', crown: opts.crown || '',
         silks: opts.silks || { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, money: Math.round((opts.money || 30000) * U.priceIndex(year0) / 10) * 10,
@@ -537,8 +537,8 @@
       const sim = played[race.key] || S.run(race, runners, wIdx, new U.RNG(card.seed), { frames: watch });
       if (HS.Jockey) HS.Jockey.record(race, sim, runners);
       W.applyResults(race, sim, runners, wIdx);
-      W.noteRecord(race, sim);
-      report.races.push({ race, sim, runners, hasMine, watch, ridden: !!played[race.key], ride: card.ride });
+      const rec = W.noteRecord(race, sim);
+      report.races.push({ race, sim, runners, hasMine, watch, ridden: !!played[race.key], ride: card.ride, rec });
     }
     G.entries = {}; G.rides = {};
     if (HS.Jockey) HS.Jockey.weekly();
@@ -556,14 +556,25 @@
   };
   // コースレコード（このゲームの中で出た、競馬場・芝ダ・距離ごとの一番速い時計）
   W.recKey = race => `${race.course}|${race.surface}|${race.dist}`;
-  W.courseRecord = race => (G.records.course || {})[W.recKey(race)] || null;
+  W.courseRecord = race => (G && G.records.course || {})[W.recKey(race)] || null;
+  // time の走破タイムがいまのレコードを破るか（0.1秒に丸めて比べる。同じ時計はタイ記録で、塗り替えない）
+  W.recordCheck = function (race, time, old) {
+    if (old === undefined) old = G ? W.courseRecord(race) : null;
+    const t = Math.round(time * 10) / 10;
+    return { t, old: old ? old.t : null, beat: !!old && t < old.t, diff: old ? Math.round((t - old.t) * 10) / 10 : null };
+  };
+  // 勝ち時計がレコードなら書きかえる。前のレコードを破ったときは { t, old, diff, rode } を返す（結果の画面の「RECORD」に使う）
+  // rode：プレイヤーが乗って作ったレコード（一覧で強調する）
   W.noteRecord = function (race, sim) {
-    const w = sim.results[0]; if (!w || !(w.time > 0)) return;
+    const w = sim.results[0]; if (!w || !(w.time > 0)) return null;
     G.records.course = G.records.course || {};
     const key = W.recKey(race), old = G.records.course[key];
-    if (old && old.t <= w.time) return;
-    G.records.course[key] = { t: Math.round(w.time * 10) / 10, name: w.horse.name, year: race.year, race: R.label(race), mine: w.rider === 'P' || w.horse.owner === 'P' };
+    const chk = W.recordCheck(race, w.time, old || null);
+    if (old && !chk.beat) return null;
+    const rode = w.rider === 'P';
+    G.records.course[key] = { t: chk.t, name: w.horse.name, year: race.year, race: R.label(race), jockey: w.jockey ? w.jockey.name : '', rode, mine: rode || w.horse.owner === 'P', prev: old ? old.t : null };
     if (old && (w.rider === 'P' || w.horse.owner === 'P')) news(`${w.horse.name}が${race.course}${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}mのコースレコードを塗り替えた（${U.time(w.time)}）。`, 'good');
+    return old ? { t: chk.t, old: old.t, diff: chk.diff, rode, name: w.horse.name } : null;
   };
   // 騎乗せずに1週進める（馬主のゲームと、テスト）
   W.advance = () => W.finishWeek({});
@@ -617,6 +628,7 @@
       h.prize = (h.prize || 0) + money;
       if (res.pos === 1) h.earn = (h.earn || 0) + pr;
       if (res.pos === 2 && race.graded) h.earn = (h.earn || 0) + Math.round(pr * 0.4);
+      if (res.pos === 1 && h.owner === 'P' && G.eraless && HS.Eraless) HS.Eraless.unlockWin(race);
       if (race.graded && res.pos === 1) { h.gradedWins.push({ y: year, race: race.name, short: race.short, grade: race.grade, region: race.region }); if (h.owner === 'P' && HS.Season) HS.Season.onWin(h, race, year); }
       if (race.trialFor && res.pos <= (race.trialTop || 2)) { h.rights = h.rights || {}; h.rights[race.trialFor] = year; }
       h.results.push({ y: year, m: race.month, w: race.week, race: race.short || race.name, grade: R.gradeBadge(race), course: race.course, surface: race.surface, dist: race.dist, ground: race.ground, pos: res.pos, n: sim.results.length, time: Math.round(res.time * 10) / 10, margin: res.margin, last3f: res.last3f ? Math.round(res.last3f * 10) / 10 : null, jockey: res.jockey && res.jockey.name, pop: res.pop });
@@ -1074,7 +1086,7 @@
   // ---------- セーブ ----------
   W.slimResult = function (r) {
     return {
-      key: r.race.key, name: r.race.name, short: r.race.short, grade: r.race.grade, year: r.race.year, region: r.race.region, course: r.race.course, surface: r.race.surface, dist: r.race.dist, ground: r.race.ground, mine: r.hasMine,
+      key: r.race.key, name: r.race.name, short: r.race.short, rec: r.rec || null, grade: r.race.grade, year: r.race.year, region: r.race.region, course: r.race.course, surface: r.race.surface, dist: r.race.dist, ground: r.race.ground, mine: r.hasMine,
       rows: r.sim.results.map(x => ({ pos: x.pos, num: x.num, frame: x.frame, name: x.horse.name, mine: x.mine, hist: !!x.horse.hist, sex: x.horse.sex, age: G.year - x.horse.born, jockey: x.jockey && x.jockey.name, weight: x.weight, time: Math.round(x.time * 10) / 10, margin: x.margin, last3f: x.last3f ? Math.round(x.last3f * 10) / 10 : null, pop: x.pop, odds: x.odds, sire: x.horse.sire })),
     };
   };
@@ -1098,7 +1110,7 @@
     g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, course: {}, hall: [], player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
-    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; g.lineup = g.lineup || {}; g.unlocked = g.unlocked || []; g.trophies = g.trophies || {}; if (g.eraless && !g.startYear) g.startYear = 2025; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
+    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; if (g.dc && !g.dc.ai && HS.Season && HS.Season.dcUpgrade) HS.Season.dcUpgrade(g); // 前の形の招待（自分の馬が全部出た） g.lineup = g.lineup || {}; g.unlocked = g.unlocked || []; if (g.eraless && !g.shopKeys) g.shopKeys = HS.Eraless ? HS.Eraless.migrateKeys(g) : []; // 前のセーブは、自分の馬の勝ち鞍で馬の店を開けておく g.trophies = g.trophies || {}; if (g.eraless && !g.startYear) g.startYear = 2025; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
     for (const h of Object.values(g.horses)) {
       h.bonus = h.bonus || {}; h.results = h.results || []; h.gradedWins = h.gradedWins || []; h.coat = h.coat || '鹿毛';
       // 能力の形が変わる前のセーブ（瞬発力・パワー・賢さ・気性 → 気性・坂・脚の切れ）
@@ -1107,6 +1119,8 @@
       if (h.kire == null) h.kire = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[h.style] || 4;
       h.skills = h.skills || [];
     }
+    // コースレコードの「自分で乗って作ったか」（前の版のセーブには無い。騎手のゲームでは自分の馬＝自分が乗った馬）
+    for (const rc of Object.values(g.records.course || {})) if (rc.rode == null) rc.rode = !!rc.mine && g.mode === 'jockey';
     // 前の版のエディット（瞬発力などの数値）は、遊ぶときに H.fromHistoric が読み替える
     g.v = SAVE_VERSION;
   };

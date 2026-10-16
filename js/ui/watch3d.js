@@ -13,7 +13,7 @@
       const { race, sim, runners } = data;
       const results = sim.results, frames = sim.frames;
       const course = HS.DATA.courses[race.course] || HS.DATA.courses['東京'];
-      const geo = (race.surface === 'ダ' ? course.dirt : course.turf) || course.turf || course.dirt;
+      const geo = HS.Track.forRace(race).geo;
       el.innerHTML = `<div class="rv"><div class="ride-stage"><canvas class="ride-3d"></canvas><canvas class="ride-canvas"></canvas></div>
         <div class="rv-bar"><div class="rv-speed">${[1, 2, 4].map(s => `<button data-sp="${s}" class="${s === (opts.speed || 1) ? 'on' : ''}">×${s}</button>`).join('')}</div>
         <div class="rv-speed"><button data-cam="tv" class="on">中継</button><button data-cam="ride">騎手目線</button></div><button class="rv-skip">ゴールまで飛ばす</button></div></div>`;
@@ -30,7 +30,7 @@
       let r3;
       try {
         r3 = HS.Race3D.create(cv3, {
-          D: sim.D, surface: race.surface, ground: race.ground, track: HS.Track.make(geo.lap, geo.straight, course.dir),
+          D: sim.D, surface: race.surface, ground: race.ground, track: sim.track || HS.Track.forRace(race).track,
           course: { name: race.course, dir: course.dir, lap: geo.lap, straight: geo.straight, slope: geo.slope },
           horses: meta.map(m => ({ num: m.x.num, frame: m.x.frame, cap: m.cap, silks: m.silks, coat: m.x.horse.coat, name: m.x.horse.name, age: (HS.World.get() ? HS.World.get().year : race.year) - m.x.horse.born, mine: !!(m.x.mine || m.x.rider === 'P') })),
         });
@@ -108,6 +108,14 @@
             ctx.fillStyle = '#ff9a1f'; ctx.font = '12px "Noto Sans JP", sans-serif'; ctx.fillText(i === 0 ? U.time(r.time) : r.margin, bx2 + 104, y + 9);
           }
           ctx.globalAlpha = 1;
+          // レコードを破ったら、掲示板の下に「RECORD」と前のレコードとの差（data.rec＝W.noteRecord の戻り値）
+          if (data.rec && T > winT + 0.9) {
+            const a2 = Math.min(1, (T - winT - 0.9) / 0.4), yy = by2 + bh + 34, pulse = 0.75 + 0.25 * Math.sin(T * 6);
+            ctx.globalAlpha = a2; ctx.fillStyle = `rgba(190,28,20,${0.8 * pulse})`; rr(VW / 2 - 130, yy - 26, 260, 52, 8); ctx.fill();
+            ctx.fillStyle = '#ffe08a'; ctx.font = '900 30px "Noto Serif JP", serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('RECORD', VW / 2 - 34, yy);
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 15px "Noto Sans JP", sans-serif'; ctx.fillText(`${data.rec.diff < 0 ? '−' : '+'}${Math.abs(data.rec.diff).toFixed(1)}`, VW / 2 + 82, yy);
+            ctx.globalAlpha = 1;
+          }
         }
       }
       function loop(ts) {

@@ -102,6 +102,8 @@
   S.PACE_HI = 1.006; S.PACE_LO = 0.994; S.PACE_K = 70; S.DRAFT = 0.12; S.PACE_TOP = 50; S.PACE_EARLY = 60;
   S.paceVerdict = f => f > S.PACE_HI ? 'ハイペース' : f < S.PACE_LO ? 'スローペース' : '平均ペース';
   S.paceHint = v => v === 'ハイペース' ? '前は苦しい。後ろでためて遅めに' : v === 'スローペース' ? '前が楽。早めに動け' : '力どおりの流れ';
+  // 勾配（比。0.02＝2%）の効き：上りの速さ・上りの消耗・下りの速さ・下りの楽さ
+  S.HILL = { v: 0.4, e: 100, dv: 0.25, de: 10 };
   S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0, cS: 0.035, z: 0.0015, top: 2.2 };
 
   // 本体。runners: [{horse, jockey, weight, num, frame, rider?}]。rider==='P' の馬はプレイヤーが乗る（opts.ride のとき操作を受け付ける）
@@ -115,8 +117,9 @@
   S.create = function (race, runners, wIdx, rng, opts) {
     opts = opts || {};
     const course = HS.DATA.courses[race.course] || HS.DATA.courses['東京'];
-    const surfKey = race.surface === 'ダ' ? 'dirt' : 'turf';
-    const geo = course[surfKey] || course.turf || course.dirt;
+    // コースの形と高低差（data/layouts.js にある場は実際の回り。無ければ courses.js の数で楕円）
+    const cf = HS.Track ? HS.Track.forRace(race) : null;
+    const geo = cf ? cf.geo : (race.surface === 'ダ' ? course.dirt : course.turf) || course.turf || course.dirt;
     const D = race.dist;
     const v0 = S.baseSpeed(D, race.surface, race.ground, geo.speed) * U.eraSpeed(race.year);
     const straight = Math.min(geo.straight, D * 0.6);
@@ -157,7 +160,7 @@
       race, runners, wIdx, rng, opts, geo, D, straight, slope: geo.slope, paceF, pace: medVc * paceF, st,
       events: [], frames: [], t: 0, step: 0, finished: 0, winnerT: null, over: false,
       talk: { lastLeader: null, straight: false, mid: false, corner: false, f400: false, f200: false },
-      track: HS.Track ? HS.Track.make(geo.lap, geo.straight, course.dir) : null,
+      track: cf ? cf.track : null,
       me: -1, ctl: null, _byX: null,
       checkAt: D >= 2400 ? 1200 : D >= 1600 ? 1000 : 600, check: null, skillFx: [],
     };
@@ -405,8 +408,12 @@
       // 発動した特殊能力の、一時の速さ
       if (s.boost && t < s.boost.until) target *= s.boost.mul;
       // 坂：ゴール前の上りで脚を使う。坂が弱いほど大きく減る
-      const onHill = R < 320 && R > 60 && slope !== '平';
+      // 実際の高低差があるコースは、その場の勾配で（上りは遅く重く、下りは少し速く楽に）。無いコースはゴール前の坂の強さで
+      const grade = sim.track && !sim.track.flat ? sim.track.gAt(R) : 0;
+      const onHill = (!sim.track || sim.track.flat) && R < 320 && R > 60 && slope !== '平';
       if (onHill) target *= 1 - ({ '急': 0.008, '中': 0.005, '小': 0.003 }[slope] || 0) * (1 - s.slopeP / 120);
+      if (grade > 0) target *= 1 - grade * S.HILL.v * (1 - s.slopeP / 120);
+      else if (grade < 0) target *= 1 - grade * S.HILL.dv;
       // 不利（差し・追込が直線で詰まる）。プレイヤーの馬は自分の進路取りしだい
       if (!(s.me && c) && s.spurting && !s.blockedOnce && st.length >= 10 && (s.h.style === '差し' || s.h.style === '追込')) {
         s.blockedOnce = true;
@@ -425,6 +432,8 @@
       let cost = (s.v * DT) / s.Ds * 0.9 * ratio * ratio * ratio * costMul;
       if (s.spurting) cost *= s.spurtCost;
       if (onHill) cost *= 1 + ({ '急': 2.2, '中': 1.4, '小': 0.8 }[slope] || 0) * U.clamp(1 - s.slopeP / 100, 0, 0.6);
+      if (grade > 0) cost *= 1 + grade * S.HILL.e * U.clamp(1 - s.slopeP / 100, 0, 0.6);
+      else if (grade < 0) cost *= Math.max(0.7, 1 + grade * S.HILL.de);
       // 早くから追い通すと、馬がもたない
       if (s.me && c && R > 600) cost *= 1 + 8 * Math.max(0, ratio - 1);
       s.E -= cost;
