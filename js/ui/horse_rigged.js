@@ -45,6 +45,7 @@
   // 骨の名前（素材の名前から空白と _ を除いて引く）
   const key = s => s.replace(/_\d+_\d+$/, '').replace(/[ _]/g, '');
   const BN = {
+    pelvis: 'Bip01Pelvis', spine: 'Bip01Spine', spine1: 'Bip01Spine1',
     neck: 'Bip01Neck', neck1: 'Bip01Neck1', head: 'Bip01Head', headNub: 'Bip01HeadNub',
     pony1: 'Bip01Ponytail1', pony1n: 'Bip01Ponytail1Nub', pony2: 'Bip01Ponytail2', pony2n: 'Bip01Ponytail2Nub',
     tail: 'Bip01Tail', tail1: 'Bip01Tail1', tail2: 'Bip01Tail2', tail3: 'Bip01Tail3',
@@ -186,8 +187,12 @@
       const b = bones[byRole(r)], q = new THREE.Quaternion(); b.getWorldQuaternion(q); q.invert();
       P.axis[r] = { z: new THREE.Vector3(-1, 0, 0).applyQuaternion(q), y: new THREE.Vector3(0, 1, 0).applyQuaternion(q) };
     }
-    // 尾の先の骨も、尾の2つめと同じ向きに回す
-    { const b = bones[byRole('tail3')], q = new THREE.Quaternion(); b.getWorldQuaternion(q); q.invert(); P.axis.tail3 = { z: new THREE.Vector3(-1, 0, 0).applyQuaternion(q), y: new THREE.Vector3(0, 1, 0).applyQuaternion(q) }; }
+    // 尾の先・腰と背・つなぎの骨も（手作りの馬には無い骨。HR.pose で動かす）
+    for (const r of ['tail3', 'pelvis', 'spine', 'spine1', 'lFi', 'rFi', 'lTo', 'rTo']) {
+      const i = byRole(r); if (i < 0) continue;
+      const q = new THREE.Quaternion(); bones[i].getWorldQuaternion(q); q.invert();
+      P.axis[r] = { z: new THREE.Vector3(-1, 0, 0).applyQuaternion(q), y: new THREE.Vector3(0, 1, 0).applyQuaternion(q) };
+    }
     P.scene = g.scene; P.mesh = mesh; P.role = role;
     P.hair = hairCards(vs, dom, W2, byRole, bones, G);
     P.bridle = bridleGeo(vs, dom, W2, byRole, G);
@@ -574,18 +579,26 @@ float hrN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
   const tq = { a: null, b: null };
   HR.pose = function (r, hb) {
     const qa = tq.a || (tq.a = new THREE.Quaternion()), qb = tq.b || (tq.b = new THREE.Quaternion());
+    // 腰と背のしなり：後脚が前へ踏み込むと腰が丸まり（尻が下がる）、蹴り出すと伸びる。
+    // 腰（骨盤）を回し、背はその分を戻すので、胴の前半の向きは変わらない。後脚は付け根でその分を戻す
+    const flex = 0.38 * (hb[16].rotation.z + hb[20].rotation.z) / 2;
+    const turn = (k, a) => { const b = r.bones[k], ax = P.axis[k]; if (b && ax) b.quaternion.copy(r.rest[k]).multiply(qa.setFromAxisAngle(ax.z, a)); };
+    turn('pelvis', flex); turn('spine', -flex * 0.6); turn('spine1', -flex * 0.4);
     for (const [hi, k] of RETARGET) {
       const b = r.bones[k]; if (!b) continue;
       const ax = P.axis[k];
       // 股は素材の尻の皮も引っぱるので小さく回し、残りを後膝へ回す（後脚の付け根が伸びて見えないように）
       let ang = hb[hi].rotation.z - (REF[hi] || 0);
-      if (hi === 16 || hi === 20) ang *= HIP_K;
+      if (hi === 16 || hi === 20) ang = ang * HIP_K - flex;
       else if (hi === 17 || hi === 21) ang += hb[hi - 1].rotation.z * (1 - HIP_K);
       b.quaternion.copy(r.rest[k]).multiply(qa.setFromAxisAngle(ax.z, ang));
       if (hb[hi].rotation.y) b.quaternion.multiply(qb.setFromAxisAngle(ax.y, hb[hi].rotation.y));
     }
     // 尾の先は尾の2つめと同じだけ
     if (r.bones.tail3) r.bones.tail3.quaternion.copy(r.rest.tail3).multiply(qa.setFromAxisAngle(P.axis.tail3.z, hb[7].rotation.z - REF[7]));
+    // つなぎ：脚を畳むとき（球節が後ろへ折れるとき）、蹄も遅れて後ろへ返る
+    turn('lFi', 0.55 * Math.min(0, hb[11].rotation.z)); turn('rFi', 0.55 * Math.min(0, hb[15].rotation.z));
+    turn('lTo', 0.55 * Math.min(0, hb[19].rotation.z)); turn('rTo', 0.55 * Math.min(0, hb[23].rotation.z));
   };
   // 蹄を地面へ・頭の馬具を素材の頭へ。gait＝{ ph, sp, lead, touch, duty }（race3d の襲歩の表）。手作りの骨の行列は更新してあること
   const sv = { v: null, m: null, p: null, q: null, s: null };

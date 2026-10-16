@@ -1106,6 +1106,22 @@ check('look: 毛色の表に抜けがない・芦毛は年を取ると白い・�
   return `毛色 ${coats.size}・馬具 ${Object.keys(g).length}頭・三角形 ${out.join(' / ')}`;
 });
 
+check('gait: 常歩は4拍子で着いた蹄が地面にあり、関節の角度が続いている（襲歩とまざっても NaN にならない）', () => {
+  const R3 = HS.Race3D;
+  let maxGap = 0, minLow = 9, maxStep = 0, prev = null;
+  for (let i = 0; i < 40; i++) {
+    const g = R3.gaitTest(i / 40);
+    const lo = Math.min(...g.hoof);
+    minLow = Math.min(minLow, lo); maxGap = Math.max(maxGap, Math.abs(lo));
+    if (prev) for (let k = 8; k < 24; k++) maxStep = Math.max(maxStep, Math.abs(g.rot[k] - prev.rot[k]));
+    prev = g;
+  }
+  assert(maxGap < 0.05, `常歩で着いた蹄が地面から ${maxGap.toFixed(3)}m 離れている`);
+  assert(maxStep < 0.35, `常歩の関節が1/40周期で ${maxStep.toFixed(2)}rad 跳ぶ`);
+  for (const w of [0.25, 0.5, 0.75]) { const g = R3.gaitTest(0.3, 0.4, w); assert(g.rot.every(isFinite) && isFinite(g.y), '常歩と襲歩の混ぜで NaN'); }
+  return `蹄の高さのずれ 最大 ${(maxGap * 100).toFixed(1)}cm・関節の1コマの変化 最大 ${maxStep.toFixed(2)}rad`;
+});
+
 check('terrain: 3D の地面がコースの高さに合う（坂・楕円でない形・直線・馬蹄形）', () => {
   // race3d.js は前の 'look:' の確かめで読んである
   const T = HS.Track, R3 = HS.Race3D, out = [];
