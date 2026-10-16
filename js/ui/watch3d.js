@@ -15,8 +15,8 @@
       const course = HS.DATA.courses[race.course] || HS.DATA.courses['東京'];
       const geo = HS.Track.forRace(race).geo;
       el.innerHTML = `<div class="rv"><div class="ride-stage"><canvas class="ride-3d"></canvas><canvas class="ride-canvas"></canvas></div>
-        <div class="rv-bar"><div class="rv-speed">${[1, 2, 4].map(s => `<button data-sp="${s}" class="${s === (opts.speed || 1) ? 'on' : ''}">×${s}</button>`).join('')}</div>
-        <div class="rv-speed"><button data-cam="tv" class="on">中継</button><button data-cam="ride">騎手目線</button></div><button class="rv-skip">ゴールまで飛ばす</button></div></div>`;
+        <div class="rv-bar"><div class="rv-speed">${(opts.speeds || [1, 2, 4]).map(s => `<button data-sp="${s}" class="${s === (opts.speed || 1) ? 'on' : ''}">×${s}</button>`).join('')}</div>
+        <div class="rv-speed"><button data-cam="tv" class="on">中継</button><button data-cam="ride">騎手目線</button></div>${opts.seek ? '<button class="rv-seek">10秒先へ</button>' : ''}<button class="rv-skip">ゴールまで飛ばす</button></div></div>`;
       const narrow = (el.clientWidth || 960) < 600;
       const VW = narrow ? 640 : 960, VH = narrow ? 560 : 540;
       const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
@@ -49,6 +49,7 @@
       const winT = results[0].time, tEnd = frames[frames.length - 1].t;
       const finT = runners.map(x => { const r = results.find(rr => rr.horse === x.horse); return r ? r.time : null; });
       el.querySelector('.rv-skip').onclick = () => { T = Math.max(T, winT + 0.01); };
+      const sk = el.querySelector('.rv-seek'); if (sk) sk.onclick = () => { T = Math.min(Math.max(T, 0) + 10, winT + 0.01); }; // リプレイ：10秒送り
       const evs = sim.events.slice();
       let telop = { text: `${race.short || race.name}、まもなく発走です。`, t: -9 };
       let T = -3, last = null, done = false, shownEnd = false;
@@ -108,6 +109,14 @@
             ctx.fillStyle = '#ff9a1f'; ctx.font = '12px "Noto Sans JP", sans-serif'; ctx.fillText(i === 0 ? U.time(r.time) : r.margin, bx2 + 104, y + 9);
           }
           ctx.globalAlpha = 1;
+          // レコードを破ったら、掲示板の下に「RECORD」と前のレコードとの差（data.rec＝W.noteRecord の戻り値）
+          if (data.rec && T > winT + 0.9) {
+            const a2 = Math.min(1, (T - winT - 0.9) / 0.4), yy = by2 + bh + 34, pulse = 0.75 + 0.25 * Math.sin(T * 6);
+            ctx.globalAlpha = a2; ctx.fillStyle = `rgba(190,28,20,${0.8 * pulse})`; rr(VW / 2 - 130, yy - 26, 260, 52, 8); ctx.fill();
+            ctx.fillStyle = '#ffe08a'; ctx.font = '900 30px "Noto Serif JP", serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('RECORD', VW / 2 - 34, yy);
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 15px "Noto Sans JP", sans-serif'; ctx.fillText(`${data.rec.diff < 0 ? '−' : '+'}${Math.abs(data.rec.diff).toFixed(1)}`, VW / 2 + 82, yy);
+            ctx.globalAlpha = 1;
+          }
         }
       }
       function loop(ts) {

@@ -19,6 +19,7 @@
     document.body.dataset.screen = st.screen;
     if (st.screen === 'title') { App.setScene('title'); app.innerHTML = UI.screens.title(App.st.titleOpen); App.enter(app, anim); App.titleCanvas(); return; }
     if (st.screen === 'newgame') { App.setScene('title'); app.innerHTML = UI.screens.newgame(st.ng); App.enter(app, anim); App.drawNgSilks(); return; }
+    if (App.pages && App.pages[st.screen]) { App.pages[st.screen](app, anim); return; } // ゲームの外の画面（リプレイ・フリーレース。js/ui/replayui.js・freerace.js）
     if (st.screen === 'editor') { App.setScene('home'); app.innerHTML = UI.screens.editor(st.ed || (st.ed = {})); App.hydrate(app); return; }
     const view = st.view || { name: st.tab };
     const html = UI.screens[view.name] ? UI.screens[view.name](view) : '';
@@ -374,7 +375,7 @@
   App.weekSummary = function (report) {
     const G = W.get();
     const mine = report.races.filter(r => r.hasMine);
-    const g1 = report.races.filter(r => r.race.grade === 'G1' && !r.hasMine);
+    const g1 = report.races.filter(r => (r.race.grade === 'G1' || r.race.invite) && !r.hasMine).sort((a, b) => (b.race.invite ? 1 : 0) - (a.race.invite ? 1 : 0)); // 出なかったグランドフィナーレも観戦できる（先頭に）
     // この週に起きたこと（週の処理のあとで暦が進むので、次の週の頭に出たものも含める）
     const fresh = G.news.filter(n => n.kind !== 'g1race' && ((n.y === report.y && n.m === report.m && n.w === report.w) || (n.y === G.year && n.m === G.month && n.w === G.week))).slice(0, 10);
     const items = [];

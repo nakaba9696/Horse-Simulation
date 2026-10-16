@@ -103,7 +103,7 @@
   S.paceVerdict = f => f > S.PACE_HI ? 'ハイペース' : f < S.PACE_LO ? 'スローペース' : '平均ペース';
   S.paceHint = v => v === 'ハイペース' ? '前は苦しい。後ろでためて遅めに' : v === 'スローペース' ? '前が楽。早めに動け' : '力どおりの流れ';
   // 勾配（比。0.02＝2%）の効き：上りの速さ・上りの消耗・下りの速さ・下りの楽さ
-  S.HILL = { v: 0.4, e: 100, dv: 0.25, de: 10 };
+  S.HILL = { v: 0.4, e: 100, dv: 0.25, de: 10, mid: 0.4 };
   S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0, cS: 0.035, z: 0.0015, top: 2.2 };
 
   // 本体。runners: [{horse, jockey, weight, num, frame, rider?}]。rider==='P' の馬はプレイヤーが乗る（opts.ride のとき操作を受け付ける）
@@ -412,7 +412,9 @@
       const grade = sim.track && !sim.track.flat ? sim.track.gAt(R) : 0;
       const onHill = (!sim.track || sim.track.flat) && R < 320 && R > 60 && slope !== '平';
       if (onHill) target *= 1 - ({ '急': 0.008, '中': 0.005, '小': 0.003 }[slope] || 0) * (1 - s.slopeP / 120);
-      if (grade > 0) target *= 1 - grade * S.HILL.v * (1 - s.slopeP / 120);
+      // 道中の坂はペースで吸収されるので効きを弱く、追い出してからの坂（ゴール前の急坂など）は強く
+      const hillW = s.spurting ? 1 : S.HILL.mid;
+      if (grade > 0) target *= 1 - grade * S.HILL.v * hillW * (1 - s.slopeP / 120);
       else if (grade < 0) target *= 1 - grade * S.HILL.dv;
       // 不利（差し・追込が直線で詰まる）。プレイヤーの馬は自分の進路取りしだい
       if (!(s.me && c) && s.spurting && !s.blockedOnce && st.length >= 10 && (s.h.style === '差し' || s.h.style === '追込')) {
@@ -432,7 +434,7 @@
       let cost = (s.v * DT) / s.Ds * 0.9 * ratio * ratio * ratio * costMul;
       if (s.spurting) cost *= s.spurtCost;
       if (onHill) cost *= 1 + ({ '急': 2.2, '中': 1.4, '小': 0.8 }[slope] || 0) * U.clamp(1 - s.slopeP / 100, 0, 0.6);
-      if (grade > 0) cost *= 1 + grade * S.HILL.e * U.clamp(1 - s.slopeP / 100, 0, 0.6);
+      if (grade > 0) cost *= 1 + grade * S.HILL.e * hillW * U.clamp(1 - s.slopeP / 100, 0, 0.6);
       else if (grade < 0) cost *= Math.max(0.7, 1 + grade * S.HILL.de);
       // 早くから追い通すと、馬がもたない
       if (s.me && c && R > 600) cost *= 1 + 8 * Math.max(0, ratio - 1);

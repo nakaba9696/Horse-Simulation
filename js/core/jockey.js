@@ -156,6 +156,7 @@
   J.retire = function (id) {
     if (HS.Original && HS.Original.on()) return HS.Original.retire(id); // 年代なしのゲームは、牧場に残してオリジナルホースの親にする
     const h = W.horse(id); if (!h) return { err: '持ち馬ではない' };
+    if (HS.Hall && h.owner === 'P') HS.Hall.onRetire(h); // トロフィー2つ以上なら殿堂入り
     const r = W.retire(id);
     if (!r.err && W.horse(id)) { W.horse(id).owner = 'AI'; W.dirty(); }
     return r;
