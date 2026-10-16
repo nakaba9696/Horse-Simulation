@@ -22,8 +22,9 @@
 
   // 重賞のデータ（年で有効なもの）
   R.gradedOf = function (year, month, week) {
-    return (HS.DATA.races || []).filter(r => r.from <= year && year <= (r.to || 9999) && r.month === month && r.week === week)
-      .map(r => Object.assign({}, r, { key: `${year}-${month}-${week}-${r.name}`, graded: true, year, prize: R.prizeOf(r, year) }));
+    const ey = U.ERA || year; // 年代なしなら、番組はその年で固定
+    return (HS.DATA.races || []).filter(r => r.from <= ey && ey <= (r.to || 9999) && r.month === month && r.week === week)
+      .map(r => Object.assign({}, r, { key: `${year}-${month}-${week}-${r.name}`, graded: true, year, prize: R.prizeOf(r, ey) }));
   };
   // その年の1着賞金（prizeBy があれば年ごとの値）
   R.prizeOf = function (r, year) {
@@ -32,7 +33,8 @@
     return p;
   };
   R.gradedYear = function (year) {
-    return (HS.DATA.races || []).filter(r => r.from <= year && year <= (r.to || 9999)).map(r => Object.assign({}, r, { year }))
+    const ey = U.ERA || year;
+    return (HS.DATA.races || []).filter(r => r.from <= ey && ey <= (r.to || 9999)).map(r => Object.assign({}, r, { year }))
       .sort((a, b) => (a.month - b.month) || (a.week - b.week) || ((R.GRADE_RANK[b.grade] || 0) - (R.GRADE_RANK[a.grade] || 0)));
   };
 
@@ -40,7 +42,7 @@
   R.conditionalOf = function (seed, year, month, week) {
     const out = [];
     const courses = (HS.DATA.meets && HS.DATA.meets[month]) || [];
-    const old = year < 2019;
+    const old = (U.ERA || year) < 2019;
     courses.forEach((course, ci) => {
       const rng = U.hashRng(`${seed}:${year}:${month}:${week}:${course}`);
       const slots = [];
@@ -58,7 +60,7 @@
         if (sl.age === '2') ds = ds.filter(d => d <= (month < 9 ? 1800 : 2000)).length ? ds.filter(d => d <= (month < 9 ? 1800 : 2000)) : [ds[0]];
         const dist = rng.pick(ds);
         const ageLabel = sl.age === '2' ? '2歳' : sl.age === '3' ? '3歳' : sl.age === '3+' ? '3歳以上' : '4歳以上';
-        const clsLabel = sl.cls === 'newcomer' ? '新馬' : sl.cls === 'maiden' ? '未勝利' : sl.cls === 'OP' ? 'オープン' : H.className(sl.cls, year);
+        const clsLabel = sl.cls === 'newcomer' ? '新馬' : sl.cls === 'maiden' ? '未勝利' : sl.cls === 'OP' ? 'オープン' : H.className(sl.cls, U.ERA || year);
         const fem = sl.cls !== 'newcomer' && rng.chance(0.15);
         out.push({
           key: `${year}-${month}-${week}-c${ci}-${si}`, name: `${ageLabel}${clsLabel}${fem ? '（牝）' : ''}`, short: null, grade: null, cls: sl.cls,

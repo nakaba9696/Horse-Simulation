@@ -83,6 +83,7 @@
   // 自分の馬が重賞を勝ったとき：新しい冠を知らせ、冠のある馬は殿堂へ
   T.onWin = function (h, race, year) {
     const G = HS.World.get();
+    if (HS.Trophy) HS.Trophy.onWin(h, race);
     const now = T.titles(h).map(t => t.label);
     const before = h.titles || [];
     const fresh = now.filter(l => !before.includes(l));

@@ -461,9 +461,9 @@ check('season: 年末のドリームクラシックに強い馬が招待され�
   star.owner = 'P';
   let guard = 0;
   while (!(G.month === 11 && G.week === 4) && guard++ < 60) W.finishWeek({});
-  star.gradedWins.push({ y: 2005, race: '天皇賞（秋）', short: '天皇賞・秋', grade: 'G1' }); star.injury = null; star.loc = 'stable';
+  star.gradedWins.push({ y: G.year, race: '天皇賞（秋）', short: '天皇賞・秋', grade: 'G1' }); star.injury = null; star.loc = 'stable';
   while (!(G.month === 12 && G.week === 1) && guard++ < 60) W.finishWeek({});
-  assert(G.dc && G.dc.y === 2005 && G.dc.ids.length >= T.DC_FIELD, '招待馬が決まらない');
+  assert(G.dc && G.dc.y === G.year && G.dc.ids.length >= T.DC_FIELD, '招待馬が決まらない');
   assert(G.dc.ids.includes(star.id) || star.injury, 'G1を勝った自分の馬が招待されない');
   const ok = !star.injury;
   while (!(G.month === 12 && G.week === 4) && guard++ < 70) W.finishWeek({});
@@ -477,6 +477,62 @@ check('season: 年末のドリームクラシックに強い馬が招待され�
   assert(w.gradedWins.some(g => g.short === T.DC_NAME), '勝ち鞍に残らない');
   const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
   return `${card.runners.length}頭・勝ったのは${w.name}${ok ? '' : '（自分の馬は出られなかった）'}`;
+});
+
+check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデビューし、走っている間は馬の店に並ばない', () => {
+  const E = HS.Eraless;
+  W.newGame({ seed: 21, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get();
+  assert(G.eraless && U.ERA === E.ERA && W.dateLabel(G.year, 1, 1).startsWith('1年目'), '年代なしになっていない');
+  const hist = W.all().filter(h => h.hist);
+  assert(hist.length >= E.CROP * 4, `史実馬が少ない ${hist.length}`);
+  for (const h of hist) { const d = W.histByName.get(h.name); assert(d && E.isPool(d), `${h.name} は1990〜2026年の馬ではない`); }
+  // 生年をずらしても、勝ち鞍は本当の年の分だけ前に持つ
+  const shop = W.marketHistoric();
+  const act = E.activeNames();
+  assert(shop.length > 1000 && !shop.some(it => act.has(it.horse.name)), '走っている馬が店に並んでいる');
+  assert(shop.every(it => G.year - it.horse.born === 2), '店の馬が2歳でない');
+  // 買うと店から消える
+  G.player.money = 1e9;
+  const it = shop.sort((a, b) => b.price - a.price)[0];
+  assert(!W.buy(it), '買えない');
+  const mine = W.horse(it.horse.id);
+  assert(mine && mine.owner === 'P' && !W.marketHistoric().some(x => x.horse.name === mine.name), '買った馬が店に残る');
+  // 年が明けると新しい2歳が出て、引退した馬は店に戻る
+  const old = hist.find(h => G.year - h.born >= 6);
+  let guard = 0;
+  while (G.year === G.startYear && guard++ < 60) W.finishWeek({});
+  const crop = W.all().filter(h => h.hist && G.year - h.born === 2 && h.owner !== 'P').length;
+  assert(crop >= E.CROP * 0.8, `今年の2歳 ${crop}`);
+  if (old && !W.horse(old.id)) assert(W.marketHistoric().some(x => x.horse.name === old.name), '引退した馬が店に戻らない');
+  const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1 && U.ERA === E.ERA, 'セーブの往復で中身が変わる');
+  return `史実馬 ${hist.length}頭・店 ${shop.length}頭・2年目の2歳 ${crop}頭`;
+});
+
+check('trophy: 三冠の最後の菊花賞に伝説の名馬が出て、勝つとトロフィーと店に並ぶ', () => {
+  const TR = HS.Trophy, S = HS.Sim;
+  W.newGame({ seed: 33, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get();
+  const kk = R.gradedYear(G.year).find(r => r.short === '菊花賞');
+  const h = W.all().find(x => x.hist && x.sex !== '牝' && !x.gelding && G.year - x.born === 3 && x.loc === 'stable' && !x.injury);
+  h.owner = 'P'; h.auto = false; h.fatigue = 0; h.injury = null; h.earn = 30000; h.wins = 4; h.starts = 5;
+  h.gradedWins.push({ y: G.year, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year, race: '東京優駿', short: '日本ダービー', grade: 'G1' });
+  for (const k of H.STATS) h.pot[k] = 150;
+  h.distMin = 1600; h.distMax = 3200; h.kire = 6; h.apt.turf = 100;
+  G.month = kk.month; G.week = kk.week; W.dirty(); W._cache = null; W._week = null;
+  const race = W.weekRaces().find(r => r.short === '菊花賞');
+  assert(!W.enter(h.id, race.key), '菊花賞に登録できない');
+  const card = W.cards().find(c => c.race.key === race.key);
+  const legends = card.runners.filter(x => x.horse.legend).map(x => x.horse.name);
+  assert(legends.includes('シンボリルドルフ') && legends.includes('シンザン'), `伝説の名馬が出ない（${legends.join('・')}）`);
+  const rep = W.finishWeek({});
+  const res = rep.races.find(r => r.race.key === race.key).sim.results;
+  assert(res[0].horse === h, `勝てなかった（1着 ${res[0].horse.name}）`);
+  assert(G.trophies.triple && G.unlocked.includes('シンボリルドルフ'), 'トロフィーが付かない');
+  const shop = W.marketHistoric();
+  assert(shop.some(x => x.horse.name === 'シンボリルドルフ' && x.legend), '伝説の名馬が店に並ばない');
+  assert(!W.all().some(x => x.legend), '伝説の名馬が世界に残る');
+  return `菊花賞の伝説の名馬 ${legends.join('・')}`;
 });
 
 // ---------- 騎手のゲーム ----------
@@ -515,7 +571,7 @@ check('jockey: 史実馬を買って自分で乗り、成績と賞金とリー�
   const j = G.jockey;
   assert(ridden > 0 && j.total.rides === ridden, `騎乗数 ${j.total.rides} / ${ridden}`);
   assert(W.mine('stable').length + W.mine('farm').length > 0, '持ち馬がいない');
-  const lead = J.leading(2000);
+  const lead = J.leading(G.startYear || 2000);
   assert(lead.length > 50 && lead.some(x => x.me), 'リーディングの表が無い');
   const s1 = W.serialize(); W.load(s1); const s2 = W.serialize();
   assert(s1 === s2, 'セーブの往復で中身が変わる');

@@ -28,8 +28,8 @@
     const yr = j.years[G.year] || { rides: 0, wins: 0 };
     const n = J.myRides().length;
     return `<div class="hdr">
-      <div class="cal"><div class="y">${G.year}年</div><div class="mw">${G.month}<small>月</small>${G.week}<small>週</small></div></div>
-      <div class="hinfo"><div class="farm">${e(j.region)}・${e(j.name)}騎手・${G.year}年 ${yr.wins}勝 / ${yr.rides}戦</div><div class="money ${G.player.money < 0 ? 'neg' : ''}">${U.money(G.player.money)}</div></div>
+      <div class="cal"><div class="y">${W.yLabel(G.year)}</div><div class="mw">${G.month}<small>月</small>${G.week}<small>週</small></div></div>
+      <div class="hinfo"><div class="farm">${e(j.region)}・${e(j.name)}騎手・${W.yLabel(G.year)} ${yr.wins}勝 / ${yr.rides}戦</div><div class="money ${G.player.money < 0 ? 'neg' : ''}">${U.money(G.player.money)}</div></div>
       <button class="btn-next" data-act="next">${n ? 'レースへ' : '次の週へ'}<small>▶ ${n ? `${n}鞍に騎乗` : (G.week === 4 ? (G.month === 12 ? '新年' : (G.month + 1) + '月') : G.month + '月' + (G.week + 1) + '週')}</small></button>
     </div>`;
   };
@@ -102,7 +102,7 @@
     const cmds = [['stable', '🐎', '出走登録', '厩舎とレース'], ['market', '💰', '馬の店', `お手馬 ${T.ownCount()}/${T.MAX_OWN}`], ['jrecord', '🏇', 'データ', '成績・殿堂・レコード'], ['records', '📜', '記録', '年代記・表彰'], ['menu', '⚙', 'システム', 'セーブ・音・色']];
     const over = G.gameOver;
     return `
-      ${over ? `<div class="panel over mt"><div class="big">シーズン終了</div><div>${over.y}年${over.m}月、資金が尽きた（${U.money(over.money)}）。</div><div class="small muted">記録はここまでの分が残っています。</div><div class="btns mt"><button class="btn gold" data-act="newgame-form">はじめから</button><button class="btn" data-act="tab" data-tab="jrecord">成績を見る</button></div></div>` : ''}
+      ${over ? `<div class="panel over mt"><div class="big">シーズン終了</div><div>${W.yLabel(over.y)}${over.m}月、資金が尽きた（${U.money(over.money)}）。</div><div class="small muted">記録はここまでの分が残っています。</div><div class="btns mt"><button class="btn gold" data-act="newgame-form">はじめから</button><button class="btn" data-act="tab" data-tab="jrecord">成績を見る</button></div></div>` : ''}
       <div class="mgr mt">
         <div class="mgr-top">
           <div><div class="small">騎手</div><b class="nm">${e(j.name)}</b><span class="small">　${e(j.region)}${allowance ? `・${J.allowanceMark(allowance)}${allowance}kg 減` : ''}</span></div>
@@ -110,7 +110,7 @@
           <div class="r"><div class="small">資金</div><b class="${G.player.money < 0 ? 'neg' : ''}">${U.money(G.player.money)}</b></div>
         </div>
         <div class="mgr-mid">
-          <div class="plaque"><div class="y">${G.year}年</div><div class="mw">${G.month}<small>月</small> 第${G.week}<small>週</small></div></div>
+          <div class="plaque"><div class="y">${W.yLabel(G.year)}</div><div class="mw">${G.month}<small>月</small> 第${G.week}<small>週</small></div></div>
           <div class="wx">${wx ? `<div class="ic">${T.weatherIcon(wx)}</div><div><div class="small">${e(main.course)}</div><b>${wx}・${main.ground}</b></div>` : ''}</div>
           <button class="go ${rides.length ? 'on' : ''}" data-act="next" ${over ? 'disabled' : ''}>${rides.length ? 'レースへ' : '次の週へ'}<small>${rides.length ? `${rides.length}鞍に騎乗` : ''}</small></button>
         </div>
@@ -128,7 +128,7 @@
       <h2 class="sec">これからのG1</h2>
       <div class="panel"><table class="t">${up.map(r => `<tr><td class="small muted">${r.inWeeks}週後</td><td>${UI.gradeTag(r)}</td><td><b>${e(R.label(r))}</b></td><td class="small">${r.course} ${UI.surf(r.surface)} ${r.dist}m</td></tr>`).join('') || '<tr><td class="muted">なし</td></tr>'}</table></div>
       <h2 class="sec">ニュース</h2>
-      <ul class="news">${G.news.slice(0, 30).map(n => `<li class="${n.kind}"><span class="d">${n.y}/${n.m}-${n.w}</span>${e(n.text)}</li>`).join('')}</ul>`;
+      <ul class="news">${G.news.slice(0, 30).map(n => `<li class="${n.kind}"><span class="d">${UI.newsDate(n)}</span>${e(n.text)}</li>`).join('')}</ul>`;
   };
 
   // 騎乗する馬・依頼の馬のカード
@@ -145,6 +145,7 @@
         ${UI.numStats(h, wIdx, { surface: race.surface })}
         ${UI.hasSkills(h) ? `<div class="skills">${UI.skillChips(h)}</div>` : ''}
         <div class="small muted">近走：${e(UI.recentRuns(h))}</div>
+        ${(() => { const lg = card.runners.filter(r => r.horse.legend).map(r => r.horse.name); if (!lg.length) return ''; const ts = HS.Trophy ? HS.Trophy.pending(h, race).map(t => t.label) : []; return `<div class="legend-call">🏆 トロフィー「${e(ts.join('・'))}」がかかる。伝説の名馬 <b>${lg.map(e).join('・')}</b> が待っている！</div>`; })()}
         <div class="btns">${accepted ? `<span class="chip mine">騎乗する</span><button class="btn sm" data-act="horse" data-id="${e(h.id)}">馬を見る</button><button class="btn sm" data-act="skip-week" data-id="${e(h.id)}">今週は休ませる</button>` : `<button class="btn sm gold" data-act="offer-accept" data-race="${e(race.key)}" data-horse="${e(h.id)}">受ける</button>`}</div>
       </div></div>`;
   }
@@ -156,20 +157,20 @@
     const G = W.get(), wIdx = W.wIdx();
     const items = W.marketHistoric().map((it, i) => ({ it, i, kind: 'hist' })).concat(W.marketForeign().map((it, i) => ({ it, i, kind: 'fhist' })));
     for (const x of items) { x.fh = T.fhBoth(x.it.horse, wIdx); x.top = Math.max(x.fh.turf, x.fh.dirt); }
-    items.sort((a, b) => b.top - a.top || b.it.price - a.it.price);
+    items.sort((a, b) => ((b.it.legend ? 1 : 0) - (a.it.legend ? 1 : 0)) || b.top - a.top || b.it.price - a.it.price); // トロフィーで呼べるようになった伝説の名馬は上に
     const lim = st.mlimit || 40;
     const full = !T.canBuy();
     const rows = items.slice(0, lim).map(({ it, fh, top }) => {
       const h = it.horse, surf = fh.turf >= fh.dirt ? '芝' : 'ダ';
       return `<tr class="shop-row" data-act="horse" data-id="${e(h.id)}">
-        <td><b>${e(h.name)}</b></td>
+        <td><b>${e(h.name)}</b>${h.legendBought ? ' <span class="chip legend">伝説</span>' : ''}</td>
         <td><span class="sexm ${h.sex === '牝' ? 'f' : 'm'}">${h.sex === '牝' ? '牝馬' : '牡馬'}</span></td>
         <td class="num">${G.year - h.born}歳</td>
         <td class="num"><span class="fhv ${surf === '芝' ? 'turf' : 'dirt'}">${top.toFixed(1)}</span><small class="muted"> ${surf}</small></td>
         <td class="num"><b style="color:var(--gold2)">${U.money(it.price)}</b></td></tr>`;
     }).join('');
     return `<h2 class="sec">馬の店<span class="r">資金 ${U.money(G.player.money)}・お手馬 ${T.ownCount()}/${T.MAX_OWN}${full ? '（いっぱい）' : ''}</span></h2>
-      <div class="small muted">デビュー前の史実馬を、フリーハンデ（いまの力を斤量で表した数。芝とダートの高いほう）の高い順に。行を押すと馬の画面が開き、そこで買えます。</div>
+      <div class="small muted">1990〜2026年に走った馬で、いま走っていない馬を、デビュー前の2歳として売る。フリーハンデ（いまの力を斤量で表した数。芝とダートの高いほう）の高い順。トロフィーで呼べるようになった伝説の名馬は上に並ぶ。行を押すと馬の画面が開き、そこで買えます。</div>
       ${items.length ? `<div class="tblwrap mt"><table class="t shop"><tr><th>馬名</th><th>性別</th><th class="num">年齢</th><th class="num">フリーハンデ</th><th class="num">値段</th></tr>${rows}</table></div>
         ${items.length > lim ? `<div class="center mt"><button class="btn" data-act="mmore">もっと見る（残り${items.length - lim}頭）</button></div>` : ''}`
         : '<div class="panel empty">いま買えるデビュー前の史実馬はいません。毎年3月に新しい世代が生まれます。</div>'}`;
@@ -193,7 +194,7 @@
     const sel = document.getElementById('debut-week'); if (!sel) return;
     const [y, m, w] = sel.value.split('-').map(Number);
     const err = T.reserveDebut(d.id, y, m, w);
-    if (err) App.toast(err); else { App.toast(`新馬戦（${y}年${m}月${w}週）を予約した`); App.save(); }
+    if (err) App.toast(err); else { App.toast(`新馬戦（${W.yLabel(y)}${m}月${w}週）を予約した`); App.save(); }
     App.render();
   };
   App.act.unreserve = d => { T.unreserve(d.id, d.key); App.save(); App.render(); };
@@ -222,7 +223,7 @@
   S.jrecord = function (st) {
     const G = W.get(), j = J.me();
     const tab = st.jtab || 'me';
-    const tabs = [['me', 'わたしの成績'], ['lead', 'リーディング'], ['awards', '騎手の表彰'], ['hall', '殿堂'], ['course', 'コースレコード'], ['mounts', '乗った馬'], ['hist', '騎乗の記録']];
+    const tabs = [['me', 'わたしの成績'], ['trophy', 'トロフィー'], ['lead', 'リーディング'], ['awards', '騎手の表彰'], ['hall', '殿堂'], ['course', 'コースレコード'], ['mounts', '乗った馬'], ['hist', '騎乗の記録']];
     let body = '';
     if (tab === 'me') {
       const ys = Object.keys(j.years).map(Number).sort((a, b) => b - a);
@@ -230,20 +231,27 @@
         ${ys.map(y => { const r = j.years[y]; return `<tr><td>${y}</td><td class="num">${r.rides}</td><td class="num"><b>${r.wins}</b></td><td class="num">${r.w2}</td><td class="num">${r.w3}</td><td class="num">${r.rides ? (r.wins / r.rides * 100).toFixed(1) : '0.0'}%</td><td class="num">${J.myRank(y) || '-'}</td></tr>`; }).join('')}
         <tr><td><b>通算</b></td><td class="num">${j.total.rides}</td><td class="num"><b>${j.total.wins}</b></td><td class="num">${j.total.w2}</td><td class="num">${j.total.w3}</td><td class="num">${j.total.rides ? (j.total.wins / j.total.rides * 100).toFixed(1) : '0.0'}%</td><td></td></tr></table></div>
         <h2 class="sec">重賞の勝ち鞍</h2>
-        ${j.big.length ? `<div class="panel">${j.big.slice().reverse().map(b => `<div>${b.y}年 ${UI.gradeTag({ grade: b.grade, region: b.region, year: b.y })} ${e(b.race)}　${e(b.horse)}</div>`).join('')}</div>` : '<div class="panel empty">まだ重賞を勝っていません。</div>'}`;
+        ${j.big.length ? `<div class="panel">${j.big.slice().reverse().map(b => `<div>${W.yLabel(b.y)} ${UI.gradeTag({ grade: b.grade, region: b.region, year: b.y })} ${e(b.race)}　${e(b.horse)}</div>`).join('')}</div>` : '<div class="panel empty">まだ重賞を勝っていません。</div>'}`;
     } else if (tab === 'lead') {
       const years = Object.keys(G.records.jockeys || {}).map(Number).sort((a, b) => b - a);
       const y = st.ly || years[0] || G.year;
       const l = J.leading(y);
       const top = l.slice(0, 30); const meI = l.findIndex(x => x.me);
       if (meI >= 30) top.push(l[meI]);
-      body = `<div class="btns">${years.slice(0, 8).map(yy => `<button class="btn sm ${yy === y ? 'gold' : ''}" data-act="jlead-year" data-y="${yy}">${yy}年</button>`).join('')}</div>
+      body = `<div class="btns">${years.slice(0, 8).map(yy => `<button class="btn sm ${yy === y ? 'gold' : ''}" data-act="jlead-year" data-y="${yy}">${W.yLabel(yy)}</button>`).join('')}</div>
         <div class="tblwrap mt"><table class="t"><tr><th>順位</th><th>騎手</th><th>1着</th><th>2着</th><th>3着</th><th>騎乗</th><th>勝率</th></tr>
         ${top.map(x => `<tr class="${x.me ? 'lead-me' : ''}"><td class="num">${l.indexOf(x) + 1}</td><td>${x.me ? '<b>' + e(x.name) + '</b>（あなた）' : e(x.name)}</td><td class="num"><b>${x.wins}</b></td><td class="num">${x.w2}</td><td class="num">${x.w3}</td><td class="num">${x.rides}</td><td class="num">${x.rides ? (x.wins / x.rides * 100).toFixed(1) : '0.0'}%</td></tr>`).join('')}</table></div>`;
     } else if (tab === 'awards') {
       const aw = G.records.jawards || {};
       const ys = Object.keys(aw).map(Number).sort((a, b) => b - a);
-      body = ys.length ? ys.map(y => `<h2 class="sec">${y}年</h2><div class="panel"><dl class="kv">${Object.entries(aw[y]).map(([k, v]) => `<dt>${k}</dt><dd>${v === j.name ? '★ <b>' + e(v) + '</b>（あなた）' : e(v)}</dd>`).join('')}</dl></div>`).join('') : '<div class="panel empty">年が明けると、前の年の騎手の表彰が発表されます。</div>';
+      body = ys.length ? ys.map(y => `<h2 class="sec">${W.yLabel(y)}</h2><div class="panel"><dl class="kv">${Object.entries(aw[y]).map(([k, v]) => `<dt>${k}</dt><dd>${v === j.name ? '★ <b>' + e(v) + '</b>（あなた）' : e(v)}</dd>`).join('')}</dl></div>`).join('') : '<div class="panel empty">年が明けると、前の年の騎手の表彰が発表されます。</div>';
+    } else if (tab === 'trophy' && HS.Trophy) {
+      const tr = G.trophies || {};
+      const n = HS.Trophy.LIST.filter(t => tr[t.id]).length;
+      body = `<div class="small muted">条件の最後のレースに自分の馬が出ると、1990年より前に同じことをやってのけた伝説の名馬が出てくる。勝つとトロフィーを手にし、その名馬たちが馬の店に並ぶ。${n} / ${HS.Trophy.LIST.length}</div>
+        <div class="list mt">${HS.Trophy.LIST.map(t => { const got = tr[t.id]; const lg = HS.Trophy.legendsOf(t).map(d => d.name);
+          return `<div class="panel trophy ${got ? 'got' : ''}"><div class="row"><span class="cup">${got ? '🏆' : '🔒'}</span><b class="nm">${e(t.label)}</b><span class="right small muted">${got ? `${W.yLabel(got.y)}・${e(got.horse)}` : 'まだ'}</span></div>
+            <div class="small">${e(t.note)}</div>${lg.length ? `<div class="small mt">伝説の名馬：<b>${lg.map(e).join('・')}</b>${got ? '（馬の店に並んでいる）' : ''}</div>` : ''}</div>`; }).join('')}</div>`;
     } else if (tab === 'hall') {
       const hall = (G.records.hall || []).slice().sort((a, b) => b.titles.length - a.titles.length || b.g1 - a.g1);
       body = hall.length ? `<div class="small muted">冠（勝ったレースの組み合わせで付く称号）を手にした自分の馬。</div><div class="list mt">${hall.map(x => `<div class="panel"><div class="row"><b class="nm">${e(x.name)}</b><span class="small muted">${x.born}年生 ${x.sex}</span><span class="right small">${x.starts}戦${x.wins}勝・G1 ${x.g1}勝</span></div><div class="mt">${x.titles.map(l => `<span class="chip crown">👑 ${e(l)}</span>`).join('')}</div><div class="small muted">総獲得賞金 ${U.money(x.prize)}・${x.since}年に殿堂入り</div></div>`).join('')}</div>` : '<div class="panel empty">まだ殿堂入りした馬はいません。三冠・グランプリ制覇などの冠を取ると殿堂入りします。</div>';
@@ -254,7 +262,7 @@
       const ms = Object.entries(j.mounts || {}).sort((a, b) => b[1].wins - a[1].wins || a[1].best - b[1].best || b[1].rides - a[1].rides);
       body = ms.length ? `<div class="small muted">これまでに乗った馬。</div><div class="tblwrap mt"><table class="t"><tr><th>馬</th><th>騎乗</th><th>1着</th><th>最高</th><th>最後</th></tr>${ms.slice(0, 60).map(([n, m]) => `<tr><td>${m.best <= 3 ? '<b>' + e(n) + '</b>' : e(n)}</td><td class="num">${m.rides}</td><td class="num">${m.wins}</td><td class="num">${m.best}着</td><td class="num">${m.last || ''}</td></tr>`).join('')}</table></div>` : '<div class="panel empty">まだお手馬はいません。</div>';
     } else {
-      body = j.history.length ? `<div class="tblwrap"><table class="t"><tr><th>日付</th><th>レース</th><th>馬</th><th>人気</th><th>着順</th></tr>${j.history.slice(0, 80).map(r => `<tr><td class="small">${r.y}/${r.m}-${r.w}</td><td class="small">${r.grade ? `<span class="grade ${r.grade}">${r.grade}</span> ` : ''}${e(r.race)}</td><td>${e(r.horse)}</td><td class="num">${r.pop}</td><td class="num ${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos}着</td></tr>`).join('')}</table></div>` : '<div class="panel empty">まだ騎乗していません。</div>';
+      body = j.history.length ? `<div class="tblwrap"><table class="t"><tr><th>日付</th><th>レース</th><th>馬</th><th>人気</th><th>着順</th></tr>${j.history.slice(0, 80).map(r => `<tr><td class="small">${UI.newsDate(r)}</td><td class="small">${r.grade ? `<span class="grade ${r.grade}">${r.grade}</span> ` : ''}${e(r.race)}</td><td>${e(r.horse)}</td><td class="num">${r.pop}</td><td class="num ${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos}着</td></tr>`).join('')}</table></div>` : '<div class="panel empty">まだ騎乗していません。</div>';
     }
     return `<div class="tabs mt">${tabs.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="jtab" data-tab="${k}">${l}</button>`).join('')}</div>${body}`;
   };
@@ -265,18 +273,16 @@
     // 馬主・生産者の遊び方は選べなくした（持ち主の決定 2026-10-15。前のセーブは「つづきから」で遊べる）
     void newgame0;
     const pick = '';
-    const years = []; for (let y = 1960; y <= 2025; y++) years.push(y);
     return pick + `<div class="panel gold" style="margin-top:12px">
       <h3 class="serif" style="margin:0 0 12px;color:var(--gold2);font-size:22px">新人騎手としてデビューする</h3>
       <div class="field"><label>騎手の名前</label><input id="ng-jname" maxlength="10" value="${e(st.jname || '')}" placeholder="例：青空 翔"></div>
       <div class="field"><label>所属</label><select id="ng-region">${J.REGIONS.map(r => `<option ${st.region === r ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
-      <div class="field"><label>デビューの年</label><select id="ng-year">${years.map(y => `<option ${y === st.year ? 'selected' : ''}>${y}</option>`).join('')}</select>
-        <div class="small muted">その年の実在の馬と騎手と一緒に走る。勝って評判を上げると、強い馬・大きいレース・史実の名馬の依頼が来る。</div></div>
+      <div class="small muted">1990〜2026年に走った名馬が、年代に関係なく毎年デビューしてくる。馬の店で買い、自分で乗って勝とう。三冠などのトロフィーがかかる最後のレースには、1990年より前の伝説の名馬が出てくる。</div>
       <div class="btns mt"><button class="btn gold" data-act="newgame-jockey">デビューする</button><button class="btn" data-act="title">もどる</button></div>
     </div>`;
   };
   const act = App.act;
-  const readJ = () => { const ng = App.st.ng; const n = document.querySelector('#ng-jname'); if (n) { ng.jname = n.value; ng.region = document.querySelector('#ng-region').value; ng.year = +document.querySelector('#ng-year').value; } };
+  const readJ = () => { const ng = App.st.ng; const n = document.querySelector('#ng-jname'); if (n) { ng.jname = n.value; ng.region = document.querySelector('#ng-region').value; const yy = document.querySelector('#ng-year'); if (yy) ng.year = +yy.value; } };
   act['ng-mode'] = d => { readJ(); App.st.ng.mode = d.m; App.render(); };
   act['newgame-jockey'] = () => {
     readJ();
@@ -438,13 +444,13 @@
     const recent = h => (h.results || []).slice(-3).map(r => `<span class="${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos > 9 ? '×' : r.pos}</span>`).join('') || '<span class="muted">新</span>';
     return `<div class="entry">
       <div class="entry-head"><div>${UI.gradeTag(race)} <b class="serif" style="font-size:20px">${e(race.short || race.name)}</b></div>
-        <div class="small">${G.year}年${race.month}月 ${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　${(w => `${T.weatherIcon(w)}${w}`)(T.weather(G.seed, G.year, G.month, G.week, race.course, race.ground))}・${race.ground}　${runners.length}頭</div></div>
+        <div class="small">${W.yLabel(G.year)}${race.month}月 ${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　${(w => `${T.weatherIcon(w)}${w}`)(T.weather(G.seed, G.year, G.month, G.week, race.course, race.ground))}・${race.ground}　${runners.length}頭</div></div>
       <div class="entry-top">${UI.courseSvg(race)}
         <div class="tenkai"><div class="small muted">展開予想</div><div class="big">${pace}</div><div class="small">${favor}</div>
           <div class="kyaku-cnt">${Object.entries(cnt).map(([k, v]) => `<span class="kyaku ${STYLE_CLS[k]}">${k[0]}</span>${v}`).join(' ')}</div></div></div>
       <div class="tblwrap mt"><table class="t entry-t"><tr><th>枠</th><th>馬名</th><th>脚質</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th>騎手</th><th>人気</th><th>近走</th></tr>
       ${rows.map(x => { const me = x.rider === 'P' || x.mine; return `<tr class="${me ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td>
-        <td class="nm">${e(x.horse.name)}${x.horse.hist ? ' <span class="chip hist">史</span>' : ''}</td>
+        <td class="nm">${e(x.horse.name)}${x.horse.legend ? ' <span class="chip legend">伝説</span>' : x.horse.hist ? ' <span class="chip hist">史</span>' : ''}</td>
         <td>${UI.kyakuArrows(x.horse.style)}<div class="small muted">${e(x.horse.style)}</div></td>
         <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td>
         <td class="small">${x.allowance ? J.allowanceMark(x.allowance) : ''}${e(x.jockey ? x.jockey.name : '')}</td>

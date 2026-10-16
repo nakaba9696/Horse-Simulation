@@ -7,6 +7,9 @@
   const S = UI.screens = {};
 
   // ---------- 小物 ----------
+  // 日付の見せ方（年代なしのゲームは「n年目」）
+  UI.newsDate = n => { const G = W.get(); return G && G.eraless ? `${n.y - G.startYear + 1}年目 ${n.m}/${n.w}` : `${n.y}/${n.m}-${n.w}`; };
+  UI.ym = (y, m) => { const G = W.get(); return G && G.eraless ? `${y - G.startYear + 1}年目 ${m}月` : `${y}/${m}`; };
   UI.waku = (frame, num) => { const c = HS.DATA.frameColors[(frame - 1) % 8], t = HS.DATA.frameText[(frame - 1) % 8]; return `<span class="waku" style="background:${c};color:${t}">${num}</span>`; };
   UI.gradeTag = r => { const b = R.gradeBadge(r); if (!b) return ''; const cls = b.startsWith('Jpn') ? 'Jpn' : b === '重賞' ? 'Pre' : b; return `<span class="grade ${cls}">${b}</span>`; };
   UI.surf = s => `<span class="chip ${s === 'ダ' ? 'dirt' : 'turf'}">${s === 'ダ' ? 'ダート' : '芝'}</span>`;
@@ -22,7 +25,7 @@
   UI.header = function () {
     const G = W.get();
     return `<div class="hdr">
-      <div class="cal"><div class="y">${G.year}年</div><div class="mw">${G.month}<small>月</small>${G.week}<small>週</small></div></div>
+      <div class="cal"><div class="y">${W.yLabel(G.year)}</div><div class="mw">${G.month}<small>月</small>${G.week}<small>週</small></div></div>
       <div class="hinfo"><div class="farm">${e(G.player.farm)}・${e(G.player.name)}</div><div class="money ${G.player.money < 0 ? 'neg' : ''}">${U.money(G.player.money)}</div></div>
       <button class="btn-next" data-act="next">次の週へ<small>▶ ${G.week === 4 ? (G.month === 12 ? '新年' : (G.month + 1) + '月') : G.month + '月' + (G.week + 1) + '週'}</small></button>
     </div>`;
@@ -104,7 +107,7 @@
       <h2 class="sec">これからのG1</h2>
       <div class="panel"><table class="t">${up.map(r => `<tr><td class="small muted">${r.inWeeks}週後</td><td>${UI.gradeTag(r)}</td><td><b>${e(R.label(r))}</b></td><td class="small">${r.course} ${UI.surf(r.surface)} ${r.dist}m</td></tr>`).join('') || '<tr><td class="muted">なし</td></tr>'}</table></div>
       <h2 class="sec">ニュース</h2>
-      <ul class="news">${G.news.slice(0, 30).map(n => `<li class="${n.kind}"><span class="d">${n.y}/${n.m}-${n.w}</span>${e(n.text)}</li>`).join('')}</ul>`;
+      <ul class="news">${G.news.slice(0, 30).map(n => `<li class="${n.kind}"><span class="d">${UI.newsDate(n)}</span>${e(n.text)}</li>`).join('')}</ul>`;
   };
   function ageCond(r) {
     const a = { '2': '2歳', '3': '3歳', '3+': '3歳以上', '4+': '4歳以上' }[r.age] || '';
@@ -200,7 +203,7 @@
         ${h.loc === 'stable' ? `<div>状態<b>${h.injury ? '故障中' : UI.condTag(h)}</b></div>` : ''}
       </div>
       ${known && UI.hasSkills(h) ? `<h2 class="sec">特殊能力</h2><div class="panel skills">${UI.skillChips(h)}</div>` : ''}
-      ${h.gradedWins.length ? `<h2 class="sec">重賞の勝ち鞍</h2><div class="panel">${h.gradedWins.map(g => `<div>${g.y}年 ${UI.gradeTag({ grade: g.grade, region: g.region, year: g.y })} ${e(g.short || g.race)}${g.hist ? ' <span class="small muted">（開始前）</span>' : ''}</div>`).join('')}</div>` : ''}
+      ${h.gradedWins.length ? `<h2 class="sec">重賞の勝ち鞍</h2><div class="panel">${h.gradedWins.map(g => `<div>${W.yLabel(g.y)} ${UI.gradeTag({ grade: g.grade, region: g.region, year: g.y })} ${e(g.short || g.race)}${g.hist ? ' <span class="small muted">（開始前）</span>' : ''}</div>`).join('')}</div>` : ''}
       ${h.hist && W.get().settings.showHistNote ? histNote(h) : ''}`;
   }
   // 名馬の解説（市場などから開く）
@@ -261,7 +264,7 @@
         }).join('')}</table></div>` : '<div class="panel empty">今週は出られるレースがありません。</div>'}
       ${ent ? `<div class="panel mt"><div class="row"><span>騎手</span><select class="grow" data-act-change="jockey" data-id="${h.id}">${W.ridersForPlayer(G.year).map(j => `<option ${j.name === ent.jockey ? 'selected' : ''} value="${e(j.name)}">${e(j.name)}（腕 ${U.grade(j.skill)}・${j.region === '外国' ? '短期免許' : j.region}）</option>`).join('')}</select></div></div>` : ''}
       ${jm && !(h.starts > 0) && HS.Season.debutWeeks(h).length ? (() => { const dw = HS.Season.debutWeeks(h), cur = rsv.find(x => x.debut); return `<h2 class="sec">デビュー戦の予約</h2>
-      <div class="panel row wrap">${cur ? `<span>新馬戦：<b>${cur.y}年${cur.m}月${cur.w}週</b></span><button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(cur.key)}">予約取消</button>` : `<select id="debut-week">${dw.map(x => `<option value="${x.y}-${x.m}-${x.w}">${x.y}年${x.m}月${x.w}週</option>`).join('')}</select><button class="btn sm gold" data-act="reserve-debut" data-id="${h.id}">新馬戦を予約</button>`}<span class="small muted">その週の新馬戦から、馬場と距離の合うものに出ます。</span></div>`; })() : ''}
+      <div class="panel row wrap">${cur ? `<span>新馬戦：<b>${W.yLabel(cur.y)}${cur.m}月${cur.w}週</b></span><button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(cur.key)}">予約取消</button>` : `<select id="debut-week">${dw.map(x => `<option value="${x.y}-${x.m}-${x.w}">${W.yLabel(x.y)}${x.m}月${x.w}週</option>`).join('')}</select><button class="btn sm gold" data-act="reserve-debut" data-id="${h.id}">新馬戦を予約</button>`}<span class="small muted">その週の新馬戦から、馬場と距離の合うものに出ます。</span></div>`; })() : ''}
       <h2 class="sec">この先の重賞（出られるもの）${jm ? '<span class="r">1年先まで予約できる（勝ち上がりなどの条件はその週に確かめる）</span>' : ''}</h2>
       <div class="panel"><table class="t">${upcoming.map(r => { const on = rsv.some(x => x.key === r.key); const busy = !on && rsv.some(x => x.y === r.year && x.m === r.month && x.w === r.week);
         return `<tr class="${on ? 'lead-me' : ''}"><td class="small muted">${r.month}月${r.week}週<br>${r.inWeeks}週後</td><td>${UI.gradeTag(r)}</td><td><b>${e(R.label(r))}</b></td><td class="small">${r.course}${r.surface}${r.dist}m</td>${jm ? `<td>${on ? `<button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(r.key)}">予約取消</button>` : busy ? '' : `<button class="btn sm gold" data-act="reserve" data-id="${h.id}" data-key="${e(r.key)}">予約</button>`}</td>` : ''}</tr>`; }).join('') || '<tr><td class="muted">なし</td></tr>'}</table></div>`;
@@ -270,7 +273,7 @@
     const rs = h.results.slice().reverse();
     if (!rs.length) return '<div class="panel empty">まだ走っていません。</div>';
     return `<div class="tblwrap mt"><table class="t"><tr><th>日付</th><th>レース</th><th>距離</th><th>着</th><th class="hide-sm">人気</th><th>タイム</th><th class="hide-sm">上がり</th><th class="hide-sm">騎手</th></tr>
-      ${rs.map(r => `<tr><td class="small">${r.y}/${r.m}</td><td>${r.grade ? `<span class="grade ${r.grade.startsWith('Jpn') ? 'Jpn' : r.grade}">${r.grade}</span> ` : ''}${e(r.race)}<div class="small muted">${r.course} ${r.ground}</div></td><td class="small">${r.surface}${r.dist}</td>
+      ${rs.map(r => `<tr><td class="small">${UI.ym(r.y, r.m)}</td><td>${r.grade ? `<span class="grade ${r.grade.startsWith('Jpn') ? 'Jpn' : r.grade}">${r.grade}</span> ` : ''}${e(r.race)}<div class="small muted">${r.course} ${r.ground}</div></td><td class="small">${r.surface}${r.dist}</td>
         <td class="num ${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos}<span class="small muted">/${r.n}</span></td><td class="num hide-sm">${r.pop || ''}</td><td class="num small">${U.time(r.time)}${r.pos > 1 ? `<div class="muted">${e(r.margin)}</div>` : ''}</td><td class="num small hide-sm">${r.last3f ? r.last3f.toFixed(1) : ''}</td><td class="small hide-sm">${e(r.jockey || '')}</td></tr>`).join('')}
     </table></div>`;
   }
@@ -338,7 +341,7 @@
     rows.sort((a, b) => sort === 'fee' ? b.s.fee - a.s.fee : sort === 'feeAsc' ? a.s.fee - b.s.fee : b.ev.mean - a.ev.mean);
     return `
       <div class="row mt"><button class="btn sm" data-act="back">← もどる</button></div>
-      <h2 class="sec">${e(m.name)}の相手を選ぶ<span class="r">${G.year}年・${list.length}頭</span></h2>
+      <h2 class="sec">${e(m.name)}の相手を選ぶ<span class="r">${W.yLabel(G.year)}・${list.length}頭</span></h2>
       <div class="panel small">母 ${e(m.name)}（父 ${e(m.sire || '?')}・${e(P.lineOf(m.sire))}）　資金 ${U.money(G.player.money)}</div>
       <div class="tabs">${[['all', 'すべて'], ['turf', '芝向き'], ['dirt', 'ダート向き'], ['cheap', '300万円以下']].map(([k, l]) => `<button class="${f === k ? 'on' : ''}" data-act="bfilter" data-f="${k}">${l}</button>`).join('')}
         ${[['rank', '評価順'], ['fee', '高い順'], ['feeAsc', '安い順']].map(([k, l]) => `<button class="${sort === k ? 'on' : ''}" data-act="bsort" data-s="${k}">${l}</button>`).join('')}</div>
@@ -438,7 +441,7 @@
     const G = W.get();
     const rows = runners.slice().sort((a, b) => a.num - b.num);
     return `<h3>${UI.gradeTag(race)} ${e(race.short || race.name)}</h3>
-      <div class="small muted">${G.year}年${race.month}月 ${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　馬場：${race.ground}　${runners.length}頭</div>
+      <div class="small muted">${W.yLabel(G.year)}${race.month}月 ${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　馬場：${race.ground}　${runners.length}頭</div>
       <div class="tblwrap mt card-sheet"><table class="t"><tr><th>枠番</th><th></th><th>馬名</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th class="hide-sm">騎手</th><th>人気</th><th>単勝</th></tr>
       ${rows.map(x => `<tr class="${x.mine || x.rider === 'P' ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td><td><canvas class="silks" width="52" height="52" data-art="silks" data-key="${e(x.horse.name)}" data-mine="${x.mine ? 1 : 0}"></canvas></td><td class="nm">${e(x.horse.name)} ${x.horse.hist ? '<span class="chip hist">史</span>' : ''}<div class="small muted">${x.horse.sire ? '父 ' + e(x.horse.sire) : x.horse.foreign ? '外国馬' : ''}<span class="show-sm">　${e(x.jockey ? x.jockey.name : '')}</span></div></td>
         <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td><td class="small hide-sm">${x.allowance && HS.Jockey ? HS.Jockey.allowanceMark(x.allowance) : ''}${e(x.jockey ? x.jockey.name : '')}</td><td class="num">${x.pop}</td><td class="num">${x.odds}</td></tr>`).join('')}
@@ -452,10 +455,10 @@
     const years = Object.keys(G.records.g1).map(Number).sort((a, b) => b - a);
     let body = '';
     if (tab === 'g1') {
-      body = years.length ? years.map(y => `<h2 class="sec">${y}年のG1</h2><div class="tblwrap"><table class="t"><tr><th>レース</th><th>勝ち馬</th><th class="hide-sm">父</th><th>史実</th></tr>${G.records.g1[y].map(r => `<tr class="${r.owner === 'P' ? 'mine' : ''}"><td>${UI.gradeTag(Object.assign({ year: y }, r))} ${e(r.short || r.race)}</td><td><b>${e(r.winner)}</b>${r.hist ? ' <span class="chip hist">史</span>' : ''}</td><td class="small hide-sm">${e(r.sire || '')}</td><td class="small ${r.histWinner === r.winner ? '' : 'muted'}">${r.histWinner ? (r.histWinner === r.winner ? '史実どおり' : e(r.histWinner)) : ''}</td></tr>`).join('')}</table></div>`).join('') : '<div class="panel empty">まだG1は行われていません。</div>';
+      body = years.length ? years.map(y => `<h2 class="sec">${W.yLabel(y)}のG1</h2><div class="tblwrap"><table class="t"><tr><th>レース</th><th>勝ち馬</th><th class="hide-sm">父</th><th>史実</th></tr>${G.records.g1[y].map(r => `<tr class="${r.owner === 'P' ? 'mine' : ''}"><td>${UI.gradeTag(Object.assign({ year: y }, r))} ${e(r.short || r.race)}</td><td><b>${e(r.winner)}</b>${r.hist ? ' <span class="chip hist">史</span>' : ''}</td><td class="small hide-sm">${e(r.sire || '')}</td><td class="small ${r.histWinner === r.winner ? '' : 'muted'}">${r.histWinner ? (r.histWinner === r.winner ? '史実どおり' : e(r.histWinner)) : ''}</td></tr>`).join('')}</table></div>`).join('') : '<div class="panel empty">まだG1は行われていません。</div>';
     } else if (tab === 'awards') {
       const ys = Object.keys(G.records.awards).map(Number).sort((a, b) => b - a);
-      body = ys.length ? ys.map(y => `<h2 class="sec">${y}年の年度表彰</h2><div class="panel"><dl class="kv">${Object.entries(G.records.awards[y]).map(([k, v]) => `<dt>${k}</dt><dd>${v.owner === 'P' ? '★ ' : ''}<b>${e(v.name)}</b></dd>`).join('')}</dl></div>`).join('') : '<div class="panel empty">年が明けると、前の年の表彰が発表されます。</div>';
+      body = ys.length ? ys.map(y => `<h2 class="sec">${W.yLabel(y)}の年度表彰</h2><div class="panel"><dl class="kv">${Object.entries(G.records.awards[y]).map(([k, v]) => `<dt>${k}</dt><dd>${v.owner === 'P' ? '★ ' : ''}<b>${e(v.name)}</b></dd>`).join('')}</dl></div>`).join('') : '<div class="panel empty">年が明けると、前の年の表彰が発表されます。</div>';
     } else if (tab === 'mine') {
       const pr = G.records.player;
       body = `<div class="panel"><dl class="kv"><dt>通算</dt><dd>${pr.starts}戦${pr.wins}勝</dd><dt>獲得賞金</dt><dd>${U.money(pr.earn)}</dd><dt>重賞勝利</dt><dd>${pr.g1.length}勝（うちG1 ${pr.g1.filter(x => x.grade === 'G1').length}勝）</dd></dl></div>

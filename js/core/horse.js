@@ -122,7 +122,7 @@
 
   // いまの能力値（成長×素質＋調教の上積み）
   H.cur = function (horse, wIdx) {
-    const g = horse.filler ? 1 : H.growthFactor(horse, wIdx); // 頭数合わせの馬は、いまの値をそのまま持つ
+    const g = horse.filler || horse.legend ? 1 : H.growthFactor(horse, wIdx); // 頭数合わせの馬は、いまの値をそのまま持つ。伝説の名馬はいちばん良いとき
     const out = {};
     for (const k of H.STATS) out[k] = horse.pot[k] * g + ((horse.bonus && horse.bonus[k]) || 0);
     return out;

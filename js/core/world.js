@@ -39,11 +39,14 @@
   // その年の物価（1995年＝1）
   const IDX = () => U.priceIndex(G.year);
   W.priceIndex = IDX;
-  W.dateLabel = (y, m, w) => `${y}年${m}月${w}週`;
+  // 年の見せ方（年代なしのゲームは「n年目」）
+  W.yLabel = y => G && G.eraless ? `${y - G.startYear + 1}年目` : `${y}年`;
+  W.dateLabel = (y, m, w) => `${W.yLabel(y)}${m}月${w}週`;
   const news = (text, kind) => { G.news.unshift({ y: G.year, m: G.month, w: G.week, text, kind: kind || '' }); if (G.news.length > 120) G.news.length = 120; };
   W.news = news;
   const newId = () => 'h' + (G.nextId++);
-  W.horse = id => G.horses[id];
+  W.newId = newId;
+  W.horse = id => G.horses[id] || (HS.Eraless && HS.Eraless.shopHorse(id)) || undefined;
   W.all = () => Object.values(G.horses);
   W.mine = loc => W.all().filter(h => h.owner === 'P' && (!loc || h.loc === loc));
   // 使われている名前（週の間は使い回し、新しい名前は足していく）
@@ -63,11 +66,15 @@
     if (HS.Edits) HS.Edits.apply(edits);
     W.index();
     const seed = opts.seed || (Date.now() % 1e9);
+    // 騎手のゲームは年代なし（持ち主の決定 2026-10-16）：番組・物価・騎手は固定し、史実馬は毎年ランダムにデビューする
+    const eraless = opts.mode === 'jockey' && opts.eraless !== false && !!HS.Eraless;
+    U.ERA = eraless ? HS.Eraless.ERA : null;
+    const year0 = eraless ? HS.Eraless.START : (opts.year || 1995);
     G = {
-      v: SAVE_VERSION, seed, rngState: seed, year: opts.year || 1995, month: 1, week: 1,
+      v: SAVE_VERSION, seed, rngState: seed, year: year0, month: 1, week: 1, eraless, startYear: year0, lineup: {}, unlocked: [], trophies: {},
       player: {
         name: opts.name || 'プレイヤー', farm: opts.farm || '新星牧場', crown: opts.crown || '',
-        silks: opts.silks || { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, money: Math.round((opts.money || 30000) * U.priceIndex(opts.year || 1995) / 10) * 10,
+        silks: opts.silks || { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, money: Math.round((opts.money || 30000) * U.priceIndex(year0) / 10) * 10,
       },
       difficulty: opts.difficulty || 'normal',
       horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, edits,
@@ -77,8 +84,9 @@
     };
     rng = new U.RNG(seed);
     P.build(G.pedExtra);
-    // 史実馬：開始年に生きている世代（0歳は3月に生まれる）
-    for (let b = G.year - 9; b < G.year; b++) for (const d of W.histByBorn.get(b) || []) {
+    // 史実馬：開始年に生きている世代（0歳は3月に生まれる）。年代なしのゲームは、2〜6歳をランダムに
+    if (eraless) HS.Eraless.populate();
+    else for (let b = G.year - 9; b < G.year; b++) for (const d of W.histByBorn.get(b) || []) {
       if ((d.retire || d.born + 5) < G.year && b < G.year - 2) continue;
       W.spawnHistoric(d, true);
     }
@@ -282,6 +290,10 @@
     return wc.jk[key].map(j => Object.assign({}, j));
   };
   W.jockeysOf0 = function (year, regions) {
+    // 年代なしのゲーム：1990〜2026年に乗った騎手が全員いて、腕前はその間のいちばん良い年
+    if (U.ERA) return (HS.DATA.jockeys || []).filter(j => j.from <= 2026 && (j.to || 9999) >= 1990 && (!regions || regions.includes(j.region)))
+      .map(j => { let s = 0; for (let y = Math.max(j.from, 1990); y <= Math.min(j.to || 2026, 2026); y += 2) s = Math.max(s, W.skillAt(j, y)); return { name: j.name, region: j.region, skill: Math.round(s || W.skillAt(j, 2026)) }; })
+      .sort((a, b) => b.skill - a.skill);
     return (HS.DATA.jockeys || []).filter(j => j.from <= year && year <= (j.to || 9999) && (!regions || regions.includes(j.region)))
       .map(j => ({ name: j.name, region: j.region, skill: Math.round(W.skillAt(j, year)) }))
       .sort((a, b) => b.skill - a.skill);
@@ -307,6 +319,7 @@
     const all = (HS.DATA.jockeys || []).filter(j => j.name === name);
     const j = all.find(x => x.from <= yr && yr <= (x.to || 9999)) || all[0];
     if (!j) return { name: name || '騎手未定', skill: 65, region: '' };
+    if (U.ERA) { let s = 0; for (let y = j.from; y <= (j.to || 2026); y += 2) s = Math.max(s, W.skillAt(j, y)); return { name: j.name, region: j.region, skill: Math.round(s || 70) }; }
     return { name: j.name, region: j.region, skill: Math.round(W.skillAt(j, yr)) };
   };
   // 史実馬の主戦騎手（その年）
@@ -314,8 +327,9 @@
     const m = HS.DATA.historicJockeys && HS.DATA.historicJockeys[h.name];
     if (!m) return null;
     if (typeof m === 'string') return m;
-    // 年の指定はその年だけ（ほかの年は default）
-    return m[String(year)] || m.default || null;
+    // 年の指定はその年だけ（ほかの年は default）。年代なしのゲームは、その馬の本当の年に直して見る
+    const off = (G.lineup && G.lineup[h.name]) || 0;
+    return m[String(year - off)] || m.default || null;
   };
   W.travelCost = race => race.region !== '海外' ? 0 : Math.round((['仏', '英', '米', '愛', '加', '独'].includes(race.country || (HS.DATA.courses[race.course] || {}).country) ? 3000 : 1500) * IDX());
 
@@ -324,7 +338,8 @@
   W.histTargets = function (h, year) {
     const d = W.histByName.get(h.name);
     if (!d) return [];
-    return [...(d.wins || []), ...(d.ran || [])].filter(s => s.startsWith(String(year))).map(s => s.slice(4));
+    const off = (G.lineup && G.lineup[h.name]) || 0; // 年代なしのゲームでは生年をずらしているので、本当の年に直す
+    return [...(d.wins || []), ...(d.ran || [])].filter(s => s.startsWith(String(year - off))).map(s => s.slice(4));
   };
   // このプレイヤー以外の馬を、どのレースに出すか
   W.aiChoose = function (h, races, wIdx, r) {
@@ -407,6 +422,8 @@
     }
     // 招待のレース（ドリームクラシック）は招待馬で組む
     for (const rc of allRaces) if (rc.invite && HS.Season) field[rc.key] = HS.Season.dcField(rc);
+    // トロフィーのかかったレースには、伝説の名馬が出てくる（trophy.js）
+    if (G.eraless && HS.Trophy) for (const rc of allRaces) { const lg = HS.Trophy.legendsFor(rc, field[rc.key] || []); if (lg.length) field[rc.key] = (field[rc.key] || []).concat(lg); }
     // レースごとの出走表（G1 は出走が無くても実施）。レースごとに乱数の種を分ける
     const cards = [];
     for (const race of allRaces) {
@@ -428,7 +445,7 @@
     entr = entr.filter(e => e.horse && !seen.has(e.horse.id) && seen.add(e.horse.id));
     // 地方：JRA 所属は7頭まで
     const max = R.maxField(race);
-    entr.sort((a, b) => R.priority(b.horse, race, year, r) - R.priority(a.horse, race, year, r));
+    entr.sort((a, b) => ((b.legend ? 1 : 0) - (a.legend ? 1 : 0)) || (R.priority(b.horse, race, year, r) - R.priority(a.horse, race, year, r))); // 伝説の名馬は必ず出る
     const limit = race.region === '地方' ? Math.min(max, 7) : max;
     const excluded = entr.slice(limit).filter(e => e.mine).map(e => e.horse.id);
     entr = entr.slice(0, limit);
@@ -437,7 +454,7 @@
     const lvl = W.fillerLevel(race, year);
     const want = race.graded ? Math.max(entr.length, Math.min(max, r.int(max - 4, max))) : Math.max(entr.length, r.int(Math.min(10, max), max));
     const used = new Set(W.usedNames());
-    const runners = entr.map(e => ({ horse: e.horse, jockey: e.jockeyName ? W.jockey(e.jockeyName) : null, mine: !!e.mine }));
+    const runners = entr.map(e => ({ horse: e.horse, jockey: e.jockeyName ? W.jockey(e.jockeyName) : null, mine: !!e.mine, legend: !!e.legend }));
     while (runners.length < want) {
       const born = year - (race.age === '2' ? 2 : race.age === '3' ? 3 : 3 + r.int(0, 3));
       const foreign = race.region === '海外' && r.chance(0.85);
@@ -453,7 +470,8 @@
       if (x.jockey || !x.horse.hist) continue;
       const nm = W.histJockey(x.horse, year);
       if (!nm || taken.has(nm)) continue;
-      if (!(HS.DATA.jockeys || []).some(j => j.name === nm && j.from <= year && year <= (j.to || 9999))) continue;
+      // 年代なしのゲームは1990〜2026年の騎手なら乗れる（伝説の名馬は、その時代の主戦騎手）
+      if (!(HS.DATA.jockeys || []).some(j => j.name === nm && (x.horse.legend || (U.ERA ? (j.to || 9999) >= 1990 && j.from <= 2026 : j.from <= year && year <= (j.to || 9999))))) continue;
       x.jockey = W.jockey(nm); taken.add(nm);
     }
     const pools = { JRA: W.jockeysOf(year, W.JRA), foreign: W.jockeysOf(year, ['外国']), local: W.jockeysOf(year, ['地方']) };
@@ -584,6 +602,7 @@
       const h = res.horse;
       const x = runners.find(r => r.horse === h);
       res.odds = x.odds; res.pop = x.pop; res.mine = !!(x.mine || x.rider === 'P');
+      if (h.legend) continue; // 伝説の名馬はその場限り（記録だけ残る）
       if (h.filler) {
         // 重賞を勝った・G1で3着以内の「その場限りの馬」は名を残して走り続ける
         if (race.graded && (res.pos === 1 || (race.grade === 'G1' && res.pos <= 3)) && race.region === 'JRA') W.promote(h, race, res, wIdx);
@@ -636,7 +655,7 @@
     // 記録（G1 は全部、ほかの重賞は勝ち馬だけ）
     if (race.graded) {
       const win = sim.results[0];
-      const hist = W.histWinner.get(`${year}${race.name}`) || null;
+      const hist = G.eraless ? null : W.histWinner.get(`${year}${race.name}`) || null;
       const rec = { race: race.name, short: race.short, grade: race.grade, region: race.region, m: race.month, w: race.week, winner: win.horse.name, owner: win.horse.owner, hist: !!win.horse.hist, sire: win.horse.sire, time: Math.round(win.time * 10) / 10, histWinner: hist, second: sim.results[1] && sim.results[1].horse.name };
       if (race.grade === 'G1') {
         (G.records.g1[year] = G.records.g1[year] || []).push(rec);
@@ -768,6 +787,8 @@
       stud += inc;
     }
     if (stud > 0) { G.player.money += stud; news(`種牡馬の種付け料収入 ${U.money(stud)}`, 'money'); }
+    // 年代なしのゲーム：今年デビューする史実馬をランダムに
+    if (G.eraless && HS.Eraless) HS.Eraless.crop();
     // 古い記録を整理
     G.records.pts = {};
     news(`${G.year}年が明けた。`, 'info');
@@ -800,8 +821,8 @@
       m.foals = m.foals || []; m.foals.push(foal.id);
       m.cover = null;
     }
-    // 史実馬の誕生（母をプレイヤーが持っていない仔）
-    for (const d of W.histByBorn.get(G.year) || []) {
+    // 史実馬の誕生（母をプレイヤーが持っていない仔）。年代なしのゲームでは、毎年の初めにランダムに出す（eraless.js）
+    for (const d of G.eraless ? [] : W.histByBorn.get(G.year) || []) {
       const damMine = W.all().some(h => h.owner === 'P' && h.name === d.dam);
       if (damMine) { if (!G.bornHist.includes(d.name) && !G.erased.includes(d.name)) { G.erased.push(d.name); news(`歴史が変わった……「${d.name}」はこの世界には生まれなかった。`, 'hist'); } continue; }
       W.spawnHistoric(d, false);
@@ -934,6 +955,7 @@
   };
   // 史実馬（デビュー前）と史実の繁殖牝馬
   W.marketHistoric = function () {
+    if (G.eraless && HS.Eraless) return HS.Eraless.market();
     const out = [];
     for (const h of W.all()) {
       if (!h.hist || h.owner === 'P' || h.loc !== 'farm' || h.starts > 0 || h.foreignTrained) continue;
@@ -950,6 +972,7 @@
   };
   // 海外の史実馬（デビュー前）。輸入の費用を足した値段
   W.marketForeign = function () {
+    if (G.eraless) return []; // 年代なしのゲームは、海外の馬も馬の店（marketHistoric）に並ぶ
     const out = [];
     for (const h of W.all()) {
       if (!h.hist || !h.foreignTrained || h.owner === 'P' || h.loc !== 'farm' || h.starts > 0) continue;
@@ -981,6 +1004,7 @@
     if ((item.kind === 'hmare' || item.kind === 'gmare') && n >= W.farmCap()) return '繁殖牝馬の枠がいっぱい（牧場を拡張しよう）';
     if (G.player.money < item.price) return '資金が足りない';
     if (G.mode === 'jockey' && HS.Season && !HS.Season.canBuy()) return `お手馬は${HS.Season.MAX_OWN}頭まで`;
+    if (item.kind === 'pool') return HS.Eraless.buy(item);
     if (item.kind === 'hist') {
       const h = G.horses[item.horse.id];
       if (!h || h.owner === 'P') return '売り切れ';
@@ -1058,6 +1082,7 @@
     if (!g || !g.v || !g.horses) throw new Error('セーブデータが読めない');
     W.migrate(g);
     G = g;
+    U.ERA = G.eraless && HS.Eraless ? HS.Eraless.ERA : null;
     if (HS.Edits) HS.Edits.apply(G.edits || {});
     W.index();
     P.build(G.pedExtra || {});
@@ -1071,7 +1096,7 @@
     g.records = Object.assign({ g1: {}, graded: {}, awards: {}, pts: {}, course: {}, hall: [], player: { starts: 0, wins: 0, earn: 0, g1: [] } }, g.records || {});
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
-    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
+    g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; g.lineup = g.lineup || {}; g.unlocked = g.unlocked || []; g.trophies = g.trophies || {}; if (g.eraless && !g.startYear) g.startYear = 2025; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {};
     for (const h of Object.values(g.horses)) {
       h.bonus = h.bonus || {}; h.results = h.results || []; h.gradedWins = h.gradedWins || []; h.coat = h.coat || '鹿毛';
       // 能力の形が変わる前のセーブ（瞬発力・パワー・賢さ・気性 → 気性・坂・脚の切れ）

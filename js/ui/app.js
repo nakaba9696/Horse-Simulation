@@ -339,7 +339,7 @@
       ${items.length ? `<div class="panel"><table class="t">${items.join('')}</table></div>` : ''}
       ${g1.length ? `<div class="panel mt">${g1.map(r => `<div class="row"><span class="grow">${UI.gradeTag(r.race)} <b>${e(R.label(r.race))}</b>　1着 ${e(r.sim.results[0].horse.name)}${(() => { const h = W.histWinner.get(r.race.year + r.race.name); return h && h !== r.sim.results[0].horse.name ? ` <span class="small muted">（史実：${e(h)}）</span>` : ''; })()}</span><button class="btn sm" data-act="replay" data-key="${e(r.race.key)}">観戦</button></div>`).join('')}</div>` : ''}
       ${report.events.length ? `<div class="small muted mt">${report.events.map(e).join('<br>')}</div>` : ''}
-      <ul class="news mt">${fresh.map(n => `<li class="${n.kind}"><span class="d">${n.y}/${n.m}-${n.w}</span>${e(n.text)}</li>`).join('')}</ul>
+      <ul class="news mt">${fresh.map(n => `<li class="${n.kind}"><span class="d">${UI.newsDate(n)}</span>${e(n.text)}</li>`).join('')}</ul>
       <div class="btns mt"><button class="btn gold" data-act="close">閉じる</button></div>`);
   };
 
