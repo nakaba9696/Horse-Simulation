@@ -1,7 +1,7 @@
 // レースの3D：Three.js（lib/three.min.js、r128。グローバルの THREE）で、コース・馬・騎手を立体で描く
 // 使い方：
 //   const r3 = HS.Race3D.create(canvas, setup)  // setup = { D, surface, ground, course, track, horses:[{num,frame,cap,silks,coat,name,age,mine}] }
-//   r3.render(view, cam, orbit)   // view = { t, horses:[{x,lane,v,push?,whip?（ムチを入れてからの秒）,pose?（ガッツポーズからの秒）}], me, phase:'gate'|'race'|'finish' }、cam = 'ride'|'tv'|'gate'
+//   r3.render(view, cam, orbit)   // view = { t, horses:[{x,lane,v,push?,whip?（ムチを入れてからの秒）,pose?（ガッツポーズからの秒）}], me, phase:'gate'|'race'|'finish', fix? }、cam = 'ride'|'tv'|'gate'|'fixed'（fix の位置から。止め絵用）
 //   orbit = { yaw, pitch, zoom }（カメラの回転。yaw は左右の回り込み[rad]、pitch は上下[-0.3〜1.2]、zoom は距離の倍率）
 //   r3.resize(w, h, dpr) / r3.dispose() / r3.info()
 //   HS.Race3D.supported()  // WebGL が使えるか
@@ -77,7 +77,7 @@
       grass: overcast ? [58, 100, 50] : [64, 120, 52],
       // 素材を使うとき（ACESFilmic の下での明るさ）
       sky: overcast ? 'sky_overcast' : 'sky_clear',
-      sunP: overcast ? 0.9 : 2.6, hemiP: overcast ? 0.75 : 0.4, envP: overcast ? 1.15 : 0.85, exposure: overcast ? 1.05 : 0.92,
+      sunP: overcast ? 0.9 : 2.95, hemiP: overcast ? 0.75 : 0.3, envP: overcast ? 1.15 : 0.85, exposure: overcast ? 1.05 : 0.92,
       sunEl: overcast ? 0.4 : 0.9, // 太陽の高さ（rad）
     };
   }
@@ -292,20 +292,24 @@
     }
     return c;
   }
-  // スタンド前の立ち見の人（透ける絵。横 512 × 縦 128 に 64 人）
-  function standingCanvas() {
-    const c = canvasOf(512, 128), g = c.getContext('2d');
-    const cols = ['#c9b8a6', '#3b3f52', '#8a6d5a', '#f2f2f2', '#c83a3a', '#3a6bc8', '#e0c040', '#2c2c30', '#9aa4b0', '#6a8a5a', '#ffffff', '#1c1c22', '#d88a5a'];
-    for (let q = 0; q < 64; q++) {
-      const x = q * 8 + hash01(q, 81) * 4, h = 92 + hash01(q, 82) * 30, top = 128 - h, w = 6.4 + hash01(q, 83) * 1.6;
-      g.fillStyle = hash01(q, 84) < 0.5 ? '#2a2a32' : '#4a4a58';                    // 脚
-      g.fillRect(x + w * 0.18, top + h * 0.55, w * 0.26, h * 0.45); g.fillRect(x + w * 0.56, top + h * 0.55, w * 0.26, h * 0.45);
-      g.fillStyle = cols[Math.floor(hash01(q, 85) * cols.length)];                    // 胴
-      g.beginPath(); g.moveTo(x, top + h * 0.6); g.lineTo(x, top + h * 0.22); g.quadraticCurveTo(x + w / 2, top + h * 0.13, x + w, top + h * 0.22); g.lineTo(x + w, top + h * 0.6); g.fill();
-      g.fillStyle = hash01(q, 86) < 0.85 ? '#e1bf9c' : '#b8896a';                     // 頭
-      g.beginPath(); g.arc(x + w / 2, top + h * 0.08, w * 0.36, 0, TAU); g.fill();
-      g.fillStyle = '#1e1812'; g.beginPath(); g.arc(x + w / 2, top + h * 0.06, w * 0.36, Math.PI, TAU); g.fill();
+  // 観客席の座席（人は立体で置く）。段ごとの座席と段の縁、上ほど屋根の陰で暗く
+  function seatCanvas() {
+    const c = canvasOf(512, 512), g = c.getContext('2d');
+    g.scale(2, 2);
+    g.fillStyle = '#5d5b63'; g.fillRect(0, 0, 256, 256);
+    const rows = 24, per = 40, rh = 256 / rows, w = 256 / per;
+    for (let r = 0; r < rows; r++) {
+      const y = r * rh;
+      g.fillStyle = '#4a4850'; g.fillRect(0, y + rh * 0.8, 256, rh * 0.2);
+      for (let q = 0; q < per; q++) {
+        const id = r * 97 + q;
+        g.fillStyle = hash01(id, 71) < 0.5 ? '#3d5a86' : '#456494';
+        g.fillRect(q * w + w * 0.1, y + rh * 0.25, w * 0.8, rh * 0.5);
+      }
     }
+    const gr = g.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, 'rgba(10,12,20,0.6)'); gr.addColorStop(0.45, 'rgba(10,12,20,0.2)'); gr.addColorStop(1, 'rgba(10,12,20,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
     return c;
   }
 
@@ -438,15 +442,15 @@
 
   // 胴の断面：[x, 背の高さ, 腹の高さ, 横の半幅, 上ほど細く]
   const BODY_T = [
-    [0.87, 1.44, 1.12, 0.09, 0.1], [0.81, 1.54, 1.01, 0.17, 0.15], [0.71, 1.6, 0.94, 0.225, 0.22], [0.57, 1.64, 0.895, 0.255, 0.32],
-    [0.41, 1.645, 0.875, 0.27, 0.36], [0.23, 1.6, 0.87, 0.285, 0.26], [0.03, 1.565, 0.885, 0.3, 0.15], [-0.17, 1.565, 0.92, 0.3, 0.1],
-    [-0.35, 1.58, 0.975, 0.29, 0.06], [-0.53, 1.61, 1.035, 0.285, 0.05], [-0.69, 1.62, 1.08, 0.28, 0.08], [-0.83, 1.6, 1.12, 0.25, 0.12],
-    [-0.94, 1.545, 1.16, 0.2, 0.15], [-1.01, 1.47, 1.21, 0.13, 0.2], [-1.045, 1.39, 1.27, 0.06, 0.2],
+    [0.89, 1.42, 1.12, 0.1, 0.1], [0.84, 1.53, 0.99, 0.2, 0.15], [0.74, 1.6, 0.92, 0.25, 0.22], [0.59, 1.645, 0.88, 0.27, 0.32],
+    [0.41, 1.65, 0.86, 0.28, 0.36], [0.23, 1.6, 0.86, 0.29, 0.26], [0.03, 1.565, 0.88, 0.3, 0.15], [-0.17, 1.565, 0.915, 0.3, 0.1],
+    [-0.35, 1.585, 0.97, 0.3, 0.06], [-0.53, 1.625, 1.03, 0.305, 0.04], [-0.69, 1.64, 1.07, 0.305, 0.06], [-0.83, 1.615, 1.1, 0.28, 0.1],
+    [-0.94, 1.56, 1.14, 0.23, 0.14], [-1.01, 1.48, 1.2, 0.15, 0.2], [-1.05, 1.39, 1.27, 0.065, 0.2],
   ];
   // 首の断面：[たてがみの側の点 x, y, のどの側の点 x, y, 半幅, 骨a, 骨b, bの重み]
   const NECK_T = [
-    [0.47, 1.6, 0.72, 1.05, 0.19, 1, 2, 0], [0.63, 1.655, 0.86, 1.18, 0.185, 1, 2, 0.55], [0.77, 1.72, 0.97, 1.36, 0.16, 2, 3, 0.1],
-    [0.91, 1.8, 1.05, 1.53, 0.135, 2, 3, 0.6], [1.02, 1.875, 1.11, 1.66, 0.115, 3, 4, 0.15], [1.09, 1.925, 1.16, 1.76, 0.105, 3, 4, 0.7],
+    [0.47, 1.6, 0.74, 1.03, 0.21, 1, 2, 0], [0.63, 1.665, 0.88, 1.17, 0.2, 1, 2, 0.55], [0.77, 1.735, 0.98, 1.35, 0.17, 2, 3, 0.1],
+    [0.91, 1.81, 1.05, 1.53, 0.14, 2, 3, 0.6], [1.02, 1.875, 1.11, 1.66, 0.115, 3, 4, 0.15], [1.09, 1.925, 1.16, 1.76, 0.105, 3, 4, 0.7],
     [1.13, 1.95, 1.2, 1.81, 0.1, 4, 4, 0],
   ];
   // 頭の断面（うなじ 0 → 鼻先 1）：[t, 前後の半径, 横の半幅, 前へずらす, 前ほど細く]
@@ -464,7 +468,7 @@
     [0.566, 0.004, 0.064, 0.058, 3, 3, 0],
   ];
   const HLEG_T = [
-    [-0.66, 1.42, 0.22, 0.1, 0, 0, 0], [-0.64, 1.28, 0.26, 0.125, 0, 0, 0], [-0.61, 1.14, 0.25, 0.125, 0, 0, 0], [-0.6, 1.02, 0.2, 0.11, 0, 1, 0.4],
+    [-0.66, 1.42, 0.23, 0.12, 0, 0, 0], [-0.64, 1.28, 0.27, 0.145, 0, 0, 0], [-0.61, 1.14, 0.26, 0.14, 0, 0, 0], [-0.6, 1.02, 0.2, 0.115, 0, 1, 0.4],
     [-0.62, 0.92, 0.14, 0.09, 0, 1, 0.85], [-0.66, 0.82, 0.105, 0.075, 1, 1, 0], [-0.7, 0.71, 0.08, 0.058, 1, 1, 0], [-0.73, 0.63, 0.07, 0.05, 1, 2, 0.2],
     [-0.745, 0.575, 0.072, 0.055, 1, 2, 0.5], [-0.74, 0.52, 0.06, 0.05, 1, 2, 0.85], [-0.73, 0.44, 0.05, 0.044, 2, 2, 0], [-0.718, 0.32, 0.048, 0.041, 2, 2, 0],
     [-0.708, 0.24, 0.055, 0.05, 2, 3, 0.4], [-0.7, 0.19, 0.055, 0.05, 2, 3, 0.85], [-0.682, 0.135, 0.045, 0.043, 3, 3, 0], [-0.662, 0.085, 0.048, 0.048, 3, 3, 0],
@@ -472,8 +476,8 @@
   ];
   // 尾（付け根から）：[x, y, 上下の半径, 横の半幅, 骨a, 骨b, bの重み]
   const TAIL_T = [
-    [-0.98, 1.5, 0.055, 0.05, 5, 5, 0], [-1.06, 1.46, 0.05, 0.045, 5, 6, 0.3], [-1.16, 1.4, 0.055, 0.05, 5, 6, 0.8], [-1.28, 1.31, 0.065, 0.06, 6, 6, 0],
-    [-1.4, 1.21, 0.07, 0.068, 6, 7, 0.5], [-1.52, 1.11, 0.068, 0.07, 7, 7, 0], [-1.64, 1.02, 0.055, 0.06, 7, 7, 0], [-1.74, 0.95, 0.03, 0.035, 7, 7, 0],
+    [-0.99, 1.5, 0.055, 0.05, 5, 5, 0], [-1.07, 1.45, 0.06, 0.05, 5, 6, 0.3], [-1.17, 1.38, 0.085, 0.065, 5, 6, 0.8], [-1.29, 1.28, 0.11, 0.08, 6, 6, 0],
+    [-1.41, 1.17, 0.125, 0.085, 6, 7, 0.5], [-1.53, 1.06, 0.12, 0.08, 7, 7, 0], [-1.64, 0.96, 0.095, 0.065, 7, 7, 0], [-1.73, 0.88, 0.045, 0.04, 7, 7, 0],
   ];
   // 騎手の背骨（腰から首へ）：[x, y, 背と胸の半径, 横の半幅, 骨a, 骨b, bの重み]
   const SPINE_T = [
@@ -1263,6 +1267,169 @@
   R3.GEAR = GEAR;
 
   // ---- 本体 ----
+  // ---- 地形：コースの形と高さから、帯・地面の高さ・地面の升目を作る（THREE を使わない。テストでも呼べる） ----
+  // tr＝HS.Track の形。o＝{ slope（courses.js の坂。実際の高さが無いときに使う）, dirt（ダートのレース）, hasOther（もう一方のコースがある） }
+  // 戻り値：elev(s)・frame(s)・wpt(f, u, dq)・S（5m ごとの点）・bands・スタンドの範囲 sa〜sb・ground(x, y)（上から見た点の地面の高さ）・nearest(x, y)・pond・grid()
+  R3.terrain = function (tr, o) {
+    o = o || {};
+    const L = tr.L, sign = tr.sign || 1;
+    const slopeH = ({ '急': 2.1, '中': 1.6, '小': 0.9, '平': 0 })[o.slope] || 0;
+    // 実際の高低差があるコース（data/layouts.js）はその高さ。無ければゴール前の坂の強さで作る
+    const elev = tr.hAt && !tr.flat ? s => tr.hAt(s) : s => {
+      if (!slopeH) return 0;
+      s = ((s % L) + L) % L;
+      if (s < 100) return slopeH;
+      if (s < 330) return slopeH * (1 - smooth((s - 100) / 230));
+      if (s > L - 450) return slopeH * smooth((s - (L - 450)) / 450);
+      return 0;
+    };
+    // s（ゴールからさかのぼった距離）の地点：位置と進む向き（ゴールへ向かう向き）
+    function frame(s) {
+      const p = tr.at(s), a = tr.at(s - 0.6), b = tr.at(s + 0.6);
+      let fx = a.x - b.x, fy = a.y - b.y;
+      const l = Math.hypot(fx, fy) || 1;
+      return { s, x: p.x, y: p.y, fx: fx / l, fy: fy / l, curv: p.curv, corner: p.corner, e: elev(s) };
+    }
+    // 内ラチから外へ u m、前へ dq m（上から見た座標）
+    const wpt = (f, u, dq) => { dq = dq || 0; return { x: f.x - sign * f.fy * u + f.fx * dq, y: f.y + sign * f.fx * u + f.fy * dq }; };
+    // ゴール前の直線の範囲（ゴールからさかのぼった距離で [始まり, 終わり]）
+    const loop = !tr.line;
+    let hr0 = 0, hr1 = 0;
+    while (hr1 < L / 2 && tr.at(hr1 + 5).corner === 0) hr1 += 5;
+    while (hr0 > -L / 2 && tr.at(hr0 - 5).corner === 0) hr0 -= 5;
+    // スタンドの範囲
+    const sa = Math.max(hr0, -160), sb = Math.min(hr1, 430);
+    // 描く範囲：周回は1周、直線・馬蹄形のコースはゴールの先とスタートの後ろも少し
+    const sLo = loop ? 0 : Math.min(-200, sa - 40), sHi = loop ? L : L + 80;
+    const N = Math.max(160, Math.round((sHi - sLo) / 5));
+    const S = [];
+    for (let i = 0; i <= N; i++) S.push(frame(sLo + i * (sHi - sLo) / N));
+
+    // 帯（内ラチから外へ u0→u1）：馬場・もう一方のコース・草の縁。kind＝main|turf|dirt|grass
+    const W = TRACK_W, bands = [];
+    bands.push([-0.6, W + 0.4, 'main']);
+    // 外側：ダートの日は外に芝コースが見える
+    let uo = W + 0.4;
+    if (o.dirt && o.hasOther) { bands.push([uo, uo + 3, 'grass'], [uo + 3, uo + 28, 'turf']); uo += 28; }
+    const standU = uo + 12;
+    bands.push([uo, uo + 8, 'grass']);
+    const outerEdge = standU + 56;
+    // 内側：芝の日は内にダートコースが見える
+    let ui = -0.6;
+    if (!o.dirt && o.hasOther) { bands.push([-4, ui, 'grass'], [-24, -4, 'dirt']); ui = -24; }
+    bands.push([ui - 6, ui, 'grass']);
+    const innerEdge = ui - 20;
+    // 平らに作る帯の範囲（内 bandI・外 bandO。スタンドの前は外を広く）
+    const bandI = ui - 6, bandO0 = uo + 8, bandOS = standU + 30;
+    const bandOf = s => (s >= sa - 30 && s <= sb + 30) ? bandOS : bandO0;
+
+    // ---- 地面の高さ：帯の中はコースの高さ。離れると、まわりのコースの高さの重みつき平均（近いほど重い）へなだらかに ----
+    // 近いコースの点を探す升目（40m）
+    const HC = 40, hgrid = new Map(), hkey = (i, j) => i * 65536 + j;
+    for (let i = 0; i < S.length - (loop ? 1 : 0); i++) {
+      const k = hkey(Math.floor(S[i].x / HC), Math.floor(S[i].y / HC));
+      if (!hgrid.has(k)) hgrid.set(k, []);
+      hgrid.get(k).push(i);
+    }
+    // 上から見た点 (x, y) にいちばん近いコースの点：{ i, u（外へ）, q（前へ）, d }
+    function nearest(x, y) {
+      const ci = Math.floor(x / HC), cj = Math.floor(y / HC);
+      let best = null, bd = Infinity;
+      for (let r = 1; r <= 8; r++) {
+        for (let i = ci - r; i <= ci + r; i++) for (let j = cj - r; j <= cj + r; j++) {
+          if (r > 1 && Math.abs(i - ci) < r && Math.abs(j - cj) < r) continue;
+          const lst = hgrid.get(hkey(i, j)); if (!lst) continue;
+          for (const k of lst) { const d = (S[k].x - x) ** 2 + (S[k].y - y) ** 2; if (d < bd) { bd = d; best = k; } }
+        }
+        if (best != null && Math.sqrt(bd) < (r - 0.5) * HC) break;
+      }
+      if (best == null) return null;
+      const f = S[best], dx = x - f.x, dy = y - f.y;
+      return { i: best, u: dx * (-sign * f.fy) + dy * (sign * f.fx), q: dx * f.fx + dy * f.fy, d: Math.sqrt(bd) };
+    }
+    // 遠くの高さ：20m ごとのコースの点の重みつき平均
+    const FAR = [];
+    for (let i = 0; i < S.length; i += 4) FAR.push(S[i]);
+    let hAvg = 0; for (const f of S) hAvg += f.e; hAvg /= S.length;
+    function hFar(x, y) {
+      let tw = 0, th = 0;
+      for (const f of FAR) { const d2 = (f.x - x) ** 2 + (f.y - y) ** 2 + 900, w = 1 / (d2 * Math.sqrt(d2)); tw += w; th += w * f.e; }
+      const w0 = 1 / Math.pow(700 * 700, 1.5); // とても遠い所は平均の高さ
+      return (th + hAvg * w0) / (tw + w0);
+    }
+    // 池（内馬場）：あれば地面をくぼませる
+    let pond = null;
+    // 高さ。info＝true なら { h, band（帯の中）, inner（内馬場か）, near }
+    function ground(x, y, info) {
+      const n = nearest(x, y);
+      if (!n) return info ? { h: hAvg, band: false, inner: false, near: null } : hAvg;
+      const f = S[n.i], bo = bandOf(f.s);
+      let out = n.u < bandI ? bandI - n.u : n.u > bo ? n.u - bo : 0;
+      // 直線・馬蹄形のコースの両端より先
+      if (!loop && (n.i === 0 || n.i === S.length - 1) && Math.abs(n.q) > 2.5) out = Math.max(out, Math.abs(n.q));
+      let h;
+      if (out <= 0) h = f.e - 0.1; // 帯の下（帯は polygonOffset で手前に描く）
+      else { const k = smooth(out / 70); h = (f.e - 0.03) * (1 - k) + hFar(x, y) * k; }
+      if (pond) {
+        const px = x - pond.x, py = y - pond.y, c = Math.cos(pond.rot), s = Math.sin(pond.rot);
+        const r = Math.hypot((px * c + py * s) / pond.rx, (-px * s + py * c) / pond.rz);
+        if (r < 1.35) h = r < 1 ? pond.y0 - 0.5 : h + (pond.y0 - 0.5 - h) * (1 - smooth((r - 1) / 0.35));
+      }
+      return info ? { h, band: out <= 0 && n.u > bandI + 3 && n.u < bandO0 - 3, inner: n.u < 0, near: n } : h;
+    }
+    // 内馬場のまんなか（周回のときだけ）と、そこからコースまでの距離
+    let mid = null;
+    if (loop) {
+      let cx = 0, cy = 0; for (let i = 0; i < N; i++) { cx += S[i].x; cy += S[i].y; } cx /= N; cy /= N;
+      const n = nearest(cx, cy);
+      if (n && n.u < bandI - 10) mid = { x: cx, y: cy, free: -n.u + bandI };
+    }
+    if (mid && mid.free > 30) {
+      // 池：いちばん長い向きに伸ばし、まわりがコースから 12m 以上離れるまで縮める
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const f of S) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); y0 = Math.min(y0, f.y); y1 = Math.max(y1, f.y); }
+      const p = { x: mid.x - (x1 - x0) * 0.1 * sign, y: mid.y, rot: x1 - x0 > y1 - y0 ? 0 : Math.PI / 2, rx: Math.max(20, Math.max(x1 - x0, y1 - y0) * 0.14), rz: Math.max(14, mid.free * 0.5) };
+      for (let k = 0; k < 12; k++) {
+        let ok = true;
+        for (let a = 0; a < 16 && ok; a++) {
+          const th = a / 16 * TAU, c = Math.cos(p.rot), s = Math.sin(p.rot), ex = Math.cos(th) * p.rx * 1.35, ey = Math.sin(th) * p.rz * 1.35;
+          const n = nearest(p.x + ex * c - ey * s, p.y + ex * s + ey * c);
+          if (!n || n.u > bandI - 12) ok = false;
+        }
+        if (ok) break;
+        p.rx *= 0.85; p.rz *= 0.85;
+      }
+      if (p.rz > 8) { p.y0 = ground(p.x, p.y); pond = p; }
+    }
+    // 地面の升目（8m）。帯の中に入りきる三角形は描かない（コースの帯が上にある）。uv は m
+    function grid() {
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const f of S) { x0 = Math.min(x0, f.x); x1 = Math.max(x1, f.x); y0 = Math.min(y0, f.y); y1 = Math.max(y1, f.y); }
+      const MG = 360, CS = 8;
+      x0 = Math.floor((x0 - MG) / CS) * CS; x1 = Math.ceil((x1 + MG) / CS) * CS; y0 = Math.floor((y0 - MG) / CS) * CS; y1 = Math.ceil((y1 + MG) / CS) * CS;
+      const nx = Math.round((x1 - x0) / CS) + 1, ny = Math.round((y1 - y0) / CS) + 1;
+      const pos = new Float32Array(nx * ny * 3), uv = new Float32Array(nx * ny * 2), inB = new Uint8Array(nx * ny);
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        const x = x0 + i * CS, y = y0 + j * CS, k = j * nx + i;
+        const gi = ground(x, y, true);
+        // 升目の縁は平均の高さへ（その外の広い地面とつなぐ）
+        const edge = Math.min(x - x0, x1 - x, y - y0, y1 - y);
+        const h = gi.h + (hAvg - gi.h) * (1 - smooth(edge / 120));
+        pos[k * 3] = x; pos[k * 3 + 1] = h; pos[k * 3 + 2] = -y;
+        uv[k * 2] = x; uv[k * 2 + 1] = y;
+        inB[k] = gi.band ? 1 : 0;
+      }
+      const idx = [];
+      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+        const a = j * nx + i, b = a + 1, c = a + nx, d = c + 1;
+        if (!(inB[a] && inB[b] && inB[c])) idx.push(a, b, c);
+        if (!(inB[b] && inB[c] && inB[d])) idx.push(b, d, c);
+      }
+      return { pos, uv, idx, x0, x1, y0, y1 };
+    }
+    return { L, sign, loop, elev, frame, wpt, hr0, hr1, sa, sb, sLo, sHi, N, S, bands, W, uo, standU, outerEdge, ui, innerEdge, bandI, bandO0, bandOf, nearest, hAvg, ground, pond, grid };
+  };
+
   R3.create = function (canvas, setup) {
     setup = setup || {};
     const course = setup.course || {};
@@ -1321,43 +1488,20 @@
       sc.updateProjectionMatrix();
     }
 
-    // ---- コースの形 ----
-    const slopeH = ({ '急': 2.1, '中': 1.6, '小': 0.9, '平': 0 })[course.slope] || 0;
-    // 実際の高低差があるコース（data/layouts.js）はその高さ。無ければゴール前の坂の強さで作る
-    const elev = tr.hAt && !tr.flat ? s => tr.hAt(s) : s => {
-      if (!slopeH) return 0;
-      s = ((s % L) + L) % L;
-      if (s < 100) return slopeH;
-      if (s < 330) return slopeH * (1 - smooth((s - 100) / 230));
-      if (s > L - 450) return slopeH * smooth((s - (L - 450)) / 450);
-      return 0;
-    };
-    // s（ゴールからさかのぼった距離）の地点：位置と進む向き（ゴールへ向かう向き）
-    function frame(s) {
-      const p = tr.at(s), a = tr.at(s - 0.6), b = tr.at(s + 0.6);
-      let fx = a.x - b.x, fy = a.y - b.y;
-      const l = Math.hypot(fx, fy) || 1;
-      return { s, x: p.x, y: p.y, fx: fx / l, fy: fy / l, curv: p.curv, corner: p.corner, e: elev(s) };
-    }
-    // 内ラチから外へ u m、前へ dq m（上から見た座標）
-    const wpt = (f, u, dq) => { dq = dq || 0; return { x: f.x - sign * f.fy * u + f.fx * dq, y: f.y + sign * f.fx * u + f.fy * dq }; };
+    // ---- コースの形と地形（R3.terrain） ----
+    const cdat = HS.DATA && HS.DATA.courses && HS.DATA.courses[course.name];
+    const hasOther = !tr.line && (!cdat || !!(look.dirt ? cdat.turf : cdat.dirt));
+    const TR = R3.terrain(tr, { slope: course.slope, dirt: look.dirt, hasOther });
+    const { elev, frame, wpt, loop, hr0, hr1, sa, sb, sLo, sHi, N, S, standU, outerEdge, innerEdge, bandI, bandO0, bandOf, nearest, hAvg, ground, pond } = TR;
     const W3 = (f, u, h, dq) => { const p = wpt(f, u, dq); return new THREE.Vector3(p.x, h, -p.y); };
     const yawOf = f => Math.atan2(f.fy, f.fx);
-    // ゴール前の直線の範囲（ゴールからさかのぼった距離で [始まり, 終わり]）
-    let hr0 = 0, hr1 = 0;
-    while (hr1 < L / 2 && tr.at(hr1 + 5).corner === 0) hr1 += 5;
-    while (hr0 > -L / 2 && tr.at(hr0 - 5).corner === 0) hr0 -= 5;
 
-    const N = Math.max(160, Math.round(L / 5));
-    const S = [];
-    for (let i = 0; i <= N; i++) S.push(frame(i * L / N));
-
-    // 帯（u0→u1、高さは坂の高さ×k0→k1）
-    function ribbon(u0, u1, k0, k1, mat, ua, ub, period) {
+    // 帯（u0→u1。高さはコースの高さから d0・d1 だけ下げる）
+    function ribbon(u0, u1, d0, d1, mat, ua, ub, period) {
       const n = S.length, pos = new Float32Array(n * 6), uv = new Float32Array(n * 4), idx = [];
       for (let i = 0; i < n; i++) {
         const f = S[i], p0 = wpt(f, u0), p1 = wpt(f, u1);
-        pos.set([p0.x, f.e * k0, -p0.y, p1.x, f.e * k1, -p1.y], i * 6);
+        pos.set([p0.x, f.e - d0, -p0.y, p1.x, f.e - d1, -p1.y], i * 6);
         const v = f.s / period;
         uv.set([ua, v, ub, v], i * 4);
         if (i < n - 1) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
@@ -1374,28 +1518,29 @@
       scene.add(m);
       return m;
     }
-    const loopPts = u => { const out = []; for (let i = 0; i < N; i++) { const p = wpt(S[i], u); out.push(new THREE.Vector2(p.x, p.y)); } return out; };
 
     // ---- 馬場と周り ----
     // 素材の絵（photo）があれば、写真の質感を m 単位で貼り、刈り目・内ラチ沿いの荒れ・ハローの筋を材質の中で描く
     const period = L / Math.max(1, Math.round(L / 16));
     const W = TRACK_W;
-    let turfMat, dirtMat, grassMat, farMat;
+    let turfMat, dirtMat, grassMat, farMat, terrMat;
     function groundMat(col, nor, tile, o) {
       const map = T(imgTex(col, true, aniso)); map.repeat.set(1 / tile, 1 / tile);
       // 地面は画面の半分を占めるので、映り込みを計算しない軽い材質（Phong）にし、空の明るさは一定の環境の光（uAmb）で足す
       const wet = o.rough < 0.7;
-      const m = M(new THREE.MeshPhongMaterial({ map, shininess: wet ? 60 * (1 - o.rough) : 4, specular: lin(wet ? '#5a5a5a' : '#141414') }));
+      const m = M(new THREE.MeshPhongMaterial({ map, shininess: wet ? 60 * (1 - o.rough) : 4, specular: lin(wet ? '#5a5a5a' : '#141414'), polygonOffset: !!o.lift, polygonOffsetFactor: o.lift ? -1 : 0, polygonOffsetUnits: o.lift ? -2 : 0 }));
       if (nor && imgOk(nor)) { m.normalMap = T(imgTex(nor, true, aniso, true)); m.normalScale.set(o.ns || 1, o.ns || 1); }
       const U = {
         uStripe: { value: o.stripe || 0 }, uStripeLen: { value: o.stripeLen || 16 }, uWear: { value: o.wear || 0 }, uWearCol: { value: lin(o.wearCol || '#8a7650') },
         uTint: { value: new THREE.Vector3().fromArray(o.tint || [1, 1, 1]) }, uMix: { value: o.mix != null ? o.mix : 0.42 }, uHarrow: { value: o.harrow || 0 },
-        uAmb: { value: lin(fogCol).multiplyScalar((o.env != null ? o.env : 0.6) * 0.9) },
+        uAmb: { value: lin(fogCol).multiplyScalar((o.env != null ? o.env : 0.6) * (look.overcast ? 0.9 : 0.6)) }, uClod: { value: o.clod || 0 },
       };
       m.onBeforeCompile = sh => {
         Object.assign(sh.uniforms, U);
         sh.vertexShader = 'varying vec2 vM;\n' + sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n  vM = uv;');
-        sh.fragmentShader = 'varying vec2 vM;\nuniform float uStripe, uStripeLen, uWear, uMix, uHarrow;\nuniform vec3 uWearCol, uTint, uAmb;\n' + sh.fragmentShader
+        sh.fragmentShader = 'varying vec2 vM;\nuniform float uStripe, uStripeLen, uWear, uMix, uHarrow, uClod;\nuniform vec3 uWearCol, uTint, uAmb;\n' +
+          'float hsH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n' +
+          'float hsN(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hsH(i), hsH(i + vec2(1.0, 0.0)), f.x), mix(hsH(i + vec2(0.0, 1.0)), hsH(i + vec2(1.0, 1.0)), f.x), f.y); }\n' + sh.fragmentShader
           .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n  reflectedLight.indirectDiffuse += diffuseColor.rgb * uAmb;')
           .replace('#include <map_fragment>', `
   // 同じ絵の繰り返しが目立たないように、大きく引き伸ばした絵を重ねる
@@ -1411,7 +1556,15 @@
   float wr = exp(-pow((vM.x - 1.8) / 2.2, 2.0));
   diffuseColor.rgb = mix(diffuseColor.rgb, uWearCol, uWear * wr);
   // ハローの筋（進む向きの細い筋）
-  diffuseColor.rgb *= 1.0 + uHarrow * (sin(vM.x * 9.0) * 0.6 + sin(vM.x * 23.0 + 1.3) * 0.4);`);
+  diffuseColor.rgb *= 1.0 + uHarrow * (sin(vM.x * 9.0) * 0.6 + sin(vM.x * 23.0 + 1.3) * 0.4);
+  // ダート：蹴られた土の塊と蹄の跡（暗い粒）・乾いて白っぽい所のむら
+  if (uClod > 0.0) {
+    float big = hsN(vM * vec2(0.35, 0.22)), mid = hsN(vM * 1.7 + 3.1), fine = hsN(vM * vec2(6.0, 4.0) + 7.7);
+    diffuseColor.rgb *= 1.0 + uClod * ((big - 0.5) * 0.55 + (mid - 0.5) * 0.35);
+    float clod = smoothstep(0.72, 0.86, fine) * (0.6 + 0.4 * mid);
+    diffuseColor.rgb *= 1.0 - uClod * 0.55 * clod;
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 1.05, 0.92), uClod * smoothstep(0.62, 0.8, big) * 0.6);
+  }`);
       };
       m.customProgramCacheKey = () => 'hs-ground';
       return m;
@@ -1419,73 +1572,73 @@
     if (photo) {
       const ov = look.overcast ? 0.86 : 1;
       const tw = ov * [1, 0.94, 0.86, 0.78][look.wet];
-      turfMat = groundMat('turf_col', 'turf_nor', 2.6, { rough: 0.92, stripe: 0.12, stripeLen: 18, wear: 0.16 + 0.04 * look.wet, tint: [0.52 * tw, 0.8 * tw, 0.42 * tw], ns: 0.9, env: 0.4 });
-      const dk = [1, 0.78, 0.5, 0.42][look.wet];
-      dirtMat = groundMat('dirt_col', 'dirt_nor', 2.2, { rough: [0.96, 0.78, 0.55, 0.42][look.wet], stripe: 0, wear: 0.1, wearCol: '#6e4e30', tint: [1.12 * dk, 0.9 * dk, 0.64 * dk], ns: 1.2, harrow: 0.06, env: [0.45, 0.5, 0.55, 0.6][look.wet] });
-      grassMat = groundMat('grass_col', null, 3.2, { rough: 0.95, tint: [0.78 * ov, 0.92 * ov, 0.7 * ov], env: 0.35 });
+      turfMat = groundMat('turf_col', 'turf_nor', 2.6, { rough: 0.92, stripe: 0.12, stripeLen: 18, wear: 0.16 + 0.04 * look.wet, tint: [0.52 * tw, 0.8 * tw, 0.42 * tw], ns: 0.9, env: 0.4, lift: true });
+      const dk = [1, 0.8, 0.56, 0.46][look.wet];
+      dirtMat = groundMat('dirt_col', 'dirt_nor', 1.8, { rough: [0.96, 0.78, 0.55, 0.42][look.wet], stripe: 0, wear: 0.14, wearCol: '#5e3f24', tint: [0.98 * dk, 0.74 * dk, 0.52 * dk], ns: 1.6, harrow: 0.08, env: [0.42, 0.48, 0.55, 0.6][look.wet], clod: [1, 0.9, 0.7, 0.55][look.wet], lift: true });
+      grassMat = groundMat('grass_col', null, 3.2, { rough: 0.95, tint: [0.78 * ov, 0.92 * ov, 0.7 * ov], env: 0.35, lift: true });
       farMat = groundMat('grass_col', null, 9, { rough: 1, tint: [0.66 * ov, 0.8 * ov, 0.6 * ov], mix: 0.6, env: 0.3 });
+      terrMat = groundMat('grass_col', null, 3.2, { rough: 0.95, tint: [0.74 * ov, 0.9 * ov, 0.66 * ov], mix: 0.5, env: 0.35 });
     } else {
       const turfTex = T(texOf(turfCanvas(look.wet, look), true, aniso));
       const dirtTex = T(texOf(dirtCanvas(look.wet), true, aniso));
-      turfMat = lambert({ map: turfTex });
+      const lift = { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 };
+      turfMat = lambert(Object.assign({ map: turfTex }, lift));
       dirtMat = look.wet >= 2
-        ? M(new THREE.MeshPhongMaterial({ map: dirtTex, specular: lin(look.wet >= 3 ? 0x3a3a3a : 0x262626), shininess: 26 }))
-        : lambert({ map: dirtTex });
-      grassMat = lambert({ map: T(texOf(grassCanvas(look, 1), true, aniso)) });
+        ? M(new THREE.MeshPhongMaterial(Object.assign({ map: dirtTex, specular: lin(look.wet >= 3 ? 0x3a3a3a : 0x262626), shininess: 26 }, lift)))
+        : lambert(Object.assign({ map: dirtTex }, lift));
+      grassMat = lambert(Object.assign({ map: T(texOf(grassCanvas(look, 1), true, aniso)) }, lift));
       farMat = lambert({ map: T(texOf(grassCanvas(look, 0.85), true, 1)) });
+      terrMat = lambert({ map: T(texOf(grassCanvas(look, 1), true, aniso)) });
     }
     const mainMat = look.dirt ? dirtMat : turfMat;
     // 帯の貼り方：photo のときは uv を m 単位（横 u・進む向き s）に、そうでなければ手作りの絵の割り付け
-    const band = (u0, u1, k0, k1, mat, ua, ub, per) => {
-      const m = photo ? ribbon(u0, u1, k0, k1, mat, u0, u1, 1) : ribbon(u0, u1, k0, k1, mat, ua, ub, per);
+    const band = (u0, u1, mat, ua, ub, per) => {
+      const m = photo ? ribbon(u0, u1, 0, 0, mat, u0, u1, 1) : ribbon(u0, u1, 0, 0, mat, ua, ub, per);
       m.receiveShadow = shadowOn;
       return m;
     };
-    // もう一方のコース（芝の内のダート・ダートの外の芝）は、その競馬場にあるときだけ
-    const cdat = HS.DATA && HS.DATA.courses && HS.DATA.courses[course.name];
-    const hasOther = !cdat || !!(look.dirt ? cdat.turf : cdat.dirt);
-    band(-0.6, W + 0.4, 1, 1, mainMat, 0, 1, period);
-    // 外側：ダートの日は外に芝コースが見える
-    let uo = W + 0.4;
-    if (look.dirt && hasOther) { band(uo, uo + 3, 1, 1, grassMat, 0, 3 / 12, 12); band(uo + 3, uo + 28, 1, 1, turfMat, 0, 1, period); uo += 28; }
-    const standU = uo + 12;
-    band(uo, standU + 30, 1, 1, grassMat, 0, (standU + 30 - uo) / 12, 12);
-    const outerEdge = standU + 56;
-    band(standU + 30, outerEdge, 1, 0, grassMat, 0, 26 / 12, 12);
-    // 内側：芝の日は内にダートコースが見える
-    let ui = -0.6;
-    if (!look.dirt && hasOther) { band(-4, ui, 1, 1, grassMat, 0, 3.4 / 12, 12); band(-24, -4, 1, 1, dirtMat, 0, 1, period); ui = -24; }
-    band(ui - 6, ui, 1, 1, grassMat, 0, 0.5, 12);
-    const innerEdge = ui - 20;
-    band(innerEdge, ui - 6, 0, 1, grassMat, 0, 14 / 12, 12);
-    // 内馬場と外の地面（平らな面。帯とすき間なくつなぐ）
-    function flatShape(shape, mat) {
-      const g = G(new THREE.ShapeGeometry(shape));
-      g.rotateX(-Math.PI / 2);
-      const uv = g.attributes.uv, k = photo ? 1 : 1 / 12;
-      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * k, uv.getY(i) * k);
-      const m = new THREE.Mesh(g, mat);
-      m.receiveShadow = shadowOn;
-      scene.add(m);
-      return m;
+    for (const [u0, u1, kind] of TR.bands) {
+      if (kind === 'grass') band(u0, u1, grassMat, 0, (u1 - u0) / 12, 12);
+      else band(u0, u1, kind === 'main' ? mainMat : kind === 'turf' ? turfMat : dirtMat, 0, 1, period);
     }
-    flatShape(new THREE.Shape(loopPts(innerEdge)), grassMat);
+
+    // 地面の升目（R3.terrain の grid）と、その外の広い地面
     {
+      const { pos, uv, idx, x0, x1, y0, y1 } = TR.grid();
+      if (!photo) for (let i = 0; i < uv.length; i++) uv[i] /= 12;
+      const g = G(new THREE.BufferGeometry());
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      const gm = new THREE.Mesh(g, terrMat);
+      gm.receiveShadow = shadowOn;
+      scene.add(gm);
+      // その外の広い地面（升目の形の穴をあけた平らな面）
       const R = 5000, sh = new THREE.Shape([new THREE.Vector2(-R, -R), new THREE.Vector2(R, -R), new THREE.Vector2(R, R), new THREE.Vector2(-R, R)]);
-      sh.holes.push(new THREE.Path(loopPts(outerEdge)));
-      flatShape(sh, farMat);
+      sh.holes.push(new THREE.Path([new THREE.Vector2(x0, y0), new THREE.Vector2(x0, y1), new THREE.Vector2(x1, y1), new THREE.Vector2(x1, y0)]));
+      const fg = G(new THREE.ShapeGeometry(sh));
+      fg.rotateX(-Math.PI / 2);
+      fg.translate(0, hAvg, 0);
+      const fuv = fg.attributes.uv, k = photo ? 1 : 1 / 12;
+      for (let i = 0; i < fuv.count; i++) fuv.setXY(i, fuv.getX(i) * k, fuv.getY(i) * k);
+      const fm = new THREE.Mesh(fg, farMat);
+      fm.receiveShadow = shadowOn;
+      scene.add(fm);
     }
-    // 池（内馬場の中ほど）
-    {
+    // 池の水
+    if (pond) {
       const g = G(new THREE.CircleGeometry(1, 36));
       g.rotateX(-Math.PI / 2);
-      const pond = new THREE.Mesh(g, photo ? std({ color: look.overcast ? 0x3d4f55 : 0x2f5a74, roughness: 0.06, envMapIntensity: 1.4, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })
-        : M(new THREE.MeshPhongMaterial({ color: lin(look.overcast ? 0x4e6670 : 0x3f7fae), specular: lin(0x667788), shininess: 60, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
-      const rx = Math.max(20, tr.a * 0.28), rz = Math.max(14, (tr.r + innerEdge) * 0.42);
-      pond.scale.set(rx, 1, rz);
-      pond.position.set(-tr.a * 0.12 * sign, 0.02, 0);
-      scene.add(pond);
+      const pm = new THREE.Mesh(g, photo ? std({ color: look.overcast ? 0x3d4f55 : 0x2f5a74, roughness: 0.06, envMapIntensity: 1.4 })
+        : M(new THREE.MeshPhongMaterial({ color: lin(look.overcast ? 0x4e6670 : 0x3f7fae), specular: lin(0x667788), shininess: 60 })));
+      pm.scale.set(pond.rx, 1, pond.rz);
+      pm.rotation.y = pond.rot;
+      pm.position.set(pond.x, pond.y0 - 0.15, -pond.y);
+      scene.add(pm);
     }
+    // 確かめ用：地面の高さ（上から見た x, y）
+    const groundAt = (x, y) => ground(x, y);
 
     // ---- ラチ（内・外。白い横木と支柱） ----
     {
@@ -1565,9 +1718,10 @@
 
     // ---- スタンド（ゴール前の外側）・内馬場の大きな画面・木 ----
     const props = new Builder({ color: true });
+    let crowdN = 0; // 立体の観客の数
+    let camFar = 70; // 中継のカメラを内へ離せるいちばん遠く
     {
       const crowd = new Builder();
-      const sa = Math.max(hr0, -160), sb = Math.min(hr1, 430);
       const u0 = standU, step = 25;
       for (let s0 = sa; s0 < sb - 1; s0 += step) {
         const s1 = Math.min(sb, s0 + step), f0 = frame(s0), f1 = frame(s1);
@@ -1577,11 +1731,11 @@
         props.quad(P(f0, e0, u0, -2), P(f1, e1, u0, -2), P(f1, e1, u0, 2.6), P(f0, e0, u0, 2.6), { color: '#8f8c86' });
         props.quad(P(f0, e0, u0, 2.6), P(f1, e1, u0, 2.6), P(f1, e1, u0 + 1, 2.6), P(f0, e0, u0 + 1, 2.6), { color: '#bdb8ad' });
         crowd.quad(P(f0, e0, u0 + 1, 2.6), P(f1, e1, u0 + 1, 2.6), P(f1, e1, u0 + 22, 15), P(f0, e0, u0 + 22, 15), { uvs: [[0, 0], [1, 0], [1, 1], [0, 1]] });
-        props.quad(P(f0, e0, u0 + 22, 15), P(f1, e1, u0 + 22, 15), P(f1, e1, u0 + 22, 19.5), P(f0, e0, u0 + 22, 19.5), { color: look.overcast ? '#4c6378' : '#4f7aa6' });
+        props.quad(P(f0, e0, u0 + 22, 15), P(f1, e1, u0 + 22, 15), P(f1, e1, u0 + 22, 19.5), P(f0, e0, u0 + 22, 19.5), { color: look.overcast ? '#33424f' : '#344a60' });
         props.quad(P(f0, e0, u0 + 24, -2), P(f1, e1, u0 + 24, -2), P(f1, e1, u0 + 24, 20), P(f0, e0, u0 + 24, 20), { color: '#d6d1c4' });
         props.quad(P(f0, e0, u0 - 3, 20.6), P(f1, e1, u0 - 3, 20.6), P(f1, e1, u0 + 24.5, 20.6), P(f0, e0, u0 + 24.5, 20.6), { color: '#eeece6' });
         props.quad(P(f0, e0, u0 - 3, 19.8), P(f1, e1, u0 - 3, 19.8), P(f1, e1, u0 - 3, 20.6), P(f0, e0, u0 - 3, 20.6), { color: '#f6f5f0' });
-        props.quad(P(f0, e0, u0 - 3, 19.8), P(f1, e1, u0 - 3, 19.8), P(f1, e1, u0 + 24.5, 19.8), P(f0, e0, u0 + 24.5, 19.8), { color: '#7b7686' });
+        props.quad(P(f0, e0, u0 - 3, 19.8), P(f1, e1, u0 - 3, 19.8), P(f1, e1, u0 + 24.5, 19.8), P(f0, e0, u0 + 24.5, 19.8), { color: '#d8d4de' });
         // 柱
         const pc = W3(f0, u0 + 0.5, 0);
         props.box(pc.x, e0 + 11.2, pc.z, 0.5, 17.2, 0.5, yawOf(f0), { color: '#d6d1c4' });
@@ -1591,24 +1745,91 @@
         const f = frame(s), e = f.e;
         props.quad(W3(f, u0, e - 2), W3(f, u0 + 24, e - 2), W3(f, u0 + 24, e + 20), W3(f, u0, e + 20), { color: '#cfcabd' });
       }
-      const ctex = T(texOf(crowdCanvas(photo ? 512 : 256), false, aniso));
+      // 素材を使うときは、観客席は座席の絵にして、人は立体（下の crowd3d）で置く
+      const ctex = T(texOf(photo ? seatCanvas() : crowdCanvas(256), false, aniso));
       scene.add(new THREE.Mesh(G(crowd.build()), lambert({ map: ctex, side: THREE.DoubleSide })));
-      // スタンド前の立ち見（素材を使うときだけ）
-      if (photo) {
-        const sb2 = new Builder(), us = u0 - 2.5;
-        for (let s0 = sa; s0 < sb - 1; s0 += 12.8) {
-          const s1 = Math.min(sb, s0 + 12.8), f0 = frame(s0), f1 = frame(s1);
-          sb2.quad(W3(f0, us, f0.e), W3(f1, us, f1.e), W3(f1, us, f1.e + 1.85), W3(f0, us, f0.e + 1.85), { uvs: [[0, 0], [(s1 - s0) / 12.8, 0], [(s1 - s0) / 12.8, 1], [0, 1]] });
-        }
-        const stex = T(texOf(standingCanvas(), true, aniso));
-        scene.add(new THREE.Mesh(G(sb2.build()), lambert({ map: stex, alphaTest: 0.5, side: THREE.DoubleSide })));
-      }
-      // 大きな画面（内馬場、スタンドの向かい）
-      const sm = (sa + sb) / 2, f = frame(sm), su = Math.min(innerEdge - 30, -tr.r * 1.05), c = W3(f, su, 0), yaw = yawOf(f);
-      props.box(c.x, 10, c.z, 44, 14, 1.4, yaw, { color: '#1c2129' });
+      if (photo) crowd3d(u0);
+      // 内馬場のまんなかあたり（スタンドの向かい）。直線のコースは内側の少し先
+      const sm = (sa + sb) / 2, f = frame(sm);
+      let su = innerEdge - 40;
+      if (loop) { const i0 = nearest(f.x, f.y).i; for (let u = innerEdge; u > -2000; u -= 10) { const p = wpt(f, u), n = nearest(p.x, p.y); if (!n || Math.abs(n.i - i0) > 6) { su = Math.min(innerEdge - 30, u * 0.55); break; } } }
+      if (loop) camFar = Math.max(30, Math.min(-innerEdge + 26, -su));
+      const c = W3(f, su, 0), yaw = yawOf(f), gy = ground(c.x, -c.z);
+      props.box(c.x, gy + 10, c.z, 44, 14, 1.4, yaw, { color: '#1c2129' });
       const cf = W3(f, su + 0.75, 0);
-      props.box(cf.x, 10.3, cf.z, 41, 11.5, 0.1, yaw, { color: look.overcast ? '#2a4258' : '#2c5070' });
-      for (const dq of [-14, 14]) { const lg = W3(f, su, 0, dq); props.box(lg.x, 1.6, lg.z, 1, 3.2, 1, yaw, { color: '#555c66' }); }
+      props.box(cf.x, gy + 10.3, cf.z, 41, 11.5, 0.1, yaw, { color: look.overcast ? '#2a4258' : '#2c5070' });
+      for (const dq of [-14, 14]) { const lg = W3(f, su, 0, dq); props.box(lg.x, ground(lg.x, -lg.z) + 1.2, lg.z, 1, 4.0, 1, yaw, { color: '#555c66' }); }
+    }
+    // 観客（立体）：観客席に座る人とスタンド前の立ち見。体と頭の2つの形を InstancedMesh で（描く回数は4回）
+    // 色・背の高さ・向き・座る位置は番号から決まる揺らぎでばらす。光は受けるが影は落とさない（重さ）
+    function crowd3d(u0) {
+      const shirts = ['#c9b8a6', '#e8d6c0', '#3b3f52', '#8a6d5a', '#f2f2f2', '#c83a3a', '#3a6bc8', '#e0c040', '#2c2c30', '#9aa4b0', '#6a8a5a', '#d88a5a', '#ffffff', '#1c1c22', '#7a3a5a', '#2f6a6a'];
+      const skins = ['#e9c8a6', '#dcb48e', '#c99a74', '#a8795a', '#f0d4b8'];
+      const hairs = ['#1a1410', '#2a2018', '#4a3828', '#6a6a6a', '#16120e', '#8a6a48'];
+      const seat = [], stand = [];
+      const len = sb - sa;
+      // 座る人：段は 24 段（u0+1.6 → u0+21.4、高さ 2.6 → 15）、横は 0.62m ごと
+      for (let r = 0; r < 24; r++) {
+        const fu = (r + 0.5) / 24, u = u0 + 1 + 21 * fu, h = 2.6 + 12.4 * fu;
+        const n = Math.floor(len / 0.62);
+        for (let q = 0; q < n; q++) {
+          const id = r * 4099 + q;
+          // 上の段と端は空き気味
+          if (hash01(id, 91) > 0.78 - fu * 0.22 - (q < 6 || q > n - 6 ? 0.3 : 0)) continue;
+          seat.push([sa + (q + 0.5 + (hash01(id, 92) - 0.5) * 0.3) * 0.62, u + (hash01(id, 93) - 0.5) * 0.12, h, id]);
+        }
+      }
+      // 立ち見：スタンドの前に 3 列
+      for (let r = 0; r < 3; r++) {
+        const n = Math.floor(len / 0.56);
+        for (let q = 0; q < n; q++) {
+          const id = 900000 + r * 4099 + q;
+          if (hash01(id, 91) > (r === 0 ? 0.85 : 0.62)) continue;
+          stand.push([sa + (q + 0.5 + (hash01(id, 92) - 0.5) * 0.5) * 0.56, u0 - 1.2 - r * 0.75 + (hash01(id, 93) - 0.5) * 0.3, 0, id]);
+        }
+      }
+      const all = seat.concat(stand), n = all.length;
+      if (!n) return;
+      // 体（座っていれば胸から上、立っていれば脚まで）と頭（髪の帽子つき）
+      const body = new Builder({ color: true });
+      body.add(new THREE.CylinderGeometry(0.15, 0.21, 0.64, 5, 1, true), new THREE.Matrix4().makeTranslation(0, 0.32, 0), { color: '#ffffff' });
+      const legs = new Builder({ color: true });
+      legs.add(new THREE.CylinderGeometry(0.15, 0.21, 0.64, 5, 1, true), new THREE.Matrix4().makeTranslation(0, 1.14, 0), { color: '#ffffff' });
+      legs.add(new THREE.CylinderGeometry(0.15, 0.11, 0.84, 4, 1, true), new THREE.Matrix4().makeTranslation(0, 0.42, 0), { color: '#3a3c46' });
+      const head = new Builder({ color: true });
+      head.add(new THREE.OctahedronGeometry(0.12, 0), new THREE.Matrix4().makeScale(1, 1.1, 1), { color: '#ffffff' });
+      const hair = new Builder({ color: true });
+      hair.add(new THREE.ConeGeometry(0.13, 0.11, 4, 1, true), new THREE.Matrix4().makeTranslation(0, 0.09, 0), { color: '#ffffff' });
+      const mat = lambert({ vertexColors: true });
+      // スタンドを横に 4 つに分けて描く（見えない所は描かない）。InstancedMesh の見える範囲は、形の範囲を人のいる所まで広げて決める
+      const NC = 4, chunk = x => clamp(Math.floor((x[0] - sa) / len * NC), 0, NC - 1);
+      const o = new THREE.Object3D(), c = new THREE.Color();
+      for (let ck = 0; ck < NC; ck++) {
+        const ps = all.filter(x => chunk(x) === ck), ns = ps.filter(x => x[2] > 0).length, nl = ps.length - ns;
+        if (!ps.length) continue;
+        const f0 = frame(sa + (ck + 0.5) * len / NC), ctr = W3(f0, u0 + 8, f0.e + 7), rad = len / NC / 2 + 30;
+        const mk = (B, cnt) => {
+          const g = G(B.build()); g.boundingSphere = new THREE.Sphere(ctr.clone(), rad);
+          const m = new THREE.InstancedMesh(g, mat, Math.max(1, cnt)); m.count = cnt; scene.add(m); return m;
+        };
+        const mBody = mk(body, ns), mLegs = mk(legs, nl), mHead = mk(head, ps.length), mHair = mk(hair, ps.length);
+        let ib = 0, il = 0;
+        ps.forEach(([s, u, h, id], k) => {
+          const f = frame(s), p = W3(f, u, f.e + h), sit = h > 0;
+          const tall = 0.9 + hash01(id, 94) * 0.22, wide = 0.9 + hash01(id, 95) * 0.25;
+          const yaw = yawOf(f) + (hash01(id, 96) - 0.5) * 0.6;
+          o.position.copy(p); o.rotation.set((sit ? -0.12 : 0) * sign, yaw, 0); o.scale.set(wide, tall, wide); o.updateMatrix();
+          c.copy(lin(shirts[Math.floor(hash01(id, 97) * shirts.length)]));
+          if (sit) { mBody.setMatrixAt(ib, o.matrix); mBody.setColorAt(ib++, c); } else { mLegs.setMatrixAt(il, o.matrix); mLegs.setColorAt(il++, c); }
+          // 頭と髪（1割は帽子）
+          o.position.y = p.y + (sit ? 0.76 : 1.58) * tall; o.scale.set(1, 1, 1); o.rotation.set(0, yaw, 0); o.updateMatrix();
+          mHead.setMatrixAt(k, o.matrix); mHead.setColorAt(k, c.copy(lin(skins[Math.floor(hash01(id, 98) * skins.length)])));
+          const hat = hash01(id, 99) < 0.1;
+          mHair.setMatrixAt(k, o.matrix); mHair.setColorAt(k, c.copy(lin(hat ? shirts[Math.floor(hash01(id, 100) * shirts.length)] : hairs[Math.floor(hash01(id, 101) * hairs.length)])));
+        });
+        for (const m of [mBody, mLegs, mHead, mHair]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+      }
+      crowdN = n;
     }
     // 木（外の向こう正面と、内馬場）。InstancedMesh で1回に描く
     // 素材の木（板絵を十字に組んだ形）があればそれを、無ければ手作りの形
@@ -1616,15 +1837,22 @@
       const spots = [];
       const treeImg = imgOk('tree');
       const step = treeImg ? 15 : 26;
-      for (let k = 0; k * step < L; k++) {
-        const s = k * step, home = s < hr1 + 40 || s > L + hr0 - 40;
+      // 置く所が、そのコースの点からいちばん近い（ほかの所のコースの上に来ない）ときだけ置く
+      const put = (f, u, sc, id) => {
+        const p = wpt(f, u), n = nearest(p.x, p.y);
+        if (!n || Math.abs(n.u - u) > 2 || n.u > bandI && n.u < bandOf(n.i != null ? S[n.i].s : 0) + 6) return;
+        if (pond) { const px = p.x - pond.x, py = p.y - pond.y, c = Math.cos(pond.rot), s = Math.sin(pond.rot); if (Math.hypot((px * c + py * s) / pond.rx, (-px * s + py * c) / pond.rz) < 1.5) return; }
+        spots.push([p.x, ground(p.x, p.y), -p.y, sc, id]);
+      };
+      for (let k = 0; sLo + k * step < sHi; k++) {
+        const s = sLo + k * step, home = loop ? (s < hr1 + 40 || s > L + hr0 - 40) : (s > sa - 60 && s < sb + 60);
         const f = frame(s);
         if (!home) {
-          const p = W3(f, outerEdge - 18 + hash01(k, 1) * 30, 0); spots.push([p.x, p.z, 0.8 + hash01(k, 2) * 0.6, k]);
-          if (treeImg && hash01(k, 6) < 0.7) { const q = W3(f, outerEdge + 14 + hash01(k, 7) * 40, 0); spots.push([q.x, q.z, 0.9 + hash01(k, 8) * 0.7, k + 2000]); }
+          put(f, outerEdge - 18 + hash01(k, 1) * 30, 0.8 + hash01(k, 2) * 0.6, k);
+          if (treeImg && hash01(k, 6) < 0.7) put(f, outerEdge + 14 + hash01(k, 7) * 40, 0.9 + hash01(k, 8) * 0.7, k + 2000);
         }
         const ut = innerEdge - 34 - hash01(k, 4) * 30;
-        if (hash01(k, 3) < 0.55 && !home && -ut < tr.r - 6) { const p = W3(f, ut, 0); spots.push([p.x, p.z, 0.7 + hash01(k, 5) * 0.6, k + 1000]); }
+        if (hash01(k, 3) < 0.55 && !home) put(f, ut, 0.7 + hash01(k, 5) * 0.6, k + 1000);
       }
       let tg, tm;
       if (treeImg) {
@@ -1648,10 +1876,11 @@
         tm = lambert({ vertexColors: true });
       }
       const im = new THREE.InstancedMesh(tg, tm, spots.length);
+      im.frustumCulled = false; // 木はコースのまわり全体にある
       const o = new THREE.Object3D();
-      spots.forEach(([x, z, sc, id], i) => {
+      spots.forEach(([x, y, z, sc, id], i) => {
         const k = treeImg ? 2.3 * sc : sc;
-        o.position.set(x, 0, z); o.rotation.set(0, hash01(id, 9) * TAU, 0); o.scale.set(k, k * (0.85 + hash01(id, 8) * 0.4), k); o.updateMatrix(); im.setMatrixAt(i, o.matrix);
+        o.position.set(x, y, z); o.rotation.set(0, hash01(id, 9) * TAU, 0); o.scale.set(k, k * (0.85 + hash01(id, 8) * 0.4), k); o.updateMatrix(); im.setMatrixAt(i, o.matrix);
       });
       im.instanceMatrix.needsUpdate = true;
       scene.add(im);
@@ -1780,7 +2009,7 @@
       const ct = new THREE.Color(top), cb = new THREE.Color(bot);
       for (let i = 0; i <= n; i++) {
         const a = i / n * TAU, h = hf(a);
-        pos.push(Math.cos(a) * R, -4, Math.sin(a) * R, Math.cos(a) * R, h, Math.sin(a) * R);
+        pos.push(Math.cos(a) * R, hAvg - 4, Math.sin(a) * R, Math.cos(a) * R, hAvg + h, Math.sin(a) * R);
         col.push(cb.r, cb.g, cb.b, ct.r, ct.g, ct.b);
         if (i < n) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
       }
@@ -1834,7 +2063,7 @@
     // 丸い影の板（まとめて1回）
     const shTexC = canvasOf(64, 64), sg = shTexC.getContext('2d');
     const rg = sg.createRadialGradient(32, 32, 2, 32, 32, 31);
-    const so = shadowOn ? 0.5 : 1; // 太陽の影があるときは、足元の暗がりだけ
+    const so = shadowOn ? 0.75 : 1; // 太陽の影があるときは、足元の暗がりだけ
     rg.addColorStop(0, `rgba(0,0,0,${0.55 * so})`); rg.addColorStop(0.6, `rgba(0,0,0,${0.3 * so})`); rg.addColorStop(1, 'rgba(0,0,0,0)');
     sg.fillStyle = rg; sg.fillRect(0, 0, 64, 64);
     const shGeo = G(new THREE.PlaneGeometry(1, 1)); shGeo.rotateX(-Math.PI / 2);
@@ -1854,7 +2083,7 @@
     function makeDust() {
       const N = 480, puff = look.dirt && look.wet < 2;
       const pos = new Float32Array(N * 3), vel = new Float32Array(N * 3), age = new Float32Array(N).fill(99), life = new Float32Array(N).fill(1);
-      const size = new Float32Array(N), alpha = new Float32Array(N), s0 = new Float32Array(N), grow = new Float32Array(N), a0 = new Float32Array(N), shade = new Float32Array(N).fill(1), grain = new Uint8Array(N);
+      const size = new Float32Array(N), alpha = new Float32Array(N), s0 = new Float32Array(N), grow = new Float32Array(N), a0 = new Float32Array(N), shade = new Float32Array(N).fill(1), grain = new Uint8Array(N), floor = new Float32Array(N);
       const g = G(new THREE.BufferGeometry());
       const pa = new THREE.BufferAttribute(pos, 3), sa = new THREE.BufferAttribute(size, 1), aa = new THREE.BufferAttribute(alpha, 1), ha = new THREE.BufferAttribute(shade, 1);
       for (const at of [pa, sa, aa, ha]) at.setUsage(THREE.DynamicDrawUsage);
@@ -1895,7 +2124,7 @@
             const k = cur; cur = (cur + 1) % N; cnt++;
             const h1 = hash01(cnt, i * 7 + 1), h2 = hash01(cnt, i * 7 + 2), h3 = hash01(cnt, i * 7 + 3), h4 = hash01(cnt, i * 7 + 4);
             const back = -0.55 - h1 * 0.6, side = (h2 - 0.5) * 0.55;
-            pos[k * 3] = p.x + fx * back + lx * side; pos[k * 3 + 1] = f.e + 0.06; pos[k * 3 + 2] = -p.y + fz * back + lz * side;
+            pos[k * 3] = p.x + fx * back + lx * side; pos[k * 3 + 1] = f.e + 0.06; pos[k * 3 + 2] = -p.y + fz * back + lz * side; floor[k] = f.e + 0.02;
             const vb = puff ? 1.2 + h3 * 2.6 : 2.0 + h3 * 3.0, vs = (h4 - 0.5) * 1.6, vu = puff ? 0.9 + h4 * 1.6 : 2.2 + h1 * 2.6;
             vel[k * 3] = -fx * vb + lx * vs; vel[k * 3 + 1] = vu; vel[k * 3 + 2] = -fz * vb + lz * vs;
             age[k] = 0;
@@ -1918,7 +2147,7 @@
             age[k] += dt;
             const gv = grain[k] ? 9.8 : 1.6, e = Math.max(0, 1 - (grain[k] ? 0.4 : drag0) * dt);
             vel[k * 3] *= e; vel[k * 3 + 2] *= e; vel[k * 3 + 1] = vel[k * 3 + 1] * e - gv * dt;
-            pos[k * 3] += vel[k * 3] * dt; pos[k * 3 + 1] = Math.max(0.02, pos[k * 3 + 1] + vel[k * 3 + 1] * dt); pos[k * 3 + 2] += vel[k * 3 + 2] * dt;
+            pos[k * 3] += vel[k * 3] * dt; pos[k * 3 + 1] = Math.max(floor[k], pos[k * 3 + 1] + vel[k * 3 + 1] * dt); pos[k * 3 + 2] += vel[k * 3 + 2] * dt;
             const u = age[k] / life[k];
             size[k] = s0[k] * (1 + grow[k] * u);
             alpha[k] = u >= 1 ? 0 : a0[k] * Math.pow(1 - u, 1.4) * Math.min(1, u * 8);
@@ -2014,7 +2243,12 @@
       if (camMode !== mem.camMode) { mem.cam = null; mem.camMode = camMode; }
       const me = pos[meI] || { s: D, u: LANE0, f: frame(D), x: 0, v: 0 };
       let cp, lk, base = 55;
-      if (camMode === 'gate') {
+      if (camMode === 'fixed' && view.fix) {
+        // 止めたカメラ（止め絵用）：fix＝{ s, u, h（カメラ。ゴールまでの残り・内ラチから外へ・コースからの高さ）, ls, lu, lh（見る所）, fov }
+        const x = view.fix, fa = frame(x.s), fb = frame(x.ls);
+        cp = W3(fa, x.u, fa.e + x.h); lk = W3(fb, x.lu, fb.e + x.lh);
+        hfovMin = x.fov || 60; base = x.fov ? x.fov * 0.6 : 40;
+      } else if (camMode === 'gate') {
         const n = Math.max(nH, 2), uc = LANE0 + (n - 1) / 2 * GATE_P;
         const fb = frame(D + 17), ff = frame(D - 4);
         cp = W3(fb, uc, fb.e + 4.6); lk = W3(ff, uc, ff.e + 0.9);
@@ -2029,16 +2263,22 @@
         const uc = cnt ? uSum / cnt : LANE0;
         const fc = frame(D - qc);
         const hf = 2 * Math.atan(Math.tan(camera.fov * Math.PI / 360) * VW / VH);
-        const dist = clamp(span / 2 / Math.tan(hf / 2) * 1.15, 24, Math.max(30, Math.min(-innerEdge + 26, tr.r)));
+        const dist = clamp(span / 2 / Math.tan(hf / 2) * 1.15, 24, camFar);
         const home = !gateNow && (D - lead) < tr.straight + 30 && (D - lead) > -40 && fc.corner === 0;
+        // 坂：先頭の 60m 先から後ろの馬の 20m 後ろまでの勾配が 0.8% を超えたら、カメラを少し低く・望遠にして、ラチと地面の傾きが見えるように
+        const sF = D - lead - 60, sB = D - qmin + 20, grd = Math.abs(elev(sF) - elev(sB)) / Math.max(40, sB - sF);
+        const hillT = gateNow ? 0 : smooth((grd - 0.008) / 0.008);
+        mem.hill = mem.hill == null || jump ? hillT : mem.hill + (hillT - mem.hill) * (dt > 0 ? Math.min(1, dt * 0.8) : 1);
+        const hk = mem.hill;
         if (home) {
-          const d2 = dist * 1.25, fa = frame(D - qc - d2 * 0.55);
-          cp = W3(fa, uc - d2 * 0.8, fa.e + 4 + d2 * 0.1);
+          const d2 = dist * 1.25, fa = frame(D - qc - d2 * (0.55 + 0.25 * hk));
+          cp = W3(fa, uc - d2 * (0.8 - 0.2 * hk), fa.e + (4 + d2 * 0.1) * (1 - 0.35 * hk));
         } else {
-          cp = W3(fc, uc - dist, fc.e + 5 + dist * 0.14);
+          cp = W3(fc, uc - dist, fc.e + (5 + dist * 0.14) * (1 - 0.35 * hk));
         }
         lk = W3(fc, uc, fc.e + 1.2);
-        hfovMin = 50; base = 34;
+        cp.y = Math.max(cp.y, ground(cp.x, -cp.z) + 2.5); // 内馬場の高い所に埋まらないように
+        hfovMin = 50 - 6 * hk; base = 34 - 4 * hk;
       } else {
         // 騎乗：自分の馬の少し後ろ・上から。進路を変えると少し遅れてついてくる
         if (mem.camU == null || mem.cam == null) mem.camU = me.u;
@@ -2048,7 +2288,8 @@
         const bob = me.v > 1.5 && !gateNow ? Math.sin(((me.x / STRIDE) % 1) * TAU) * 0.05 : 0;
         const camH = gate.visible ? 2.55 + 0.65 * smooth((camQ - 1) / 14) : 3.2; // ゲートの梁の下をくぐる
         cp = W3(fc, mem.camU, fc.e + camH + bob);
-        lk = W3(fl, mem.camU * 0.55 + me.u * 0.45, fl.e + 1.0);
+        // 見る高さは足元の高さに寄せる（上り坂は前の地面がせり上がって、下り坂は落ちて見える）
+        lk = W3(fl, mem.camU * 0.55 + me.u * 0.45, fl.e * 0.4 + fc.e * 0.6 + 1.0);
         hfovMin = 68; base = 50;
       }
       // カメラの回転：見ている中心（騎乗なら自分の馬）のまわりを回り込む
@@ -2078,7 +2319,7 @@
       sky.position.copy(camera.position);
       // 太陽の影：見ている所（騎乗は自分の馬、中継は見ている中心）のまわりだけ。影の升目にそろえて、動いてもちらつかないように
       if (shadowOn) {
-        const box = camMode === 'ride' ? 26 : camMode === 'gate' ? 24 : 44;
+        const box = camMode === 'ride' ? 30 : camMode === 'gate' ? 24 : 58;
         if (box !== shadowBox) {
           shadowBox = box;
           const sc = sun.shadow.camera; sc.left = -box; sc.right = box; sc.top = box; sc.bottom = -box; sc.updateProjectionMatrix();
@@ -2145,7 +2386,7 @@
       renderer.dispose();
       if (renderer.forceContextLoss) renderer.forceContextLoss();
     }
-    const info = () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, photo, jockey: useJockey, shadow: shadowOn && sun.castShadow, dust: !!dust, level: perf.level });
+    const info = () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, photo, jockey: useJockey, shadow: shadowOn && sun.castShadow, dust: !!dust, level: perf.level, crowd: crowdN });
 
     return { render, resize, dispose, info, renderer, scene, camera };
   };

@@ -753,6 +753,50 @@ check('look: 毛色の表に抜けがない・芦毛は年を取ると白い・�
   return `毛色 ${coats.size}・馬具 ${Object.keys(g).length}頭・三角形 ${out.join(' / ')}`;
 });
 
+check('terrain: 3D の地面がコースの高さに合う（坂・楕円でない形・直線・馬蹄形）', () => {
+  // race3d.js は前の 'look:' の確かめで読んである
+  const T = HS.Track, R3 = HS.Race3D, out = [];
+  const cases = [
+    ['楕円・急坂', T.make(1667, 310, '右'), { slope: '急', dirt: false, hasOther: true }],
+    ['周回の実際の形', T.fromLayout({ id: '内', lap: 1667, straight: 310, segs: [['S', 310], ['C', 120, 95, 180, 3], ['S', 420], ['C', 100, 100, 180, 1], ['S', 300]], elev: [[0, 4.6], [110, 4.0], [330, 0.6], [900, 1.0], [1350, 5.3], [1667, 4.6]] }, '右'), { dirt: true, hasOther: true }],
+    ['直線', T.fromLayout({ id: '直線', line: true, lap: 1000, straight: 1000, segs: [['S', 1000]], elev: [[0, 0.3], [400, 0], [1000, 0.6]] }, '左'), { hasOther: false }],
+    ['馬蹄形', T.fromLayout({ id: '馬蹄', line: true, lap: 2414, straight: 600, segs: [['S', 620], ['C', 260, 200, 110, 3], ['S', 380], ['C', 400, 400, 40, 1], ['S', 600], ['C', 500, 500, 30, 1], ['S', 300]], elev: [[0, 6], [150, 4], [700, 12], [1100, 26], [1600, 40], [2414, 1]] }, '左'), { hasOther: false }],
+  ];
+  for (const [name, tr, o] of cases) {
+    const R = R3.terrain(tr, o), G = R.grid(), CS = 8, nx = Math.round((G.x1 - G.x0) / CS) + 1;
+    for (let i = 0; i < G.pos.length; i++) assert(isFinite(G.pos[i]), `${name}：地面に NaN`);
+    assert(G.idx.length > 3000, `${name}：地面の三角形が少ない`);
+    // 升目の高さ（上から見た x, y。三角形の中は平面）
+    const gridH = (x, y) => {
+      const fx = (x - G.x0) / CS, fy = (y - G.y0) / CS, i = Math.floor(fx), j = Math.floor(fy), a = fx - i, b = fy - j, h = (ii, jj) => G.pos[(jj * nx + ii) * 3 + 1];
+      return a + b <= 1 ? h(i, j) + (h(i + 1, j) - h(i, j)) * a + (h(i, j + 1) - h(i, j)) * b : h(i + 1, j + 1) + (h(i, j + 1) - h(i + 1, j + 1)) * (1 - a) + (h(i + 1, j) - h(i + 1, j + 1)) * (1 - b);
+    };
+    let worst = 0, hMin = Infinity, hMax = -Infinity;
+    for (let k = 0; k < R.S.length; k += 3) {
+      const f = R.S[k];
+      hMin = Math.min(hMin, f.e); hMax = Math.max(hMax, f.e);
+      // 馬場の下は、地面がコースの帯より下
+      const c = R.wpt(f, 12);
+      assert(R.ground(c.x, c.y) <= f.e - 0.05, `${name}：残り ${f.s.toFixed(0)}m で地面が馬場から出る`);
+      // 帯の内と外の縁で、地面がコースの高さとつながる（浮かない・埋まらない）
+      for (const u of [R.bandI - 0.5, R.bandO0 + 0.5]) {
+        const p = R.wpt(f, u), n = R.nearest(p.x, p.y);
+        if (!n || Math.abs(n.u - u) > 1) continue; // ほかの所のコースの方が近い所は除く
+        const d = gridH(p.x, p.y) - f.e;
+        worst = Math.max(worst, Math.abs(d));
+        assert(d < 0.08 && d > -0.3, `${name}：残り ${f.s.toFixed(0)}m の帯の縁（${u.toFixed(0)}m）で地面が ${d.toFixed(2)}m ずれる`);
+      }
+    }
+    // 池は内馬場の中で、コースから離れている
+    if (R.pond) {
+      assert(R.loop, `${name}：直線のコースに池がある`);
+      const n = R.nearest(R.pond.x, R.pond.y);
+      assert(n && n.u < R.bandI - R.pond.rz, `${name}：池がコースに近い`);
+    }
+    out.push(`${name} 高低差 ${(hMax - hMin).toFixed(1)}m・縁のずれ ${(worst * 100).toFixed(0)}cm`);
+  }
+  return out.join('／');
+});
 check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中・騎手の GLB の形・騎手が手綱と鐙に届く', () => {
   const vm = require('vm'), fs = require('fs'), path = require('path');
   const ROOT = path.join(__dirname, '..'), dir = path.join(ROOT, 'assets');
