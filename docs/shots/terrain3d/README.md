@@ -13,3 +13,5 @@
 馬の作り込み（区切り2）：`docs/shots/horse3d_v2/before_after.jpg`（左が前・右が後。横からの襲歩6コマ・頭と首・脚・後ろ・肖像）と `portrait.jpg`。`compare_*` はこの区切りで撮り直した。
 
 区切り3（背と腹の線・頭の彫り・毛のつや）：`docs/shots/horse3d_v2/before_after_2.jpg`（左が区切り2・右が区切り3）、`portrait_coats.jpg`（左上が区切り2の鹿毛、右上・左下・右下が区切り3の鹿毛・黒鹿毛・芦毛）、`head_before_after.jpg`、`portrait.jpg`。`compare_*` はこの区切りで撮り直した。
+
+区切り4（サラブレッドの比・連銭）：`docs/shots/horse3d_v2/before_after_3.jpg`（左が区切り3・右が区切り4）、`proportion_before_after.jpg`（肖像の比の前後）、`portrait_coats_3.jpg`（鹿毛・黒鹿毛・芦毛（4歳）・栗毛）、`portrait.jpg`。
