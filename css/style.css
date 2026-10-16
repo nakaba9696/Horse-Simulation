@@ -347,4 +347,7 @@ html[data-theme="green"] .tenkai { background: #0e2a1a; }
 .sp-reach { color: #ffd34d; font-weight: 700; }
 .card.sel { outline: 3px solid var(--gold); } .card[data-act="orig-pick"] { cursor: pointer; }
 .sp-got { color: #ffd34d; }
+.sp-nm { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+.sp-nm.sp-got { color: #ffd34d; font-weight: 700; }
+.hinfo { grid-template-columns: repeat(2, 1fr); }
 details.sp-g summary { cursor: pointer; list-style: none; } details.sp-g summary::-webkit-details-marker { display: none; } details.sp-g:not([open]) summary::after { content: "▼"; margin-left: 8px; color: var(--muted); font-size: 11px; }

@@ -64,7 +64,7 @@
       if (d.note) d.note = F.text(d.note);
       if (d.text) d.text = F.text(d.text);
     }
-    for (const f of D.famous || []) if (f.text) f.text = F.text(f.text);
+    for (const f of (D.famous || []).concat(D.profiles || [])) if (f.text) f.text = F.text(f.text);
   };
   F.apply();
 })();

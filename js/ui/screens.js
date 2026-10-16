@@ -208,13 +208,12 @@
   }
   // 名馬の解説（市場などから開く）
   UI.histTextModal = function (name) {
-    const d = W.histByName.get(name); if (!d) return '';
+    const d = UI.histData(name); if (!d) return '';
     const h = H.fromHistoric(d, 'x');
-    return `<h3>${e(d.name)}</h3><div class="small muted">${d.born}年生 ${d.sex}・${e(d.coat || '')}　父 ${e(d.sire || '?')}　母 ${e(d.dam || '?')}</div>
-      ${d.text ? `<div class="panel mt horse-text">${e(d.text)}</div>` : ''}
+    return `<h3>${e(d.name)}</h3><div class="small muted">${d.born}年生 ${d.sex}・${e(d.coat || '')}${d.country && d.country !== '日' ? '・' + e(d.country) : ''}　父 ${e(d.sire || '?')}　母 ${e(d.dam || '?')}</div>
+      <div class="mt">${UI.histInfo(d)}</div>
       <div class="apt mt"><div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div><div>脚質<b>${h.style}・${H.kireLabel(h.kire)}</b></div><div>成長型<b>${h.growth}</b></div></div>
       ${UI.hasSkills(h) ? `<div class="skills mt">${UI.skillChips(h)}</div>` : ''}
-      ${(d.wins || []).length ? `<div class="small muted mt">史実の主な勝ち鞍：${d.wins.map(e).join('、')}</div>` : ''}
       <div class="btns mt"><button class="btn" data-act="close">閉じる</button></div>`;
   };
   // 特殊能力の札。手書きのもの（出るだけで効く）と、能力値から決まる発動型（⚡。得は水色・損は赤茶）
@@ -222,10 +221,24 @@
   UI.hasSkills = h => (h.skills || []).length > 0 || UI.trigSkills(h).length > 0;
   UI.skillChips = h => (h.skills || []).filter(x => H.SKILLS[x]).map(x => `<span class="chip skill ${H.SKILLS[x].bad ? 'bad' : ''}" title="${e(H.SKILLS[x].note)}">${e(H.SKILLS[x].label)}</span>`).join('')
     + UI.trigSkills(h).map(id => { const k = HS.Skills.BY[id]; return `<span class="chip skill trig ${k.bad ? 'bad' : ''}" title="${e(k.note)}">⚡${e(k.label)}</span>`; }).join('');
+  // 史実の名馬の名鑑：年代・戦績・主な勝鞍・解説（data/profiles.js があればそちら。無ければ勝ち鞍から）
+  UI.histData = name => W.histByName.get(name) || (HS.Special ? HS.Special.data(name) : null);
+  UI.histYears = d => d.years || (d.born && d.retire ? `${Math.floor((d.born + 2 + d.retire) / 2 / 10) * 10}年代` : '');
+  UI.histMainWins = function (d) {
+    if (d.mainWins) return d.mainWins;
+    const big = w => (HS.Special && HS.Special.mapWin(w) ? 0 : 1);
+    return (d.wins || []).slice().sort((a, b) => big(a) - big(b)).slice(0, 6).sort().map(w => `${w.slice(0, 4)} ${w.slice(4)}`);
+  };
+  UI.histInfo = function (d) {
+    const mw = UI.histMainWins(d);
+    return `<div class="apt hinfo"><div>年代<b>${e(UI.histYears(d))}</b></div>${d.record ? `<div>戦績<b>${e(d.record)}</b></div>` : ''}</div>
+      <div class="panel small mt">主な勝鞍：${mw.length ? mw.map(e).join('、') : '重賞の勝ち鞍なし'}${d.note ? `<div class="muted">${e(d.note)}</div>` : ''}</div>
+      ${d.text ? `<div class="panel mt horse-text">${e(d.text)}</div>` : ''}`;
+  };
   function histNote(h) {
-    const d = W.histByName.get(h.name);
+    const d = UI.histData(h.name);
     if (!d) return '';
-    return `${d.text ? `<h2 class="sec">解説</h2><div class="panel horse-text">${e(d.text)}</div>` : ''}<h2 class="sec">史実メモ</h2><div class="panel small">${d.note ? e(d.note) + '<br>' : ''}${(d.wins || []).length ? '史実の主な勝ち鞍：' + d.wins.map(e).join('、') : '史実ではG1未勝利'}<div class="muted">史実の引退：${d.retire}年</div></div>`;
+    return `<h2 class="sec">名鑑<span class="r">史実</span></h2>${UI.histInfo(d)}`;
   }
   function trainTab(h, wIdx, st) {
     const G = W.get();

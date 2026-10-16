@@ -293,11 +293,11 @@
       const un = G.unlocked || [];
       const SPx = HS.Special;
       const reach = {}; for (const h of W.mine().filter(x => x.loc === 'stable' || x.loc === 'farm')) for (const r of SPx.reachInfo(h)) (reach[r.group.id] = reach[r.group.id] || []).push(`${h.name}（${r.need}）`);
-      body = `<div class="small muted">1989年より前に走り終えた名馬。自分の馬がグループの条件にリーチをかける（あと1勝でそろう）と、最後のレースにそのグループの名馬が出てくる。勝つと馬の店に並ぶ。店に並んだ馬 ${un.length} / ${SPx.list().length}</div>
+      body = `<div class="small muted">1989年より前に走り終えた名馬。自分の馬がグループの条件にリーチをかける（あと1勝でそろう）と、最後のレースにそのグループの名馬が出てくる。勝つと馬の店に並ぶ。名前を押すと名鑑（年代・戦績・主な勝鞍・解説）が開く。店に並んだ馬 ${un.length} / ${SPx.list().length}</div>
         <div class="list mt">${SPx.GROUPS.map(g => { const ms = SPx.members(g); if (!ms.length) return '';
           return `<details class="panel sp-g" ${!g.race || reach[g.id] ? 'open' : ''}><summary class="row"><b class="nm">${e(g.label)}</b><span class="right small muted">${ms.filter(d => un.includes(d.name)).length} / ${ms.length}頭</span></summary>
             <div class="small">${e(g.note)}</div>${reach[g.id] ? `<div class="sp-reach small">リーチ：${reach[g.id].map(e).join('・')}</div>` : ''}
-            <div class="small mt">${ms.map(d => un.includes(d.name) ? `<b class="sp-got">${e(d.name)}</b>` : e(d.name)).join('・')}</div></details>`; }).join('')}</div>`;
+            <div class="small mt">${ms.map(d => `<a href="#" class="sp-nm ${un.includes(d.name) ? 'sp-got' : ''}" data-act="htext" data-name="${e(d.name)}">${e(d.name)}</a>`).join('・')}</div></details>`; }).join('')}</div>`;
     } else if (tab === 'trophy' && HS.Trophy) {
       const tr = G.trophies || {};
       const n = HS.Trophy.LIST.filter(t => tr[t.id]).length;

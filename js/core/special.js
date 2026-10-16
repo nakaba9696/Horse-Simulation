@@ -79,7 +79,7 @@
   let pool = null;
   SP.pool = function () {
     if (pool) return pool;
-    const fam = new Set((HS.DATA.famous || []).map(f => f.name));
+    const fam = new Set((HS.DATA.famous || []).concat(HS.DATA.profiles || []).map(f => f.name));
     pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d) && fam.has(d.name) && (d.rating || 0) >= SP.MIN_RATING).concat(HS.DATA.legendsExtra || []);
     return pool;
   };

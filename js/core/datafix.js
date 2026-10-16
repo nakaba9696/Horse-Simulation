@@ -59,6 +59,15 @@
     if (h.kire == null && f.kire) h.kire = f.kire;
     if (!h.skills && f.skills) h.skills = f.skills.slice();
   }
+  // 名馬の名鑑（data/profiles.js）：年代・戦績・主な勝鞍と長い解説。名馬の解説より長いので、こちらを正にする
+  const legendBy = new Map((D.legendsExtra || []).map(d => [d.name, d]));
+  for (const p of D.profiles || []) {
+    const h = byName.get(p.name) || byNorm.get(HS.normName(p.name)) || legendBy.get(p.name); if (!h) continue;
+    if (p.text) h.text = p.text;
+    if (p.years) h.years = p.years;
+    if (p.record) h.record = p.record;
+    if (p.mainWins) h.mainWins = p.mainWins.slice();
+  }
   for (const s of D.stallions || []) {
     const h = byName.get(s.name); if (!h) continue;
     if (s.kire == null && h.kire != null) s.kire = h.kire;
