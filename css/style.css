@@ -852,3 +852,12 @@ main.enter-back { animation: backin 300ms var(--ease) both; }
 .rec-banner.me { outline: 2px solid var(--accent-hi); }
 @keyframes rec-in { from { transform: scale(1.25); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .rec-banner { animation: none; } }
+
+/* リプレイ（js/ui/replayui.js） */
+.rp-save { justify-content: flex-end; margin-top: var(--sp-2); }
+.rp-fav { background: none; border: 0; font-size: 20px; line-height: 1; color: var(--text-2); cursor: pointer; padding: 4px; }
+.rp-fav.on { color: var(--accent-hi); text-shadow: 0 0 8px rgba(242, 217, 142, .6); }
+.rp-t .rp-btns { white-space: nowrap; text-align: right; }
+.rp-t .rp-btns .btn + .btn { margin-left: 6px; }
+.page-solo { max-width: var(--w-app, 960px); margin: 0 auto; padding: var(--sp-4); }
+.rv-bar .rv-seek { min-height: 40px; border: 1px solid var(--line-2); background: var(--surface-3); color: var(--text); border-radius: var(--r); padding: 6px var(--sp-4); font-weight: 700; cursor: pointer; margin-left: auto; }
