@@ -1154,6 +1154,22 @@
   const BOB = [[0, -0.3], [0.13, -0.7], [0.3, -0.2], [0.46, -0.6], [0.6, -0.5], [0.75, 0.2], [0.88, 0.8]];  // 胴の上下（浮く間が高い）
   const PITCH = [[0, 0.3], [0.16, 0.7], [0.34, 0.1], [0.5, -0.6], [0.66, -0.6], [0.84, -0.1]];          // 胴の前後の傾き（＋＝鼻が上）
   const NOD = [[0, 0.5], [0.2, 0.8], [0.4, 0.0], [0.56, -0.8], [0.72, -0.6], [0.86, 0.0]];               // 首の上下（＋＝上げる）
+  const LEG_LAG = [0, 0.018, 0.036, 0.055];
+  // 常歩（なみあし）の4拍子：左後 → 左前 → 右後 → 右前。脚は 6 割の間地面に着いている
+  const W_DUTY = 0.62, WALK_STRIDE = 1.75;
+  const WALK_TOUCH = { 8: 0.25, 12: 0.75, 16: 0.0, 20: 0.5 };
+  const WFK = [
+    [[0, 0.2], [0.31, 0.0], [0.62, -0.2], [0.75, -0.12], [0.88, 0.12]],                 // 肩
+    [[0, 0.0], [0.31, 0.0], [0.62, 0.02], [0.75, 0.3], [0.88, 0.2]],                    // 肘
+    [[0, 0.0], [0.31, 0.0], [0.62, -0.05], [0.72, -0.75], [0.84, -0.45], [0.95, -0.05]], // 膝
+    [[0, 0.08], [0.31, 0.2], [0.58, 0.15], [0.7, -0.6], [0.82, -0.4], [0.95, 0.0]],     // 球節
+  ];
+  const WHK = [
+    [[0, 0.22], [0.31, 0.0], [0.62, -0.22], [0.75, -0.08], [0.88, 0.16]],               // 股
+    [[0, 0.0], [0.31, 0.04], [0.62, 0.0], [0.75, -0.25], [0.88, -0.12]],                // 後膝
+    [[0, 0.1], [0.31, 0.12], [0.62, 0.05], [0.74, 0.6], [0.86, 0.4], [0.96, 0.15]],     // 飛節
+    [[0, 0.08], [0.31, 0.2], [0.58, 0.15], [0.7, -0.55], [0.84, -0.35], [0.95, 0.0]],   // 球節
+  ];
   const HOOF_OFF = [0.07 * KX, -0.215, 0];
   const _m = { a: null, v: null };
   // 蹄の底の高さ（馬の形の中で。胴の骨から関節をたどる）
@@ -1165,19 +1181,70 @@
     return V.y;
   }
   // 馬の形を動かす。ph＝走りの位相 0〜1、sp＝走りの大きさ（0＝立つ）、push＝騎手の追い 0〜1、lead＝手前（1＝左）
-  function poseHorse(H, ph, sp, push, t, seed, whip, pose) {
+  // 常歩の形（脚・首・尾・胴の高さ）。phW＝常歩の位相
+  function walkPose(H, phW, t, seed) {
     const b = H.bones;
+    for (const b0 of [8, 12, 16, 20]) {
+      const K = b0 < 16 ? WFK : WHK, phi = ((phW - WALK_TOUCH[b0]) % 1 + 1) % 1;
+      for (let i = 0; i < 4; i++) b[b0 + i].rotation.z = cyc(K[i], phi - LEG_LAG[i] * 0.5);
+    }
+    // 前脚が着くたびに首が下がる（1周期に2回）。頭はそれより少し遅れる
+    const n1 = Math.cos((phW - 0.3) * TAU * 2), n2 = Math.cos((phW - 0.36) * TAU * 2);
+    b[2].rotation.z = -0.06 + 0.035 * n1;
+    b[3].rotation.z = -0.02 + 0.02 * n2;
+    b[4].rotation.z = 0.05 - 0.03 * n2 + 0.03 * Math.sin(t * 0.6 + seed * 3);
+    b[2].rotation.y = 0.025 * Math.sin(phW * TAU) + 0.03 * Math.sin(t * 0.23 + seed * 5);
+    b[4].rotation.y = -0.5 * b[2].rotation.y;
+    // 胴：後脚の踏み込みに合わせて少し左右に揺れ、上下は小さく
+    b[1].position.y = 1.25 + 0.008 * Math.cos(phW * TAU * 2);
+    b[1].rotation.x = 0.018 * Math.sin((phW - 0.1) * TAU);
+    b[1].rotation.z = 0.008 * Math.cos((phW - 0.15) * TAU * 2);
+    // 尾：腰の揺れに遅れて左右に振れる
+    b[5].rotation.z = 0.72 + 0.02 * Math.sin(phW * TAU * 2);
+    b[5].rotation.x = 0.08 * Math.sin((phW - 0.25) * TAU);
+    b[6].rotation.z = 0.22; b[6].rotation.x = 0.06 * Math.sin((phW - 0.35) * TAU);
+    b[7].rotation.z = 0.15; b[7].rotation.x = 0.05 * Math.sin((phW - 0.45) * TAU);
+    b[1].updateMatrix();
+    for (let i = 8; i < 24; i++) b[i].updateMatrix();
+    // 着いている脚の蹄を地面へ
+    let ws = 0, wy = 0;
+    for (const b0 of [8, 12, 16, 20]) {
+      const phi = ((phW - WALK_TOUCH[b0]) % 1 + 1) % 1;
+      if (phi < W_DUTY) { const w = Math.sin(phi / W_DUTY * Math.PI) + 0.05; ws += w; wy += w * hoofY(b, b0); }
+    }
+    if (ws > 0) b[1].position.y -= wy / ws;
+  }
+  const _wk = { r: null, x: null };
+  function poseHorse(H, ph, sp, push, t, seed, whip, pose, walk) {
+    const b = H.bones;
+    // 常歩だけ（パドック・発走前後のゆっくりの歩み）。walk＝{ ph, w }（w＝常歩の重み 0〜1）
+    const wk = walk && walk.w > 0 ? Math.min(1, walk.w) : 0;
+    if (wk >= 1 || (wk > 0 && sp <= 0)) {
+      poseHorse(H, ph, 0, 0, t, seed, null, null, null);
+      walkPose(H, walk.ph, t, seed);
+      for (let i = 1; i < 24; i++) b[i].updateMatrix();
+      return;
+    }
     const J = BONES;
     // 騎手の骨を元の位置へ
     b[24].position.set(J[24][1] - J[1][1], J[24][2] - J[1][2], 0);
     for (const i of [1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31]) b[i].rotation.set(0, 0, 0);
     let bob = 0, pitch = 0;
     if (sp <= 0) {
-      b[1].position.y = 1.25;
-      b[2].rotation.z = 0.04 * Math.sin(t * 1.1 + seed * 5);
+      // 立ち姿：息で胴がわずかに上下し、ゆっくり体重を左右へ移す。首と頭はあたりを見回し、尾はときどき振る
+      const br = Math.sin(t * 1.7 + seed * 9), sw = Math.sin(t * 0.31 + seed * 4);
+      b[1].position.y = 1.25 + 0.004 * br;
+      b[1].rotation.x = 0.012 * sw;
+      b[1].rotation.z = 0.004 * br;
+      b[2].rotation.z = 0.04 * Math.sin(t * 1.1 + seed * 5) + 0.01 * br;
+      b[3].rotation.z = 0.02 * Math.sin(t * 0.8 + seed * 6 - 0.5);
       b[4].rotation.z = 0.06 * Math.sin(t * 0.7 + seed * 3);
+      b[2].rotation.y = 0.06 * Math.sin(t * 0.27 + seed * 2);
+      b[4].rotation.y = 0.05 * Math.sin(t * 0.41 + seed * 8 - 0.6);
+      const swish = Math.pow(Math.max(0, Math.sin(t * 0.45 + seed * 11)), 6);
       b[5].rotation.z = 0.75 + 0.05 * Math.sin(t * 1.3 + seed * 7); b[6].rotation.z = 0.25; b[7].rotation.z = 0.15;
-      b[5].rotation.x = 0.05 * Math.sin(t * 0.9 + seed);
+      b[5].rotation.x = 0.05 * Math.sin(t * 0.9 + seed) + 0.25 * swish * Math.sin(t * 5.5);
+      b[6].rotation.x = 0.3 * swish * Math.sin(t * 5.5 - 0.7); b[7].rotation.x = 0.35 * swish * Math.sin(t * 5.5 - 1.4);
       for (let i = 8; i < 24; i++) b[i].rotation.z = 0;
       b[24].position.y -= 0.03;
       b[25].rotation.z = 0.08 + 0.03 * Math.sin(t * 0.8 + seed * 2);
@@ -1188,7 +1255,8 @@
       const T = H.lead > 0 ? TOUCH_L : TOUCH_R;
       for (const b0 of [8, 12, 16, 20]) {
         const front = b0 < 16, K = front ? FK : HK, phi = ((ph - T[b0]) % 1 + 1) % 1;
-        for (let i = 0; i < 4; i++) b[b0 + i].rotation.z = k * cyc(K[i], phi);
+        // 関節ごとに少しずつ遅らせる（肩→肘→膝→球節、股→後膝→飛節→球節の順にしなる）
+        for (let i = 0; i < 4; i++) b[b0 + i].rotation.z = k * cyc(K[i], phi - LEG_LAG[i]);
       }
       bob = 0.035 * k * cyc(BOB, ph);
       pitch = 0.065 * k * cyc(PITCH, ph);
@@ -1207,16 +1275,20 @@
       const al = Math.min(1, ws * 1.5);
       b[1].position.y -= al * (ws > 0 ? wy / ws : 0) + (1 - al) * (lo - 0.1 * k); // 4本とも浮く間は蹄が 10cm ほど上がる
       // 首：前脚が着く頃に下げ、後脚で押す頃に上げる。走るほど前へ伸ばす
-      const nod = cyc(NOD, ph) * k;
+      // 首の根元から頭へ、少しずつ遅れて付いてくる（胴の上下に引っぱられる重さ）
+      const nod = cyc(NOD, ph) * k, nod1 = cyc(NOD, ph - 0.035) * k, nod2 = cyc(NOD, ph - 0.07) * k;
+      const pitchLag = 0.065 * k * cyc(PITCH, ph - 0.07);
       b[2].rotation.z = -0.14 * k + 0.13 * nod;
-      b[3].rotation.z = -0.05 * k + 0.08 * nod;
-      b[4].rotation.z = 0.12 * k - 0.15 * nod - pitch;
+      b[3].rotation.z = -0.05 * k + 0.08 * nod1;
+      b[4].rotation.z = 0.12 * k - 0.15 * nod2 - pitchLag;
       // 手前の側へ少しだけ首を振る
       b[2].rotation.y = 0.03 * k * Math.sin(ph * TAU + (H.lead > 0 ? 0 : Math.PI));
       b[4].rotation.y = -0.6 * b[2].rotation.y;
       // 尾：走ると後ろへ流れる
-      b[5].rotation.z = 0.46 - 0.1 * k + 0.05 * Math.sin(ph * TAU * 2 + seed);
-      b[6].rotation.z = 0.05 * Math.sin(ph * TAU + 1 + seed); b[7].rotation.z = 0.08 * Math.sin(ph * TAU + 2 + seed);
+      // 尾：胴の上下に遅れて波打つ（根元 → 先へ遅れが大きく、振れも大きく）
+      const tb = k * cyc(BOB, ph - 0.1), tb2 = k * cyc(BOB, ph - 0.2), tb3 = k * cyc(BOB, ph - 0.3);
+      b[5].rotation.z = 0.46 - 0.1 * k + 0.05 * Math.sin(ph * TAU * 2 + seed) + 0.06 * tb;
+      b[6].rotation.z = 0.05 * Math.sin(ph * TAU + 1 + seed) + 0.1 * tb2; b[7].rotation.z = 0.08 * Math.sin(ph * TAU + 2 + seed) + 0.14 * tb3;
       b[5].rotation.x = 0.06 * Math.sin(ph * TAU + seed * 3);
       // 騎手：鐙の上で腰を浮かせ、馬の上下を脚で吸う。追うときは首の動きに合わせて上体と腕を前へ送る
       const pk = clamp(push, 0, 1);
@@ -1228,6 +1300,14 @@
       b[25].rotation.z = -0.04 - pk * (0.05 + 0.06 * pump);
       b[26].rotation.z = 0.04 + pk * (0.05 + 0.06 * pump) + pitch * 0.8;
       for (const ua of [27, 29]) { b[ua].rotation.z = pk * (0.12 + 0.3 * pump); b[ua + 1].rotation.z = pk * (0.05 + 0.25 * pump); }
+    }
+    // 襲歩と常歩のあいだ：両方の形を混ぜる（脚・首・尾・胴の高さ）
+    if (wk > 0 && sp > 0) {
+      const R = _wk.r || (_wk.r = new Float32Array(24 * 2)), Y = b[1].position.y;
+      for (let i = 1; i < 24; i++) { R[i * 2] = b[i].rotation.z; R[i * 2 + 1] = b[i].rotation.x; }
+      walkPose(H, walk.ph, t, seed);
+      for (let i = 1; i < 24; i++) { b[i].rotation.z = R[i * 2] + (b[i].rotation.z - R[i * 2]) * wk; b[i].rotation.x = R[i * 2 + 1] + (b[i].rotation.x - R[i * 2 + 1]) * wk; }
+      b[1].position.y = Y + (b[1].position.y - Y) * wk;
     }
     // ムチ：入れてから 0.5 秒。右腕を振り上げ、尻へ振り下ろして戻す
     if (whip != null && whip >= 0 && whip < 0.5) {
@@ -1430,6 +1510,13 @@
     return { start: new THREE.Vector3(HEADP[0], HEADP[1], 0), nose: new THREE.Vector3(n[0], n[1], 0), width: headSec(0.5).w * HK0 };
   };
   R3.BONES = BONES.length;
+  // テスト用：手作りの骨で常歩・襲歩の形を作り、蹄の高さを返す（骨は手作りの馬と同じ並び）
+  R3.gaitTest = function (walkPh, gallopPh, w) {
+    const bones = horseBones(), H = { bones, lead: 1 };
+    poseHorse(H, gallopPh || 0, w != null && w < 1 ? 0.6 : 0, 0, 1, 0.3, null, null, walkPh != null ? { ph: walkPh, w: w == null ? 1 : w } : null);
+    bones[1].updateMatrix(); for (let i = 8; i < 24; i++) bones[i].updateMatrix();
+    return { hoof: [8, 12, 16, 20].map(b0 => hoofY(bones, b0)), y: bones[1].position.y, rot: bones.map(b => b.rotation.z) };
+  };
   R3.BONE_AT = i => BONES[i].slice(1); // テスト用：骨の付け根（体の比を直したあとの座標）
   R3.GEAR = GEAR;
 
@@ -2382,11 +2469,14 @@
         const ph = ((x / STRIDE + Hh.num * 0.137) % 1 + 1) % 1;
         const sp = moving ? clamp(v / 16, 0.35, 1.15) : 0;
         const push = st.push != null ? st.push : (moving ? clamp((v - 15.2) / 2, 0, 1) : 0);
-        poseHorse(Hh, ph, sp, push, t, Hh.seed, st.whip, st.pose);
+        // ゆっくりのとき（発走前後・ゴールのあと）は常歩。4〜7m/s で襲歩へつなぐ
+        const ww = !gateNow && v > 0.3 ? 1 - smooth((v - 4) / 3) : 0;
+        const walk = ww > 0 ? { ph: ((x / WALK_STRIDE + Hh.num * 0.37) % 1 + 1) % 1, w: ww } : null;
+        poseHorse(Hh, ph, sp, push, t, Hh.seed, st.whip, st.pose, walk);
         // 骨入りの馬：角度を写し、蹄を地面へ・頭の馬具を頭へ（遠い馬ははじめの1回のあとは合わせ直さない）
         if (Hh.rig) {
           HRG.pose(Hh.rig, Hh.bones);
-          if (d2 < 120 * 120 || !Hh.rigSet) { Hh.mesh.updateMatrixWorld(true); HRG.settle(Hh.rig, Hh.bones, { ph, sp, touch: Hh.lead > 0 ? TOUCH_L : TOUCH_R, duty: [F_DUTY, H_DUTY] }); Hh.rigSet = true; }
+          if (d2 < 120 * 120 || !Hh.rigSet) { Hh.mesh.updateMatrixWorld(true); HRG.settle(Hh.rig, Hh.bones, walk && walk.w >= 0.5 ? { ph: walk.ph, sp: 1, touch: WALK_TOUCH, duty: [W_DUTY, W_DUTY] } : { ph, sp, touch: Hh.lead > 0 ? TOUCH_L : TOUCH_R, duty: [F_DUTY, H_DUTY] }); Hh.rigSet = true; }
         }
         // 騎手（素材の形）：手作りの骨に合わせる。遠い馬（120m より先）は、はじめの1回のあとは合わせ直さない
         const J = Hh.jockey;
@@ -2664,9 +2754,11 @@
       for (const [k, bi] of Object.entries(GEAR)) if (!gear[k]) bones[bi].scale.set(0, 0, 0);
       let rig = null;
       if (rigged) { try { rig = HRG.make(h, bones); } catch (e) { rig = null; } }
-      poseHorse({ bones, lead: 1 }, 0, 0, 0, 1.3, hash01(strHash(h.name), 3), null, null);
-      bones[2].rotation.z += 0.06; bones[4].rotation.z -= 0.05; // 首を少し上げて前を見る
-      if (rig) { HRG.pose(rig, bones); mesh.updateMatrixWorld(true); HRG.settle(rig, bones, { ph: 0, sp: 0 }); }
+      // view.walk＝常歩の位相（パドックの歩きの確かめ用）、view.t＝立ち姿の時刻
+      const vw = view && view.walk != null ? { ph: view.walk, w: 1 } : null;
+      poseHorse({ bones, lead: 1 }, 0, 0, 0, view && view.t != null ? view.t : 1.3, hash01(strHash(h.name), 3), null, null, vw);
+      if (!vw) { bones[2].rotation.z += 0.06; bones[4].rotation.z -= 0.05; } // 首を少し上げて前を見る
+      if (rig) { HRG.pose(rig, bones); mesh.updateMatrixWorld(true); HRG.settle(rig, bones, vw ? { ph: vw.ph, sp: 1, touch: WALK_TOUCH, duty: [W_DUTY, W_DUTY] } : { ph: 0, sp: 0 }); }
       mesh.castShadow = true;
       scene.add(mesh);
       // カメラ：馬の右から少し前寄り・少し下から。横長でも縦長でも馬全体が入る距離

@@ -872,7 +872,7 @@ check('shop: 馬の店は少しずつ開く（はじめは G3 まで。G1・G2�
   return `はじめの店 ${new Set(E.market().map(x => x.horse.name)).size}頭（G1 とドイツを開けたあと）・鍵 ${locks.map(l => l.label + l.n).join(' ')}`;
 });
 
-check('shop: 品ぞろえは走っていない馬から牡馬・牝馬それぞれ10頭（毎月と鍵が開いたときに入れ替え・買うと消える・セーブに入る）', () => {
+check('shop: 品ぞろえは走っていない馬から牡馬・牝馬それぞれ10頭（毎月入れ替え・鍵が開いた馬は来月から・買うと消える・セーブに入る）', () => {
   const E = HS.Eraless;
   W.newGame({ seed: 24, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
@@ -887,10 +887,10 @@ check('shop: 品ぞろえは走っていない馬から牡馬・牝馬それぞ�
   // セーブの往復で同じ
   const s1 = W.serialize(); W.load(s1);
   assert(W.marketHistoric().map(x => x.horse.name).join() === names.slice(1).join(), 'セーブの往復で品ぞろえが変わる');
-  // 鍵が開くと入れ替わる
+  // 鍵が開いても、品ぞろえは来月まで同じ
   E.unlockWin({ grade: 'G1', region: 'JRA', course: '東京' });
   const n2 = W.marketHistoric().map(x => x.horse.name);
-  assert(n2.join() !== names.slice(1).join(), '鍵が開いても品ぞろえが変わらない');
+  assert(n2.join() === names.slice(1).join(), '鍵が開いたその月に品ぞろえが変わる（来月から）');
   // 月が変わると入れ替わる
   let guard = 0; const m0 = G.month;
   while (G.month === m0 && guard++ < 8) W.finishWeek({});
@@ -1106,6 +1106,22 @@ check('look: 毛色の表に抜けがない・芦毛は年を取ると白い・�
   return `毛色 ${coats.size}・馬具 ${Object.keys(g).length}頭・三角形 ${out.join(' / ')}`;
 });
 
+check('gait: 常歩は4拍子で着いた蹄が地面にあり、関節の角度が続いている（襲歩とまざっても NaN にならない）', () => {
+  const R3 = HS.Race3D;
+  let maxGap = 0, minLow = 9, maxStep = 0, prev = null;
+  for (let i = 0; i < 40; i++) {
+    const g = R3.gaitTest(i / 40);
+    const lo = Math.min(...g.hoof);
+    minLow = Math.min(minLow, lo); maxGap = Math.max(maxGap, Math.abs(lo));
+    if (prev) for (let k = 8; k < 24; k++) maxStep = Math.max(maxStep, Math.abs(g.rot[k] - prev.rot[k]));
+    prev = g;
+  }
+  assert(maxGap < 0.05, `常歩で着いた蹄が地面から ${maxGap.toFixed(3)}m 離れている`);
+  assert(maxStep < 0.35, `常歩の関節が1/40周期で ${maxStep.toFixed(2)}rad 跳ぶ`);
+  for (const w of [0.25, 0.5, 0.75]) { const g = R3.gaitTest(0.3, 0.4, w); assert(g.rot.every(isFinite) && isFinite(g.y), '常歩と襲歩の混ぜで NaN'); }
+  return `蹄の高さのずれ 最大 ${(maxGap * 100).toFixed(1)}cm・関節の1コマの変化 最大 ${maxStep.toFixed(2)}rad`;
+});
+
 check('terrain: 3D の地面がコースの高さに合う（坂・楕円でない形・直線・馬蹄形）', () => {
   // race3d.js は前の 'look:' の確かめで読んである
   const T = HS.Track, R3 = HS.Race3D, out = [];
@@ -1272,6 +1288,7 @@ check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中�
 
 require('./extra_replay.js')(check, assert, HS); // レコード・リプレイ・フリーレース
 require('./extra_owners.js')(check, assert, HS); // 馬主と騎乗依頼
+require('./extra_rivals.js')(check, assert, HS); // ライバル騎手
 require('./extra_audio.js')(check, assert, HS); // BGM の曲の書式と長さ
 require('./extra_rumble.js')(check, assert, HS); // コントローラーの振動
 require('./extra_balance.js')(check, assert, HS); // 立ち回りの噛み合い・競り合いの気合
