@@ -36,7 +36,7 @@
         });
         r3.resize(cv3.clientWidth || VW, cv3.clientHeight || VH, dpr);
       } catch (err) { console.warn(err); el.innerHTML = ''; return HS.RaceView.play(el, data, opts).then(resolve); }
-      let speed = opts.speed || 1, cam = 'tv';
+      let speed = opts.speed || 1.35, cam = 'tv';
       // 画面をドラッグでカメラを回す（2回タップで戻す）
       const orbit = { yaw: 0, pitch: 0, zoom: 1 };
       const stage = el.querySelector('.ride-stage');
@@ -65,7 +65,7 @@
         ctx.clearRect(0, 0, VW, VH);
         const order = P.map((p, j) => [p[0], j, finT[j] != null && finT[j] <= T ? finT[j] : null]).sort((a, b) => (a[2] != null && b[2] != null) ? a[2] - b[2] : a[2] != null ? -1 : b[2] != null ? 1 : b[0] - a[0]);
         const lead = order[0][0];
-        const rem = Math.max(0, Math.ceil((sim.D - lead) / 10) * 10);
+        const rem = Math.max(0, Math.ceil(sim.D - lead));
         // 左上：レース名・残り・時計
         ctx.fillStyle = 'rgba(8,18,32,0.82)'; rr(10, 10, 230, 62, 8); ctx.fill();
         ctx.fillStyle = '#ffd34d'; ctx.font = 'bold 15px "Noto Sans JP", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';

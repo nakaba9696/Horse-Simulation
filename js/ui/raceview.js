@@ -37,7 +37,7 @@
       cv.width = VW * dpr; cv.height = VH * dpr;
       const ctx = cv.getContext('2d');
       ctx.scale(dpr, dpr);
-      let speed = opts.speed || 1;
+      let speed = opts.speed || 1.35;
       el.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => { speed = +b.dataset.sp; el.querySelectorAll('[data-sp]').forEach(x => x.classList.toggle('on', x === b)); if (opts.onSpeed) opts.onSpeed(speed); });
       const frames = sim.frames;
       const tEnd = frames[frames.length - 1].t;
@@ -264,7 +264,7 @@
         }
       }
       function hudClock(lead) {
-        const rem = Math.max(0, Math.ceil((sim.D - lead) / 10) * 10);
+        const rem = Math.max(0, Math.ceil(sim.D - lead));
         ctx.fillStyle = 'rgba(10,22,38,0.82)'; roundRect(ctx, 12, 74, 150, 30, 6); ctx.fill();
         ctx.fillStyle = '#ffd34d'; ctx.font = 'bold 16px "Noto Sans JP", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
         ctx.fillText(T <= 0 ? '発走前' : rem > 0 ? `残り ${rem}m` : 'ゴール', 22, 89);

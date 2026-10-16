@@ -6,7 +6,7 @@
   const HS = globalThis.HS = globalThis.HS || {};
   const U = HS.U, S = HS.Sim;
   const RD = HS.Ride = {};
-  RD.speed = 1; // 確かめ用に速く進める倍率
+  RD.speed = 1.35; // 進む速さの倍率（持ち主の指摘「ゲームスピード遅い」で実時間の1.35倍。走破タイムの表示は本当の秒のまま）
   const FC = () => HS.DATA.frameColors, FT = () => HS.DATA.frameText;
   const FONT = '"Noto Sans JP", sans-serif';
   // 計器の色（css/style.css の方針に合わせる：暗い板・金の細い線・控えめな字）
@@ -241,7 +241,7 @@
         const c = sim.ctl;
         const order = orderNow();
         const rank = order.indexOf(me) + 1;
-        const rem = Math.max(0, Math.ceil((sim.D - me.x) / 10) * 10);
+        const rem = Math.max(0, Math.ceil(sim.D - (prev[sim.me][0] + (me.x - prev[sim.me][0]) * U.clamp(acc / 0.1, 0, 1)))); // 1m 刻み（コマの間も補って刻む）
         // 左上：順位／頭数（大きく）と残り
         outlined(String(rank), 18, 58, `900 54px ${FONT}`, '#ffd34d');
         const rw = (ctx.measureText(String(rank)).width);
