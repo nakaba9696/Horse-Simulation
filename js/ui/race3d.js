@@ -1301,8 +1301,8 @@
       b[26].rotation.z = 0.04 + pk * (0.05 + 0.06 * pump) + pitch * 0.8;
       for (const ua of [27, 29]) { b[ua].rotation.z = pk * (0.12 + 0.3 * pump); b[ua + 1].rotation.z = pk * (0.05 + 0.25 * pump); }
     }
-    // 掛かり（H.fight 0〜1）：ハミに逆らって首と頭を上げ、鼻先を突き出し、首を振る。騎手は上体を起こして手綱を引く
-    const fg = H.fight || 0;
+    // 掛かり（H.kakari 0〜1）：ハミに逆らって首と頭を上げ、鼻先を突き出し、首を振る。騎手は上体を起こして手綱を引く
+    const fg = H.kakari || 0;
     if (fg > 0.01) {
       const sh = Math.sin(t * 6.3 + seed * 5), sh2 = Math.sin(t * 6.3 + seed * 5 - 0.9), toss = Math.sin(t * 4.1 + seed * 2);
       // 走っている間は首を前へ伸ばしている分も戻す（sp）
@@ -1528,7 +1528,7 @@
   R3.BONES = BONES.length;
   // テスト用：手作りの骨で常歩・襲歩の形を作り、蹄の高さを返す（骨は手作りの馬と同じ並び）
   R3.gaitTest = function (walkPh, gallopPh, w, fight) {
-    const bones = horseBones(), H = { bones, lead: 1, fight: fight || 0 };
+    const bones = horseBones(), H = { bones, lead: 1, kakari: fight || 0 };
     poseHorse(H, gallopPh || 0, w != null && w < 1 ? 0.6 : 0, 0, 1, 0.3, null, null, walkPh != null ? { ph: walkPh, w: w == null ? 1 : w } : null);
     bones[1].updateMatrix(); for (let i = 8; i < 24; i++) bones[i].updateMatrix();
     return { hoof: [8, 12, 16, 20].map(b0 => hoofY(bones, b0)), y: bones[1].position.y, rot: bones.map(b => b.rotation.z) };
@@ -2332,7 +2332,7 @@
       }
       scene.add(mesh);
       const seed = hash01(strHash(h.name || i), 3);
-      H.push({ mesh, bones, jockey, rig, num: h.num != null ? h.num : i + 1, seed, lead: seed < 0.5 ? 1 : -1, lean: 0, yaw: 0, lane: null, fight: 0, ears: 0.3 });
+      H.push({ mesh, bones, jockey, rig, num: h.num != null ? h.num : i + 1, seed, lead: seed < 0.5 ? 1 : -1, lean: 0, yaw: 0, lane: null, kakari: 0, ears: 0.3 });
     }
     // 丸い影の板（まとめて1回）
     const shTexC = canvasOf(64, 64), sg = shTexC.getContext('2d');
@@ -2490,7 +2490,7 @@
         const walk = ww > 0 ? { ph: ((x / WALK_STRIDE + Hh.num * 0.37) % 1 + 1) % 1, w: ww } : null;
         // 掛かり・耳（模擬の値。無ければ掛からず、耳は軽く前）。1コマで跳ばないよう寄せる
         const kf = dt > 0 ? Math.min(1, dt * 3) : 1;
-        Hh.fight += (clamp(st.fight || 0, 0, 1) - Hh.fight) * kf;
+        Hh.kakari += (clamp(st.kakari || 0, 0, 1) - Hh.kakari) * kf;
         Hh.ears += (clamp(st.ears != null ? st.ears : 0.3, -1, 1) - Hh.ears) * Math.min(1, kf * 2);
         poseHorse(Hh, ph, sp, push, t, Hh.seed, st.whip, st.pose, walk);
         // 骨入りの馬：角度を写し、蹄を地面へ・頭の馬具を頭へ（遠い馬ははじめの1回のあとは合わせ直さない）
@@ -2777,7 +2777,7 @@
       if (rigged) { try { rig = HRG.make(h, bones); } catch (e) { rig = null; } }
       // view.walk＝常歩の位相（パドックの歩きの確かめ用）、view.t＝立ち姿の時刻
       const vw = view && view.walk != null ? { ph: view.walk, w: 1 } : null;
-      poseHorse({ bones, lead: 1, fight: view && view.fight || 0 }, 0, 0, 0, view && view.t != null ? view.t : 1.3, hash01(strHash(h.name), 3), null, null, vw);
+      poseHorse({ bones, lead: 1, kakari: view && view.kakari || 0 }, 0, 0, 0, view && view.t != null ? view.t : 1.3, hash01(strHash(h.name), 3), null, null, vw);
       if (!vw) { bones[2].rotation.z += 0.06; bones[4].rotation.z -= 0.05; } // 首を少し上げて前を見る
       if (rig) { rig.ears = view && view.ears != null ? view.ears : 0.3; HRG.pose(rig, bones); mesh.updateMatrixWorld(true); HRG.settle(rig, bones, vw ? { ph: vw.ph, sp: 1, touch: WALK_TOUCH, duty: [W_DUTY, W_DUTY] } : { ph: 0, sp: 0 }); }
       mesh.castShadow = true;
