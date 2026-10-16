@@ -85,9 +85,11 @@
     if (!h || h.owner === 'P' || h.legend || !LIST().length) return null;
     const g = G(); if (!g) return null;
     if (!own || own.seed !== g.seed || own.map.size > 6000) own = { seed: g.seed, map: new Map() };
-    const key = h.name || h.id;
+    // 覚えておく鍵は名前と id の組（同じ名前の別の馬＝店の馬と走っている馬で、答えが入れ替わらないように。
+    // 前は名前だけで覚えていて、先にどちらを見たかで答えが変わり、セーブを読み直すとその週の依頼が変わることがあった）
+    const name = h.name || h.id, key = `${name}|${h.id}`;
     if (own.map.has(key)) return own.map.get(key);
-    const r = U.hashRng(`owner:${g.seed}:${key}`);
+    const r = U.hashRng(`owner:${g.seed}:${name}`);
     let res = null;
     if (r.chance(h.filler ? O.OWNED_FILLER : O.OWNED)) {
       const ok = LIST().filter(o => !o.only || (fitH[o.only] && fitH[o.only](h)));
