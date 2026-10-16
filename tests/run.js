@@ -604,95 +604,118 @@ check('season: デビュー前の馬も、新馬戦と重賞を1年先まで予�
   return `${h.name}：${wk.y}年${wk.m}月${wk.w}週 ${race ? race.name + ' ' + race.course + race.surface + race.dist : '（ニュースで知らせた）'}`;
 });
 
-check('season: 年末のグランドフィナーレに強い馬が招待され、12月4週に走る', () => {
+// 自分の馬が今年その距離の G1 を勝った扱いにする（成績と勝ち鞍）
+function fakeG1(G, h, name, surface, dist) {
+  h.results.push({ y: G.year, m: 10, w: 4, race: name, grade: 'G1', surface, dist, pos: 1, pop: 2 });
+  h.gradedWins.push({ y: G.year, race: name, short: name, grade: 'G1', region: 'JRA' });
+  W.dirty();
+}
+
+check('season: 年末にグランドフィナーレが距離ごとに6つ開かれ、招待馬が12月2〜4週に走る', () => {
   const T = HS.Season;
   W.newGame({ year: 2005, seed: 12, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
-  // 強い現役馬を1頭、自分の馬にする（G1を勝った扱い）
+  assert(T.GF_CATS.length === 6 && new Set(T.GF_CATS.map(c => c.id)).size === 6, '6つの GF が無い');
+  for (const w of [2, 3, 4]) assert(new Set(T.GF_CATS.filter(c => c.week === w).map(c => c.course)).size === T.GF_CATS.filter(c => c.week === w).length, `${w}週に同じ競馬場の GF が重なる`);
+  // 強い現役馬を1頭、自分の馬にする（中距離の G1 を勝った扱い）
   const star = W.all().filter(h => h.loc === 'stable' && G.year - h.born >= 3 && h.hist).sort((a, b) => b.gradedWins.length - a.gradedWins.length)[0];
-  star.owner = 'P';
+  star.owner = 'P'; star.auto = false;
   let guard = 0;
   while (!(G.month === 11 && G.week === 4) && guard++ < 60) W.finishWeek({});
-  star.gradedWins.push({ y: G.year, race: '天皇賞（秋）', short: '天皇賞・秋', grade: 'G1' }); star.injury = null; star.loc = 'stable';
-  W.dirty();
-  assert(T.dcStatus(star).state === 'sure', `G1を勝った自分の馬が「資格あり」にならない（${T.dcStatus(star).state}）`);
+  star.injury = null; star.loc = 'stable';
+  fakeG1(G, star, '天皇賞・秋', '芝', 2000);
+  assert(T.dcStatus(star, 'middle').state === 'sure', `中距離の G1 を勝った自分の馬が「資格あり」にならない（${T.dcStatus(star, 'middle').state}）`);
   while (!(G.month === 12 && G.week === 1) && guard++ < 60) W.finishWeek({});
-  assert(G.dc && G.dc.y === G.year && G.dc.ai.length >= T.DC_FIELD, '招待馬が決まらない');
+  assert(G.dc && G.dc.y === G.year && G.dc.gf && Object.keys(G.dc.gf).length === 6, '6つの招待が決まらない');
+  for (const c of T.GF_CATS) assert(G.dc.gf[c.id].ai.length >= 12, `${c.label}の招待馬が少ない（${G.dc.gf[c.id].ai.length}）`);
   const ok = !star.injury;
-  assert(G.dc.elig.some(x => x.id === star.id) || !ok, 'G1を勝った自分の馬が招待されない');
-  if (ok) assert(T.dcPending(), '招待の返事を待っていない');
-  while (!(G.month === 12 && G.week === 4) && guard++ < 70) W.finishWeek({});
-  const card = W.cards().find(c => c.race.invite);
-  assert(card && card.runners.length === T.DC_FIELD, `グランドフィナーレの出走表が16頭でない（${card && card.runners.length}）`);
-  assert(!card.runners.some(x => x.horse.filler), 'その場限りの馬が混じる');
-  assert(card.runners.filter(x => x.horse.foreignTrained).length <= T.DC_FOREIGN, '外国の馬が多すぎる');
-  // 返事をしないまま当日：おすすめの1頭で出る（招待を取り逃さない）
-  if (ok && !star.injury) assert(card.ride && card.runners.filter(x => x.mine).length === 1, '返事が無いとき、おすすめの1頭で出ない');
-  const rep = W.finishWeek({});
-  const r = rep.races.find(x => x.race.invite);
-  assert(r && r.sim.results.length === card.runners.length && r.watch, '走っていない・観戦できない');
-  const w = r.sim.results[0].horse;
-  assert(w.gradedWins.some(g => g.short === T.DC_NAME), '勝ち鞍に残らない');
+  assert(G.dc.gf.middle.elig.some(x => x.id === star.id) || !ok, 'G1を勝った自分の馬が中距離に招待されない');
+  if (ok) assert(T.dcPendingList().includes('middle'), '招待の返事を待っていない');
+  // AI の馬：同じ馬が2つに出るのは間が2週あるときだけ
+  const weeks = new Map();
+  for (const c of T.GF_CATS) for (const id of G.dc.gf[c.id].ai.slice(0, T.DC_FIELD)) weeks.set(id, (weeks.get(id) || []).concat([c.week]));
+  for (const [, ws] of weeks) assert(ws.every((w, i) => ws.every((v, j) => i === j || Math.abs(w - v) >= T.GF_GAP)), '同じ馬が間2週なしで2つの GF に出る');
+  const ran = [];
+  while (G.month === 12 && guard++ < 70) {
+    const cards = W.cards().filter(c => c.race.invite);
+    for (const card of cards) {
+      assert(card.runners.length === T.DC_FIELD, `${card.race.name}の出走表が16頭でない（${card.runners.length}）`);
+      assert(card.runners.filter(x => x.horse.foreignTrained).length <= T.DC_FOREIGN, '外国の馬が多すぎる');
+      assert(card.race.name === T.gfName(card.race.gf) && card.race.week === T.GF_BY[card.race.gf].week, 'GF の名前・週が違う');
+      if (card.race.gf === 'middle' && ok && !star.injury) assert(card.ride && card.runners.filter(x => x.mine).length === 1, '返事が無いとき、おすすめの1頭で出ない');
+    }
+    const rep = W.finishWeek({});
+    for (const r of rep.races.filter(x => x.race.invite)) { assert(r.watch && r.sim.results[0].horse.gradedWins.some(g => g.short === r.race.name), '勝ち鞍に残らない'); ran.push(r.race.gf + ':' + r.sim.results[0].horse.name); }
+  }
+  assert(ran.length === 6, `走った GF が6つでない（${ran.length}）`);
   const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
-  return `${card.runners.length}頭・勝ったのは${w.name}${ok ? '' : '（自分の馬は出られなかった）'}`;
+  return ran.join('・');
 });
 
-check('dream: 資格（G1・前年の勝ち馬・ファンの票）と、出ない／1頭だけ選ぶ、古いセーブ', () => {
+check('dream: GF ごとの資格（G1・前年の勝ち馬・その距離の票）と、出ない／1頭だけ選ぶ・間2週、古いセーブ', () => {
   const T = HS.Season;
   W.newGame({ seed: 31, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
   let guard = 0;
   while (!(G.month === 11 && G.week === 4) && guard++ < 60) W.finishWeek({});
-  // 票：G1の1着100・1番人気で+5。その年の成績だけ数える
-  const v = T.votesOf({ results: [{ y: G.year, grade: 'G1', pos: 1, pop: 1 }, { y: G.year, grade: 'G3', pos: 2 }, { y: G.year - 1, grade: 'G1', pos: 1 }] }, G.year);
-  assert(v === 117, `票の数え方（${v}）`);
-  // 自分の馬を3頭：G1を勝った馬・票で圏内の馬・圏外の馬
-  const pool = W.all().filter(h => h.loc === 'stable' && !h.injury && G.year - h.born >= 3 && h.owner !== 'P' && !h.foreignTrained && !T.g1Wins(h, G.year).length && !T.dcChamp(h, G.year));
-  const st0 = T.dcStanding();
-  const inside = st0.find(x => x.in && x.tier === 2 && !x.h.foreignTrained && !T.g1Wins(x.h, G.year).length && !T.dcChamp(x.h, G.year)).h;
-  const outside = pool.find(h => !st0.some(x => x.h === h && x.in));
-  const g1 = pool.find(h => h !== inside && h !== outside && !st0.some(x => x.h === h && x.in));
+  // 票：G1の1着100・1番人気で+5。その年・その区分の距離のレースだけ数える
+  const rs = { results: [{ y: G.year, grade: 'G1', pos: 1, pop: 1, surface: '芝', dist: 1600 }, { y: G.year, grade: 'G3', pos: 2, surface: '芝', dist: 1800 }, { y: G.year, grade: 'G1', pos: 1, surface: '芝', dist: 2400 }, { y: G.year - 1, grade: 'G1', pos: 1, surface: '芝', dist: 1600 }] };
+  assert(T.votesOf(rs, G.year, 'mile') === 117 && T.votesOf(rs, G.year, 'classic') === 100 && T.votesOf(rs, G.year, 'dirt') === 0, `票の数え方（${T.votesOf(rs, G.year, 'mile')}・${T.votesOf(rs, G.year, 'classic')}）`);
+  // 自分の馬を3頭：マイルと中距離の G1 を勝った馬・クラシックの票で圏内の馬・圏外の馬
+  const pool = W.all().filter(h => h.loc === 'stable' && !h.injury && G.year - h.born >= 3 && h.owner !== 'P' && !h.foreignTrained && !T.g1Wins(h, G.year).length && !T.gfWins(h).length);
+  const st0 = T.dcStanding('classic');
+  const inside = st0.find(x => x.in && x.tier === 2 && pool.includes(x.h)).h;
+  const outside = pool.find(h => !T.GF_CATS.some(c => T.dcStanding(c.id).some(x => x.h === h && x.in)));
+  const g1 = pool.find(h => h !== inside && h !== outside);
   for (const h of [inside, outside, g1]) { h.owner = 'P'; h.auto = false; }
-  inside.results.push({ y: G.year, grade: 'G2', pos: 1 }); // 境目の馬だと、G1 の馬を足したときに押し出されるので、票を足して圏内に
-  g1.gradedWins.push({ y: G.year, race: '天皇賞（秋）', short: '天皇賞・秋', grade: 'G1', region: 'JRA' });
-  W.dirty();
-  const s = h => T.dcStatus(h);
-  assert(s(g1).state === 'sure', `G1の勝ち馬：${s(g1).state}`);
-  assert(s(inside).state === 'in', `票の圏内：${s(inside).state}`);
-  assert(s(outside).state === 'out' && /票|G1/.test(s(outside).need), `圏外とあと何が要るか：${s(outside).state} ${s(outside).need}`);
-  // 2歳は「3歳から」
+  fakeG1(G, g1, 'マイルCS', '芝', 1600); fakeG1(G, g1, '天皇賞・秋', '芝', 2000);
+  const s = (h, c) => T.dcStatus(h, c);
+  assert(s(g1, 'mile').state === 'sure' && s(g1, 'middle').state === 'sure' && s(g1, 'sprint').state !== 'sure', `G1の勝ち馬：${s(g1, 'mile').state}・${s(g1, 'sprint').state}`);
+  assert(s(inside, 'classic').state === 'in', `票の圏内：${s(inside, 'classic').state}`);
+  assert(s(outside, 'classic').state === 'out' && /票|G1/.test(s(outside, 'classic').need), `圏外とあと何が要るか：${s(outside, 'classic').state} ${s(outside, 'classic').need}`);
   const young = W.all().find(h => h.loc === 'stable' && G.year - h.born === 2);
-  if (young) { const o = young.owner; young.owner = 'P'; assert(s(young).state === 'young', '2歳が3歳からにならない'); young.owner = o; }
+  if (young) { const o = young.owner; young.owner = 'P'; assert(s(young, 'mile').state === 'young', '2歳が3歳からにならない'); young.owner = o; }
   W.finishWeek({});
-  assert(G.month === 12 && G.week === 1 && G.dc && G.dc.ai, '12月1週に招待が来ない');
-  const elig = T.dcEligible().map(x => x.h.id);
-  assert(elig.includes(g1.id) && !elig.includes(outside.id), `招待された自分の馬：${elig.length}頭`);
-  assert(T.dcStatus(outside).state === 'notInvited', '圏外の馬が招待されたことになる');
-  // 選べるのは招待された馬だけ、1頭だけ
-  assert(T.dcChoose(outside.id), '招待されていない馬で出られる');
-  assert(!T.dcChoose(g1.id) && G.dc.pick === g1.id, '招待された馬を選べない');
-  if (elig.includes(inside.id)) { assert(!T.dcChoose(inside.id) && G.dc.pick === inside.id, '選び直せない'); T.dcChoose(g1.id); }
+  assert(G.month === 12 && G.week === 1 && G.dc && G.dc.gf, '12月1週に招待が来ない');
+  const elig = c => T.dcEligible(c).map(x => x.h.id);
+  assert(elig('mile').includes(g1.id) && elig('middle').includes(g1.id) && !elig('classic').includes(outside.id), '招待された自分の馬が違う');
+  assert(T.dcStatus(outside, 'classic').state === 'notInvited', '圏外の馬が招待されたことになる');
+  // マイル（3週）と中距離（4週）は間が1週：同じ馬は片方だけ
+  assert(T.dcChoose('classic', outside.id), '招待されていない馬で出られる');
+  assert(!T.dcChoose('mile', g1.id) && G.dc.gf.mile.pick === g1.id, '招待された馬を選べない');
+  assert(T.dcChoose('middle', g1.id), '間2週なしで同じ馬が2つの GF に出られる');
+  assert(T.dcRunners().middle !== g1, '返事なしの GF に、間2週なしの馬を当てる');
   // 出ない：AI の馬だけで走る
-  assert(!T.dcDecline() && G.dc.ans === 'no' && !T.dcPending(), '出ないを選べない');
-  let lineup = T.dcLineup();
+  assert(!T.dcDecline('mile') && G.dc.gf.mile.ans === 'no', '出ないを選べない');
+  let lineup = T.dcLineup('mile');
   assert(lineup.length === T.DC_FIELD && !lineup.some(h => h.owner === 'P'), '出ないのに自分の馬がいる');
-  // 出る：自分の馬は選んだ1頭だけ
-  T.dcChoose(g1.id);
-  lineup = T.dcLineup();
+  // 出る：自分の馬は選んだ1頭だけ（こんどは中距離に出られる）
+  assert(!T.dcChoose('middle', g1.id), '出ないにしたあとも、もう片方を選べない');
+  lineup = T.dcLineup('middle');
   assert(lineup.length === T.DC_FIELD && lineup.filter(h => h.owner === 'P').length === 1 && lineup.includes(g1), '自分の馬が1頭にならない');
-  // 古いセーブ（{ y, ids }）：自分の馬は先頭の1頭が出る
+  for (const c of T.dcPendingList()) T.dcDecline(c);
+  assert(!T.dcPending(), '全部に返事をしても待っている');
+  // 古いセーブ（GF が1つの頃 { y, ids }）：クラシックの GF だけ、自分の馬は先頭の1頭が出る
   const g = JSON.parse(W.serialize());
-  g.dc = { y: G.year, ids: lineup.map(h => h.id).concat([inside.id]) };
+  g.dc = { y: G.year, ids: T.dcLineup('classic').map(h => h.id).concat([inside.id]) };
   W.load(JSON.stringify(g));
   const G2 = W.get();
-  assert(G2.dc.ai && G2.dc.elig.length >= 1 && G2.dc.ans === 'yes' && G2.dc.ai.every(id => G2.horses[id].owner !== 'P'), '古いセーブの招待が今の形にならない');
-  assert(T.dcLineup().filter(h => h.owner === 'P').length === 1, '古いセーブで自分の馬が1頭にならない');
-  // 前の年の勝ち馬は確定
+  assert(G2.dc.gf && Object.keys(G2.dc.gf).join() === 'classic' && G2.dc.gf.classic.ans === 'yes' && G2.dc.gf.classic.ai.every(id => G2.horses[id].owner !== 'P'), '古いセーブの招待が今の形にならない');
+  assert(T.dcLineup('classic').filter(h => h.owner === 'P').length === 1, '古いセーブで自分の馬が1頭にならない');
+  // 前の年の勝ち馬は、その GF で確定（前の名前の GF はクラシック）
   const champ = W.all().find(h => h.owner === 'P' && h.loc === 'stable' && !h.injury);
-  champ.gradedWins.push({ y: G2.year - 1, race: T.DC_NAME, short: T.DC_NAME, grade: 'GF' });
+  champ.gradedWins.push({ y: G2.year - 1, race: T.gfName('sprint'), short: T.gfName('sprint'), grade: 'GF' });
+  champ.gradedWins.push({ y: G2.year - 1, race: 'ドリームクラシック', short: 'ドリームクラシック', grade: 'GF' });
   G2.dc = null; W.dirty();
-  assert(T.dcStatus(champ).state === 'sure', '前の年の勝ち馬が確定にならない');
-  return `16位の票 ${T.dcCut().votes}・招待された自分の馬 ${elig.length}頭`;
+  assert(T.dcStatus(champ, 'sprint').state === 'sure' && T.dcStatus(champ, 'classic').state === 'sure', '前の年の勝ち馬が確定にならない');
+  assert(T.titles(champ).some(t => t.id === 'dc') && T.gfWins(champ).length >= 2, 'どの GF の勝ちも冠に数えない');
+  // スペシャルホース（伝説級）：前の年のその GF を勝った馬が出ると、距離の合う名馬だけ出てくる
+  const SP = HS.Special;
+  const sprintRace = T.dcRace(G2.year, 'sprint');
+  const lg = SP.pending(champ, sprintRace).filter(x => x.g.id === 'gf').map(x => x.d);
+  assert(lg.length && lg.every(d => T.gfFits(d, sprintRace)), `スプリントの GF の伝説級が距離に合わない（${lg.map(d => d.name)}）`);
+  assert(!SP.pending(champ, T.dcRace(G2.year, 'mile')).some(x => x.g.id === 'gf'), '勝っていない GF にも伝説級が出る');
+  return `16位の票 ${T.GF_CATS.map(c => c.label + T.dcCut(c.id).votes).join(' ')}・伝説級（スプリント）${lg.map(d => d.name).join('・')}`;
 });
 
 check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデビューし、走っている間は馬の店に並ばない', () => {
@@ -736,7 +759,10 @@ check('shop: 馬の店は少しずつ開く（はじめは G3 まで。G1・G2�
   const G = W.get();
   const by = n => W.histByName.get(n) || E.pool().find(d => d.name === n);
   const lk = n => E.lockOf(by(n));
-  assert(lk('ディープインパクト') === 'g1' && lk('フリオーソ') === 'local' && lk('デインドリーム') === 'c:独' && lk('エネイブル') === 'c:英', `鍵 ${['ディープインパクト', 'フリオーソ', 'デインドリーム', 'エネイブル'].map(lk).join(',')}`);
+  assert(lk('ディープインパクト') === 'gf:classic' && lk('ロードカナロア') === 'gf:sprint' && lk('フリオーソ') === 'local' && lk('ダノンスマッシュ') === 'g1', `鍵 ${['ディープインパクト', 'ロードカナロア', 'フリオーソ', 'ダノンスマッシュ'].map(lk).join(',')}`);
+  assert(E.pool().some(d => lk(d.name) === 'c:独') && E.pool().some(d => lk(d.name) === 'c:英'), '国の鍵が無い');
+  const gfN = E.pool().filter(d => (E.lockOf(d) || '').startsWith('gf:')).length;
+  assert(gfN >= 60 && gfN <= 300 && HS.Season.GF_CATS.every(c => E.pool().some(d => E.lockOf(d) === 'gf:' + c.id)), `GF の馬の数（${gfN}）か、区分の抜け`);
   const names = () => new Set(W.marketHistoric().map(x => x.horse.name));
   let shop = names();
   const lockedNow = E.pool().filter(d => E.lockOf(d) && !E.activeNames().has(d.name));
@@ -759,6 +785,19 @@ check('shop: 馬の店は少しずつ開く（はじめは G3 まで。G1・G2�
   const g = { eraless: true, horses: { a: { owner: 'P', gradedWins: [{ grade: 'G2', region: 'JRA' }], results: [{ pos: 1, course: '大井' }] } } };
   const k = E.migrateKeys(g);
   assert(k.includes('g2') && k.includes('local') && !k.includes('g1'), `前のセーブの鍵 ${k}`);
+  // GF を勝つと、その区分の GF の馬が並ぶ（G1 の鍵も開く）
+  const gfh = E.pool().find(d => E.lockOf(d) === 'gf:sprint' && !E.activeNames().has(d.name));
+  const gfm = E.pool().find(d => E.lockOf(d) === 'gf:mile' && !E.activeNames().has(d.name));
+  assert(!names().has(gfh.name), 'GF の馬が初めから並ぶ');
+  E.unlockWin(HS.Season.dcRace(G.year, 'sprint'));
+  assert(names().has(gfh.name) && !names().has(gfm.name), 'スプリントの GF を勝っても、その区分の GF の馬だけが並ぶようにならない');
+  const lk2 = E.locks().find(l => l.key === 'gf:mile');
+  assert(lk2 && !lk2.open && lk2.label === 'GFの馬（マイル）' && lk2.hint === 'マイルのGFを勝つ', `解放の表の GF の段（${lk2 && lk2.label}）`);
+  // 前のセーブ：自分の馬が勝った GF の区分を開けておく（前の名前の GF はクラシック）
+  const g2 = JSON.parse(W.serialize());
+  g2.shopKeys = []; delete g2.gfShop; const ph = Object.values(g2.horses).find(x => x.owner === 'P') || Object.values(g2.horses)[0]; ph.owner = 'P'; ph.gradedWins.push({ y: 2025, race: 'グランドフィナーレ', short: 'グランドフィナーレ', grade: 'GF' });
+  W.load(JSON.stringify(g2));
+  assert(W.get().shopKeys.includes('gf:classic'), `前のセーブで GF の鍵が開かない（${W.get().shopKeys}）`);
   return `はじめの店 ${new Set(W.marketHistoric().map(x => x.horse.name)).size}頭（G1 とドイツを開けたあと）・鍵 ${locks.map(l => l.label + l.n).join(' ')}`;
 });
 

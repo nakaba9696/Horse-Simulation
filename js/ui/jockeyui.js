@@ -414,8 +414,8 @@
       }
       const beat = (G1.unlocked || []).filter(n => !un0.includes(n));
       if (beat.length) await UI.celebrate({ kind: 'special', kicker: 'スペシャルホースを破った', title: beat.join('・'), sub: `${beat.join('・')}が馬の店に並ぶようになった` });
-      // 12月1週：グランドフィナーレの招待が届いたら、出るかどうか（出るなら1頭）を決める
-      if (UI.dreamAsk && T.dcPending()) await UI.dreamAsk();
+      // 12月1週：グランドフィナーレ（距離ごとに6つ）の招待が届いたら、GF ごとに出るかどうか（出るなら1頭）を決める
+      if (UI.dreamAskAll && T.dcPending()) await UI.dreamAskAll();
       App.weekSummary(report);
       App.render();
     } catch (err) {
