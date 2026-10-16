@@ -202,9 +202,9 @@
     G.reserve = keep;
   };
 
-  // ---------- グランドフィナーレ（GF）：年末、その年の強い馬だけが招待されて走る特別なレース ----------
-  // 12月1週に、入厩している3歳以上の馬から総合力（芝・ダートの高いほう）の上位16頭を招待する。その年にG1を勝った自分の馬も招待される。
-  // 12月4週（有馬記念と同じ週の最後）に東京芝2400mで走る。ほかのレースに出た馬も続けて出られる
+  // ---------- グランドフィナーレ（GF）：年末のドリームレース。その年に活躍した馬だけが招待されて走る ----------
+  // 12月4週（有馬記念と同じ週の最後）に東京芝2400mで走る。ほかのレースに出た馬も続けて出られる。
+  // 出られる条件（12月1週の招待）・自分の馬を1頭選ぶか出ないか・出走表は js/core/dream.js
   T.DC_NAME = 'グランドフィナーレ';
   T.DC_FIELD = 16;
   T.dcRace = function (year) {
@@ -216,34 +216,10 @@
       ground: R.ground(G.seed, year, 12, 4, '東京'),
     };
   };
-  T.dcInvite = function () {
-    const W = HS.World, G = W.get();
-    if (G.mode !== 'jockey' || (G.dc && G.dc.y === G.year)) return;
-    const wIdx = W.wIdx();
-    const pool = W.all().filter(h => h.loc === 'stable' && !h.injury && G.year - h.born >= 3)
-      .map(h => ({ h, v: Math.max(T.fh(h, wIdx, '芝'), T.fh(h, wIdx, 'ダ')) })).sort((a, b) => b.v - a.v);
-    const ids = pool.slice(0, T.DC_FIELD).map(x => x.h.id);
-    // その年にG1を勝った自分の馬は、上位に入っていなくても招待する（下から入れ替える）
-    const g1 = pool.filter(x => x.h.owner === 'P' && !ids.includes(x.h.id) && (x.h.gradedWins || []).some(g => g.y === G.year && g.grade === 'G1'));
-    for (const x of g1) {
-      let k = ids.length - 1;
-      while (k >= 0 && W.horse(ids[k]).owner === 'P') k--;
-      if (k >= 0 && ids.length >= T.DC_FIELD) ids[k] = x.h.id; else ids.push(x.h.id);
-    }
-    G.dc = { y: G.year, ids };
-    W.news(`${T.DC_NAME}（12月4週・東京芝2400m）の招待馬${ids.length}頭が決まった。`, 'g1');
-    for (const id of ids) { const h = W.horse(id); if (h.owner === 'P') W.news(`${h.name}が${T.DC_NAME}に招待された！`, 'g1'); }
-  };
   // その週の特別なレースを足す（W.weekRaces から呼ぶ）
   T.addSpecial = function (list, year, month, week) {
     const G = HS.World.get();
     if (G.mode === 'jockey' && month === 12 && week === 4 && G.dc && G.dc.y === year) list.push(T.dcRace(year));
-  };
-  T.dcField = function (race) {
-    const W = HS.World, G = W.get();
-    if (!G.dc || G.dc.y !== race.year) return [];
-    return G.dc.ids.map(id => W.horse(id)).filter(h => h && h.loc === 'stable' && !h.injury)
-      .map(h => h.owner === 'P' ? { horse: h, jockeyName: W.bestFreeJockey(race.key, h.id), mine: true } : { horse: h });
   };
 
   // ---------- 天気（馬場から決まる。週と競馬場ごと） ----------
