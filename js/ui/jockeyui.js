@@ -329,7 +329,7 @@
     if (tab === 'me') {
       const ys = Object.keys(j.years).map(Number).sort((a, b) => b - a);
       body = `<div class="tblwrap"><table class="t"><tr><th>年</th><th>騎乗</th><th>1着</th><th>2着</th><th>3着</th><th>勝率</th><th>順位</th></tr>
-        ${ys.map(y => { const r = j.years[y]; return `<tr><td>${y}</td><td class="num">${r.rides}</td><td class="num"><b>${r.wins}</b></td><td class="num">${r.w2}</td><td class="num">${r.w3}</td><td class="num">${r.rides ? (r.wins / r.rides * 100).toFixed(1) : '0.0'}%</td><td class="num">${J.myRank(y) || '-'}</td></tr>`; }).join('')}
+        ${ys.map(y => { const r = j.years[y]; return `<tr><td>${W.yLabel(y)}</td><td class="num">${r.rides}</td><td class="num"><b>${r.wins}</b></td><td class="num">${r.w2}</td><td class="num">${r.w3}</td><td class="num">${r.rides ? (r.wins / r.rides * 100).toFixed(1) : '0.0'}%</td><td class="num">${J.myRank(y) || '-'}</td></tr>`; }).join('')}
         <tr><td><b>通算</b></td><td class="num">${j.total.rides}</td><td class="num"><b>${j.total.wins}</b></td><td class="num">${j.total.w2}</td><td class="num">${j.total.w3}</td><td class="num">${j.total.rides ? (j.total.wins / j.total.rides * 100).toFixed(1) : '0.0'}%</td><td></td></tr></table></div>
         <h2 class="sec">重賞の勝ち鞍</h2>
         ${j.big.length ? `<div class="panel">${j.big.slice().reverse().map(b => `<div>${W.yLabel(b.y)} ${UI.gradeTag({ grade: b.grade, region: b.region, year: b.y })} ${e(b.race)}　${e(b.horse)}</div>`).join('')}</div>` : '<div class="panel empty">まだ重賞を勝っていません。</div>'}`;
