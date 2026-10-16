@@ -783,6 +783,8 @@
     else if (name === 'goal') { V.bell(bus, [freq('A6')], t, 0.08, 1.6); noise(bus, t, 0.5, 'bandpass', 1100, 0.3, 0.8); }
     else if (name === 'rank1') { ['G5', 'C6', 'E6', 'G6'].forEach((n, i) => V.lead(bus, [freq(n)], t + i * 0.07, i === 3 ? 0.45 : 0.08, 1.1)); V.bell(bus, [freq('C7')], t + 0.28, 0.4, 1.4); }
     else if (name === 'rank') { V.bell(bus, [freq('E6')], t, 0.1, 1.1); V.bell(bus, [freq('B5')], t + 0.09, 0.2, 0.9); }
+    else if (name === 'snort') { noise(bus, t, 0.16, 'bandpass', 700, 0.55, 1.4); noise(bus, t + 0.17, 0.12, 'bandpass', 520, 0.4, 1.2); } // 鼻息（掛かり始め・手綱とケンカ）：ブルッ、ブルッ
+    else if (name === 'exhale') { noise(bus, t, 0.5, 'lowpass', 900, 0.22, 0.8); } // 折り合って、ふうっと息を吐く
     else if (name === 'gate') { V.bell(bus, [1568], t, 0.05, 3); V.bell(bus, [2093], t, 0.05, 2); noise(bus, t, 0.25, 'bandpass', 900, 0.35, 1.5); }
   };
 

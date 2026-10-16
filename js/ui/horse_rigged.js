@@ -58,7 +58,7 @@
   // 手作りの骨 → 素材の骨（同じ横の軸のまわりに回す）
   // 尾は手作りの馬の立ち姿の角度を 0 とみなす（素材の尾ははじめから垂れている）
   const REF = { 5: 0.75, 6: 0.25, 7: 0.15 };
-  const HIP_K = 0.6;
+  const HIP_K = 0.6, EAR_K = 0.5;
   const RETARGET = [
     [2, 'neck'], [3, 'neck1'], [4, 'head'], [5, 'tail'], [6, 'tail1'], [7, 'tail2'],
     [8, 'lCla'], [9, 'lUp'], [10, 'lFo'], [11, 'lHa'], [12, 'rCla'], [13, 'rUp'], [14, 'rFo'], [15, 'rHa'],
@@ -188,7 +188,7 @@
       P.axis[r] = { z: new THREE.Vector3(-1, 0, 0).applyQuaternion(q), y: new THREE.Vector3(0, 1, 0).applyQuaternion(q) };
     }
     // 尾の先・腰と背・つなぎの骨も（手作りの馬には無い骨。HR.pose で動かす）
-    for (const r of ['tail3', 'pelvis', 'spine', 'spine1', 'lFi', 'rFi', 'lTo', 'rTo']) {
+    for (const r of ['tail3', 'pelvis', 'spine', 'spine1', 'lFi', 'rFi', 'lTo', 'rTo', 'pony2']) {
       const i = byRole(r); if (i < 0) continue;
       const q = new THREE.Quaternion(); bones[i].getWorldQuaternion(q); q.invert();
       P.axis[r] = { z: new THREE.Vector3(-1, 0, 0).applyQuaternion(q), y: new THREE.Vector3(0, 1, 0).applyQuaternion(q) };
@@ -596,6 +596,8 @@ float hrN(vec3 p) { vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     }
     // 尾の先は尾の2つめと同じだけ
     if (r.bones.tail3) r.bones.tail3.quaternion.copy(r.rest.tail3).multiply(qa.setFromAxisAngle(P.axis.tail3.z, hb[7].rotation.z - REF[7]));
+    // 耳（r.ears -1〜1）：+1 で前へ立て、-1 で後ろへ伏せる（素材の両耳の先は1本の骨）
+    turn('pony2', EAR_K * (r.ears != null ? r.ears : 0.3));
     // つなぎ：脚を畳むとき（球節が後ろへ折れるとき）、蹄も遅れて後ろへ返る
     turn('lFi', 0.55 * Math.min(0, hb[11].rotation.z)); turn('rFi', 0.55 * Math.min(0, hb[15].rotation.z));
     turn('lTo', 0.55 * Math.min(0, hb[19].rotation.z)); turn('rTo', 0.55 * Math.min(0, hb[23].rotation.z));

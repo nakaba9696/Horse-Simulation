@@ -317,6 +317,7 @@
           x, lane: prev[j][1] + (s.lane - prev[j][1]) * k, v: coast[j] ? coast[j].v : s.v,
           num: s.r.num, frame: s.r.frame, cap: meta[j].cap, silks: meta[j].silks, coat: s.h.coat, name: s.h.name, mine: !!s.me,
           whip: s.me ? sim.t - whipAt : null, pose: s.me && poseAt != null ? (performance.now() - poseAt) / 1000 : null,
+          kakari: s.kakari || 0, ears: s.ears != null ? s.ears : 0.3, // 3D の掛かり（頭の上げ具合 0〜1）と耳
         };
       });
       const viewX = (j, k) => coast[j] ? coast[j].x : prev[j][0] + (sim.st[j].x - prev[j][0]) * k;
@@ -493,6 +494,7 @@
         // 画面の効果（下から）：追い出した速さの筋・掛かりの赤い縁・競り合いの縁・ムチの光
         if (!fin && clock > 0) { speedLines(now); kakariEdge(now); }
         drawFight(now);
+        oriaiFeel(c, now);
         drawWhip(now);
         if (clock < 0) countdown(now);
         else if (!fin) topLeft(rank, meX); // ゴールのあとは着順の表示まで順位を伏せる
@@ -595,6 +597,25 @@
         const g = ctx.createRadialGradient(VW / 2, VH / 2, VH * 0.45, VW / 2, VH / 2, VW * 0.65);
         g.addColorStop(0, 'rgba(255,60,40,0)'); g.addColorStop(1, `rgba(255,60,40,${a})`);
         ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+      }
+      // 折り合いの手ざわり（文字は出さない）：掛かり始め・引きすぎのケンカで鼻息、折り合うと息を吐く。
+      // 掛かっている間はコントローラーが不規則にガツガツ震え（折り合っていれば蹄の拍子だけで静か）
+      let oriaiPrev = { kakari: false, fight: false, high: false }, oriaiBin = -1;
+      function oriaiFeel(c, now) {
+        if (!c || me.done || paused) return;
+        const fightNow = !!c.reinFight, kak = !!c.kakariNow;
+        if ((kak && !oriaiPrev.kakari) || (fightNow && !oriaiPrev.fight)) { if (AU) AU.se('snort'); if (RB) RB.play(160, 1, 0.3); }
+        if (c.tension > 60) oriaiPrev.high = true;
+        if (oriaiPrev.high && c.tension < 35) { oriaiPrev.high = false; if (AU) AU.se('exhale'); }
+        oriaiPrev.kakari = kak; oriaiPrev.fight = fightNow;
+        if (RB && (kak || fightNow)) {
+          const bin = Math.floor(now / 110);
+          if (bin !== oriaiBin) {
+            oriaiBin = bin;
+            const h = Math.abs(Math.sin(bin * 12.9898) * 43758.5453) % 1; // 拍子の外れた揺れ（結果には関わらない）
+            if (h > (fightNow ? 0.45 : 0.6)) RB.play(50 + Math.round(h * 40), 0.6 + 0.4 * h, 0.15);
+          }
+        }
       }
       // 競り合いの気合（js/core/racesim.js の S.FIGHT）。画面の縁の光と、気合が上がりきった瞬間の FIGHT
       let fightFx = null, fightArmed = true, fightPrev = 0;
@@ -752,7 +773,7 @@
       }
       // 丸い計器
       function dial(c, cx, cy, R, now) {
-        const kakari = c.kakariNow, spurt = me.spurting && !me.done;
+        const kakari = c.kakariNow || c.reinFight, spurt = me.spurting && !me.done;
         ctx.save();
         // 盤
         ctx.shadowColor = kakari ? `rgba(255,70,50,${0.6 + 0.4 * Math.sin(now / 120)})` : spurt ? 'rgba(255,214,90,0.7)' : 'rgba(0,0,0,0.6)';
@@ -787,7 +808,10 @@
           if (tv > s0) { ctx.globalAlpha = 0.95; ctx.beginPath(); ctx.arc(cx, cy, ri, a0 + sweep * s0 + 0.02, a0 + sweep * Math.min(tv, s1) - 0.02 + (tv < s1 ? 0.02 : 0)); ctx.stroke(); }
         }
         ctx.globalAlpha = 1;
-        const at = a0 + sweep * tv, tcol = tv < 0.35 ? HUD.calm : tv < 0.55 ? HUD.good : tv < 0.75 ? HUD.warn : HUD.bad;
+        // 光る玉は生き物のように：高ぶっている・掛かっているほど不規則に震え、引きすぎでケンカすると大きく暴れる。折り合うと静かに落ち着く
+        const tremble = (c.kakariNow ? 0.09 : 0) + Math.min(0.08, (c.surge || 0) / 300) + (c.reinFight ? 0.14 : 0) + Math.max(0, tv - 0.5) * 0.08;
+        if (!kakari && tv < 0.35 && !spurt) { ctx.strokeStyle = HUD.calm; ctx.globalAlpha = 0.18 + 0.08 * Math.sin(now / 900); ctx.lineWidth = 9; ctx.beginPath(); ctx.arc(cx, cy, ri, a0, a0 + sweep); ctx.stroke(); ctx.globalAlpha = 1; } // 折り合っている間は青く静かに光る
+        const at = a0 + sweep * tv + tremble * (Math.sin(now / 43) * 0.6 + Math.sin(now / 17 + 1.3) * 0.4), tcol = tv < 0.35 ? HUD.calm : tv < 0.55 ? HUD.good : tv < 0.75 ? HUD.warn : HUD.bad;
         ctx.shadowColor = tcol; ctx.shadowBlur = 10; ctx.fillStyle = '#fff';
         ctx.beginPath(); ctx.arc(cx + Math.cos(at) * ri, cy + Math.sin(at) * ri, 3.6, 0, TAU); ctx.fill();
         ctx.shadowBlur = 0;
