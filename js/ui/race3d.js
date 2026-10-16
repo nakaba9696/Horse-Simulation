@@ -1369,7 +1369,7 @@
       if (!loop && (n.i === 0 || n.i === S.length - 1) && Math.abs(n.q) > 2.5) out = Math.max(out, Math.abs(n.q));
       let h;
       if (out <= 0) h = f.e - 0.1; // 帯の下（帯は polygonOffset で手前に描く）
-      else { const k = smooth(out / 70); h = (f.e - 0.03) * (1 - k) + hFar(x, y) * k; }
+      else { const k = smooth((out - 6) / 70); h = (f.e - 0.03) * (1 - k) + (k > 0 ? hFar(x, y) * k : 0); } // 縁から 6m は帯と同じ高さ
       if (pond) {
         const px = x - pond.x, py = y - pond.y, c = Math.cos(pond.rot), s = Math.sin(pond.rot);
         const r = Math.hypot((px * c + py * s) / pond.rx, (-px * s + py * c) / pond.rz);
