@@ -15,7 +15,9 @@
     const g = { '良': 0, '稍重': 1, '重': 2, '不良': 3 }[ground] || 0;
     if (surface === '芝') v *= 1 - [0, 0.006, 0.015, 0.03][g];
     else v *= 1 + [0, 0.004, 0.007, 0.009][g];
-    return v * (1 + (courseAdj || 0));
+    v *= 1 + (courseAdj || 0);
+    // 出だしの加速を速くした分（約2秒）、走りの速さを少し落として走破タイムを保つ
+    return dist / (dist / v + 2.4);
   };
 
   // 1頭の、このレースでの強さ（点）を計算する。内訳も返す（人気・説明に使う）
@@ -94,12 +96,13 @@
   S.MISFIT = 14; S.TENSE_COST = 0.5;
   // 気性の荒さ（mind が70より低いほど大きい。45で2倍）
   S.temperF = s => 1 + Math.max(0, 70 - s.mind) / 25;
+  S.START_ACC = 7.5;
   S.LATE_E = 0.15; // 出遅れた馬は、位置を取り戻すのに脚を使う（スタミナの減り）
   S.PUSH = { base: 0.25 }; // 追い出したあと、しごかずに馬なりで行くときの伸び（段に置き換えた値）
   S.PACE_HI = 1.006; S.PACE_LO = 0.994; S.PACE_K = 70; S.DRAFT = 0.12; S.PACE_TOP = 50; S.PACE_EARLY = 60;
   S.paceVerdict = f => f > S.PACE_HI ? 'ハイペース' : f < S.PACE_LO ? 'スローペース' : '平均ペース';
   S.paceHint = v => v === 'ハイペース' ? '前は苦しい。後ろでためて遅めに' : v === 'スローペース' ? '前が楽。早めに動け' : '力どおりの流れ';
-  S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0, z: 0.0015, top: 2.2 };
+  S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0, cS: 0.035, z: 0.0015, top: 2.2 };
 
   // 本体。runners: [{horse, jockey, weight, num, frame, rider?}]。rider==='P' の馬はプレイヤーが乗る（opts.ride のとき操作を受け付ける）
   // S.create で始め、S.step で 0.1 秒ずつ進め、S.finish で結果を出す。S.run はそれを一度に行う
@@ -141,7 +144,7 @@
       const kakari = rng.chance(Math.max(0, (72 - mind) / 100) * 0.3 + (has('kakari') ? 0.25 : 0));
       return {
         r, h, i, A, vc, Ds, kickS, spurtR, guts, mind, slopeP, x: 0, v: 0, E: late ? 1 - S.LATE_E : 1, delay, late, kakari,
-        acc: K.a0 + K.a1 * kire, zubu: (8 - kire) * K.z + (has('longspurt') ? 0.003 : 0), spurtCost: K.c0 + K.c1 * (kire - 1),
+        acc: K.a0 + K.a1 * kire, zubu: (8 - kire) * K.z + (has('longspurt') ? 0.003 : 0), spurtCost: K.c0 + K.c1 * (kire - 1) + K.cS * (kire - 4.5) * (330 - geo.straight) / 200, // 直線が長いほど切れる馬が、短いほどズブい馬が脚を効率よく使える
         oonige: has('oonige') && h.style === '逃げ', nino: has('nino'), narabu: has('narabu'), sora: has('sora'),
         me: false, fired: {}, boost: null, trig: [], sk: null, passive: [], passiveShown: false,
         lane: (r.num - 1) * 0.5, laneT: 0, spurting: false, done: false, finishT: null, t600: null, blocked: 0, blockedOnce: false,
@@ -412,7 +415,8 @@
       }
       if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
       // 加減速の上限
-      const acc = s.v < 10 ? 3.6 : s.acc + s.slopeP * 0.0015;
+      // ゲートを出てすぐは強く加速し、2秒ほどで巡航の速さの9割に乗る（持ち主の指摘「動き出しが遅い」）
+      const acc = s.v < s.vc * 0.9 ? S.START_ACC : s.acc + s.slopeP * 0.0015;
       const dv = U.clamp(target - s.v, -1.4 * DT, acc * DT);
       const vPrev = s.v;
       s.v = Math.max(0, s.v + dv);

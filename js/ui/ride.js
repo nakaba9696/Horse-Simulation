@@ -86,15 +86,11 @@
       const doWhip = side => {
         const b = S.ctl.whip(sim, side);
         if (b == null) return say(sim.ctl && !sim.ctl.started ? 'まだゲートの中' : '', '');
-        if (b === 'swap') { say(`${sim.ctl.hand === 'R' ? '右' : '左'}手に持ち替え`, ''); return; }
+        if (b === 'swap') return; // 持ち替えは左下の計器（ムチ 右手・左手）で分かる
         whipAt = sim.t; whipFx = { t: performance.now(), side, b, inward: sim.ctl.lastWhip && sim.ctl.lastWhip.away < 0, zone: sim.D - me.x < sim.straight + 200 };
-        if (b === 'yore') say(`よれた！（${whipFx.inward ? '内' : '外'}へ）`, 'bad');
-        else if (b === 'tired') say('ムチが効かない', 'bad');
-        else if (b === 'windmill') say('風車ムチ！', 'whip');
-        else if (!whipFx.zone) say('まだ早い（行きたがるだけ）', 'bad');
         if (AU) AU.se('whip');
       };
-      const doSwap = () => { if (S.ctl.swap(sim)) say(`${sim.ctl.hand === 'R' ? '右' : '左'}手に持ち替え`, ''); };
+      const doSwap = () => { S.ctl.swap(sim); };
       const doLane = d => S.ctl.lane(sim, d);
       const doPose = () => { if (me.done && poseAt == null) { poseAt = sim.t; if (AU) AU.se('skill'); } };
       // 照準（レーダーで見る馬）
@@ -269,7 +265,6 @@
         if (c.kakariNow) notes.push(['掛かっている', 'bad']);
         else if (c.behind && c.tension < 50 && !me.spurting) notes.push(['折り合っている', 'good']);
         if (me.spurting && !me.done && sim.D - me.x < 1000) notes.push(['追い出した', 'good']);
-        if (c.misfit && !me.spurting && !c.kakariNow) notes.push([`${me.h.style}の位置ではない（気分が悪くなる）`, 'bad']);
         if (c.wide) notes.push(['外を回っている', '']);
         if (c.gear < -0.05 && !c.kakariNow) notes.push(['ためている', 'good']);
         if (me.E <= 0) notes.push(['バテた', 'bad']);
@@ -302,11 +297,14 @@
           if (poseAt == null) txt('Y／G／2回タップ：ガッツポーズ', VW / 2, VH * 0.36 + 58, `12px ${FONT}`, '#ffe9a6', 'center');
           ctx.globalAlpha = 1;
         }
-        // 真ん中の言葉
-        if (flash && flash.text && performance.now() - flash.t < 1400) {
-          const a = 1 - (performance.now() - flash.t) / 1400;
-          ctx.globalAlpha = Math.min(1, a * 2);
-          outlined(flash.text, VW / 2, VH * 0.5, `bold 34px "Noto Serif JP", serif`, flash.cls === 'bad' ? '#ff8a6a' : flash.cls === 'good' || flash.cls === 'whip' ? '#ffe680' : '#fff', 'center');
+        // 短い言葉（スタート・好スタート・視点など）：大きく出さず、下寄りに小さな札で
+        if (flash && flash.text && performance.now() - flash.t < 1200) {
+          const a = 1 - (performance.now() - flash.t) / 1200;
+          ctx.globalAlpha = Math.min(1, a * 2.5);
+          ctx.font = `bold 15px ${FONT}`;
+          const fw = ctx.measureText(flash.text).width + 28, fy = VH * 0.66;
+          ctx.fillStyle = HUD.panel; rr(VW / 2 - fw / 2, fy - 15, fw, 30, 15); ctx.fill();
+          txt(flash.text, VW / 2, fy + 1, `bold 15px ${FONT}`, flash.cls === 'bad' ? '#ffa48a' : flash.cls === 'good' || flash.cls === 'go' ? HUD.gold : '#fff', 'center', 'middle');
           ctx.globalAlpha = 1;
         }
       }
@@ -338,7 +336,7 @@
         txt('スロー', gx - 4, gy + 4, `9px ${FONT}`, '#7fc8ff', 'right', 'middle'); txt('ハイ', gx + gw + 4, gy + 4, `9px ${FONT}`, '#ff8a6a', 'left', 'middle');
         if (big) txt(pace.text, bx + bw - 8, by + 14, `11px ${FONT}`, HUD.label, 'right', 'middle');
       }
-      // ムチ：打った側の端から光の筋、少しの揺れ、寄った向きの矢印（右回りは右ムチで外、左ムチで内）
+      // ムチ：打った側の端から光の筋と、少しの揺れ（文字は出さない。持ち主の指摘）
       function drawWhip() {
         const stg = el.querySelector('.ride-stage');
         if (!whipFx) { if (stg) stg.style.transform = ''; return; }
@@ -352,12 +350,6 @@
           ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(right ? x0 - len : x0 + len, y - 10); ctx.stroke();
         }
         ctx.restore();
-        ctx.globalAlpha = Math.min(1, k * 1.5);
-        const ax = right ? VW * 0.78 : VW * 0.22, ay = VH * 0.62;
-        outlined(`${right ? '右' : '左'}ムチ`, ax, ay, `900 30px ${FONT}`, whipFx.zone ? '#ffe680' : '#ffb199', 'center');
-        // 馬が寄る向き（ムチと反対の側）
-        const toLeft = right;
-        outlined(`${toLeft ? '◀' : ''} ${whipFx.inward ? '内' : '外'}へ寄る ${toLeft ? '' : '▶'}`, ax, ay + 28, `bold 17px ${FONT}`, '#fff', 'center');
         ctx.globalAlpha = 1;
       }
       // 発動の札：得なものは水色、損なものは赤茶。小さな馬の印と、画面の集中線。はじめの1.2秒は真ん中に大きく「発動！」

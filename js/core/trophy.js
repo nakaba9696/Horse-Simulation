@@ -25,6 +25,10 @@
     { id: 'us3', label: '米三冠', note: 'ケンタッキーダービー・プリークネスS・ベルモントSを同じ年に', finals: ['ベルモントS'], legs: sameYear(['ケンタッキーダービー', 'プリークネスS']) },
     { id: 'uk3', label: '英三冠', note: '英2000ギニー・英ダービー・英セントレジャーを同じ年に', finals: ['英セントレジャー'], legs: sameYear(['英2000ギニー', '英ダービー']) },
   ];
+  // 手にしたときのボーナス賞金（万円・1995年の物価。いまの物価に直して渡す）。持ち主の指摘 2026-10-16「トロフィーゲットでボーナス賞金」
+  TR.BONUS = { triple: 50000, ftriple: 30000, autumn: 30000, spring: 30000, grandprix: 10000, tenno: 10000, arima2: 10000, arc2: 30000, us3: 50000, uk3: 50000 };
+  TR.bonusOf = t => Math.round((TR.BONUS[t.id] || 0) * HS.U.priceIndex() / 10) * 10;
+  TR.LIST.forEach(t => { const base = t.note; Object.defineProperty(t, 'note', { get: () => `${base}（ボーナス賞金 ${HS.U.money(TR.bonusOf(t))}）`, enumerable: true }); });
   TR.BY = {}; TR.LIST.forEach(t => { TR.BY[t.id] = t; });
 
   // 自分の馬が重賞を勝ったとき（season.js の onWin から）
@@ -38,8 +42,10 @@
       // legs は「この勝ちより前」で見る（いま足した勝ち鞍は除く）
       const before = Object.assign({}, h, { gradedWins: h.gradedWins.slice(0, -1) });
       if (!t.legs(before, race)) continue;
-      G.trophies[t.id] = { y: race.year, horse: h.name };
-      W.news(`トロフィー「${t.label}」を手にした！（${h.name}）`, 'g1');
+      const bonus = TR.bonusOf(t);
+      G.trophies[t.id] = { y: race.year, horse: h.name, bonus };
+      G.player.money += bonus;
+      W.news(`トロフィー「${t.label}」を手にした！（${h.name}）ボーナス賞金 ${HS.U.money(bonus)}`, 'g1');
       got.push(t);
     }
     return got;
