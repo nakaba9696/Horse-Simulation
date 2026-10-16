@@ -6,11 +6,17 @@
 //   r3.resize(w, h, dpr) / r3.dispose() / r3.info()
 //   HS.Race3D.supported()  // WebGL が使えるか
 //   setup.horses[i] には age（満年齢。芦毛の白さ）・gear（馬具。無ければ data/gear.js から名前で引く）も渡せる
+//   setup には、確かめ用に noShadow（太陽の影なし）・noDust（蹴り上げなし）・handmade（素材を使わず手作りの絵と形で）・handmadeJockey（騎手だけ手作り）も渡せる
+//   r3.info() は { calls, triangles, photo（素材の絵を使っている）, jockey（素材の騎手）, shadow, dust, level（重さで落とした段 0〜2） }
 //   render の戻り値：{ horses: [{ i, sx, sy, k, z }] }（画面に出た馬の頭の上の位置・1mあたりの画素・奥行き。名前の札などを重ねるとき用）
 // 座標：コースの上から見た位置 (x, y)（js/core/track.js。y は上向き）を、3D では (X, Y, Z) = (x, 高さ, -y) にする
 // 乱数は使わない（揺らぎは番号・位置から決まる値で出す）
-// 重さ：馬1頭＝骨つきの形1つ（材質1つ・描く回数1回）。形は全頭で共有し（近く・遠くの2つ）、色・勝負服・ゼッケンは馬ごとの小さな絵（256×256）で変える。
-//       景色は材質ごとに1つの形へまとめる。影は丸い影の板（まとめて1回）で代用し、影の計算はしない。
+// 素材：assets/*.js が HS.ASSETS に載せた絵（空・芝・ダート・草地・木の板絵）と騎手の形（GLB）を使う（出典は assets/CREDITS.md）。
+//       読み込みは R3.preload（このファイルを読んだときに始まる）。読めていない素材は、手作りの絵と形で代わりに描く。
+//       騎手の GLB は lib/GLTFLoader.js で読み、lib/SkeletonUtils.js で骨ごと複製する。動きは手作りの骨（24〜31）に IK で合わせる
+// 色：出力は sRGB、色の調子は ACESFilmic。色の値（#rrggbb）は線形に直してから材質へ渡す（lin）
+// 重さ：馬1頭＝骨つきの形1つ（材質1つ・描く回数1回）＋騎手1つ。形は全頭で共有し（近く・遠くの2つ）、色・勝負服・ゼッケンは馬ごとの小さな絵（512×512）で変える。
+//       景色は材質ごとに1つの形へまとめる。影は太陽の影（見ている所のまわりだけ）と、足元の丸い影の板（まとめて1回）。
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const R3 = HS.Race3D = {};
@@ -69,8 +75,39 @@
       mount: overcast ? '#8d989f' : '#7f9fba', mount2: overcast ? '#6f7f78' : '#5f8a70', woods: overcast ? '#3a553c' : '#2f5a34',
       sun: overcast ? 0.32 : 0.78, hemi: overcast ? 0.88 : 0.62,
       grass: overcast ? [58, 100, 50] : [64, 120, 52],
+      // 素材を使うとき（ACESFilmic の下での明るさ）
+      sky: overcast ? 'sky_overcast' : 'sky_clear',
+      sunP: overcast ? 0.9 : 2.6, hemiP: overcast ? 0.75 : 0.4, envP: overcast ? 1.15 : 0.85, exposure: overcast ? 1.05 : 0.92,
+      sunEl: overcast ? 0.4 : 0.9, // 太陽の高さ（rad）
     };
   }
+  // 色の値を線形に（出力が sRGB なので、材質と頂点の色はこれを通す）。素材が無いとき（LIN＝false）は前と同じく、色をそのまま使い出力も直さない
+  let LIN = true;
+  const lin = c => LIN ? new THREE.Color(c).convertSRGBToLinear() : new THREE.Color(c);
+  function linOpts(o) { if (o && o.color != null && !(o.color instanceof THREE.Color)) o = Object.assign({}, o, { color: lin(o.color) }); return o; }
+
+  // ---- 素材（assets/*.js が HS.ASSETS に載せた base64） ----
+  const IMG = {};     // 名前 → Image（読み終わるまで complete でない）
+  const JK = { state: 'none', scene: null, err: null }; // 騎手の GLB
+  const IMG_KEYS = ['sky_clear', 'sky_overcast', 'turf_col', 'turf_nor', 'grass_col', 'dirt_col', 'dirt_nor', 'tree'];
+  R3.preload = function () {
+    if (typeof document === 'undefined' || typeof Image === 'undefined') return;
+    const A = HS.ASSETS || {};
+    for (const k of IMG_KEYS) if (A[k] && !IMG[k]) { const im = new Image(); im.decoding = 'async'; im.src = A[k]; IMG[k] = im; }
+    if (A.jockey && JK.state === 'none' && typeof THREE !== 'undefined' && THREE.GLTFLoader && THREE.SkeletonUtils) {
+      JK.state = 'loading';
+      try {
+        const b64 = A.jockey.slice(A.jockey.indexOf(',') + 1), bin = atob(b64), buf = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+        new THREE.GLTFLoader().parse(buf.buffer, '', g => { JK.scene = g.scene; JK.state = 'ok'; }, e => { JK.err = e; JK.state = 'error'; });
+      } catch (e) { JK.err = e; JK.state = 'error'; }
+    }
+  };
+  const imgOk = k => { const im = IMG[k]; return !!(im && im.complete && im.naturalWidth > 0); };
+  // 素材がみな読めたか（読めない素材があれば false のまま。そのときは手作りで描く）
+  R3.assetsReady = () => IMG_KEYS.every(k => !(HS.ASSETS || {})[k] || imgOk(k)) && JK.state !== 'loading';
+  R3.assetState = () => ({ images: IMG_KEYS.filter(imgOk), jockey: JK.state });
+  if (typeof document !== 'undefined') R3.preload();
   function shade(rgb, k) { return `rgb(${Math.round(clamp(rgb[0] * k, 0, 255))},${Math.round(clamp(rgb[1] * k, 0, 255))},${Math.round(clamp(rgb[2] * k, 0, 255))})`; }
   function coatOf(c) {
     const A = HS.Art;
@@ -103,10 +140,38 @@
 
   // ---- 絵（canvas）→ 貼る絵 ----
   function canvasOf(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
-  function texOf(cv, repeat, aniso) {
+  // 色の絵は sRGB。data＝true は凹凸（法線）など色でない絵
+  function texOf(cv, repeat, aniso, data) {
     const t = new THREE.CanvasTexture(cv);
     if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; }
     t.anisotropy = aniso || 1;
+    if (!data && LIN) t.encoding = THREE.sRGBEncoding;
+    return t;
+  }
+  // 空の絵（全天の上 SKY_CROP を切り出した絵）の、高さ el（rad）での色の平均。霞と背景の色に使う
+  const SKY_CROP = 0.56;
+  const skyV = el => clamp((0.5 + Math.asin(clamp(el, -1, 1)) / Math.PI - (1 - SKY_CROP)) / SKY_CROP, 0.002, 0.998);
+  const HZC = {};
+  function horizonColor(key, im) {
+    if (HZC[key]) return HZC[key];
+    try {
+      const c = canvasOf(64, 64), g = c.getContext('2d');
+      g.drawImage(im, 0, 0, 64, 64);
+      const y = Math.round((1 - skyV(0.03)) * 63), d = g.getImageData(0, y, 64, 1).data;
+      let r = 0, gg = 0, b = 0;
+      for (let i = 0; i < 64; i++) { r += d[i * 4]; gg += d[i * 4 + 1]; b += d[i * 4 + 2]; }
+      HZC[key] = '#' + [r, gg, b].map(v => Math.round(v / 64).toString(16).padStart(2, '0')).join('');
+    } catch (e) { HZC[key] = '#c8d6e2'; }
+    return HZC[key];
+  }
+  // 素材の絵 → 貼る絵（読めていなければ null）
+  function imgTex(key, repeat, aniso, data) {
+    if (!imgOk(key)) return null;
+    const t = new THREE.Texture(IMG[key]);
+    if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; }
+    t.anisotropy = aniso || 1;
+    if (!data) t.encoding = THREE.sRGBEncoding;
+    t.needsUpdate = true;
     return t;
   }
   // 細かいまだら（芝・砂・草地）
@@ -188,21 +253,58 @@
     g.globalAlpha = 1;
     return c;
   }
-  // 観客席（列ごとの人の点）
-  function crowdCanvas() {
-    const c = canvasOf(256, 256), g = c.getContext('2d');
+  // 観客席（列ごとの人）。res＝絵の大きさ（素材を使うときは細かく）
+  function crowdCanvas(res) {
+    res = res || 256;
+    const c = canvasOf(res, res), g = c.getContext('2d');
+    const k = res / 256;
+    g.scale(k, k);
     g.fillStyle = '#6d6a72'; g.fillRect(0, 0, 256, 256);
-    const cols = ['#c9b8a6', '#e8d6c0', '#3b3f52', '#8a6d5a', '#f2f2f2', '#c83a3a', '#3a6bc8', '#e0c040', '#2c2c30', '#9aa4b0'];
-    for (let r = 0; r < 24; r++) {
-      const y = r * (256 / 24);
-      g.fillStyle = '#56535c'; g.fillRect(0, y + 8.5, 256, 2);
-      for (let k = 0; k < 44; k++) {
-        if (hash01(r * 64 + k, 71) < 0.12) continue;
-        const x = k * (256 / 44) + hash01(r * 64 + k, 72) * 2;
-        g.fillStyle = cols[Math.floor(hash01(r * 64 + k, 73) * cols.length)];
-        g.fillRect(x, y + 2, 4, 6);
-        g.fillStyle = '#e3c4a4'; g.fillRect(x + 1, y, 2, 2.5);
+    const cols = ['#c9b8a6', '#e8d6c0', '#3b3f52', '#8a6d5a', '#f2f2f2', '#c83a3a', '#3a6bc8', '#e0c040', '#2c2c30', '#9aa4b0', '#6a8a5a', '#d88a5a', '#ffffff', '#1c1c22'];
+    const hair = ['#1a1410', '#2a2018', '#4a3828', '#6a6a6a', '#16120e'];
+    const rows = res > 256 ? 26 : 24, per = res > 256 ? 52 : 44;
+    for (let r = 0; r < rows; r++) {
+      const y = r * (256 / rows), rh = 256 / rows;
+      g.fillStyle = '#56535c'; g.fillRect(0, y + rh * 0.82, 256, rh * 0.18);   // 段の縁
+      for (let q = 0; q < per; q++) {
+        const id = r * 97 + q;
+        if (hash01(id, 71) < 0.1) continue;
+        const w = 256 / per, x = q * w + hash01(id, 72) * w * 0.3;
+        g.fillStyle = cols[Math.floor(hash01(id, 73) * cols.length)];
+        if (res > 256) {
+          // 肩から下（丸い四角）・頭・髪
+          g.beginPath(); g.moveTo(x + w * 0.08, y + rh * 0.85); g.lineTo(x + w * 0.08, y + rh * 0.45); g.quadraticCurveTo(x + w * 0.42, y + rh * 0.3, x + w * 0.76, y + rh * 0.45); g.lineTo(x + w * 0.76, y + rh * 0.85); g.fill();
+          g.fillStyle = hash01(id, 74) < 0.85 ? '#e1bf9c' : '#b8896a';
+          g.beginPath(); g.arc(x + w * 0.42, y + rh * 0.24, w * 0.21, 0, TAU); g.fill();
+          g.fillStyle = hair[Math.floor(hash01(id, 75) * hair.length)];
+          g.beginPath(); g.arc(x + w * 0.42, y + rh * 0.19, w * 0.21, Math.PI, TAU); g.fill();
+          if (hash01(id, 76) < 0.12) { g.fillStyle = cols[Math.floor(hash01(id, 77) * cols.length)]; g.fillRect(x + w * 0.12, y + rh * 0.06, w * 0.6, rh * 0.09); } // 帽子
+        } else {
+          g.fillRect(x, y + 2, 4, 6);
+          g.fillStyle = '#e3c4a4'; g.fillRect(x + 1, y, 2, 2.5);
+        }
       }
+    }
+    if (res > 256) { // 屋根の陰（上ほど暗い）
+      const gr = g.createLinearGradient(0, 0, 0, 256);
+      gr.addColorStop(0, 'rgba(10,12,20,0.55)'); gr.addColorStop(0.45, 'rgba(10,12,20,0.18)'); gr.addColorStop(1, 'rgba(10,12,20,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+    }
+    return c;
+  }
+  // スタンド前の立ち見の人（透ける絵。横 512 × 縦 128 に 64 人）
+  function standingCanvas() {
+    const c = canvasOf(512, 128), g = c.getContext('2d');
+    const cols = ['#c9b8a6', '#3b3f52', '#8a6d5a', '#f2f2f2', '#c83a3a', '#3a6bc8', '#e0c040', '#2c2c30', '#9aa4b0', '#6a8a5a', '#ffffff', '#1c1c22', '#d88a5a'];
+    for (let q = 0; q < 64; q++) {
+      const x = q * 8 + hash01(q, 81) * 4, h = 92 + hash01(q, 82) * 30, top = 128 - h, w = 6.4 + hash01(q, 83) * 1.6;
+      g.fillStyle = hash01(q, 84) < 0.5 ? '#2a2a32' : '#4a4a58';                    // 脚
+      g.fillRect(x + w * 0.18, top + h * 0.55, w * 0.26, h * 0.45); g.fillRect(x + w * 0.56, top + h * 0.55, w * 0.26, h * 0.45);
+      g.fillStyle = cols[Math.floor(hash01(q, 85) * cols.length)];                    // 胴
+      g.beginPath(); g.moveTo(x, top + h * 0.6); g.lineTo(x, top + h * 0.22); g.quadraticCurveTo(x + w / 2, top + h * 0.13, x + w, top + h * 0.22); g.lineTo(x + w, top + h * 0.6); g.fill();
+      g.fillStyle = hash01(q, 86) < 0.85 ? '#e1bf9c' : '#b8896a';                     // 頭
+      g.beginPath(); g.arc(x + w / 2, top + h * 0.08, w * 0.36, 0, TAU); g.fill();
+      g.fillStyle = '#1e1812'; g.beginPath(); g.arc(x + w / 2, top + h * 0.06, w * 0.36, Math.PI, TAU); g.fill();
     }
     return c;
   }
@@ -219,7 +321,7 @@
     const P = g.attributes.position, N = g.attributes.normal, T = g.attributes.uv;
     const base = this.p.length / 3;
     const nm = new THREE.Matrix3().getNormalMatrix(m);
-    const col = this.c ? new THREE.Color(o.color || '#ffffff') : null;
+    const col = this.c ? lin(o.color || '#ffffff') : null;
     for (let i = 0; i < P.count; i++) {
       V.fromBufferAttribute(P, i).applyMatrix4(m); this.p.push(V.x, V.y, V.z);
       if (N) { V.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); this.n.push(V.x, V.y, V.z); } else this.n.push(0, 1, 0);
@@ -249,7 +351,7 @@
     const n = e1.cross(e2).normalize();
     const base = this.p.length / 3;
     const pts = [a, b, c, d];
-    const col = this.c ? new THREE.Color(o.color || '#ffffff') : null;
+    const col = this.c ? lin(o.color || '#ffffff') : null;
     for (let i = 0; i < 4; i++) {
       this.p.push(pts[i].x, pts[i].y, pts[i].z); this.n.push(n.x, n.y, n.z);
       const uv = o.uvs ? o.uvs[i] : (o.uv || [0, 0]);
@@ -504,8 +606,9 @@
   });
   const neckPt = (i, th, off) => { const s = NECK[i]; return ellPt(s.c, s.u, vZ(), s.h, s.w, 0.28, 0.95, th, off); };
 
-  function horseGeometry(q) {
-    const hi = q > 0;
+  // o.noJockey：騎手を描かない（騎手は素材の形で別に描くとき。鐙・手綱・ムチは残す）
+  function horseGeometry(q, o) {
+    const hi = q > 0, rider = !(o && o.noJockey);
     const B = new Builder({ skin: true });
     const X = V3(1, 0, 0), Y = V3(0, 1, 0), Z = V3(0, 0, 1);
     const cell = k => { const uv = cellUV(CELL[k]); return () => uv; };
@@ -606,42 +709,46 @@
     // 騎手：脚（白いズボン・黒い長靴。鐙に立つ）
     for (const sd of [-1, 1]) {
       const hip = V3(0.0, 1.87, sd * 0.1), knee = V3(0.4, 1.7, sd * 0.25), ankle = V3(0.24, 1.36, sd * 0.29);
-      tube(B, [hip, hip.clone().lerp(knee, 0.5), knee], [0.068, 0.06, 0.048], hi ? 7 : 5, [[24, 24, 0], [24, 1, 0.5], [1, 1, 0]], cell('pants'), { cap0: true });
-      blob(B, knee, 0.05, 0.05, 0.05, 6, 4, { uv: cellUV(CELL.pants), bone: 1 });
-      tube(B, [knee, knee.clone().lerp(ankle, 0.3), ankle], [0.055, 0.052, 0.044], hi ? 7 : 5, [rig(1), rig(1), rig(1)], (i) => cellUV(i === 0 ? CELL.bootTop : CELL.boots), { cap1: true });
-      B.box(0.29, 1.335, sd * 0.29, 0.17, 0.06, 0.075, 0, { uv: cellUV(CELL.boots), bone: 1 });
+      if (rider) {
+        tube(B, [hip, hip.clone().lerp(knee, 0.5), knee], [0.068, 0.06, 0.048], hi ? 7 : 5, [[24, 24, 0], [24, 1, 0.5], [1, 1, 0]], cell('pants'), { cap0: true });
+        blob(B, knee, 0.05, 0.05, 0.05, 6, 4, { uv: cellUV(CELL.pants), bone: 1 });
+        tube(B, [knee, knee.clone().lerp(ankle, 0.3), ankle], [0.055, 0.052, 0.044], hi ? 7 : 5, [rig(1), rig(1), rig(1)], (i) => cellUV(i === 0 ? CELL.bootTop : CELL.boots), { cap1: true });
+        B.box(0.29, 1.335, sd * 0.29, 0.17, 0.06, 0.075, 0, { uv: cellUV(CELL.boots), bone: 1 });
+      }
       // 鐙と鐙革
       limb(B, V3(0.14, 1.6, sd * 0.25), V3(0.27, 1.34, sd * 0.31), 0.008, 0.008, 3, { uv: cellUV(CELL.bridle), bone: 1 });
       B.box(0.29, 1.3, sd * 0.29, 0.1, 0.016, 0.1, 0, { uv: cellUV(CELL.goggle), bone: 1 });
     }
-    // 上体（勝負服）・尻
-    {
-      const rings = [], sk = [];
-      SPINE_T.forEach((r, i) => {
-        const a = SPINE_T[Math.max(0, i - 1)], b = SPINE_T[Math.min(SPINE_T.length - 1, i + 1)];
-        const T = V3(b[0] - a[0], b[1] - a[1], 0).normalize(), u = V3(-T.y, T.x, 0);
-        rings.push(ell(V3(r[0], r[1], 0), u, Z, r[2], r[3], hi ? 12 : 8, 0.05, 0.85)); sk.push([r[4], r[5], r[6]]);
-      });
-      const m = hi ? 12 : 8;
-      loft(B, rings, sk, (i, j) => rUV(R_SILK, mth(j, m), i / (rings.length - 1)), { cap0: true, cap1: true });
-      blob(B, V3(-0.02, 1.86, 0), 0.12, 0.09, 0.15, hi ? 8 : 6, hi ? 6 : 4, { uv: cellUV(CELL.pants), bone: 24 });
-    }
-    // 首・頭・帽子・ゴーグル
-    {
-      limb(B, V3(0.53, 2.05, 0), V3(0.62, 2.11, 0), 0.045, 0.042, hi ? 6 : 4, { uv: cellUV(CELL.skin), bone: 26 });
-      blob(B, V3(0.655, 2.14, 0), 0.098, 0.1, 0.088, hi ? 9 : 6, hi ? 7 : 5, { uv: cellUV(CELL.skin), bone: 26 });
-      const g = new THREE.SphereGeometry(0.122, hi ? 12 : 8, hi ? 7 : 4, 0, TAU, 0, Math.PI * 0.56);
-      B.add(g, new THREE.Matrix4().compose(V3(0.645, 2.155, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.5)), V3(1.06, 1, 1.0)), { uv: cellUV(CELL.cap), bone: 26 });
-      B.add(new THREE.BoxGeometry(0.1, 0.014, 0.17), new THREE.Matrix4().compose(V3(0.76, 2.19, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.28)), V3(1, 1, 1)), { uv: cellUV(CELL.cap), bone: 26 });
-      B.box(0.742, 2.14, 0, 0.03, 0.045, 0.16, 0, { uv: cellUV(CELL.goggle), bone: 26 });
-    }
-    // 腕（袖）・手（手袋）
-    for (const sd of [-1, 1]) {
-      const ua = sd < 0 ? 27 : 29, fa = ua + 1;
-      const sh = V3(0.43, 2.0, sd * 0.15), el = V3(0.58, 1.86, sd * 0.2), hd = V3(0.84, 1.81, sd * 0.1);
-      tube(B, [sh, sh.clone().lerp(el, 0.5), el, el.clone().lerp(hd, 0.5), hd], [0.058, 0.052, 0.046, 0.042, 0.036], hi ? 7 : 5,
-        [[ua, ua, 0], [ua, ua, 0], [ua, fa, 0.5], [fa, fa, 0], [fa, fa, 0]], cell('sleeve'), { cap0: true });
-      blob(B, hd.clone().add(V3(0.02, -0.005, 0)), 0.045, 0.04, 0.04, hi ? 6 : 4, 4, { uv: cellUV(CELL.white), bone: fa });
+    if (rider) {
+      // 上体（勝負服）・尻
+      {
+        const rings = [], sk = [];
+        SPINE_T.forEach((r, i) => {
+          const a = SPINE_T[Math.max(0, i - 1)], b = SPINE_T[Math.min(SPINE_T.length - 1, i + 1)];
+          const T = V3(b[0] - a[0], b[1] - a[1], 0).normalize(), u = V3(-T.y, T.x, 0);
+          rings.push(ell(V3(r[0], r[1], 0), u, Z, r[2], r[3], hi ? 12 : 8, 0.05, 0.85)); sk.push([r[4], r[5], r[6]]);
+        });
+        const m = hi ? 12 : 8;
+        loft(B, rings, sk, (i, j) => rUV(R_SILK, mth(j, m), i / (rings.length - 1)), { cap0: true, cap1: true });
+        blob(B, V3(-0.02, 1.86, 0), 0.12, 0.09, 0.15, hi ? 8 : 6, hi ? 6 : 4, { uv: cellUV(CELL.pants), bone: 24 });
+      }
+      // 首・頭・帽子・ゴーグル
+      {
+        limb(B, V3(0.53, 2.05, 0), V3(0.62, 2.11, 0), 0.045, 0.042, hi ? 6 : 4, { uv: cellUV(CELL.skin), bone: 26 });
+        blob(B, V3(0.655, 2.14, 0), 0.098, 0.1, 0.088, hi ? 9 : 6, hi ? 7 : 5, { uv: cellUV(CELL.skin), bone: 26 });
+        const g = new THREE.SphereGeometry(0.122, hi ? 12 : 8, hi ? 7 : 4, 0, TAU, 0, Math.PI * 0.56);
+        B.add(g, new THREE.Matrix4().compose(V3(0.645, 2.155, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.5)), V3(1.06, 1, 1.0)), { uv: cellUV(CELL.cap), bone: 26 });
+        B.add(new THREE.BoxGeometry(0.1, 0.014, 0.17), new THREE.Matrix4().compose(V3(0.76, 2.19, 0), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.28)), V3(1, 1, 1)), { uv: cellUV(CELL.cap), bone: 26 });
+        B.box(0.742, 2.14, 0, 0.03, 0.045, 0.16, 0, { uv: cellUV(CELL.goggle), bone: 26 });
+      }
+      // 腕（袖）・手（手袋）
+      for (const sd of [-1, 1]) {
+        const ua = sd < 0 ? 27 : 29, fa = ua + 1;
+        const sh = V3(0.43, 2.0, sd * 0.15), el = V3(0.58, 1.86, sd * 0.2), hd = V3(0.84, 1.81, sd * 0.1);
+        tube(B, [sh, sh.clone().lerp(el, 0.5), el, el.clone().lerp(hd, 0.5), hd], [0.058, 0.052, 0.046, 0.042, 0.036], hi ? 7 : 5,
+          [[ua, ua, 0], [ua, ua, 0], [ua, fa, 0.5], [fa, fa, 0], [fa, fa, 0]], cell('sleeve'), { cap0: true });
+        blob(B, hd.clone().add(V3(0.02, -0.005, 0)), 0.045, 0.04, 0.04, hi ? 6 : 4, 4, { uv: cellUV(CELL.white), bone: fa });
+      }
     }
     // ムチ（右手。ふだんは肩の方へ寝かせる）
     {
@@ -700,8 +807,10 @@
     const A = HS.Art;
     return A && A.coatLook ? A.coatLook(c, age) : DEF_LOOK;
   }
-  function paintHorse(h) {
-    const cv = canvasOf(256, 256), g = cv.getContext('2d');
+  function paintHorse(h, res) {
+    res = res || 256;
+    const cv = canvasOf(res, res), g = cv.getContext('2d');
+    g.scale(res / 256, res / 256); // 割り付けは 256 の目盛りで書く
     const L = coatLook(h.coat, h.age), mk = marksOf(h.name || String(h.num)), sk = h.silks || DEF_SILKS, gear = h.gear || {};
     const cell = (k, col) => { const i = CELL[k]; g.fillStyle = col; g.fillRect((i % 8) * 32, Math.floor(i / 8) * 32, 32, 32); };
     cell('saddle', '#1d1a18'); cell('pants', '#f2f2f0'); cell('boots', '#141414'); cell('bootTop', '#8a5a34'); cell('skin', '#e3bf9c');
@@ -797,6 +906,65 @@
       g.fillText(String(h.num != null ? h.num : ''), x + w / 2, y + hh / 2 + 3);
     });
     return cv;
+  }
+
+  // 馬の体の凹凸（全頭で共有する法線の絵。割り付けは馬ごとの絵と同じ）：肩・前腕・尻・後ろ腿の筋肉、あばら、首の付け根、脚の腱、たてがみ・尾の毛の筋
+  let HORSE_NOR = null;
+  function horseNormalCanvas(res) {
+    res = res || 512;
+    const k = res / 256, hc = canvasOf(res, res), g = hc.getContext('2d');
+    g.fillStyle = '#808080'; g.fillRect(0, 0, res, res);
+    g.scale(k, k);
+    const bump = (r, x0, x1, y0, y1, pts) => {
+      g.save(); g.beginPath(); g.rect(r[0], r[1], r[2], r[3]); g.clip();
+      const px = x => r[0] + (x - x0) / (x1 - x0) * r[2], py = y => r[1] + r[3] - (y - y0) / (y1 - y0) * r[3];
+      for (const [x, y, rx, ry, a, rot] of pts) {
+        const R = Math.max(rx / (x1 - x0) * r[2], 0.5), Ry = Math.max(ry / (y1 - y0) * r[3], 0.5);
+        g.save(); g.translate(px(x), py(y)); g.rotate(rot || 0); g.scale(1, Ry / R);
+        const gr = g.createRadialGradient(0, 0, 0, 0, 0, R);
+        const c = a > 0 ? '255,255,255' : '0,0,0';
+        gr.addColorStop(0, `rgba(${c},${Math.abs(a)})`); gr.addColorStop(0.55, `rgba(${c},${Math.abs(a) * 0.55})`); gr.addColorStop(1, `rgba(${c},0)`);
+        g.fillStyle = gr; g.beginPath(); g.arc(0, 0, R, 0, TAU); g.fill(); g.restore();
+      }
+      g.restore();
+    };
+    // 体（横から見た x, y）
+    const side = [
+      [0.52, 1.3, 0.2, 0.26, 0.45, -0.3], [0.5, 0.92, 0.07, 0.17, 0.35], [0.7, 1.15, 0.1, 0.18, 0.25, 0.4],
+      [-0.6, 1.42, 0.27, 0.22, 0.5], [-0.72, 1.08, 0.13, 0.22, 0.45, 0.2], [-0.35, 1.2, 0.16, 0.1, -0.2], [-0.92, 1.35, 0.1, 0.14, 0.25],
+      [0.0, 1.0, 0.36, 0.08, 0.25], [0.15, 1.5, 0.3, 0.06, 0.15], [0.86, 1.48, 0.16, 0.08, 0.3, -0.9], [0.98, 1.68, 0.1, 0.06, 0.25, -0.9],
+    ];
+    for (let i = 0; i < 5; i++) side.push([-0.25 + i * 0.1, 1.17, 0.025, 0.16, -0.18, 0.15]); // あばら
+    bump(R_BODY, SX0, SX1, SY0, SY1, side);
+    // 脚：腱（縦の筋）と関節のふくらみ
+    R_LEG.forEach((r, kk) => {
+      const xc = LEG_XC[kk], fr = kk < 2, kn = fr ? 0.53 : 0.58;
+      bump(r, xc - LEG_HW, xc + LEG_HW, 0, LEG_H, [
+        [xc - 0.02, 0.36, 0.03, 0.16, 0.35], [xc, kn, 0.06, 0.05, 0.45], [xc, 0.22, 0.05, 0.04, 0.4], [xc + 0.02, fr ? 0.9 : 0.95, 0.09, 0.2, 0.35],
+      ]);
+    });
+    // 頭：頬のふくらみ・鼻すじ・目の上のくぼみ
+    bump(R_HEAD, 0, 1, 0, 1, [[0.24, 0.35, 0.12, 0.3, 0.45], [0.6, 0.85, 0.3, 0.1, 0.25], [0.18, 0.8, 0.05, 0.1, -0.3], [0.93, 0.5, 0.05, 0.2, 0.3]]);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    // たてがみ・尾：毛の筋
+    {
+      const r = R_HAIR.map(v => v * k);
+      for (let i = 0; i < 70; i++) {
+        const x = r[0] + hash01(i, 83) * r[2];
+        g.fillStyle = hash01(i, 84) > 0.5 ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
+        g.fillRect(x, r[1], k * (0.5 + hash01(i, 85)), r[3]);
+      }
+    }
+    // 高さ → 法線（OpenGL の向き。絵の上が +v）
+    const src = g.getImageData(0, 0, res, res).data, out = g.createImageData(res, res), d = out.data, S = 1.6;
+    const H = (x, y) => src[((Math.min(res - 1, Math.max(0, y)) * res) + Math.min(res - 1, Math.max(0, x))) * 4] / 255;
+    for (let y = 0; y < res; y++) for (let x = 0; x < res; x++) {
+      const dx = (H(x + 1, y) - H(x - 1, y)) * S, dy = (H(x, y + 1) - H(x, y - 1)) * S;
+      const l = Math.hypot(dx, dy, 1), i = (y * res + x) * 4;
+      d[i] = (-dx / l * 0.5 + 0.5) * 255; d[i + 1] = (dy / l * 0.5 + 0.5) * 255; d[i + 2] = (1 / l * 0.5 + 0.5) * 255; d[i + 3] = 255;
+    }
+    g.putImageData(out, 0, 0);
+    return hc;
   }
 
   // ---- 走りの動き ----
@@ -926,8 +1094,163 @@
     }
   }
 
+  // ---- 騎手（素材の GLB）。部位は頂点色の R（番号/8）：0 肌・1 勝負服・2 袖・3 ズボン・4 長靴・5 長靴の折り返し・6 手袋・7 帽子・8 ゴーグル ----
+  // 動き：手作りの骨（24 腰・25 上体・26 頭・28/30 手・1 胴の鐙）の位置へ、毎コマ IK で合わせる。手綱とムチは手作りの形のまま手に付いてくる
+  const JK_SCALE = 0.86;   // 素材の体（1.81m）を騎手の背丈へ
+  const PAT_ID = { plain: 0, hoops: 1, stripes: 2, sash: 3, cross: 4, diamonds: 5, stars: 6, halves: 7, yoke: 8 };
+  function jockeyMaterial(h) {
+    const sk = h.silks || DEF_SILKS;
+    const U = {
+      uBase: { value: lin(sk.base || '#1f4fbf') }, uSub: { value: lin(sk.sub || sk.base || '#ffffff') }, uPat: { value: PAT_ID[sk.pattern] || 0 },
+      uCap: { value: lin(h.cap || frameColor(h.frame)) }, uSkin: { value: lin('#d9a882') },
+    };
+    const m = new THREE.MeshStandardMaterial({ skinning: true, roughness: 0.55, metalness: 0 });
+    m.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, U);
+      sh.vertexShader = 'attribute vec4 color;\nvarying float vReg;\nvarying vec3 vBP;\n' +
+        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vReg = color.r * 8.0; vBP = position;');
+      sh.fragmentShader = 'varying float vReg;\nvarying vec3 vBP;\nuniform vec3 uBase, uSub, uCap, uSkin;\nuniform float uPat;\n' +
+        `float silkMask(vec3 p) {
+  float x = p.x, y = p.y, k = 0.0;
+  if (uPat < 0.5) return 0.0;
+  if (uPat < 1.5) return step(0.5, fract((y - 0.98) / 0.13));                       // 横縞
+  if (uPat < 2.5) return step(0.5, fract(x / 0.085 + 0.25));                        // 縦縞
+  if (uPat < 3.5) return step(abs((y - 1.24) - 0.95 * x), 0.06);                      // たすき
+  if (uPat < 4.5) return max(step(abs((y - 1.24) - 0.95 * x), 0.045), step(abs((y - 1.24) + 0.95 * x), 0.045)); // 十字たすき
+  if (uPat < 5.5) { vec2 q = abs(fract(vec2(x / 0.15 + 0.5, (y - 1.0) / 0.17)) - 0.5); return step(q.x + q.y, 0.24); } // ダイヤ
+  if (uPat < 6.5) { vec2 c = fract(vec2(x / 0.14 + 0.5, (y - 1.0) / 0.15 + p.z * 2.0)) - 0.5; float a = atan(c.y, c.x), r = length(c); return step(r, 0.2 * (0.62 + 0.38 * cos(5.0 * a + 1.5708))); } // 星
+  if (uPat < 7.5) return step(0.0, x);                                              // 左右
+  return step(1.37, y);                                                             // 肩
+}
+` + sh.fragmentShader
+        .replace('#include <color_fragment>', `#include <color_fragment>
+  float rg = floor(vReg + 0.5);
+  vec3 jc = uSkin; float jr = 0.62;
+  if (rg > 0.5 && rg < 1.5) { jc = mix(uBase, uSub, silkMask(vBP)); jr = 0.38; }
+  else if (rg < 2.5 && rg > 1.5) { jc = (uPat > 6.5 && uPat < 7.5) ? mix(uBase, uSub, step(0.0, vBP.x)) : uSub; jr = 0.38; }
+  else if (rg < 3.5 && rg > 2.5) { jc = vec3(0.86); jr = 0.6; }
+  else if (rg < 4.5 && rg > 3.5) { jc = vec3(0.012); jr = 0.32; }
+  else if (rg < 5.5 && rg > 4.5) { jc = vec3(0.23, 0.11, 0.04); jr = 0.45; }
+  else if (rg < 6.5 && rg > 5.5) { jc = vec3(0.88); jr = 0.6; }
+  else if (rg < 7.5 && rg > 6.5) { jc = uCap; jr = 0.25; }
+  else if (rg > 7.5) { jc = vec3(0.02, 0.025, 0.03); jr = 0.12; }
+  diffuseColor.rgb *= jc;`)
+        .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  roughnessFactor = jr;');
+    };
+    m.customProgramCacheKey = () => 'hs-jockey';
+    return m;
+  }
+  // 騎手を1人作る（骨ごと複製）。o.hi / o.lo：近く・遠くの形、bones：名前 → 骨
+  function makeJockey(h, M, src) {
+    const root = THREE.SkeletonUtils.clone(src || JK.scene);
+    const mat = M(jockeyMaterial(h));
+    const o = { root, bones: {}, hi: null, lo: null, mat, rest: [] };
+    root.traverse(x => {
+      if (x.isBone) { o.bones[x.name] = x; o.rest.push([x, x.position.clone(), x.quaternion.clone()]); }
+      if (x.isSkinnedMesh) {
+        x.material = mat; x.castShadow = true; x.frustumCulled = false;
+        if (/lo$/i.test(x.name)) o.lo = x; else o.hi = x;
+      }
+    });
+    if (o.lo) o.lo.visible = false;
+    // 腕を少し長く（手綱を前で持つ前かがみの姿勢でも、手が手綱に届くように）
+    for (const s of ['l', 'r']) if (o.bones['upperarm_' + s]) o.bones['upperarm_' + s].scale.setScalar(1.08);
+    root.rotation.y = Math.PI / 2; // 素材の前（+Z）を馬の前（+X）へ。素材の左（+X）は馬の左（-Z）
+    root.scale.setScalar(JK_SCALE);
+    // 頭の上を指す点（骨の中の向き）を、はじめの姿勢で覚える
+    root.updateMatrixWorld(true);
+    const hd = o.bones.Head, hp = new THREE.Vector3().setFromMatrixPosition(hd.matrixWorld);  // 頭の骨は必ずある（無ければ素材の作りが違う）
+    o.headUp = hd.worldToLocal(hp.clone().add(new THREE.Vector3(0, 0.15, 0)));
+    o.footFwd = { l: null, r: null };
+    return o;
+  }
+  // IK の道具（世界の座標で考える。骨の軸の向きは問わない）
+  const IKV = { a: null };
+  function ikTmp() {
+    if (!IKV.a) Object.assign(IKV, { a: new THREE.Vector3(), b: new THREE.Vector3(), c: new THREE.Vector3(), d: new THREE.Vector3(), e: new THREE.Vector3(), f: new THREE.Vector3(), q1: new THREE.Quaternion(), q2: new THREE.Quaternion(), q3: new THREE.Quaternion() });
+    return IKV;
+  }
+  const wpos = (o, out) => out.setFromMatrixPosition(o.matrixWorld);
+  // 骨 bone をまわして、いま cur（世界）にある点を target（世界）の向きへ
+  function aim(bone, cur, target) {
+    const T = ikTmp();
+    const p = wpos(bone, T.a);
+    const u = T.b.subVectors(cur, p), w = T.c.subVectors(target, p);
+    if (u.lengthSq() < 1e-10 || w.lengthSq() < 1e-10) return;
+    T.q1.setFromUnitVectors(u.normalize(), w.normalize());
+    bone.parent.matrixWorld.decompose(T.d, T.q2, T.e);
+    T.q3.copy(T.q2).multiply(bone.quaternion);      // いまの世界の向き
+    T.q3.premultiply(T.q1);                          // まわした後の世界の向き
+    bone.quaternion.copy(T.q2.invert().multiply(T.q3));
+    bone.updateMatrixWorld(true);
+  }
+  // 2本の骨（a→b→c）の先 c を target へ。曲がる向きは pole（世界の向き）
+  function twoBone(a, b, c, target, pole) {
+    const pa = wpos(a, new THREE.Vector3()), pb = wpos(b, new THREE.Vector3()), pc = wpos(c, new THREE.Vector3());
+    const l1 = pa.distanceTo(pb), l2 = pb.distanceTo(pc);
+    const dir = new THREE.Vector3().subVectors(target, pa);
+    const d = clamp(dir.length(), Math.abs(l1 - l2) + 1e-3, (l1 + l2) * 0.999);
+    dir.normalize();
+    const x = (l1 * l1 - l2 * l2 + d * d) / (2 * d), y = Math.sqrt(Math.max(0, l1 * l1 - x * x));
+    const pn = new THREE.Vector3().copy(pole).addScaledVector(dir, -pole.dot(dir));
+    if (pn.lengthSq() < 1e-8) pn.set(0, 1, 0); else pn.normalize();
+    const knee = new THREE.Vector3().copy(pa).addScaledVector(dir, x).addScaledVector(pn, y);
+    aim(a, pb, knee);
+    aim(b, wpos(c, pc), pa.clone().addScaledVector(dir, d));
+  }
+  // 手作りの骨 bone の中の点（馬の形の座標で書いた点 P から、その骨の付け根 J を引いた差）→ 世界の点
+  const atBone = (bones, i, x, y, z) => {
+    const J = BONES[i], v = new THREE.Vector3(x - J[1], y - J[2], z - J[3]);
+    return v.applyMatrix4(bones[i].matrixWorld);
+  };
+  // 馬の形の向き（胴の骨の向き）→ 世界の向き
+  const dirBone = (bones, i, x, y, z) => new THREE.Vector3(x, y, z).transformDirection(bones[i].matrixWorld);
+  function poseJockey(J, hb) {
+    const B = J.bones;
+    for (const [b, p, q] of J.rest) { b.position.copy(p); b.quaternion.copy(q); }
+    J.root.updateMatrixWorld(true);
+    // 腰：手作りの腰の骨（24）の位置へ。少し前へ傾ける
+    const hip = atBone(hb, 24, -0.04, 1.9, 0);
+    B.pelvis.position.copy(B.pelvis.parent.worldToLocal(hip.clone()));
+    B.pelvis.updateMatrixWorld(true);
+    aim(B.pelvis, wpos(B.spine_01, new THREE.Vector3()), hip.clone().add(dirBone(hb, 24, 0.9, 0.42, 0)));
+    // 背骨：肩の真ん中（手作りの上体 25 の肩）へ
+    const sh = atBone(hb, 25, 0.46, 2.01, 0);
+    aim(B.spine_01, wpos(B.neck_01, new THREE.Vector3()), sh);
+    aim(B.spine_03, wpos(B.neck_01, new THREE.Vector3()), sh);
+    // 首と頭：前を見る
+    const np = wpos(B.neck_01, new THREE.Vector3());
+    aim(B.neck_01, wpos(B.Head, new THREE.Vector3()), np.clone().add(dirBone(hb, 26, 0.78, 0.62, 0)));
+    const hp = wpos(B.Head, new THREE.Vector3());
+    aim(B.Head, B.Head.localToWorld(J.headUp.clone()), hp.clone().add(dirBone(hb, 26, 0.32, 0.95, 0)));
+    // 腕：手綱を持つ手（手作りの 28・30 の手の位置）へ。肘は外・上へ
+    for (const [s, fa, sd] of [['l', 28, -1], ['r', 30, 1]]) {
+      const hand = atBone(hb, fa, 0.8, 1.815, sd * 0.1);
+      twoBone(B['upperarm_' + s], B['lowerarm_' + s], B['hand_' + s], hand, dirBone(hb, 1, -0.5, 0.35, sd));
+    }
+    // 脚：鐙（胴の骨 1）へ。膝は前・外へ。つま先は前へ
+    for (const [s, sd] of [['l', -1], ['r', 1]]) {
+      const ank = atBone(hb, 1, 0.235, 1.37, sd * 0.29);
+      twoBone(B['thigh_' + s], B['calf_' + s], B['foot_' + s], ank, dirBone(hb, 1, 1, 0.15, sd * 0.45));
+      const fp = wpos(B['foot_' + s], new THREE.Vector3());
+      aim(B['foot_' + s], wpos(B['ball_' + s], new THREE.Vector3()), fp.clone().add(dirBone(hb, 1, 0.95, -0.12, sd * 0.25)));
+    }
+  }
+
+  // 馬の骨（手作り）。はじめの姿勢で組む
+  function horseBones() {
+    const bones = BONES.map(() => new THREE.Bone());
+    BONES.forEach(([par, x, y, z], k) => {
+      if (par < 0) bones[k].position.set(x, y, z);
+      else { const p = BONES[par]; bones[k].position.set(x - p[1], y - p[2], z - p[3]); bones[par].add(bones[k]); }
+    });
+    return bones;
+  }
+  // テスト用：騎手の IK（src＝骨だけの形でもよい）
+  R3._ik = { horseBones, makeJockey: (h, src) => makeJockey(h, m => m, src), poseJockey, poseHorse, atBone };
+
   // テスト用：馬の形（q＝1 近く・0 遠く）と骨の数
-  R3.horseGeometry = q => horseGeometry(q);
+  R3.horseGeometry = (q, o) => horseGeometry(q, o);
   R3.BONES = BONES.length;
   R3.GEAR = GEAR;
 
@@ -944,10 +1267,20 @@
     const nH = horsesIn.length;
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
-    renderer.setClearColor(new THREE.Color(look.skyHor));
-    const aniso = Math.min(4, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    const mobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '');
+    // 素材の絵が読めているか（地面・空は、読めていなければ手作りの絵で描く）
+    const photo = imgOk('turf_col') && imgOk('dirt_col') && imgOk('grass_col') && !setup.handmade;
+    LIN = photo;
+    if (photo) { renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; }
+    const skyImg = photo && imgOk(look.sky) ? IMG[look.sky] : null;
+    const useJockey = JK.state === 'ok' && !!THREE.SkeletonUtils && !setup.handmadeJockey;
+    renderer.toneMappingExposure = look.exposure;
+    const fogCol = skyImg ? horizonColor(look.sky, skyImg) : look.skyHor;
+    renderer.setClearColor(new THREE.Color(fogCol));
+    const aniso = Math.min(mobile ? 4 : 8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(new THREE.Color(look.skyHor), 260, 2400);
+    // 遠くの霞（色は空の地平の色。霧は sRGB のまま混ぜる）
+    scene.fog = photo ? new THREE.FogExp2(new THREE.Color(fogCol), look.overcast ? 0.00075 : 0.00048) : new THREE.Fog(new THREE.Color(look.skyHor), 260, 2400);
     const camera = new THREE.PerspectiveCamera(55, 16 / 9, 0.3, 7000);
     camera.rotation.order = 'YXZ';
     let VW = 960, VH = 540;
@@ -955,13 +1288,30 @@
     // 片づけ用
     const owned = { geos: [], mats: [], texs: [] };
     const G = g => (owned.geos.push(g), g), M = m => (owned.mats.push(m), m), T = t => (owned.texs.push(t), t);
-    const lambert = o => M(new THREE.MeshLambertMaterial(o));
+    const lambert = o => M(new THREE.MeshLambertMaterial(linOpts(o)));
+    const std = o => M(new THREE.MeshStandardMaterial(Object.assign({ roughness: 0.8, metalness: 0 }, linOpts(o))));
 
-    // 光
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x56664a, look.hemi));
-    const sun = new THREE.DirectionalLight(0xfff6e8, look.sun);
+    // 光：空の光（半球）と太陽。素材の空があれば、空を映り込み（環境の光）にも使う
+    const hemi = new THREE.HemisphereLight(lin('#dfeaff'), lin('#6b7a52'), photo ? look.hemiP : look.hemi);
+    scene.add(hemi);
+    const sun = new THREE.DirectionalLight(lin('#fff4e2'), photo ? look.sunP : look.sun);
     sun.position.set(-0.5, 1, 0.35);
     scene.add(sun);
+    scene.add(sun.target);
+    // 太陽の影：見ている所のまわり（一辺 shadowBox m）だけ
+    const shadowOn = photo && !setup.noShadow;
+    let shadowBox = 36;
+    if (shadowOn) {
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
+      sun.shadow.bias = -0.0004;
+      sun.shadow.normalBias = 0.03;
+      const sc = sun.shadow.camera;
+      sc.near = 1; sc.far = 400; sc.left = -shadowBox; sc.right = shadowBox; sc.top = shadowBox; sc.bottom = -shadowBox;
+      sc.updateProjectionMatrix();
+    }
 
     // ---- コースの形 ----
     const slopeH = ({ '急': 2.1, '中': 1.6, '小': 0.9, '平': 0 })[course.slope] || 0;
@@ -1018,41 +1368,95 @@
     const loopPts = u => { const out = []; for (let i = 0; i < N; i++) { const p = wpt(S[i], u); out.push(new THREE.Vector2(p.x, p.y)); } return out; };
 
     // ---- 馬場と周り ----
+    // 素材の絵（photo）があれば、写真の質感を m 単位で貼り、刈り目・内ラチ沿いの荒れ・ハローの筋を材質の中で描く
     const period = L / Math.max(1, Math.round(L / 16));
-    const turfTex = T(texOf(turfCanvas(look.wet, look), true, aniso));
-    const dirtTex = T(texOf(dirtCanvas(look.wet), true, aniso));
-    const turfMat = lambert({ map: turfTex });
-    const dirtMat = look.wet >= 2
-      ? M(new THREE.MeshPhongMaterial({ map: dirtTex, specular: new THREE.Color(look.wet >= 3 ? 0x3a3a3a : 0x262626), shininess: 26 }))
-      : lambert({ map: dirtTex });
-    const grassTex = T(texOf(grassCanvas(look, 1), true, aniso));
-    const grassMat = lambert({ map: grassTex });
     const W = TRACK_W;
+    let turfMat, dirtMat, grassMat, farMat;
+    function groundMat(col, nor, tile, o) {
+      const map = T(imgTex(col, true, aniso)); map.repeat.set(1 / tile, 1 / tile);
+      // 地面は画面の半分を占めるので、映り込みを計算しない軽い材質（Phong）にし、空の明るさは一定の環境の光（uAmb）で足す
+      const wet = o.rough < 0.7;
+      const m = M(new THREE.MeshPhongMaterial({ map, shininess: wet ? 60 * (1 - o.rough) : 4, specular: lin(wet ? '#5a5a5a' : '#141414') }));
+      if (nor && imgOk(nor)) { m.normalMap = T(imgTex(nor, true, aniso, true)); m.normalScale.set(o.ns || 1, o.ns || 1); }
+      const U = {
+        uStripe: { value: o.stripe || 0 }, uStripeLen: { value: o.stripeLen || 16 }, uWear: { value: o.wear || 0 }, uWearCol: { value: lin(o.wearCol || '#8a7650') },
+        uTint: { value: new THREE.Vector3().fromArray(o.tint || [1, 1, 1]) }, uMix: { value: o.mix != null ? o.mix : 0.42 }, uHarrow: { value: o.harrow || 0 },
+        uAmb: { value: lin(fogCol).multiplyScalar((o.env != null ? o.env : 0.6) * 0.9) },
+      };
+      m.onBeforeCompile = sh => {
+        Object.assign(sh.uniforms, U);
+        sh.vertexShader = 'varying vec2 vM;\n' + sh.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\n  vM = uv;');
+        sh.fragmentShader = 'varying vec2 vM;\nuniform float uStripe, uStripeLen, uWear, uMix, uHarrow;\nuniform vec3 uWearCol, uTint, uAmb;\n' + sh.fragmentShader
+          .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n  reflectedLight.indirectDiffuse += diffuseColor.rgb * uAmb;')
+          .replace('#include <map_fragment>', `
+  // 同じ絵の繰り返しが目立たないように、大きく引き伸ばした絵を重ねる
+  vec4 tA = texture2D(map, vUv), tB = texture2D(map, vUv * 0.137 + vec2(0.31, 0.17));
+  vec4 texelColor = mapTexelToLinear(mix(tA, tB, uMix));
+  diffuseColor *= texelColor;
+  diffuseColor.rgb *= uTint;
+  // 刈り目：進む向きに uStripeLen/2 m ごとに明暗
+  float sp = fract(vM.y / uStripeLen);
+  float st = smoothstep(0.0, 0.04, sp) * (1.0 - smoothstep(0.5, 0.54, sp));
+  diffuseColor.rgb *= 1.0 + uStripe * (st * 2.0 - 1.0);
+  // 内ラチ沿いの荒れ
+  float wr = exp(-pow((vM.x - 1.8) / 2.2, 2.0));
+  diffuseColor.rgb = mix(diffuseColor.rgb, uWearCol, uWear * wr);
+  // ハローの筋（進む向きの細い筋）
+  diffuseColor.rgb *= 1.0 + uHarrow * (sin(vM.x * 9.0) * 0.6 + sin(vM.x * 23.0 + 1.3) * 0.4);`);
+      };
+      m.customProgramCacheKey = () => 'hs-ground';
+      return m;
+    }
+    if (photo) {
+      const ov = look.overcast ? 0.86 : 1;
+      const tw = ov * [1, 0.94, 0.86, 0.78][look.wet];
+      turfMat = groundMat('turf_col', 'turf_nor', 2.6, { rough: 0.92, stripe: 0.12, stripeLen: 18, wear: 0.16 + 0.04 * look.wet, tint: [0.52 * tw, 0.8 * tw, 0.42 * tw], ns: 0.9, env: 0.4 });
+      const dk = [1, 0.78, 0.5, 0.42][look.wet];
+      dirtMat = groundMat('dirt_col', 'dirt_nor', 2.2, { rough: [0.96, 0.78, 0.55, 0.42][look.wet], stripe: 0, wear: 0.1, wearCol: '#6e4e30', tint: [1.12 * dk, 0.9 * dk, 0.64 * dk], ns: 1.2, harrow: 0.06, env: [0.45, 0.5, 0.55, 0.6][look.wet] });
+      grassMat = groundMat('grass_col', null, 3.2, { rough: 0.95, tint: [0.78 * ov, 0.92 * ov, 0.7 * ov], env: 0.35 });
+      farMat = groundMat('grass_col', null, 9, { rough: 1, tint: [0.66 * ov, 0.8 * ov, 0.6 * ov], mix: 0.6, env: 0.3 });
+    } else {
+      const turfTex = T(texOf(turfCanvas(look.wet, look), true, aniso));
+      const dirtTex = T(texOf(dirtCanvas(look.wet), true, aniso));
+      turfMat = lambert({ map: turfTex });
+      dirtMat = look.wet >= 2
+        ? M(new THREE.MeshPhongMaterial({ map: dirtTex, specular: lin(look.wet >= 3 ? 0x3a3a3a : 0x262626), shininess: 26 }))
+        : lambert({ map: dirtTex });
+      grassMat = lambert({ map: T(texOf(grassCanvas(look, 1), true, aniso)) });
+      farMat = lambert({ map: T(texOf(grassCanvas(look, 0.85), true, 1)) });
+    }
     const mainMat = look.dirt ? dirtMat : turfMat;
+    // 帯の貼り方：photo のときは uv を m 単位（横 u・進む向き s）に、そうでなければ手作りの絵の割り付け
+    const band = (u0, u1, k0, k1, mat, ua, ub, per) => {
+      const m = photo ? ribbon(u0, u1, k0, k1, mat, u0, u1, 1) : ribbon(u0, u1, k0, k1, mat, ua, ub, per);
+      m.receiveShadow = shadowOn;
+      return m;
+    };
     // もう一方のコース（芝の内のダート・ダートの外の芝）は、その競馬場にあるときだけ
     const cdat = HS.DATA && HS.DATA.courses && HS.DATA.courses[course.name];
     const hasOther = !cdat || !!(look.dirt ? cdat.turf : cdat.dirt);
-    ribbon(-0.6, W + 0.4, 1, 1, mainMat, 0, 1, period);
+    band(-0.6, W + 0.4, 1, 1, mainMat, 0, 1, period);
     // 外側：ダートの日は外に芝コースが見える
     let uo = W + 0.4;
-    if (look.dirt && hasOther) { ribbon(uo, uo + 3, 1, 1, grassMat, 0, 3 / 12, 12); ribbon(uo + 3, uo + 28, 1, 1, turfMat, 0, 1, period); uo += 28; }
+    if (look.dirt && hasOther) { band(uo, uo + 3, 1, 1, grassMat, 0, 3 / 12, 12); band(uo + 3, uo + 28, 1, 1, turfMat, 0, 1, period); uo += 28; }
     const standU = uo + 12;
-    ribbon(uo, standU + 30, 1, 1, grassMat, 0, (standU + 30 - uo) / 12, 12);
+    band(uo, standU + 30, 1, 1, grassMat, 0, (standU + 30 - uo) / 12, 12);
     const outerEdge = standU + 56;
-    ribbon(standU + 30, outerEdge, 1, 0, grassMat, 0, 26 / 12, 12);
+    band(standU + 30, outerEdge, 1, 0, grassMat, 0, 26 / 12, 12);
     // 内側：芝の日は内にダートコースが見える
     let ui = -0.6;
-    if (!look.dirt && hasOther) { ribbon(-4, ui, 1, 1, grassMat, 0, 3.4 / 12, 12); ribbon(-24, -4, 1, 1, dirtMat, 0, 1, period); ui = -24; }
-    ribbon(ui - 6, ui, 1, 1, grassMat, 0, 0.5, 12);
+    if (!look.dirt && hasOther) { band(-4, ui, 1, 1, grassMat, 0, 3.4 / 12, 12); band(-24, -4, 1, 1, dirtMat, 0, 1, period); ui = -24; }
+    band(ui - 6, ui, 1, 1, grassMat, 0, 0.5, 12);
     const innerEdge = ui - 20;
-    ribbon(innerEdge, ui - 6, 0, 1, grassMat, 0, 14 / 12, 12);
+    band(innerEdge, ui - 6, 0, 1, grassMat, 0, 14 / 12, 12);
     // 内馬場と外の地面（平らな面。帯とすき間なくつなぐ）
     function flatShape(shape, mat) {
       const g = G(new THREE.ShapeGeometry(shape));
       g.rotateX(-Math.PI / 2);
-      const uv = g.attributes.uv;
-      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / 12, uv.getY(i) / 12);
+      const uv = g.attributes.uv, k = photo ? 1 : 1 / 12;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * k, uv.getY(i) * k);
       const m = new THREE.Mesh(g, mat);
+      m.receiveShadow = shadowOn;
       scene.add(m);
       return m;
     }
@@ -1060,14 +1464,14 @@
     {
       const R = 5000, sh = new THREE.Shape([new THREE.Vector2(-R, -R), new THREE.Vector2(R, -R), new THREE.Vector2(R, R), new THREE.Vector2(-R, R)]);
       sh.holes.push(new THREE.Path(loopPts(outerEdge)));
-      const farTex = T(texOf(grassCanvas(look, 0.85), true, 1));
-      flatShape(sh, lambert({ map: farTex }));
+      flatShape(sh, farMat);
     }
     // 池（内馬場の中ほど）
     {
       const g = G(new THREE.CircleGeometry(1, 36));
       g.rotateX(-Math.PI / 2);
-      const pond = new THREE.Mesh(g, M(new THREE.MeshPhongMaterial({ color: look.overcast ? 0x4e6670 : 0x3f7fae, specular: 0x667788, shininess: 60, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
+      const pond = new THREE.Mesh(g, photo ? std({ color: look.overcast ? 0x3d4f55 : 0x2f5a74, roughness: 0.06, envMapIntensity: 1.4, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })
+        : M(new THREE.MeshPhongMaterial({ color: lin(look.overcast ? 0x4e6670 : 0x3f7fae), specular: lin(0x667788), shininess: 60, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
       const rx = Math.max(20, tr.a * 0.28), rz = Math.max(14, (tr.r + innerEdge) * 0.42);
       pond.scale.set(rx, 1, rz);
       pond.position.set(-tr.a * 0.12 * sign, 0.02, 0);
@@ -1094,7 +1498,8 @@
       };
       rail(0, 1.0);
       rail(W + 0.4, 1.1);
-      const m = new THREE.Mesh(G(B.build()), lambert({ color: 0xf2f4f5, side: THREE.DoubleSide }));
+      const m = new THREE.Mesh(G(B.build()), photo ? std({ color: 0xf4f6f7, roughness: 0.35, side: THREE.DoubleSide }) : lambert({ color: 0xf2f4f5, side: THREE.DoubleSide }));
+      m.castShadow = shadowOn;
       scene.add(m);
     }
 
@@ -1136,6 +1541,7 @@
       const f0 = frame(0), gb = W3(f0, -1.6, f0.e);
       B.add(new THREE.CylinderGeometry(0.09, 0.09, 3.6, 6, 1, true), new THREE.Matrix4().makeTranslation(gb.x, f0.e + 1.8, gb.z), { uv: [0.03, 1 - 96 / 512] });
       const m = new THREE.Mesh(G(B.build()), lambert({ map: tex, side: THREE.DoubleSide }));
+      m.castShadow = shadowOn;
       scene.add(m);
       // ゴール板（丸い札。いつもこちらを向く）
       const gc = canvasOf(128, 128), gg = gc.getContext('2d');
@@ -1176,8 +1582,18 @@
         const f = frame(s), e = f.e;
         props.quad(W3(f, u0, e - 2), W3(f, u0 + 24, e - 2), W3(f, u0 + 24, e + 20), W3(f, u0, e + 20), { color: '#cfcabd' });
       }
-      const ctex = T(texOf(crowdCanvas(), false, aniso));
+      const ctex = T(texOf(crowdCanvas(photo ? 512 : 256), false, aniso));
       scene.add(new THREE.Mesh(G(crowd.build()), lambert({ map: ctex, side: THREE.DoubleSide })));
+      // スタンド前の立ち見（素材を使うときだけ）
+      if (photo) {
+        const sb2 = new Builder(), us = u0 - 2.5;
+        for (let s0 = sa; s0 < sb - 1; s0 += 12.8) {
+          const s1 = Math.min(sb, s0 + 12.8), f0 = frame(s0), f1 = frame(s1);
+          sb2.quad(W3(f0, us, f0.e), W3(f1, us, f1.e), W3(f1, us, f1.e + 1.85), W3(f0, us, f0.e + 1.85), { uvs: [[0, 0], [(s1 - s0) / 12.8, 0], [(s1 - s0) / 12.8, 1], [0, 1]] });
+        }
+        const stex = T(texOf(standingCanvas(), true, aniso));
+        scene.add(new THREE.Mesh(G(sb2.build()), lambert({ map: stex, alphaTest: 0.5, side: THREE.DoubleSide })));
+      }
       // 大きな画面（内馬場、スタンドの向かい）
       const sm = (sa + sb) / 2, f = frame(sm), su = Math.min(innerEdge - 30, -tr.r * 1.05), c = W3(f, su, 0), yaw = yawOf(f);
       props.box(c.x, 10, c.z, 44, 14, 1.4, yaw, { color: '#1c2129' });
@@ -1186,24 +1602,48 @@
       for (const dq of [-14, 14]) { const lg = W3(f, su, 0, dq); props.box(lg.x, 1.6, lg.z, 1, 3.2, 1, yaw, { color: '#555c66' }); }
     }
     // 木（外の向こう正面と、内馬場）。InstancedMesh で1回に描く
+    // 素材の木（板絵を十字に組んだ形）があればそれを、無ければ手作りの形
     {
-      const B = new Builder({ color: true });
-      B.add(new THREE.CylinderGeometry(0.22, 0.32, 3.2, 5, 1, true), new THREE.Matrix4().makeTranslation(0, 1.6, 0), { color: '#4a3523' });
-      B.add(new THREE.IcosahedronGeometry(1, 0), new THREE.Matrix4().compose(V3(0, 5.2, 0), new THREE.Quaternion(), V3(2.8, 3.2, 2.8)), { color: look.overcast ? '#2f4f31' : '#2e6033' });
-      B.add(new THREE.IcosahedronGeometry(1, 0), new THREE.Matrix4().compose(V3(0.5, 7.3, 0.3), new THREE.Quaternion().setFromEuler(new THREE.Euler(0.4, 0.7, 0)), V3(1.9, 2.0, 1.9)), { color: look.overcast ? '#375a38' : '#3a7440' });
-      const tg = G(B.build());
       const spots = [];
-      const step = 26;
+      const treeImg = imgOk('tree');
+      const step = treeImg ? 15 : 26;
       for (let k = 0; k * step < L; k++) {
         const s = k * step, home = s < hr1 + 40 || s > L + hr0 - 40;
         const f = frame(s);
-        if (!home) { const p = W3(f, outerEdge - 18 + hash01(k, 1) * 30, 0); spots.push([p.x, p.z, 0.8 + hash01(k, 2) * 0.6, k]); }
+        if (!home) {
+          const p = W3(f, outerEdge - 18 + hash01(k, 1) * 30, 0); spots.push([p.x, p.z, 0.8 + hash01(k, 2) * 0.6, k]);
+          if (treeImg && hash01(k, 6) < 0.7) { const q = W3(f, outerEdge + 14 + hash01(k, 7) * 40, 0); spots.push([q.x, q.z, 0.9 + hash01(k, 8) * 0.7, k + 2000]); }
+        }
         const ut = innerEdge - 34 - hash01(k, 4) * 30;
         if (hash01(k, 3) < 0.55 && !home && -ut < tr.r - 6) { const p = W3(f, ut, 0); spots.push([p.x, p.z, 0.7 + hash01(k, 5) * 0.6, k + 1000]); }
       }
-      const im = new THREE.InstancedMesh(tg, lambert({ vertexColors: true }), spots.length);
+      let tg, tm;
+      if (treeImg) {
+        // 板絵（左半分＝正面から、右半分＝横から）。高さ 5.1m の木を 2.2〜3.5 倍に
+        const B = new Builder();
+        const hw = 2.565, y0 = -0.07, y1 = 5.06;
+        for (const [ax, u0] of [[0, 0], [1, 0.5]]) {
+          const a = ax ? V3(0, y0, -hw) : V3(-hw, y0, 0), b = ax ? V3(0, y0, hw) : V3(hw, y0, 0);
+          const c = b.clone().setY(y1), d = a.clone().setY(y1);
+          B.quad(a, b, c, d, { uvs: [[u0 + 0.002, 0], [u0 + 0.498, 0], [u0 + 0.498, 1], [u0 + 0.002, 1]] });
+        }
+        tg = G(B.build());
+        // 光は板絵に描いてあるので、光を受けない材質で（裏から見ても暗くならない）
+        tm = M(new THREE.MeshBasicMaterial({ map: T(imgTex('tree', false, aniso)), alphaTest: 0.45, side: THREE.DoubleSide, color: lin(look.overcast ? '#9fae9c' : '#c6d6b4') }));
+      } else {
+        const B = new Builder({ color: true });
+        B.add(new THREE.CylinderGeometry(0.22, 0.32, 3.2, 5, 1, true), new THREE.Matrix4().makeTranslation(0, 1.6, 0), { color: '#4a3523' });
+        B.add(new THREE.IcosahedronGeometry(1, 0), new THREE.Matrix4().compose(V3(0, 5.2, 0), new THREE.Quaternion(), V3(2.8, 3.2, 2.8)), { color: look.overcast ? '#2f4f31' : '#2e6033' });
+        B.add(new THREE.IcosahedronGeometry(1, 0), new THREE.Matrix4().compose(V3(0.5, 7.3, 0.3), new THREE.Quaternion().setFromEuler(new THREE.Euler(0.4, 0.7, 0)), V3(1.9, 2.0, 1.9)), { color: look.overcast ? '#375a38' : '#3a7440' });
+        tg = G(B.build());
+        tm = lambert({ vertexColors: true });
+      }
+      const im = new THREE.InstancedMesh(tg, tm, spots.length);
       const o = new THREE.Object3D();
-      spots.forEach(([x, z, sc, id], i) => { o.position.set(x, 0, z); o.rotation.set(0, hash01(id, 9) * TAU, 0); o.scale.set(sc, sc * (0.85 + hash01(id, 8) * 0.4), sc); o.updateMatrix(); im.setMatrixAt(i, o.matrix); });
+      spots.forEach(([x, z, sc, id], i) => {
+        const k = treeImg ? 2.3 * sc : sc;
+        o.position.set(x, 0, z); o.rotation.set(0, hash01(id, 9) * TAU, 0); o.scale.set(k, k * (0.85 + hash01(id, 8) * 0.4), k); o.updateMatrix(); im.setMatrixAt(i, o.matrix);
+      });
       im.instanceMatrix.needsUpdate = true;
       scene.add(im);
     }
@@ -1235,7 +1675,7 @@
         B.box((GQ0 + GQ1) / 2, 2.0, z, GQ1 - GQ0 + 0.4, 3.6, 0.8, 0, { color: greenD });
         for (const q of [GQ0 + 0.4, GQ1 - 0.4]) B.add(new THREE.CylinderGeometry(0.4, 0.4, 0.25, 10), new THREE.Matrix4().compose(V3(q, 0.4, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0)), V3(1, 1, 1)), { color: '#202020' });
       }
-      gate.add(new THREE.Mesh(G(B.build()), lambert({ vertexColors: true })));
+      { const gm = new THREE.Mesh(G(B.build()), lambert({ vertexColors: true })); gm.castShadow = shadowOn; gate.add(gm); }
       // 枠の番号（前の梁の前と、後ろの梁の後ろ）
       const cv = canvasOf(512, 128), g = cv.getContext('2d');
       g.fillStyle = '#ffffff'; g.fillRect(0, 0, 512, 128);
@@ -1287,9 +1727,45 @@
     scene.add(new THREE.Mesh(G(props.build()), lambert({ vertexColors: true, side: THREE.DoubleSide })));
 
     // ---- 空・山並み・遠くの林 ----
-    const sky = new THREE.Mesh(G(new THREE.SphereGeometry(5000, 32, 16)), M(new THREE.MeshBasicMaterial({ map: T(texOf(skyCanvas(look), false, 1)), side: THREE.BackSide, fog: false, depthWrite: false })));
+    // 素材の空：全天の上を切り出した絵を、内側から見る球に貼る。太陽は向こう正面の側（中継のカメラの後ろ）に来るように回す
+    let sky;
+    const sunDir = new THREE.Vector3(-0.5, 1, 0.35).normalize();
+    if (skyImg) {
+      const SUN_U = look.overcast ? 0.6016 : 0.5967;   // 絵の中の太陽の横の位置（0〜1）
+      const f0 = frame(0), fwd = V3(f0.fx, 0, -f0.fy), out = V3(-sign * f0.fy, 0, -sign * f0.fx);
+      const sh = out.clone().multiplyScalar(-0.8).addScaledVector(fwd, -0.6).normalize();  // 太陽の水平の向き
+      const phiS = Math.atan2(sh.z, sh.x), off = SUN_U - 0.5 - phiS / TAU;
+      sunDir.set(sh.x * Math.cos(look.sunEl), Math.sin(look.sunEl), sh.z * Math.cos(look.sunEl));
+      const g = G(new THREE.SphereGeometry(5000, 48, 24));
+      const P = g.attributes.position, UV = g.attributes.uv;
+      for (let i = 0; i < P.count; i++) {
+        const x = P.getX(i), y = P.getY(i), z = P.getZ(i), r = Math.hypot(x, y, z) || 1;
+        UV.setXY(i, 1 - UV.getX(i) + off, skyV(y / r));
+      }
+      const st = T(new THREE.Texture(IMG[look.sky]));
+      st.wrapS = THREE.RepeatWrapping; st.encoding = THREE.sRGBEncoding; st.anisotropy = 1; st.needsUpdate = true;
+      sky = new THREE.Mesh(g, M(new THREE.MeshBasicMaterial({ map: st, side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: false })));
+      // 映り込み（環境の光）：空の絵の下に地面の色を足した全天の絵から作る
+      const ec = canvasOf(512, 256), eg = ec.getContext('2d');
+      const ox = Math.round(off * 512), ch = Math.round(256 * SKY_CROP);
+      for (const dx of [-512, 0, 512]) eg.drawImage(IMG[look.sky], dx - ox, 0, 512, ch);
+      const gr = eg.createLinearGradient(0, ch, 0, 256);
+      gr.addColorStop(0, fogCol); gr.addColorStop(0.08, look.overcast ? '#5e6a55' : '#6e8a4c'); gr.addColorStop(1, '#3a4a2c');
+      eg.fillStyle = gr; eg.fillRect(0, ch, 512, 256 - ch);
+      const et = new THREE.CanvasTexture(ec);
+      et.mapping = THREE.EquirectangularReflectionMapping; et.encoding = THREE.sRGBEncoding;
+      try {
+        const pm = new THREE.PMREMGenerator(renderer);
+        const env = pm.fromEquirectangular(et).texture;
+        pm.dispose(); et.dispose();
+        scene.environment = T(env);
+      } catch (e) { et.dispose(); }
+    } else {
+      sky = new THREE.Mesh(G(new THREE.SphereGeometry(5000, 32, 16)), M(new THREE.MeshBasicMaterial({ map: T(texOf(skyCanvas(look), false, 1)), side: THREE.BackSide, fog: false, depthWrite: false })));
+    }
     sky.renderOrder = -10;
     scene.add(sky);
+    sun.position.copy(sunDir).multiplyScalar(150);
     function ring(R, hf, top, bot, seed) {
       const n = 160, pos = [], col = [], idx = [];
       const ct = new THREE.Color(top), cb = new THREE.Color(bot);
@@ -1303,44 +1779,54 @@
       g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
       g.setIndex(idx);
-      const m = new THREE.Mesh(g, M(new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, side: THREE.DoubleSide })));
+      // 色はそのまま出す（線形に直した色を、色の調子をかけずに）
+      const m = new THREE.Mesh(g, M(new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, side: THREE.DoubleSide, toneMapped: false })));
       scene.add(m);
     }
-    const haze = (c, k) => { const a = new THREE.Color(c), b = new THREE.Color(look.skyHor); return a.lerp(b, k); };
-    ring(3600, a => 150 + 90 * Math.sin(3 * a + 1) + 60 * Math.sin(7 * a + 2.1) + 30 * Math.sin(13 * a + 0.4) + 16 * Math.sin(29 * a), haze(look.mount, 0.25), haze(look.mount, 0.75));
-    ring(2700, a => 60 + 34 * Math.sin(5 * a + 0.3) + 22 * Math.sin(11 * a + 1.7) + 10 * Math.sin(23 * a + 0.9), haze(look.mount2, 0.2), haze(look.mount2, 0.6));
-    ring(1500, a => 22 + 7 * Math.sin(37 * a) + 5 * Math.sin(61 * a + 1.3) + 4 * Math.sin(97 * a + 0.2), haze(look.woods, 0.18), haze(look.woods, 0.35));
+    const hazeTo = skyImg ? fogCol : look.skyHor;
+    const haze = (c, k) => { const a = new THREE.Color(c), b = new THREE.Color(hazeTo); const m = a.lerp(b, k); return LIN ? m.convertSRGBToLinear() : m; };
+    const hk = skyImg ? 0.2 : 0;
+    ring(3600, a => 150 + 90 * Math.sin(3 * a + 1) + 60 * Math.sin(7 * a + 2.1) + 30 * Math.sin(13 * a + 0.4) + 16 * Math.sin(29 * a), haze(look.mount, 0.25 + hk * 1.5), haze(look.mount, 0.75 + hk));
+    ring(2700, a => 60 + 34 * Math.sin(5 * a + 0.3) + 22 * Math.sin(11 * a + 1.7) + 10 * Math.sin(23 * a + 0.9), haze(look.mount2, 0.2 + hk * 1.4), haze(look.mount2, 0.6 + hk));
+    ring(1500, a => 22 + 7 * Math.sin(37 * a) + 5 * Math.sin(61 * a + 1.3) + 4 * Math.sin(97 * a + 0.2), haze(look.woods, 0.18 + hk), haze(look.woods, 0.35 + hk));
 
     // ---- 馬 ----
     // 形は近く・遠くの2つを全頭で使い回す。馬ごとに違うのは絵（毛色・勝負服・ゼッケン）と、馬具の骨を見せるかだけ
-    const hgeo = G(horseGeometry(1)), hgeoLo = G(horseGeometry(0));
+    // 騎手の素材（GLB）があれば、馬の形からは騎手を抜き、騎手は別の形で描く（手綱・ムチ・鐙は馬の形のまま）
+    const hgeo = G(horseGeometry(1, { noJockey: useJockey })), hgeoLo = G(horseGeometry(0, { noJockey: useJockey }));
+    if (photo && !HORSE_NOR) HORSE_NOR = horseNormalCanvas(512);
+    const norTex = photo ? T(texOf(HORSE_NOR, false, aniso, true)) : null;
     const H = [];
     for (let i = 0; i < nH; i++) {
       const h0 = horsesIn[i] || {};
       const h = Object.assign({}, h0, { age: ageOf(h0), gear: gearOf(h0) });
-      const tex = T(texOf(paintHorse(h), false, aniso));
-      const L = coatLook(h.coat, h.age);
-      const mat = M(new THREE.MeshPhongMaterial({ map: tex, skinning: true, shininess: 18 + 30 * (L.gloss || 0), specular: new THREE.Color(0x111111).lerp(new THREE.Color(0x3a3a3a), L.gloss || 0) }));
+      const tex = T(texOf(paintHorse(h, photo ? 512 : 256), false, aniso));
+      const L = coatLook(h.coat, h.age), gl = L.gloss || 0;
+      const mat = photo
+        ? M(new THREE.MeshStandardMaterial({ map: tex, normalMap: norTex, normalScale: new THREE.Vector2(1, 1), skinning: true, roughness: 0.56 - 0.24 * gl, metalness: 0, envMapIntensity: 0.9 }))
+        : M(new THREE.MeshPhongMaterial({ map: tex, skinning: true, shininess: 18 + 30 * gl, specular: new THREE.Color(0x111111).lerp(new THREE.Color(0x3a3a3a), gl) }));
       const mesh = new THREE.SkinnedMesh(hgeo, mat);
-      const bones = BONES.map(() => new THREE.Bone());
-      BONES.forEach(([par, x, y, z], k) => {
-        if (par < 0) bones[k].position.set(x, y, z);
-        else { const p = BONES[par]; bones[k].position.set(x - p[1], y - p[2], z - p[3]); bones[par].add(bones[k]); }
-      });
+      mesh.castShadow = shadowOn;
+      const bones = horseBones();
       mesh.add(bones[0]);
       mesh.updateMatrixWorld(true);
       mesh.bind(new THREE.Skeleton(bones));
       // 着けていない馬具は骨を縮めて消す
       for (const [k, bi] of Object.entries(GEAR)) if (!h.gear[k]) bones[bi].scale.set(0, 0, 0);
       mesh.rotation.order = 'YXZ';
+      let jockey = null;
+      if (useJockey) {
+        try { jockey = makeJockey(h, M); mesh.add(jockey.root); } catch (e) { jockey = null; }
+      }
       scene.add(mesh);
       const seed = hash01(strHash(h.name || i), 3);
-      H.push({ mesh, bones, num: h.num != null ? h.num : i + 1, seed, lead: seed < 0.5 ? 1 : -1, lean: 0, yaw: 0, lane: null });
+      H.push({ mesh, bones, jockey, num: h.num != null ? h.num : i + 1, seed, lead: seed < 0.5 ? 1 : -1, lean: 0, yaw: 0, lane: null });
     }
     // 丸い影の板（まとめて1回）
     const shTexC = canvasOf(64, 64), sg = shTexC.getContext('2d');
     const rg = sg.createRadialGradient(32, 32, 2, 32, 32, 31);
-    rg.addColorStop(0, 'rgba(0,0,0,0.55)'); rg.addColorStop(0.6, 'rgba(0,0,0,0.3)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    const so = shadowOn ? 0.5 : 1; // 太陽の影があるときは、足元の暗がりだけ
+    rg.addColorStop(0, `rgba(0,0,0,${0.55 * so})`); rg.addColorStop(0.6, `rgba(0,0,0,${0.3 * so})`); rg.addColorStop(1, 'rgba(0,0,0,0)');
     sg.fillStyle = rg; sg.fillRect(0, 0, 64, 64);
     const shGeo = G(new THREE.PlaneGeometry(1, 1)); shGeo.rotateX(-Math.PI / 2);
     const shadows = new THREE.InstancedMesh(shGeo, M(new THREE.MeshBasicMaterial({ map: T(texOf(shTexC, false, 1)), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 })), Math.max(1, nH));
@@ -1349,10 +1835,89 @@
     scene.add(shadows);
     // 自分の馬の目印（黄色い輪）
     const ringGeo = G(new THREE.RingGeometry(0.95, 1.12, 32)); ringGeo.rotateX(-Math.PI / 2);
-    const mark = new THREE.Mesh(ringGeo, M(new THREE.MeshBasicMaterial({ color: 0xffd34d, transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 })));
+    const mark = new THREE.Mesh(ringGeo, M(new THREE.MeshBasicMaterial({ color: lin(0xffd34d), transparent: true, opacity: 0.85, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 })));
     mark.renderOrder = 2;
     mark.visible = false;
     scene.add(mark);
+
+    // ---- 蹴り上げ：ダートは砂ぼこり（重・不良は泥の粒）、芝は土くれ。点の絵をまとめて1回で描く ----
+    const dust = photo && !setup.noDust ? makeDust() : null;
+    function makeDust() {
+      const N = 480, puff = look.dirt && look.wet < 2;
+      const pos = new Float32Array(N * 3), vel = new Float32Array(N * 3), age = new Float32Array(N).fill(99), life = new Float32Array(N).fill(1);
+      const size = new Float32Array(N), alpha = new Float32Array(N), s0 = new Float32Array(N), grow = new Float32Array(N), a0 = new Float32Array(N), shade = new Float32Array(N).fill(1), grain = new Uint8Array(N);
+      const g = G(new THREE.BufferGeometry());
+      const pa = new THREE.BufferAttribute(pos, 3), sa = new THREE.BufferAttribute(size, 1), aa = new THREE.BufferAttribute(alpha, 1), ha = new THREE.BufferAttribute(shade, 1);
+      for (const at of [pa, sa, aa, ha]) at.setUsage(THREE.DynamicDrawUsage);
+      g.setAttribute('position', pa); g.setAttribute('aSize', sa); g.setAttribute('aAlpha', aa); g.setAttribute('aShade', ha);
+      g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
+      const pc = canvasOf(64, 64), pg = pc.getContext('2d');
+      const rg = pg.createRadialGradient(32, 32, 0, 32, 32, 31);
+      if (puff) { rg.addColorStop(0, 'rgba(255,255,255,0.9)'); rg.addColorStop(0.45, 'rgba(255,255,255,0.45)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); }
+      else { rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(0.55, 'rgba(255,255,255,0.95)'); rg.addColorStop(0.75, 'rgba(255,255,255,0.2)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); }
+      pg.fillStyle = rg; pg.fillRect(0, 0, 64, 64);
+      const col = look.dirt ? (puff ? '#e8cfa6' : '#5a4430') : '#4e4128';
+      const U = { uMap: { value: T(texOf(pc, false, 1)) }, uCol: { value: lin(col) }, uScale: { value: 300 }, uLight: { value: look.overcast ? 0.75 : 1.15 } };
+      const mat = M(new THREE.ShaderMaterial({
+        uniforms: U, transparent: true, depthWrite: false,
+        vertexShader: `attribute float aSize; attribute float aAlpha; attribute float aShade; varying float vA; varying float vS; uniform float uScale;
+          void main() { vA = aAlpha; vS = aShade; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = aSize * uScale / max(0.5, -mv.z); gl_Position = projectionMatrix * mv; }`,
+        fragmentShader: `uniform sampler2D uMap; uniform vec3 uCol; uniform float uLight; varying float vA; varying float vS;
+          void main() { vec4 t = texture2D(uMap, gl_PointCoord); float a = t.a * vA; if (a < 0.01) discard; gl_FragColor = vec4(uCol * uLight * vS, a);
+          #include <tonemapping_fragment>
+          #include <encodings_fragment>
+          }`,
+      }));
+      const pts = new THREE.Points(g, mat);
+      pts.frustumCulled = false;
+      pts.renderOrder = 3;
+      scene.add(pts);
+      const acc = new Float32Array(Math.max(1, nH));
+      let cur = 0, cnt = 0;
+      return {
+        U,
+        emit(i, p, f, v, ph, dt, lead, d2) {
+          if (!(dt > 0) || d2 > 95 * 95) return;
+          const rate = (puff ? 44 : 16) * clamp((v - 6) / 10, 0, 1);
+          acc[i] += rate * dt;
+          const fx = f.fx, fz = -f.fy, lx = -sign * f.fy, lz = -sign * f.fx;   // 前と外の向き（3D）
+          while (acc[i] >= 1) {
+            acc[i] -= 1;
+            const k = cur; cur = (cur + 1) % N; cnt++;
+            const h1 = hash01(cnt, i * 7 + 1), h2 = hash01(cnt, i * 7 + 2), h3 = hash01(cnt, i * 7 + 3), h4 = hash01(cnt, i * 7 + 4);
+            const back = -0.55 - h1 * 0.6, side = (h2 - 0.5) * 0.55;
+            pos[k * 3] = p.x + fx * back + lx * side; pos[k * 3 + 1] = f.e + 0.06; pos[k * 3 + 2] = -p.y + fz * back + lz * side;
+            const vb = puff ? 1.2 + h3 * 2.6 : 2.0 + h3 * 3.0, vs = (h4 - 0.5) * 1.6, vu = puff ? 0.9 + h4 * 1.6 : 2.2 + h1 * 2.6;
+            vel[k * 3] = -fx * vb + lx * vs; vel[k * 3 + 1] = vu; vel[k * 3 + 2] = -fz * vb + lz * vs;
+            age[k] = 0;
+            // ダートの乾いた日は、砂けむり（大きく薄い）と砂粒（小さく暗い）を混ぜる
+            const gr = puff && h4 < 0.35;
+            grain[k] = gr || !puff ? 1 : 0;
+            if (gr) { vel[k * 3 + 1] = 2.4 + h1 * 2.2; vel[k * 3] *= 1.4; vel[k * 3 + 2] *= 1.4; }
+            life[k] = gr ? 0.5 + h2 * 0.25 : puff ? 1.0 + h2 * 0.9 : 0.45 + h2 * 0.3;
+            s0[k] = gr ? 0.06 + h3 * 0.05 : puff ? 0.45 + h3 * 0.4 : 0.07 + h3 * 0.08;
+            grow[k] = gr ? 0 : puff ? 1.8 + h1 * 1.0 : 0;
+            a0[k] = gr ? 0.95 : puff ? 0.42 + h4 * 0.3 : 0.9;
+            shade[k] = gr ? 0.55 : puff ? 0.95 + h2 * 0.2 : 1;
+          }
+        },
+        update(dt, scale) {
+          U.uScale.value = scale;
+          const drag0 = puff ? 2.2 : 0.4;
+          for (let k = 0; k < N; k++) {
+            if (age[k] >= life[k]) { if (alpha[k] !== 0) alpha[k] = 0; continue; }
+            age[k] += dt;
+            const gv = grain[k] ? 9.8 : 1.6, e = Math.max(0, 1 - (grain[k] ? 0.4 : drag0) * dt);
+            vel[k * 3] *= e; vel[k * 3 + 2] *= e; vel[k * 3 + 1] = vel[k * 3 + 1] * e - gv * dt;
+            pos[k * 3] += vel[k * 3] * dt; pos[k * 3 + 1] = Math.max(0.02, pos[k * 3 + 1] + vel[k * 3 + 1] * dt); pos[k * 3 + 2] += vel[k * 3 + 2] * dt;
+            const u = age[k] / life[k];
+            size[k] = s0[k] * (1 + grow[k] * u);
+            alpha[k] = u >= 1 ? 0 : a0[k] * Math.pow(1 - u, 1.4) * Math.min(1, u * 8);
+          }
+          pa.needsUpdate = true; sa.needsUpdate = true; aa.needsUpdate = true; ha.needsUpdate = true;
+        },
+      };
+    }
 
     // ---- 1コマ ----
     const mem = { t: null, cam: null, camMode: null, camU: null };
@@ -1402,12 +1967,21 @@
         const pitch = Math.atan((elev(s - 1) - elev(s + 1)) / 2);
         Hh.mesh.position.set(p.x, f.e, -p.y);
         // 近い馬は細かい形、遠い馬は粗い形（カメラは前のコマの位置）
-        Hh.mesh.geometry = camera.position.distanceToSquared(Hh.mesh.position) < 28 * 28 ? hgeo : hgeoLo;
+        const d2 = camera.position.distanceToSquared(Hh.mesh.position), near = d2 < 28 * 28;
+        Hh.mesh.geometry = near ? hgeo : hgeoLo;
         Hh.mesh.rotation.set(sign * Hh.lean, yawOf(f) + sign * Hh.yaw, pitch);
         const ph = ((x / STRIDE + Hh.num * 0.137) % 1 + 1) % 1;
         const sp = moving ? clamp(v / 16, 0.35, 1.15) : 0;
         const push = st.push != null ? st.push : (moving ? clamp((v - 15.2) / 2, 0, 1) : 0);
         poseHorse(Hh, ph, sp, push, t, Hh.seed, st.whip, st.pose);
+        // 騎手（素材の形）：手作りの骨に合わせる。遠い馬（120m より先）は、はじめの1回のあとは合わせ直さない
+        const J = Hh.jockey;
+        if (J) {
+          if (J.lo) { J.hi.visible = near; J.lo.visible = !near; }
+          if (d2 < 120 * 120 || !J.posed) { Hh.mesh.updateMatrixWorld(true); poseJockey(J, Hh.bones); J.posed = true; }
+        }
+        // 蹴り上げ
+        if (moving && dust) dust.emit(i, p, f, v, ph, dt, Hh.lead, d2);
         // 影
         tmpO.position.set(p.x, f.e + 0.03, -p.y);
         tmpO.rotation.set(0, yawOf(f), 0);
@@ -1493,7 +2067,23 @@
       camera.position.copy(mem.cam.p);
       camera.lookAt(mem.cam.l);
       sky.position.copy(camera.position);
+      // 太陽の影：見ている所（騎乗は自分の馬、中継は見ている中心）のまわりだけ。影の升目にそろえて、動いてもちらつかないように
+      if (shadowOn) {
+        const box = camMode === 'ride' ? 26 : camMode === 'gate' ? 24 : 44;
+        if (box !== shadowBox) {
+          shadowBox = box;
+          const sc = sun.shadow.camera; sc.left = -box; sc.right = box; sc.top = box; sc.bottom = -box; sc.updateProjectionMatrix();
+        }
+        const fc = camMode === 'ride' ? W3(me.f, me.u, me.f.e + 1) : mem.cam.l;
+        const tx = 2 * box / sun.shadow.mapSize.x;
+        const cx = Math.round(fc.x / tx) * tx, cz = Math.round(fc.z / tx) * tx;
+        sun.target.position.set(cx, fc.y, cz);
+        sun.position.set(cx + sunDir.x * 150, fc.y + sunDir.y * 150, cz + sunDir.z * 150);
+        sun.target.updateMatrixWorld();
+      }
+      if (dust) dust.update(dt, VH * renderer.getPixelRatio() / 2 / Math.tan(camera.fov * Math.PI / 360));
       renderer.render(scene, camera);
+      watchPerf();
       // 画面に出た馬の頭の上の位置
       const out = [];
       camera.updateMatrixWorld();
@@ -1509,9 +2099,27 @@
       return { horses: out };
     }
 
+    // 重さの見張り：60コマのうち 6 割以上が 38ms（26fps）より遅ければ、影 → 画素の細かさの順に落とす
+    const perf = { last: 0, n: 0, slow: 0, level: 0, dpr: 1, cap: mobile ? 1.25 : 1.5 };
+    function watchPerf() {
+      if (typeof performance === 'undefined') return;
+      const now = performance.now(), d = perf.last ? now - perf.last : 0;
+      perf.last = now;
+      if (!(d > 0) || d > 250) return; // 止まっていた（タブの切り替え・一時停止）
+      perf.n++; if (d > 38) perf.slow++;
+      if (perf.n < 60) return;
+      if (perf.slow >= 36 && perf.level < 2) {
+        perf.level++;
+        if (perf.level === 1 && shadowOn && sun.castShadow) { sun.castShadow = false; renderer.shadowMap.enabled = false; }
+        else { perf.cap = 1; resize(VW, VH, perf.dpr); if (perf.level === 1) perf.level = 2; }
+      }
+      perf.n = 0; perf.slow = 0;
+    }
+
     function resize(w, h, dpr) {
       VW = Math.max(1, w | 0); VH = Math.max(1, h | 0);
-      renderer.setPixelRatio(Math.min(dpr || 1, 1.5));
+      perf.dpr = dpr || 1;
+      renderer.setPixelRatio(Math.min(dpr || 1, perf.cap));
       renderer.setSize(VW, VH, false);
       camera.aspect = VW / VH;
       camera.updateProjectionMatrix();
@@ -1523,11 +2131,12 @@
       for (const m of owned.mats) m.dispose();
       for (const t of owned.texs) t.dispose();
       for (const h of H) if (h.mesh.skeleton && h.mesh.skeleton.dispose) h.mesh.skeleton.dispose();
+      if (scene.environment) scene.environment = null;
       scene.clear ? scene.clear() : null;
       renderer.dispose();
       if (renderer.forceContextLoss) renderer.forceContextLoss();
     }
-    const info = () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles });
+    const info = () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, photo, jockey: useJockey, shadow: shadowOn && sun.castShadow, dust: !!dust, level: perf.level });
 
     return { render, resize, dispose, info, renderer, scene, camera };
   };

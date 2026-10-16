@@ -714,6 +714,92 @@ check('look: 毛色の表に抜けがない・芦毛は年を取ると白い・�
   return `毛色 ${coats.size}・馬具 ${Object.keys(g).length}頭・三角形 ${out.join(' / ')}`;
 });
 
+check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中・騎手の GLB の形・騎手が手綱と鐙に届く', () => {
+  const vm = require('vm'), fs = require('fs'), path = require('path');
+  const ROOT = path.join(__dirname, '..'), dir = path.join(ROOT, 'assets');
+  const credits = fs.readFileSync(path.join(dir, 'CREDITS.md'), 'utf8');
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const { LIST } = require('../assets/pack_assets.js');
+  const files = fs.readdirSync(dir).filter(f => /\.js$/.test(f) && f !== 'pack_assets.js');
+  const uris = {};
+  let total = 0;
+  for (const f of files) {
+    const key = f.replace(/\.js$/, ''), a = LIST.find(x => x.key === key);
+    assert(a, `${f} が assets/pack_assets.js の表に無い`);
+    const row = credits.split('\n').find(l => l.includes('`assets/' + f + '`'));
+    assert(row, `${f} が assets/CREDITS.md に無い`);
+    assert(/CC0|CC-BY/.test(row) && /https:\/\//.test(row), `${f} の行にライセンス（CC0・CC-BY）か URL が無い`);
+    assert(html.includes(`src="assets/${f}"`), `${f} を index.html で読んでいない`);
+    const size = fs.statSync(path.join(dir, f)).size;
+    total += size;
+    assert(size <= 1.5 * 1024 * 1024, `${f} が 1.5MB を超える（${(size / 1048576).toFixed(2)}MB）`);
+    const ctx = {}; ctx.globalThis = ctx; vm.createContext(ctx);
+    vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx);
+    const uri = ctx.HS && ctx.HS.ASSETS && ctx.HS.ASSETS[key];
+    assert(typeof uri === 'string' && uri.startsWith(`data:${a.mime};base64,`), `${f} が HS.ASSETS.${key} に ${a.mime} の data URI を載せていない`);
+    uris[key] = uri;
+  }
+  for (const a of LIST) assert(files.includes(a.key + '.js'), `assets/${a.key}.js が無い`);
+  assert(total <= 15 * 1024 * 1024, `素材の合計 ${(total / 1048576).toFixed(1)}MB が 15MB を超える`);
+  // 読む順：three → GLTFLoader・SkeletonUtils、素材 → race3d.js
+  const at = f => html.indexOf(`src="${f}"`);
+  assert(at('lib/three.min.js') < at('lib/GLTFLoader.js') && at('lib/GLTFLoader.js') < at('lib/SkeletonUtils.js') && at('lib/SkeletonUtils.js') < at('js/ui/race3d.js'), 'lib の読む順が違う');
+  for (const f of files) assert(at('assets/' + f) < at('js/ui/race3d.js'), `assets/${f} を race3d.js より前に読んでいない`);
+  for (const f of ['lib/GLTFLoader.js', 'lib/SkeletonUtils.js']) assert(credits.includes('`' + f + '`') && fs.existsSync(path.join(ROOT, f)), `${f} が CREDITS に無いか、ファイルが無い`);
+  // 騎手の GLB：形の数・骨・部位の色
+  const glb = Buffer.from(uris.jockey.split(',')[1], 'base64');
+  assert(glb.readUInt32LE(0) === 0x46546c67 && glb.readUInt32LE(4) === 2, '騎手の GLB の頭が glTF 2 でない');
+  const jl = glb.readUInt32LE(12), J = JSON.parse(glb.slice(20, 20 + jl).toString('utf8'));
+  const tri = name => { const nd = J.nodes.find(x => x.name === name && x.mesh != null); assert(nd, `騎手の形 ${name} が無い`); const m = J.meshes[nd.mesh]; let n = 0; for (const p of m.primitives) { assert(p.attributes.COLOR_0 != null && p.attributes.JOINTS_0 != null, `${name} に部位の色か骨の重みが無い`); n += J.accessors[p.indices].count / 3; } return n; };
+  const tHi = tri('Jockey'), tLo = tri('JockeyLo');
+  assert(tHi <= 3500 && tLo <= 1200 && tLo < tHi, `騎手の三角形 ${tHi} / ${tLo} が多すぎる`);
+  const names = J.skins[0].joints.map(i => J.nodes[i].name);
+  assert(names.length <= 32, `騎手の骨 ${names.length} 本は多すぎる`);
+  for (const n of ['pelvis', 'spine_01', 'spine_03', 'neck_01', 'Head', 'upperarm_l', 'lowerarm_l', 'hand_l', 'upperarm_r', 'lowerarm_r', 'hand_r', 'thigh_l', 'calf_l', 'foot_l', 'ball_l', 'thigh_r', 'calf_r', 'foot_r', 'ball_r']) assert(names.includes(n), `騎手の骨 ${n} が無い`);
+  // 騎手の IK：GLB の骨の並びから骨だけを組み、走る姿勢の馬に乗せて、手が手綱・足が鐙・腰が鞍の上へ来るか
+  if (!THREE.SkeletonUtils) vm.runInThisContext(fs.readFileSync(path.join(ROOT, 'lib/SkeletonUtils.js'), 'utf8'), { filename: 'lib/SkeletonUtils.js' });
+  const joints = new Set(J.skins[0].joints);
+  const build = i => {
+    const nd = J.nodes[i], o = joints.has(i) ? new THREE.Bone() : new THREE.Group();
+    o.name = nd.name || '';
+    if (nd.translation) o.position.fromArray(nd.translation);
+    if (nd.rotation) o.quaternion.fromArray(nd.rotation);
+    if (nd.scale) o.scale.fromArray(nd.scale);
+    for (const c of nd.children || []) if (J.nodes[c].mesh == null) o.add(build(c));
+    return o;
+  };
+  const src = new THREE.Group();
+  for (const i of J.scenes[J.scene || 0].nodes) if (J.nodes[i].mesh == null) src.add(build(i));
+  const IK = HS.Race3D._ik;
+  const worst = { hand: 0, foot: 0, hip: 0 };
+  for (const [ph, push, pose] of [[0.1, 0, null], [0.45, 1, null], [0.8, 0.5, 1.0]]) {
+    const hb = IK.horseBones(), horse = new THREE.Group();
+    horse.add(hb[0]);
+    const Jk = IK.makeJockey({ silks: { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, cap: '#e53935' }, src);
+    horse.add(Jk.root);
+    horse.position.set(12, 0.5, -30); horse.rotation.set(0.05, 0.9, 0.02);
+    IK.poseHorse({ bones: hb, lead: 1 }, ph, 1, push, 10, 0.3, null, pose);
+    horse.updateMatrixWorld(true);
+    IK.poseJockey(Jk, hb);
+    const B = Jk.bones, wp = o => new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
+    for (const [s, fa, sd] of [['l', 28, -1], ['r', 30, 1]]) {
+      if (pose == null) worst.hand = Math.max(worst.hand, wp(B['hand_' + s]).distanceTo(IK.atBone(hb, fa, 0.8, 1.815, sd * 0.1)));
+      worst.foot = Math.max(worst.foot, wp(B['foot_' + s]).distanceTo(IK.atBone(hb, 1, 0.235, 1.37, sd * 0.29)));
+      const lz = horse.worldToLocal(wp(B['hand_' + s])).z, fz = horse.worldToLocal(wp(B['foot_' + s])).z;
+      assert(Math.sign(lz) === sd && Math.sign(fz) === sd, `騎手の${s === 'l' ? '左' : '右'}の手足が馬の反対の側にある`);
+    }
+    worst.hip = Math.max(worst.hip, wp(B.pelvis).distanceTo(IK.atBone(hb, 24, -0.04, 1.9, 0)));
+    const head = horse.worldToLocal(wp(B.Head)), pel = horse.worldToLocal(wp(B.pelvis));
+    assert(head.y > pel.y + 0.06 && head.x > pel.x + 0.2, `騎手の頭が腰より前・上にない（頭 ${head.toArray().map(v => v.toFixed(2))}・腰 ${pel.toArray().map(v => v.toFixed(2))}）`);
+  }
+  assert(worst.hand < 0.05 && worst.foot < 0.05 && worst.hip < 0.01, `騎手の IK のずれ：手 ${worst.hand.toFixed(3)}・足 ${worst.foot.toFixed(3)}・腰 ${worst.hip.toFixed(3)} m`);
+  // 騎手を抜いた馬の形
+  const g1 = HS.Race3D.horseGeometry(1), g2 = HS.Race3D.horseGeometry(1, { noJockey: true });
+  assert(g2.index.count < g1.index.count, '騎手を抜いた馬の形が小さくならない');
+  g1.dispose(); g2.dispose();
+  return `素材 ${files.length}・合計 ${(total / 1048576).toFixed(2)}MB・騎手 ${tHi}/${tLo} 面・骨 ${names.length}・IK のずれ 手 ${(worst.hand * 100).toFixed(1)}cm 足 ${(worst.foot * 100).toFixed(1)}cm`;
+});
+
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
 process.exit(failures ? 1 : 0);

@@ -13,7 +13,8 @@ function scriptList() {
 function load(opts) {
   opts = opts || {};
   globalThis.HS = undefined;
-  const files = scriptList().filter(f => !f.startsWith('js/ui/') && !f.startsWith('lib/') && !(opts.skip || []).includes(f));
+  // 画面・外のライブラリ・絵の素材（assets/。base64 の絵は Node では使わない）は読まない
+  const files = scriptList().filter(f => !f.startsWith('js/ui/') && !f.startsWith('lib/') && !f.startsWith('assets/') && !(opts.skip || []).includes(f));
   for (const f of files) {
     const full = path.join(opts.dataDir && f.startsWith('data/') && fs.existsSync(path.join(opts.dataDir, path.basename(f))) ? opts.dataDir : ROOT, opts.dataDir && f.startsWith('data/') && fs.existsSync(path.join(opts.dataDir, path.basename(f))) ? path.basename(f) : f);
     if (!fs.existsSync(full)) { if (opts.allowMissing) continue; throw new Error('missing ' + f); }
