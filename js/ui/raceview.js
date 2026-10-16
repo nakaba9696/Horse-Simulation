@@ -7,7 +7,8 @@
 
   // 馬ごとの勝負服（プレイヤーは自分の服、ほかは名前から決める）
   RV.silksOf = function (horse) {
-    if (horse.owner === 'P') return HS.World.get().player.silks;
+    if (horse._silks) return horse._silks; // リプレイ・フリーレースは残した勝負服で
+    if (horse.owner === 'P' && HS.World.get()) return HS.World.get().player.silks;
     const r = U.hashRng('silks:' + (horse.name || horse.id));
     const cols = ['#c8102e', '#003da5', '#ffd100', '#00843d', '#ffffff', '#111111', '#ff6a13', '#7a2182', '#e04e9a', '#8a5a2b', '#5bc2e7', '#a4d65e'];
     const base = r.pick(cols); let sub = r.pick(cols); if (sub === base) sub = base === '#ffffff' ? '#111111' : '#ffffff';

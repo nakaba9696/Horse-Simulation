@@ -19,6 +19,7 @@
     document.body.dataset.screen = st.screen;
     if (st.screen === 'title') { App.setScene('title'); app.innerHTML = UI.screens.title(App.st.titleOpen); App.enter(app, anim); App.titleCanvas(); return; }
     if (st.screen === 'newgame') { App.setScene('title'); app.innerHTML = UI.screens.newgame(st.ng); App.enter(app, anim); App.drawNgSilks(); return; }
+    if (App.pages && App.pages[st.screen]) { App.pages[st.screen](app, anim); return; } // ゲームの外の画面（リプレイ・フリーレース。js/ui/replayui.js・freerace.js）
     if (st.screen === 'editor') { App.setScene('home'); app.innerHTML = UI.screens.editor(st.ed || (st.ed = {})); App.hydrate(app); return; }
     const view = st.view || { name: st.tab };
     const html = UI.screens[view.name] ? UI.screens[view.name](view) : '';
