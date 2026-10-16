@@ -1,6 +1,7 @@
 // スペシャルホースの補い：史実馬のデータ（1955年生〜）より古い名馬。世界の暦には出さず、条件にリーチがかかったレースと、
 // 倒したあとの馬の店にだけ出る（js/core/special.js）。形は data/historic_world.js と同じ。unbeaten＝無敗のまま重ねた勝ち数（条件に使う）。
-// tier:'legend'＝伝説級（グランドフィナーレを勝った馬が次の年のグランドフィナーレに出ると出てくる。ほかのグループには入らない）
+// tier:'legend'＝伝説級（グランドフィナーレを勝った馬が次の年のグランドフィナーレに出ると出てくる。ほかのグループには入らない）。
+// リボーは伝説級にしない：凱旋門賞の連覇という史実の顔があるので、そのグループ（凱旋門賞の連覇）で出てくる
 (function(){
 const HS = globalThis.HS = globalThis.HS || {}; HS.DATA = HS.DATA || {};
 HS.DATA.legendsExtra = [
@@ -18,7 +19,7 @@ HS.DATA.legendsExtra = [
   { name:'クリフジ', born:1940, sex:'牝', coat:'栗毛', sire:'トウルヌソル', dam:'賢藤', rating:98, surface:'芝', distMin:1600, distMax:3200, style:'先行', growth:'普通', retire:1944, wins:['1943東京優駿','1943優駿牝馬','1943菊花賞'], unbeaten:11, jockey:'前田長吉', note:'11戦11勝。日本ダービー・オークス・菊花賞' },
   { name:'サイテーション', tier:'legend', nameEn:'Citation', country:'米', born:1945, sex:'牡', coat:'鹿毛', sire:'ブルリー', dam:'ハイドロプレーン', rating:100, surface:'ダ', distMin:1200, distMax:3200, style:'先行', growth:'普通', retire:1951, wins:['1948ケンタッキーダービー','1948プリークネスステークス','1948ベルモントステークス'], note:'米三冠' },
   { name:'トキノミノル', born:1948, sex:'牡', coat:'栗毛', sire:'セフト', dam:'第二タイランツクヰーン', rating:96, surface:'芝', distMin:1200, distMax:2400, style:'逃げ', growth:'早め', retire:1951, wins:['1951皐月賞','1951東京優駿'], unbeaten:10, jockey:'岩下密政', note:'10戦10勝。皐月賞・日本ダービー' },
-  { name:'リボー', tier:'legend', nameEn:'Ribot', country:'伊', born:1952, sex:'牡', coat:'鹿毛', sire:'テネラニ', dam:'ロマネラ', damsire:'エルグレコ', rating:100, surface:'芝', distMin:1600, distMax:3000, style:'先行', growth:'普通', retire:1956, wins:['1955凱旋門賞','1956キングジョージ6世＆クイーンエリザベスステークス','1956凱旋門賞'], unbeaten:16, jockey:'E.カミーチ', note:'16戦16勝。凱旋門賞連覇' },
+  { name:'リボー', nameEn:'Ribot', country:'伊', born:1952, sex:'牡', coat:'鹿毛', sire:'テネラニ', dam:'ロマネラ', damsire:'エルグレコ', rating:100, surface:'芝', distMin:1600, distMax:3000, style:'先行', growth:'普通', retire:1956, wins:['1955凱旋門賞','1956キングジョージ6世＆クイーンエリザベスステークス','1956凱旋門賞'], unbeaten:16, jockey:'E.カミーチ', note:'16戦16勝。凱旋門賞連覇' },
   { name:'ハクチカラ', born:1953, sex:'牡', coat:'鹿毛', sire:'トビサクラ', dam:'昇城', rating:93, surface:'芝', distMin:1600, distMax:3200, style:'差し', growth:'普通', retire:1959, wins:['1956東京優駿','1957天皇賞（秋）','1957有馬記念'], jockey:'保田隆芳', note:'日本ダービー・天皇賞（秋）・有馬記念' },
 ];
 })();

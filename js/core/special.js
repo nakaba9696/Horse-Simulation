@@ -8,7 +8,7 @@
   const SP = HS.Special = {};
   SP.MAX_IN_RACE = 4;   // 1レースに出てくる数の上限
   // 史実馬のデータに戦績の数が無い、無敗の名馬
-  SP.UNBEATEN = { 'マルゼンスキー': 8 };
+  SP.UNBEATEN = { 'マルゼンスキー': 8, 'ラフィアン': 10 };
 
   // データの勝ち鞍の名前 → いまの番組の G1（短い名）。名前が変わったレースは読み替える
   const ALIAS = { '朝日杯3歳ステークス': '朝日杯フューチュリティステークス', '阪神3歳牝馬ステークス': '阪神ジュベナイルフィリーズ', '中山グランプリ': '有馬記念', '産経大阪杯': '大阪杯' };
@@ -37,12 +37,33 @@
   const other = pairs => (h, race) => { const o = pairs[race.short]; return !!o && won(h, o) && !won(h, race.short); };
   const CLASSIC = ['皐月賞', '日本ダービー', '菊花賞'];
   const g1Count = d => (d.wins || []).filter(x => SP.mapWin(x)).length;
+  // 大レースの勝ち（スペシャルホースの元を決める）。JRA は1984年（グレード制）より前は、いまの G1 のうち当時から格の高かったレースだけ
+  const OLD_BIG = new Set(['皐月賞', '日本ダービー', '菊花賞', '桜花賞', 'オークス', '天皇賞・春', '天皇賞・秋', '有馬記念', '宝塚記念', '安田記念', 'ジャパンC', 'エリザベス女王杯', '秋華賞', '朝日杯FS', '阪神JF']);
+  SP.bigWins = d => (d.wins || []).filter(x => { const k = SP.mapWin(x); return k && (k.region !== 'JRA' || +x.slice(0, 4) >= 1984 || OLD_BIG.has(k.short)); });
+  // 勝ったレースの形（距離・馬場）。データの勝ち鞍は暦から、自分の馬の勝ち鞍は暦の名前と年から
+  const raceOfWin = (name, y) => (HS.DATA.races || []).find(r => r.name === name && r.from <= y && y <= (r.to || 9999)) || null;
+  const winShapes = d => H.winRaces(d);
+  const myG1 = h => (h.gradedWins || []).filter(g => g.grade === 'G1').map(g => raceOfWin(g.race, g.y)).filter(Boolean);
+  const SPRINT = 1400, STAY = 3000;
+  const allRound = rs => (rs.some(r => r.surface === 'ダ') && rs.some(r => r.surface !== 'ダ')) || (rs.some(r => r.dist <= SPRINT) && rs.some(r => r.dist >= STAY));
+  const BEAT_MALES = ['天皇賞・秋', '天皇賞・春', '有馬記念', 'ジャパンC', '宝塚記念'];
   SP.unbeatenOf = d => d.unbeaten || SP.UNBEATEN[d.name] || 0;
   SP.STREAK = 8; // 無敗の名馬が出てくる連勝の数
   SP.GROUPS = [
     { id: 'triple', label: '歴代の三冠馬', note: '皐月賞・日本ダービーを勝って菊花賞へ', finals: ['菊花賞'], legs: sameYear(['皐月賞', '日本ダービー']), member: d => dn(d, '皐月賞') && dn(d, '東京優駿') && dn(d, '菊花賞') },
     { id: 'nikan', label: 'クラシック二冠馬', note: '皐月賞・日本ダービー・菊花賞のどれかを勝って、ほかのクラシックへ', finals: CLASSIC, legs: (h, race) => CLASSIC.filter(n => won(h, n, y => y === race.year)).length === 1 && !won(h, race.short, y => y === race.year), member: d => (dn(d, '皐月賞') ? 1 : 0) + (dn(d, '東京優駿') ? 1 : 0) + (dn(d, '菊花賞') ? 1 : 0) === 2 },
     { id: 'ftriple', label: '名牝（牝馬の二冠）', note: '桜花賞・オークスを勝って秋華賞へ', finals: ['秋華賞'], legs: sameYear(['桜花賞', 'オークス']), member: d => dn(d, '桜花賞') && dn(d, '優駿牝馬') },
+    { id: 'filly', label: '牡馬を破った名牝', note: '牝馬で G1 を勝って、天皇賞・宝塚記念・ジャパンC・有馬記念へ', finals: BEAT_MALES,
+      legs: (h, race) => h.sex === '牝' && (h.gradedWins || []).some(g => g.grade === 'G1') && !won(h, race.short), member: d => d.sex === '牝' && ['天皇賞（春）', '天皇賞（秋）', '有馬記念', 'ジャパンカップ', '宝塚記念'].some(n => dn(d, n)) },
+    { id: 'long', label: '長距離の王者', note: '菊花賞を勝って天皇賞・春へ', finals: ['天皇賞・春'], legs: (h, race) => won(h, '菊花賞') && !won(h, '天皇賞・春'), member: d => dn(d, '菊花賞') && dn(d, '天皇賞（春）') },
+    // 芝とダート、または短距離（1400m 以下）と長距離（3000m 以上）の両方で重賞を勝った名馬。自分の馬は、片方で G1 を勝って、もう片方の G1 へ
+    { id: 'allround', label: '万能の名馬', note: '芝とダート（または1400m以下と3000m以上）の片方で G1 を勝って、もう片方の G1 へ', finals: null,
+      legs: (h, race) => { if (race.grade !== 'G1') return false; const rs = myG1(h); if (!rs.length) return false; return !allRound(rs) && allRound(rs.concat([race])); },
+      member: d => SP.bigWins(d).length > 0 && allRound(winShapes(d)) },
+    // 地方の競馬場でデビュー・所属した名馬（データの local）。自分の馬は、地方の重賞を勝って、まだ勝っていない中央の G1 へ
+    { id: 'local', label: '地方から来た名馬', note: '地方の重賞を勝った馬で、中央の G1 へ（中央の G1 をまだ勝っていないとき）', finals: null,
+      legs: (h, race) => race.grade === 'G1' && race.region === 'JRA' && (h.gradedWins || []).some(g => g.region === '地方') && !(h.gradedWins || []).some(g => g.grade === 'G1' && g.region === 'JRA'),
+      member: d => !!d.local },
     { id: 'autumn', label: '秋の王者', note: '天皇賞・秋とジャパンCを勝って有馬記念へ', finals: ['有馬記念'], legs: sameYear(['天皇賞・秋', 'ジャパンC']), member: d => (dn(d, '天皇賞（秋）') ? 1 : 0) + (dn(d, 'ジャパンカップ') ? 1 : 0) + (dn(d, '有馬記念') ? 1 : 0) >= 2 },
     { id: 'spring', label: '春の王者', note: '天皇賞・春を勝って宝塚記念へ', finals: ['宝塚記念'], legs: sameYear(['天皇賞・春']), member: d => dn(d, '天皇賞（春）') && dn(d, '宝塚記念') },
     { id: 'grandprix', label: 'グランプリホース', note: '宝塚記念と有馬記念の片方を勝って、もう片方へ', finals: ['有馬記念', '宝塚記念'], legs: other({ '有馬記念': '宝塚記念', '宝塚記念': '有馬記念' }), member: d => dn(d, '宝塚記念') && dn(d, '有馬記念') },
@@ -73,20 +94,23 @@
   }
   SP.BY = {}; SP.GROUPS.forEach(g => { SP.BY[g.id] = g; });
 
-  // スペシャルホースの元：1989年より前に走り終えた史実馬のうち、有名で強い馬（名馬の解説があり、評価が SP.MIN_RATING 以上）と、data/legends.js
-  // 持ち主の決定 2026-10-16「有名な強い馬だけでいい」
-  SP.MIN_RATING = 92;
+  // スペシャルホースの元：1989年より前に走り終えた史実馬のうち、名馬の名鑑（data/profiles*.js）がある馬と、data/legends.js。
+  // 強さの下限は無い（持ち主の決定 2026-10-16「スペシャルホースは別に強さの下限はないです」。前は評価92以上）。
+  // SP.WITH_BIG を true にすると、名鑑の無い大レース（SP.bigWins）の勝ち馬も入る（名鑑を書くまでは入れない）
+  SP.WITH_BIG = false;
   let pool = null;
   SP.pool = function () {
     if (pool) return pool;
-    const fam = new Set((HS.DATA.famous || []).concat(HS.DATA.profiles || []).map(f => f.name));
-    pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d) && fam.has(d.name) && (d.rating || 0) >= SP.MIN_RATING).concat(HS.DATA.legendsExtra || []);
+    const prof = new Set((HS.DATA.profiles || []).map(f => f.name));
+    pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d) && (prof.has(d.name) || (SP.WITH_BIG && SP.bigWins(d).length))).concat(HS.DATA.legendsExtra || []);
     return pool;
   };
   SP.data = name => SP.pool().find(d => d.name === name) || null;
   SP.isTop = d => d.tier === 'legend'; // 伝説級：グランドフィナーレのグループだけに入る
   // 1頭が出てくる条件は1つだけ（持ち主の決定 2026-10-16）。グループに優先順を付け、各馬は当てはまるいちばん上のグループに入る
-  SP.PRIORITY = ['gf', 'triple', 'us3', 'uk3', 'arc2', 'unbeaten', 'ftriple', 'nikan', 'europe', 'autumn', 'spring', 'grandprix', 'tenno', 'arima2', 'mile', 'us2', 'aus', 'g1five'];
+  // スピードシンボリは有馬記念の連覇（春の王者より上）。ダリア・アレフランス・ミエスクは G1を5勝した名馬のまま：
+  // 3頭とも年をまたいで路線の違う G1 を重ねた馬で、1つの冠の組み合わせより「G1 を5勝」が史実の顔に合う
+  SP.PRIORITY = ['gf', 'triple', 'us3', 'uk3', 'arc2', 'unbeaten', 'ftriple', 'long', 'nikan', 'arima2', 'local', 'allround', 'filly', 'europe', 'autumn', 'spring', 'grandprix', 'tenno', 'mile', 'us2', 'aus', 'g1five'];
   let assign = null;
   const assignAll = function () {
     if (assign) return assign;
@@ -133,7 +157,7 @@
     for (const g of SP.GROUPS) {
       if (!SP.members(g).some(d => !un.includes(d.name))) continue;
       const r = nextRaces.find(rc => SP.reach(h, g, rc));
-      if (r) out.push({ group: g, need: g.finals ? r.short : (g.id === 'g1five' ? '次のG1' : '次のレース') });
+      if (r) out.push({ group: g, need: g.finals ? r.short : (['g1five', 'allround', 'local'].includes(g.id) ? '次のG1' : '次のレース') });
     }
     return out;
   };

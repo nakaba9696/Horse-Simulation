@@ -405,7 +405,7 @@ HS.DATA.historic = (HS.DATA.historic || []).concat([
  { name:'カゼノコ', born:2011, sex:'牡', coat:'鹿毛', sire:'アグネスデジタル', dam:'タフネススター', damsire:'ラグビーボール',
    rating:84, surface:'ダ', distMin:1800, distMax:2100, style:'追込', growth:'早め', retire:2018,
    wins:['2014ジャパンダートダービー'] },
- { name:'ハッピースプリント', born:2011, sex:'牡', coat:'鹿毛', sire:'アッミラーレ', dam:'マーゴーン', damsire:'ダイジュール',
+ { name:'ハッピースプリント', born:2011, sex:'牡', coat:'鹿毛', sire:'アッミラーレ', dam:'マーゴーン', damsire:'デイジュール',
    rating:83, surface:'ダ', distMin:1400, distMax:1800, style:'差し', growth:'早熟', retire:2019,
    wins:['2013全日本2歳優駿'], note:'地方（北海道→大井）所属' },
  // ===== 2012年生まれ =====
