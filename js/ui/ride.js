@@ -78,14 +78,14 @@
       let whipAt = -9, poseAt = null, whipFx = null;
       const doUp = () => {
         const b = S.ctl.up(sim);
-        if (b === 'good' && sim.ctl.pushes === 0) say('好スタート！', 'good');
-        else if (b === 'late') say('出遅れ……', 'bad');
+        if (b === 'good' && sim.ctl.pushes === 0) say('GOOD START', 'good');
+        else if (b === 'late') say('LATE START', 'bad');
         if (AU) AU.se('click');
       };
       const doDown = () => { S.ctl.down(sim); if (AU) AU.se('click'); };
       const doWhip = side => {
         const b = S.ctl.whip(sim, side);
-        if (b == null) return say(sim.ctl && !sim.ctl.started ? 'まだゲートの中' : '', '');
+        if (b == null) return say('', '');
         if (b === 'swap') return; // 持ち替えは左下の計器（ムチ 右手・左手）で分かる
         whipAt = sim.t; whipFx = { t: performance.now(), side, b, inward: sim.ctl.lastWhip && sim.ctl.lastWhip.away < 0, zone: sim.D - me.x < sim.straight + 200 };
         if (AU) AU.se('whip');
@@ -106,7 +106,9 @@
       });
       // ---------- カメラ：視点は3つ（騎手の後ろ・高い後ろ・中継）。ドラッグで回し、左右を見るボタンで横を向く ----------
       const orbit = { yaw: 0, pitch: 0, zoom: 1 };
-      const VIEWS = [['騎手の後ろ', 'ride', 0, 0, 1], ['高い後ろ', 'ride', 0, 0.42, 1.7], ['中継', 'tv', 0, 0, 1]];
+      // 騎乗中に出す短い言葉は英語（持ち主の指摘「日本語はダサい」）
+      const VIEWS = [['JOCKEY CAM', 'ride', 0, 0, 1], ['HIGH CAM', 'ride', 0, 0.42, 1.7], ['TV CAM', 'tv', 0, 0, 1]];
+      const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
       let viewI = 0, look = 0, lookNow = 0; const lookKeys = { q: false, e: false }; let padLook = 0;
       const setView = i => { viewI = (i + VIEWS.length) % VIEWS.length; const v = VIEWS[viewI]; orbit.yaw = v[2]; orbit.pitch = v[3]; orbit.zoom = v[4]; say(v[0], ''); };
       el.querySelector('.cam-btn').onclick = ev => { ev.stopPropagation(); setView(viewI + 1); };
@@ -185,7 +187,7 @@
         lookNow += (look * Math.PI / 2 - lookNow) * Math.min(1, realDt * 8);
         if (clock < 0) {
           const before = clock; clock += dt;
-          if (before < 0 && clock >= 0) { if (AU) { AU.se('gate'); AU.raceStart(); } say('スタート！', 'go'); }
+          if (before < 0 && clock >= 0) { if (AU) { AU.se('gate'); AU.raceStart(); } say('START', 'go'); }
         } else if (!sim.over) {
           acc += dt;
           let guard = 0;
@@ -194,7 +196,7 @@
           if (me.done && finishedAt == null) {
             finishedAt = sim.t;
             myPos = sim.st.filter(s => s.done && s.finishT <= me.finishT).length;
-            if (myPos !== 1) say(`${myPos}着`, '');
+            if (myPos !== 1) say(ordinal(myPos), '');
           }
           if (AU) { const lead = Math.max(...sim.st.map(s => s.x)); AU.raceUpdate(sim.D - lead, sim.D - lead < sim.straight, sim.st.filter(s => !s.done).length, sim.st.filter(s => s.done).length); }
         }
@@ -292,7 +294,7 @@
         if (myPos === 1 && finishedAt != null) {
           const a = U.clamp((sim.t - finishedAt) / 0.4, 0, 1);
           ctx.globalAlpha = a;
-          outlined('1着', VW / 2, VH * 0.36, `900 ${Math.round(64 + 20 * (1 - a))}px "Noto Serif JP", serif`, '#ffd34d', 'center');
+          outlined('1st', VW / 2, VH * 0.36, `900 ${Math.round(64 + 20 * (1 - a))}px "Noto Serif JP", serif`, '#ffd34d', 'center');
           txt(`${U.time(me.finishT)}　上がり ${me.t600 != null ? (me.finishT - me.t600).toFixed(1) : '－'}`, VW / 2, VH * 0.36 + 34, `bold 16px ${FONT}`, '#fff', 'center');
           if (poseAt == null) txt('Y／G／2回タップ：ガッツポーズ', VW / 2, VH * 0.36 + 58, `12px ${FONT}`, '#ffe9a6', 'center');
           ctx.globalAlpha = 1;
