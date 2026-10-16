@@ -32,5 +32,16 @@ func run(t) -> void:
 		seq.append(M.hex(r.normal(0.0, 1.9))); seq.append(str(r.int_(1, 1e9))); seq.append(M.hex(r.float_(0.5, 1.4))); seq.append(str(r.chance(0.3)))
 		var f := r.fork(); seq.append(M.hex(f.next()))
 		t.eq(seq, e[1], "rng: 種 %s の列" % e[0])
+	for e in g.sort:
+		var r := HSRng.new(e[0]); var n := int(e[1]); var kind: String = e[2]
+		var arr: Array = []
+		for i in n: arr.append({ i = float(i), k = float(r.int_(0, 9)) if kind == "t" else (float(n - i + (i % 3)) if kind == "d" else float(r.int_(0, 1000))) })
+		var calls := [0]
+		HSSort.sort(arr, func(a, b):
+			calls[0] += 1
+			return r.next() - 0.5 if (kind == "r" and r.next() < 0.2) else a.k - b.k)
+		var ids: Array = []
+		for x in arr: ids.append(x.i)
+		t.eq([calls[0], ids], [int(e[3]), e[4]], "sort: %d 件（%s）の並べ替えと比べた回数" % [n, kind])
 	for e in g.hash:
 		t.eq(HSU.hash32(e[0]), int(e[1]), "hash: %s" % e[0])

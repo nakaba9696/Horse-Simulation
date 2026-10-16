@@ -129,23 +129,17 @@ static func _h_raw(E: Array, s: float) -> float:
 			return h0 + (h1 - h0) * (s - s0) / HSU.mx(1e-6, s1 - s0)
 	return float(E[E.size() - 1][1])
 
-# 区切りの番号と割合（i・f・over）
-var _i := 0
-var _f := 0.0
-var _over := 0.0
-func _idx(s: float) -> void:
-	if line:
-		var sc := HSU.mx(0.0, HSU.mn(L, s))
-		_i = mini(n - 2, int(floorf(sc / dl))); _f = _u01(sc / dl - floorf(sc / dl)); _over = s - sc
-	else:
-		s = fmod(fmod(s, L) + L, L)
-		_i = mini(n - 2, int(floorf(s / dl))); _f = s / dl - _i; _over = 0.0
-
 # ゴールからさかのぼった距離 s の地点：x・y（上から見た位置）、curv（進む向きに対する曲がり。左へ曲がるなら負）、corner（3＝3・4コーナー、1＝1・2コーナー、0＝直線）
+# （形は作ったあと変わらないので、別々のスレッドの模擬から同時に読んでよい）
 func at(s: float) -> Dictionary:
 	if _ell: return _at_ell(s)
-	_idx(s)
-	var i := _i; var f := _f; var over := _over
+	var i: int; var f: float; var over := 0.0
+	if line:
+		var sc := HSU.mx(0.0, HSU.mn(L, s))
+		i = mini(n - 2, int(floorf(sc / dl))); f = _u01(sc / dl - floorf(sc / dl)); over = s - sc
+	else:
+		var s2 := fmod(fmod(s, L) + L, L)
+		i = mini(n - 2, int(floorf(s2 / dl))); f = s2 / dl - i
 	var px := X[i] + (X[i + 1] - X[i]) * f
 	var py := Y[i] + (Y[i + 1] - Y[i]) * f
 	if over:
@@ -182,8 +176,16 @@ func _at_ell(s: float) -> Dictionary:
 # 高さ（m）
 func h_at(s: float) -> float:
 	if _ell: return 0.0
-	_idx(s)
-	return Hs[_i] + (Hs[_i + 1] - Hs[_i]) * _f
+	var i: int; var f: float
+	if line:
+		var sc := maxf(0.0, minf(L, s))
+		var q := sc / dl
+		i = mini(n - 2, int(floorf(q))); f = q - floorf(q)
+		f = 0.0 if f < 0.0 else (1.0 if f > 1.0 else f)
+	else:
+		s = fmod(fmod(s, L) + L, L)
+		i = mini(n - 2, int(floorf(s / dl))); f = s / dl - i
+	return Hs[i] + (Hs[i + 1] - Hs[i]) * f
 # 走る向き（残りが減る向き）の勾配：上りが正
 func g_at(s: float) -> float:
 	if _ell: return 0.0

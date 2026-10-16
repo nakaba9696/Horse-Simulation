@@ -195,7 +195,7 @@ static func apply(sim, s, k: Dictionary) -> void:
 	var amp := HSU.clamp(IKKI.a + IKKI.b * s.E, IKKI.lo, IKKI.hi) if k.get("ikki") else 1.0
 	if f.get("spd"): s.boost = { mul = 1.0 + f.spd * amp, until = sim.t + float(HSU.or_(f.get("sec"), 1.5)), id = k.id, free = HSU.truthy(f.get("free")) }
 	if f.get("free") and k.at == "start": s.easyStart = true
-	if f.get("top"): s.topAdd = float(HSU.or_(s.topAdd, 0.0)) + f.top
+	if f.get("top"): s.topAdd = s.topAdd + f.top
 	if f.get("E"): s.E = HSU.clamp(s.E + f.E, -0.2, 1.0)
 	if f.get("drift") and s.me and sim.ctl and sim.ctl.lastWhip != null: sim.ctl.lane = HSU.clamp(sim.ctl.lane + sim.ctl.lastWhip.away * f.drift, 0.0, 12.0)
 	elif f.get("drift"): s.driftLane = float(HSU.or_(s.driftLane, 0.0)) + f.drift * 1.5

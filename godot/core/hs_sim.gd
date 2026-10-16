@@ -65,7 +65,7 @@ class Runner:
 	var ears := 0.4
 	var rk: Variant = null
 	var easyStart := false
-	var topAdd: Variant = null
+	var topAdd := 0.0
 	var sunaT := 0.0
 
 # ---------- 自分で乗る馬の操作の状態（JS の sim.ctl） ----------
@@ -182,6 +182,27 @@ static var KIRE := { s0 = 0.03, s1 = 0.0035, r = 60.0, a0 = 0.85, a1 = 0.05, c0 
 static var ORIAI := { ramp = 2.5, calmK = 5.0, over = 0.55, overHot = 0.25, fightAfter = 1.2, fightK = 14.0, surgeT = 6.0, match = 0.35, matchLo = 0.12,
 	keen = 40.0, passed = 9.0, wall = 4.0, sand = 3.0, cover = 4.0, shrinkT = 4.0, shrinkSpd = 0.012, pushSurge = 10.0, surgeMax = 45.0 }
 static var FIGHT := { from = 300.0, dx = 2.4, l0 = 0.45, l1 = 1.8, dv = 0.6, g0 = 72.0, up = 10.0, low = -40.0, narabu = 1.3, decay = 0.05, spd = 0.012, cost = 0.12 }
+# step の中で使う定数（上の辞書と同じ値。辞書を引くより速い）
+const _HILL_V := 0.4
+const _HILL_E := 100.0
+const _HILL_DV := 0.25
+const _HILL_DE := 10.0
+const _HILL_MID := 0.4
+const _ON_HILL_V := { "急": 0.008, "中": 0.005, "小": 0.003 }
+const _ON_HILL_E := { "急": 2.2, "中": 1.4, "小": 0.8 }
+const _NINO_SPD := 1.01
+const _NINO_COST := 0.9
+const _OONIGE_EARLY := 1.02
+const _OONIGE_MID := 1.02
+const _OONIGE_KICK := 0.5
+const _OONIGE_LEAD := 0.055
+const _FIGHT_FROM := 300.0
+const _FIGHT_DX := 2.4
+const _FIGHT_L0 := 0.45
+const _FIGHT_L1 := 1.8
+const _FIGHT_DV := 0.6
+const _FIGHT_SPD := 0.012
+const _FIGHT_COST := 0.12
 const _GROUND := { "良": 0, "稍重": 1, "重": 2, "不良": 3 }
 
 # 基準の巡航速度（m/s）。総合85の馬の良馬場・芝
@@ -561,12 +582,15 @@ static func mood_out(sim: Sim, s: Runner, c: Ctl) -> void:
 # 競り合いの気合
 static func fight_step(sim: Sim, s: Runner, R: float, prog: float) -> void:
 	var F := FIGHT
-	var duel = null
-	if prog > 0.3 and (R < sim.straight + F.from or s.spurting):
+	var duel: Runner = null
+	if prog > 0.3 and (R < sim.straight + _FIGHT_FROM or s.spurting):
+		var sx := s.x; var sl := s.lane; var sv := s.v
 		for o: Runner in sim.st:
 			if o == s or o.done: continue
-			var dl := absf(o.lane - s.lane)
-			if absf(o.x - s.x) < F.dx and dl > F.l0 and dl < F.l1 and absf(o.v - s.v) < F.dv:
+			var ddx := o.x - sx
+			if ddx >= _FIGHT_DX or ddx <= -_FIGHT_DX: continue # |dx| < dx
+			var dl := absf(o.lane - sl)
+			if dl > _FIGHT_L0 and dl < _FIGHT_L1 and absf(o.v - sv) < _FIGHT_DV:
 				duel = o; break
 	s.duel = duel
 	if duel:
@@ -613,7 +637,7 @@ static func step(sim: Sim) -> bool:
 	var c := sim.ctl
 	for s: Runner in st:
 		if s.done:
-			s.v = HSU.mx(6.0, s.v - 0.9 * DT); s.x += s.v * DT; s.headUp = 0.2; s.ears = 0.5; continue
+			s.v = maxf(6.0, s.v - 0.9 * DT); s.x += s.v * DT; s.headUp = 0.2; s.ears = 0.5; continue
 		if s.me and c and not c.started and t >= 0.9:
 			c.started = true; s.delay = 0.9; s.late = true; s.E -= LATE_E; say(sim, t, "%s、出遅れた！" % s.h.name, "trouble")
 		if t < s.delay: continue
@@ -642,7 +666,7 @@ static func step(sim: Sim) -> bool:
 			else:
 				if s.spurting:
 					var ratioE := HSMath.cbrt(HSU.mx(0.0, s.E) * s.Ds / (0.9 * HSU.mx(R, 30.0) * s.spurtCost))
-					target = s.vc * HSU.clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (1.0 + (sim.top + float(HSU.or_(s.topAdd, 0.0)) - 1.0) * HSU.clamp(g, PUSH.base, 1.0)))
+					target = s.vc * HSU.clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * HSU.clamp(g, PUSH.base, 1.0)))
 				elif prog < 0.22:
 					target = pace * s.styleMult * (NINO.spd if s.nino else 1.0)
 					if s.nino: costMul *= NINO.cost
@@ -686,24 +710,24 @@ static func step(sim: Sim) -> bool:
 			if s.E <= 0:
 				target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu)
 			elif s.spurting:
-				var ratioE := HSMath.cbrt(HSU.mx(0.0, s.E) * s.Ds / (0.9 * HSU.mx(R, 30.0) * s.spurtCost))
-				target = s.vc * HSU.clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (sim.top + float(HSU.or_(s.topAdd, 0.0))))
-				if s.oonige: target = s.vc * (1.0 + s.kickS * OONIGE.kick)
+				var ratioE := HSMath.cbrt(maxf(0.0, s.E) * s.Ds / (0.9 * maxf(R, 30.0) * s.spurtCost))
+				target = s.vc * maxf(1.0 + s.kickS, minf(1.0 + s.kickS * (sim.top + s.topAdd), ratioE))
+				if s.oonige: target = s.vc * (1.0 + s.kickS * _OONIGE_KICK)
 				if s.narabu and R < 350 and _near_x(st, s, 1.5):
 					target *= 1.004; fire(sim, s, "narabu")
 				if s.sora and R < 200 and order[0] == s and order.size() > 1 and s.x - order[1].x > 2:
 					target *= 0.985; fire(sim, s, "sora")
 			elif prog < 0.22:
-				target = pace * s.styleMult * (NINO.spd if s.nino else 1.0) * (OONIGE.early if s.oonige else 1.0)
-				if s.nino: costMul *= NINO.cost
+				target = pace * s.styleMult * (_NINO_SPD if s.nino else 1.0) * (_OONIGE_EARLY if s.oonige else 1.0)
+				if s.nino: costMul *= _NINO_COST
 				if s.easyStart: costMul *= EASY_START
 			elif s.oonige:
-				target = pace * (OONIGE.mid if s.x - leaderX < OONIGE.lead * straight * 2000.0 / D else 1.0)
+				target = pace * (_OONIGE_MID if s.x - leaderX < _OONIGE_LEAD * straight * 2000.0 / D else 1.0)
 				if s.x - leaderX > 10: fire(sim, s, "oonige")
 			else:
-				var g0 := HSU.mx(0.0, s.gap + s.gapAdj)
+				var g0 := maxf(0.0, s.gap + s.gapAdj) # gap・gapAdj は -0 にならない
 				var err: float = 0.0 if pack == s else leaderX - s.x - g0
-				target = pace * (1.0 + HSU.clamp(err * 0.0012, -0.02, 0.02))
+				target = pace * (1.0 + maxf(-0.02, minf(0.02, err * 0.0012)))
 				if s.kakari and prog < 0.5:
 					target *= 1.012
 					if prog > 0.1 and _has(s.h, "kakari"): fire(sim, s, "kakari")
@@ -711,24 +735,24 @@ static func step(sim: Sim) -> bool:
 		if s.spurting and R > straight and sim.paceF > 1: costMul *= 1.0 + (sim.paceF - 1.0) * PACE_EARLY
 		if not s.spurting and prog > 0.08 and not s.oonige:
 			var rk: float = 0.5 if s.rk == null else s.rk
-			costMul *= HSU.mx(0.5, 1.0 + (sim.paceF - 1.0) * PACE_K * (1.0 - 2.0 * rk)) * (1.0 - DRAFT * rk)
+			costMul *= maxf(0.5, 1.0 + (sim.paceF - 1.0) * PACE_K * (1.0 - 2.0 * rk)) * (1.0 - DRAFT * rk)
 		if s.sunaB and not s.spurting and prog > 0.05 and _ahead_of(st, s, 4.0, 0.8) != null:
 			costMul *= SUNA; s.sunaT = s.sunaT + DT
 			if s.sunaT > 3: fire(sim, s, "sunaB")
 		fight_step(sim, s, R, prog)
 		var fk := s.fight / 100.0
 		if fk and (s.spurting or s.E <= 0):
-			target *= 1.0 + FIGHT.spd * fk
-			if fk > 0: costMul *= 1.0 - FIGHT.cost * fk
+			target *= 1.0 + _FIGHT_SPD * fk
+			if fk > 0: costMul *= 1.0 - _FIGHT_COST * fk
 		if s.boost and t < s.boost.until:
 			target *= s.boost.mul
 			if s.boost.free: costMul /= s.boost.mul * s.boost.mul * s.boost.mul
 		var grade := sim.track.g_at(R) if (sim.track and not sim.track.flat) else 0.0
 		var onHill: bool = (not sim.track or sim.track.flat) and R < 320 and R > 60 and slope != "平"
-		if onHill: target *= 1.0 - float({ "急": 0.008, "中": 0.005, "小": 0.003 }.get(slope, 0.0)) * (1.0 - s.slopeP / 120.0)
-		var hillW: float = 1.0 if s.spurting else HILL.mid
-		if grade > 0: target *= 1.0 - grade * HILL.v * hillW * (1.0 - s.slopeP / 120.0)
-		elif grade < 0: target *= 1.0 - grade * HILL.dv
+		if onHill: target *= 1.0 - float(_ON_HILL_V.get(slope, 0.0)) * (1.0 - s.slopeP / 120.0)
+		var hillW: float = 1.0 if s.spurting else _HILL_MID
+		if grade > 0: target *= 1.0 - grade * _HILL_V * hillW * (1.0 - s.slopeP / 120.0)
+		elif grade < 0: target *= 1.0 - grade * _HILL_DV
 		if not (s.me and c) and s.spurting and not s.blockedOnce and st.size() >= 10 and (s.h.style == "差し" or s.h.style == "追込"):
 			s.blockedOnce = true
 			var jk: float = s.r.jockey.skill if s.r.get("jockey") else 70.0
@@ -737,15 +761,16 @@ static func step(sim: Sim) -> bool:
 		if s.blocked > 0:
 			target *= 0.93; s.blocked -= DT
 		var accel: float = START_ACC * (START_SKILL_ACC if (s.boost and s.boost.free and t < s.boost.until) else 1.0) if s.v < s.vc * 0.9 else s.acc + s.slopeP * 0.0015
-		var dv := HSU.clamp(target - s.v, -1.4 * DT, accel * DT)
+		var dv := maxf(-1.4 * DT, minf(accel * DT, target - s.v))
 		var vPrev := s.v
 		s.v = HSU.mx(0.0, s.v + dv)
 		var ratio := s.v / s.vc
 		var cost := (s.v * DT) / s.Ds * 0.9 * ratio * ratio * ratio * costMul
 		if s.spurting: cost *= s.spurtCost
-		if onHill: cost *= 1.0 + float({ "急": 2.2, "中": 1.4, "小": 0.8 }.get(slope, 0.0)) * HSU.clamp(1.0 - s.slopeP / 100.0, 0.0, 0.6)
-		if grade > 0: cost *= 1.0 + grade * HILL.e * hillW * HSU.clamp(1.0 - s.slopeP / 100.0, 0.0, 0.6)
-		elif grade < 0: cost *= HSU.mx(0.7, 1.0 + grade * HILL.de)
+		# 1 − 坂/100 は -0 にならないので、組み込みの max・min で JS と同じ
+		if onHill: cost *= 1.0 + float(_ON_HILL_E.get(slope, 0.0)) * maxf(0.0, minf(0.6, 1.0 - s.slopeP / 100.0))
+		if grade > 0: cost *= 1.0 + grade * _HILL_E * hillW * maxf(0.0, minf(0.6, 1.0 - s.slopeP / 100.0))
+		elif grade < 0: cost *= maxf(0.7, 1.0 + grade * _HILL_DE)
 		if s.me and c and c.gear > 0.05 and R > straight + EARLY_PUSH: cost *= 1.0 + 8.0 * HSU.mx(0.0, ratio - 1.0)
 		s.E -= cost
 		var xPrev := s.x
@@ -756,9 +781,9 @@ static func step(sim: Sim) -> bool:
 			if corner: dx *= 1.0 - 0.005 * HSU.mx(0.0, s.lane - 0.5)
 		s.x += dx
 		mood_out(sim, s, c if s.me else null)
-		if s.t600 == null and s.x >= D - 600: s.t600 = t - DT + (D - 600.0 - xPrev) / HSU.mx(0.1, s.x - xPrev) * DT
+		if s.t600 == null and s.x >= D - 600: s.t600 = t - DT + (D - 600.0 - xPrev) / maxf(0.1, s.x - xPrev) * DT
 		if s.x >= D:
-			s.finishT = t - DT + (D - xPrev) / HSU.mx(0.1, s.x - xPrev) * DT
+			s.finishT = t - DT + (D - xPrev) / maxf(0.1, s.x - xPrev) * DT
 			s.done = true; sim.finished += 1
 			if sim.winnerT == null: sim.winnerT = s.finishT
 	if sim.step % 2 == 1: HSSkills.step(sim, order, DT * 2.0)

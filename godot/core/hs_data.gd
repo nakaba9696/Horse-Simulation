@@ -53,3 +53,42 @@ static func _canon(v: Variant, out: PackedStringArray) -> void:
 				_canon(v[k], out)
 			out.append("}")
 		_: push_error("HSData: 知らない型 %s" % typeof(v))
+
+# セーブ（G）の指紋（tools/golden_world.js の digest と同じ）：辞書の項目を名前の順に並べ、null の項目を除き、-0 を 0 にする（JSON に書いて読み直したのと同じ）
+static func digest_save(v: Variant) -> String:
+	var buf := PackedStringArray()
+	_canon_save(v, buf)
+	return "".join(buf).sha256_text().left(16)
+static func _canon_save(v: Variant, out: PackedStringArray) -> void:
+	match typeof(v):
+		TYPE_NIL: out.append("n;")
+		TYPE_BOOL: out.append("t;" if v else "f;")
+		TYPE_INT, TYPE_FLOAT:
+			var x := float(v)
+			out.append("d" + HSMath.hex(0.0 if x == 0.0 else x) + ";")
+		TYPE_STRING, TYPE_STRING_NAME:
+			var s := String(v)
+			out.append("s%d:" % s.to_utf8_buffer().size() + s)
+		TYPE_ARRAY:
+			out.append("[")
+			for x in v: _canon_save(x, out)
+			out.append("]")
+		TYPE_DICTIONARY:
+			out.append("{")
+			var ks: Array = v.keys().map(func(k): return String(k))
+			ks.sort_custom(func(a, b): return _js_less(a, b))
+			for ks_ in ks:
+				var val = v[ks_] if v.has(ks_) else v[StringName(ks_)]
+				if val == null: continue
+				out.append("k%d:" % ks_.to_utf8_buffer().size() + ks_)
+				_canon_save(val, out)
+			out.append("}")
+		_: out.append("?;")
+# JS の文字の比べ（UTF-16 の単位の順）
+static func _js_less(a: String, b: String) -> bool:
+	var ua := a.to_utf16_buffer(); var ub := b.to_utf16_buffer()
+	var n := mini(ua.size(), ub.size()) / 2
+	for i in n:
+		var ca := ua[i * 2] | (ua[i * 2 + 1] << 8); var cb := ub[i * 2] | (ub[i * 2 + 1] << 8)
+		if ca != cb: return ca < cb
+	return ua.size() < ub.size()

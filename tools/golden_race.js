@@ -181,6 +181,15 @@ function mathCases() {
     const f = r.fork(); seq.push(hex(f.next()));
     out.rng.push([seed, seq]);
   }
+  // 並べ替え（V8 の TimSort）：比べる関数が乱数を引く・同じ値が多い・長さがいろいろ
+  out.sort = [];
+  for (const [n, kind] of [[1, 'r'], [5, 'r'], [17, 'r'], [40, 'r'], [64, 'r'], [65, 't'], [130, 'r'], [300, 't'], [700, 'r'], [1500, 't'], [33, 'd'], [200, 'd']]) {
+    const seed = m.int(1, 2147483646), r = new U.RNG(seed);
+    const arr = []; for (let i = 0; i < n; i++) arr.push({ i, k: kind === 't' ? r.int(0, 9) : kind === 'd' ? n - i + (i % 3) : r.int(0, 1000) });
+    let calls = 0;
+    arr.sort((a, b) => { calls++; return kind === 'r' && r.next() < 0.2 ? r.next() - 0.5 : a.k - b.k; });
+    out.sort.push([seed, n, kind, calls, arr.map(x => x.i)]);
+  }
   for (const s of ['hist:ディープインパクト', 'hist:シンボリルドルフ', 'fict:武豊', 'abc', '', 'hist:セントサイモン', '𩸽テスト']) out.hash.push([s, U.hash(s)]);
   return out;
 }

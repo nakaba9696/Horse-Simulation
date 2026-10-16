@@ -15,6 +15,11 @@ JS 版は遊べる見本として残し、遊びの決まり・データ・模�
 | `godot/core/hs_horse.gd`（`HSHorse`） | 馬（`HS.Horse`。史実馬から作る・頭数合わせの馬・成長・能力・調教・故障） |
 | `godot/core/hs_skills.gd`（`HSSkills`） | 発動する特殊能力（`HS.Skills`） |
 | `godot/core/hs_sim.gd`（`HSSim`） | レースの模擬（`HS.Sim`。create・step・finish・操作・折り合い・競り合いの気合・実況） |
+| `godot/core/hs_sort.gd`（`HSSort`） | JS（V8）の `Array.prototype.sort` と同じ並べ替え（TimSort）。比べる関数が乱数を引く所（出走の優先順）でも、比べる回数と順が JS と同じ |
+| `godot/core/hs_json.gd`（`HSJson`） | セーブの JSON の読み書き。長い桁の小数を正しく読む（JS の JSON.parse と同じ値）。JS 版のセーブを読める |
+| `godot/core/hs_world.gd`（`HSWorld`） | 世界（`HS.World`。新しいゲーム・週の流れ prepare_week → cards → finish_week・AI の出走・出走表・結果・調教・暦・市場・表彰・セーブ・古いセーブの直し） |
+| `godot/core/hs_races.gd`・`hs_ped.gd` | 週のレース（`HS.Races`）・血統（`HS.Ped`） |
+| `godot/core/hs_jockey.gd`・`hs_season.gd`・`hs_eraless.gd`・`hs_special.gd`・`hs_owners.gd`・`hs_trophy.gd`・`hs_hall.gd`・`hs_original.gd`・`hs_edits.gd`・`hs_datafix.gd` | 騎手のゲーム・シーズンと GF（season.js と dream.js）・年代なしと馬の店・スペシャルホース・馬主・トロフィー・殿堂・オリジナルホース・エディット |
 | `godot/data/*.json` | `node tools/export_godot.js` が書き出す（生成物。手で直さない） |
 | `godot/tests/` | 中身のテスト（`sh godot/tests/run.sh`）と、一致テストの答え（`golden/`） |
 
@@ -40,6 +45,21 @@ var res := HSSim.finish(sim)  # { results, events, frames, D, straight, lap, win
 - 3D は JS の race3d と同じく、0.1 秒の刻みのあいだを補間して描けばよい。模擬の結果は描画に左右されない。
 - 速さの目安：1 レースを回し切って 0.5 秒ほど（一致テストの 48 本が、指紋を取りながら 22 秒。この container の CPU）。騎乗中は 1 フレームに 0〜1 刻みなので軽い。
 
+## 世界の呼び方（画面の係へ）
+```gdscript
+HSWorld.new_game({ mode = "jockey", seed = 1, jockeyName = "…", region = "美浦" })  # または HSWorld.load_save(JSON の文字)
+var G = HSWorld.G                       # JS の G と同じ形（G.player.money・G.horses・G.news …）
+HSWorld.market_historic()               # 馬の店 → HSWorld.buy(item)
+HSOwners.offers() → HSOwners.accept(raceKey, horseId)   # 馬主の依頼
+HSSeason.dc_pending_list() → HSSeason.dc_choose(cat, id) / dc_decline(cat)   # 12月の GF
+for r in HSJockey.my_rides():           # 今週自分が乗るレース
+	var sim := HSWorld.start_sim(r.card, { ride = true })   # → HSSim.step … → HSSim.finish(sim)
+var report := HSWorld.finish_week({ r.card.race.key: 結果 })   # 乗らなかったレースはおまかせで走る
+var json := HSWorld.serialize()         # セーブ（JS 版でも読める）
+```
+- 関数の名前は JS の `W.prepareWeek` → `HSWorld.prepare_week` のように小文字と `_` にした。引数と戻り値は JS と同じ。
+- 速さ：1 週を進めるのに、この container で 4〜5 秒（JS は 0.4 秒）。重いのは乗らなかったレースの模擬（1 週に 5〜13 本）。下の「速さ」を参照。
+
 ## データの流れ
 ```
 data/*.js（正）→ index.html の並びで読む → fictional.js（騎手の名前を架空に）→ datafix.js（史実馬をまとめる）
@@ -56,8 +76,11 @@ data/*.js（正）→ index.html の並びで読む → fictional.js（騎手の
    - 出走馬は作り方で持つ（史実馬の名前と上書きする値・エディットで能力を決めた馬・伝説級・頭数合わせの馬の種）。Godot も同じ作り方で作り、馬の中身の指紋を比べる。
    - 自分で乗る操作：決まった乗り方の打ち手（`tests/ridebot.js` の fit・misfit）と、でたらめに操作する打ち手。呼んだ操作を刻みの番号と一緒に書き留め、Godot は同じ刻みで同じ操作をする（戻り値も比べる）。
    - 比べるもの：10 刻みごとの状態の指紋（全馬の x・lane・v・E と操作の気分・段・進路・高ぶりのビット）、100 刻みごとの全馬の値（ずれたときの手がかり）、ペース、着順・タイム・着差・上がり・残りのスタミナ、勝ちタイムの書式、実況の文と時刻、特殊能力の発動、描画のコマ。
-2. `godot/tests/golden/math.json`：数学の関数（各 1500 件）・乱数の列・U.hash の答え。
-3. `sh godot/tests/run.sh`（headless）が `godot/tests/test_*.gd` を回す。`node tests/run.js` は、Godot があればこれを呼ぶ（無ければ「飛ばした」と出す）。Godot の場所は `GODOT=`・PATH の `godot`・`/home/user/godot-bin/godot` の順に探す。
+2. `godot/tests/golden/math.json`：数学の関数（各 1500 件）・乱数の列・U.hash・並べ替え（TimSort。長さ 1〜1500・比べる関数が乱数を引くもの）の答え。
+3. `node tools/golden_world.js` → `godot/tests/golden/world.json`・`world_save.json`：決まった遊び方（店でいちばん安い馬を買う・馬主の最初の依頼を受ける・GF に出る・自分の馬の1レースを決まった乗り方で乗る）で週を進め、毎週のセーブ（G）の指紋・出走表の指紋・依頼・乗ったレースの着順を書く。
+   - new：新しいゲームから 4 週。late：JS で 46 週遊んだセーブ（JS のセーブそのもの）を読んで、12月3週から 4 週（GF・年度表彰・年明けの史実馬のデビューをまたぐ）。
+   - 指紋は、辞書の項目を名前の順に並べ、null の項目を除き、-0 を 0 にした並べ方（JSON に書いて読み直したのと同じ）。
+4. `sh godot/tests/run.sh`（headless）が `godot/tests/test_*.gd` を回す。`node tests/run.js` は、Godot があればこれを呼ぶ（無ければ「飛ばした」と出す）。Godot の場所は `GODOT=`・PATH の `godot`・`/home/user/godot-bin/godot` の順に探す。
 
 JS の模擬を直したら：`node tools/golden_race.js` で答えを作り直し、Godot の同じ所も直して `sh godot/tests/run.sh` を緑にする（`node tests/run.js` は、答えが今の JS と違えば落ちる）。
 
@@ -70,6 +93,18 @@ JS の模擬を直したら：`node tools/golden_race.js` で答えを作り直�
 - 長い桁の小数を GDScript のコードやテストの入力に書かない（読み違える）。定数はビットの16進で持つ（`HSMath._f("…")`）。
 - `class_name` の静的関数と同じ名前の組み込み関数（`hash` など）を作らない（クラスの中から呼ぶと組み込みの方が呼ばれる）。
 - テストは標準入力を `/dev/null` にして回す（スクリプトの誤りがあると、Godot は入力待ちで止まる）。
+- 比べる関数が乱数を引く並べ替えは `HSSort.sort`（V8 と同じ TimSort）。比べる関数が純粋なら `HSU.stable_sort` でよい。
+- JSON の数を Godot の `JSON.parse_string` で読まない（セーブは `HSJson.parse`）。オブジェクトの数の名前（年など）の項目は文字（`HSU.num(year)`）で持つ。
+- 静的な変数の初期化でデータを読まない（`HSData.d()` は使うときに。読み込みの途中で呼ぶと止まる）。
+
+## 速さ
+- GDScript の模擬は JS（V8）の約 15 倍遅い：1 レース 250ms ほど（18 頭・2400m）、1 週 4〜5 秒。騎乗中（1 フレームに 1 刻み）は軽い。
+- 結果を変えない直し（定数の辞書を定数に・0 になりえない所の max/min を組み込みに）で 1 割縮めた。
+- 週のレースは互いに独立なので並列に回せる（模擬は数学の作業用の共有の入れ物を持たないようにした。`test_parallel.gd` で、同時に回しても JS と同じ結果を確かめている）。ただ、いまの Godot 4.7.2 の実行ファイルでは、GDScript をスレッドで並べても速くならない（4 スレッドで逆に遅い）。
+- 案：（1）週を進める間は進み具合の絵を出す（4〜5 秒）、（2）模擬だけを C++（GDExtension）か C# に移す（同じ一致テストで確かめられる。fdlibm は C のまま使える）。持ち主・配り役の判断待ち。
+
+## JS 版で見つけたこと
+- 馬主が誰か（`js/core/owners.js` の `O.ownerOf`）を馬の名前で覚えておく使い回し（`own`）が、その名前を最初に見たときの馬で決まる。遊んでいる間に同じ名前の別の馬（引退した史実馬がまたデビューする・頭数合わせの馬など）を先に見ていると答えが変わるので、セーブを読み直すと、その週の依頼が変わることがある。一致テストは JS もセーブを読み直してから続ける形にした（Godot はセーブを読んだときの JS と同じ）。
 
 ## Godot の用意（画面の無い container）
 - Godot 4.7.2（標準版）を https://github.com/godotengine/godot/releases から取り、`/home/user/godot-bin/godot` に置く（リポジトリに入れない）。
@@ -85,5 +120,8 @@ JS の模擬を直したら：`node tools/golden_race.js` で答えを作り直�
 | `js/core/horse.js` | `hs_horse.gd` | ○ 史実馬・伝説級・頭数合わせの馬・エディットの馬（調教・故障・回復は移したが、まだ一致テストが無い） |
 | `js/core/skills.js` | `hs_skills.gd` | ○ |
 | `js/core/racesim.js` | `hs_sim.gd` | ○ 48 本 |
-| `js/core/races.js`・`world.js`・`season.js`・`eraless.js`・`special.js`・`owners.js`・`jockey.js`・`hall.js`・`trophy.js`・`original.js`・セーブ | まだ | 次の段 |
-| `js/core/pedigree.js`・`dream.js`・`replay.js`・`freerace.js`・`edits.js` | まだ | |
+| `js/core/races.js`・`world.js`（騎手のゲームの道すじ）・`season.js`・`dream.js`・`eraless.js`・`special.js`・`owners.js`・`jockey.js`・`hall.js`・`trophy.js`・`pedigree.js`・`edits.js`（当てる所） | `hs_races.gd` ほか | ○ 新しいゲームから 4 週・JS のセーブから 4 週（GF・年明け） |
+| `original.js`（オリジナルホースを作る）・殿堂入り・トロフィー・スペシャルホースが出てくるレース | 移した | まだ（決まった遊び方では起きない。次に一致テストの遊び方を足す） |
+| セーブ（JSON） | `HSJson`・`HSWorld.serialize`・`load_save`・`migrate` | ○ JS のセーブを読んで続きが同じ |
+| `world.js` の馬主・生産者のゲームだけの所（種付け・売る・牧場の拡張・海外馬と繁殖牝馬の市場） | まだ | 新しく始められないので後回し |
+| `replay.js`・`freerace.js`・`edits.js`（書き出し・読み込み） | まだ | |

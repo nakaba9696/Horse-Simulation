@@ -6,7 +6,7 @@
 # software is freely granted, provided that this notice is preserved.
 class_name HSMath
 
-static var _b: PackedByteArray = _buf()
+# 作業用のバイト列は呼び出しごとに作る（共有の入れ物を持たないので、別々のスレッドから同時に呼んでよい）
 static func _buf() -> PackedByteArray:
 	var b := PackedByteArray(); b.resize(8); return b
 # 16 進（大きい桁から）のビットを小数に
@@ -91,17 +91,17 @@ static var NAN_: float = _f("7ff8000000000000")
 
 # ---------- ビット ----------
 static func hi_s(x: float) -> int:
-	_b.encode_double(0, x); return _b.decode_s32(4)
+	var b := _buf(); b.encode_double(0, x); return b.decode_s32(4)
 static func hi_u(x: float) -> int:
-	_b.encode_double(0, x); return _b.decode_u32(4)
+	var b := _buf(); b.encode_double(0, x); return b.decode_u32(4)
 static func lo_u(x: float) -> int:
-	_b.encode_double(0, x); return _b.decode_u32(0)
+	var b := _buf(); b.encode_double(0, x); return b.decode_u32(0)
 static func words(h: int, l: int) -> float:
-	_b.encode_u32(4, h & 0xFFFFFFFF); _b.encode_u32(0, l & 0xFFFFFFFF); return _b.decode_double(0)
+	var b := _buf(); b.encode_u32(4, h & 0xFFFFFFFF); b.encode_u32(0, l & 0xFFFFFFFF); return b.decode_double(0)
 static func set_hi(x: float, v: int) -> float:
-	var l := lo_u(x); return words(v, l)
+	var b := _buf(); b.encode_double(0, x); b.encode_u32(4, v & 0xFFFFFFFF); return b.decode_double(0)
 static func set_lo(x: float, v: int) -> float:
-	var h := hi_u(x); return words(h, v)
+	var b := _buf(); b.encode_double(0, x); b.encode_u32(0, v & 0xFFFFFFFF); return b.decode_double(0)
 # 小数のビットを 16 進（大きい桁から）に。テストで値を完全に比べるのに使う
 static func hex(x: float) -> String:
 	return "%08x%08x" % [hi_u(x), lo_u(x)]
@@ -179,15 +179,14 @@ static var _npio2_hw: PackedInt32Array = PackedInt32Array([
 	0x403DD85A, 0x403F6A7A, 0x40407E4C, 0x4041475C, 0x4042106C, 0x4042D97C,
 	0x4043A28C, 0x40446B9C, 0x404534AC, 0x4045FDBB, 0x4046C6CB, 0x40478FDB,
 	0x404858EB, 0x404921FB])
-static var _y0 := 0.0
-static var _y1 := 0.0
-# x を π/2 の n 倍と余り（_y0＋_y1）に分ける。|x| が 2^19×π/2 までだけ（それより大きい値は模擬に出てこない）
-static func _rem_pio2(x: float) -> int:
+# x を π/2 の n 倍と余り（y0＋y1）に分ける。[n, y0, y1] を返す。|x| が 2^19×π/2 までだけ（それより大きい値は模擬に出てこない）
+static func _rem_pio2(x: float) -> Array:
+	var _y0 := 0.0; var _y1 := 0.0
 	var hx := hi_s(x)
 	var ix := hx & 0x7FFFFFFF
 	var z := 0.0
 	if ix <= 0x3FE921FB:
-		_y0 = x; _y1 = 0.0; return 0
+		return [0, x, 0.0]
 	if ix < 0x4002D97C:
 		if hx > 0:
 			z = x - pio2_1
@@ -196,7 +195,7 @@ static func _rem_pio2(x: float) -> int:
 			else:
 				z -= pio2_2
 				_y0 = z - pio2_2t; _y1 = (z - _y0) - pio2_2t
-			return 1
+			return [1, _y0, _y1]
 		else:
 			z = x + pio2_1
 			if ix != 0x3FF921FB:
@@ -204,7 +203,7 @@ static func _rem_pio2(x: float) -> int:
 			else:
 				z += pio2_2
 				_y0 = z + pio2_2t; _y1 = (z - _y0) + pio2_2t
-			return -1
+			return [-1, _y0, _y1]
 	if ix <= 0x413921FB:
 		var t := absf(x)
 		var n := int(t * invpio2 + 0.5)
@@ -233,14 +232,11 @@ static func _rem_pio2(x: float) -> int:
 					w = fn * pio2_3t - ((t - r) - w)
 					_y0 = r - w
 		_y1 = (r - _y0) - w
-		if hx < 0:
-			_y0 = -_y0; _y1 = -_y1; return -n
-		return n
-	if ix >= 0x7FF00000:
-		_y0 = x - x; _y1 = _y0; return 0
+		if hx < 0: return [-n, -_y0, -_y1]
+		return [n, _y0, _y1]
+	if ix >= 0x7FF00000: return [0, x - x, x - x]
 	push_error("HSMath: 大きすぎる角度 %s" % x)
-	_y0 = NAN_; _y1 = NAN_
-	return 0
+	return [0, NAN_, NAN_]
 
 static func _k_cos(x: float, y: float) -> float:
 	var ix := hi_s(x) & 0x7FFFFFFF
@@ -272,23 +268,25 @@ static func cos_(x: float) -> float:
 	var ix := hi_s(x) & 0x7FFFFFFF
 	if ix <= 0x3FE921FB: return _k_cos(x, 0.0)
 	if ix >= 0x7FF00000: return x - x
-	var n := _rem_pio2(x)
-	match n & 3:
-		0: return _k_cos(_y0, _y1)
-		1: return -_k_sin(_y0, _y1, 1)
-		2: return -_k_cos(_y0, _y1)
-		_: return _k_sin(_y0, _y1, 1)
+	var y := _rem_pio2(x)
+	var y0: float = y[1]; var y1: float = y[2]
+	match int(y[0]) & 3:
+		0: return _k_cos(y0, y1)
+		1: return -_k_sin(y0, y1, 1)
+		2: return -_k_cos(y0, y1)
+		_: return _k_sin(y0, y1, 1)
 
 static func sin_(x: float) -> float:
 	var ix := hi_s(x) & 0x7FFFFFFF
 	if ix <= 0x3FE921FB: return _k_sin(x, 0.0, 0)
 	if ix >= 0x7FF00000: return x - x
-	var n := _rem_pio2(x)
-	match n & 3:
-		0: return _k_sin(_y0, _y1, 1)
-		1: return _k_cos(_y0, _y1)
-		2: return -_k_sin(_y0, _y1, 1)
-		_: return -_k_cos(_y0, _y1)
+	var y := _rem_pio2(x)
+	var y0: float = y[1]; var y1: float = y[2]
+	match int(y[0]) & 3:
+		0: return _k_sin(y0, y1, 1)
+		1: return _k_cos(y0, y1)
+		2: return -_k_sin(y0, y1, 1)
+		_: return -_k_cos(y0, y1)
 
 # ---------- exp・log ----------
 static func exp_(x: float) -> float:

@@ -15,6 +15,10 @@ module.exports = function (check, assert) {
     const r = node(['tools/golden_race.js', '--check']);
     assert(r.status === 0, (r.stderr || r.stdout).trim());
   });
+  check('godot: 世界の進行の答え（godot/tests/golden/world.json）が今の JS と同じ', () => {
+    const r = node(['tools/golden_world.js', '--check']);
+    assert(r.status === 0, (r.stderr || r.stdout).trim());
+  });
   const which = spawnSync('sh', ['-c', 'command -v godot'], { encoding: 'utf8' });
   const godot = process.env.GODOT || (which.status === 0 ? which.stdout.trim() : fs.existsSync('/home/user/godot-bin/godot') ? '/home/user/godot-bin/godot' : null);
   check('godot: Godot 版の中身のテスト（データ・数学・乱数・模擬が JS と同じ）', () => {
