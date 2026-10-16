@@ -55,6 +55,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/core/racesim.js` | レースの模擬（0.1秒刻み。S.create・S.step・S.finish）・プレイヤーの騎乗の操作（S.ctl）・実況・描画用のコマ | M |
 | `js/core/world.js` | 世界の状態・週の進行（W.prepareWeek → W.cards → W.finishWeek）・AI の出走・賞金・市場・配合・表彰・セーブ | C |
 | `data/owners.js`・`js/core/owners.js`・`js/ui/ownersui.js`・`css/owners.css` | 馬主のキャラクター（架空・7人。口調の表・場面ごとの台詞）と騎乗依頼・好感度の段階・ご褒美・名コンビ賞（`G.owners`）。画面はホームの依頼の札・馬主の一覧・ご褒美の場面・パドックとレースの後のひと言。顔は持ち主が作った絵（`assets/owners_*.js`。札は丸い切り抜き・場面は胸から上・表情4つ）で、読めないときは SVG | C |
+| `data/rivals.js`・`js/core/rivals.js`・`js/ui/rivalsui.js`・`css/rivals.css` | ライバル騎手（架空・4人。型：天才肌の逃げ・追込の鬼・ペースを読むベテラン・同期の新人）。相棒の史実馬（1人3頭まで、毎月空きを埋める）とほかのレースへの騎乗（`W.buildField` を包む）・型ごとの乗り方（`racesim.js` の S.step から `Rv.tactics` を1か所で聞く）・対戦成績と台詞（`G.rivals`）・G1 で破る／年間で勝ち越すと評判。画面は出走表とパドックの札・データの「ライバル」・馬群レーダーの枠 | C |
 | `js/core/jockey.js` | 騎手のゲーム：持ち馬の入厩・評判・腕前・お手馬・見習いの減量・リーディング・騎手の表彰（騎乗依頼は馬主のキャラクターから。`js/core/owners.js`） | C |
 | `js/ui/art.js` | 絵（馬・騎手・勝負服・肖像）。画像ファイルは使わず canvas で描く | V |
 | `js/ui/audio.js` | BGM と効果音（Web Audio で鳴らす。曲は書き下ろし） | V |

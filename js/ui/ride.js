@@ -542,6 +542,9 @@
           ctx.fillRect(x - 3.5, y - 5, 7, 10);
           ctx.strokeStyle = isMe ? '#fff' : 'rgba(0,0,0,0.6)'; ctx.lineWidth = isMe ? 1.5 : 1; ctx.strokeRect(x - 3.5, y - 5, 7, 10);
           if (me.duel && j === me.duel.i && (me.fight || 0) > 15) { ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke(); }
+          // ライバル騎手の馬は、その騎手の札の色の枠（js/core/rivals.js）
+          const rv = !isMe && HS.Rivals && HS.Rivals.ofRunner(sim.st[j].r);
+          if (rv) { ctx.strokeStyle = rv.colors.base; ctx.lineWidth = 2; ctx.strokeRect(x - 5.5, y - 7, 11, 14); ctx.strokeStyle = rv.colors.sub; ctx.lineWidth = 1; ctx.strokeRect(x - 7, y - 8.5, 14, 17); }
           if (j === target && !isMe) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.stroke(); }
         });
         const tg = sim.st[target];

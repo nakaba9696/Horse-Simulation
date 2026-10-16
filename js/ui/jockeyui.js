@@ -200,6 +200,7 @@
         ${UI.numStats(h, wIdx, { surface: race.surface })}
         ${UI.hasSkills(h) ? `<div class="skills">${UI.skillChips(h)}</div>` : ''}
         <div class="small muted">近走：${e(UI.recentRuns(h))}</div>
+        ${UI.rideRivals ? UI.rideRivals(card) : ''}
         ${(() => { const lg = card.runners.filter(r => r.horse.legend).map(r => r.horse.name); if (!lg.length) return ''; return `<div class="legend-call">★ リーチ！ スペシャルホース <b>${lg.map(e).join('・')}</b> が出てくる。勝てば馬の店に並ぶ</div>`; })()}
         <div class="btns">${accepted ? `<span class="chip mine">騎乗する</span><button class="btn sm" data-act="horse" data-id="${e(h.id)}">馬を見る</button><button class="btn sm" data-act="skip-week" data-id="${e(h.id)}">今週は休ませる</button>` : `<button class="btn sm gold" data-act="offer-accept" data-race="${e(race.key)}" data-horse="${e(h.id)}">受ける</button>`}</div>
       </div></div>`;
@@ -323,7 +324,7 @@
   S.jrecord = function (st) {
     const G = W.get(), j = J.me();
     const tab = st.jtab || 'me';
-    const tabs = [['me', 'わたしの成績'], ['special', 'スペシャルホース'], ['trophy', 'トロフィー'], ['lead', 'リーディング'], ['awards', '騎手の表彰'], ['hall', '殿堂'], ['course', 'コースレコード'], ['replay', 'リプレイ'], ['mounts', '乗った馬'], ['hist', '騎乗の記録']];
+    const tabs = [['me', 'わたしの成績'], ['special', 'スペシャルホース'], ['trophy', 'トロフィー'], ['rival', 'ライバル'], ['lead', 'リーディング'], ['awards', '騎手の表彰'], ['hall', '殿堂'], ['course', 'コースレコード'], ['replay', 'リプレイ'], ['mounts', '乗った馬'], ['hist', '騎乗の記録']];
     let body = '';
     if (tab === 'me') {
       const ys = Object.keys(j.years).map(Number).sort((a, b) => b - a);
@@ -332,6 +333,8 @@
         <tr><td><b>通算</b></td><td class="num">${j.total.rides}</td><td class="num"><b>${j.total.wins}</b></td><td class="num">${j.total.w2}</td><td class="num">${j.total.w3}</td><td class="num">${j.total.rides ? (j.total.wins / j.total.rides * 100).toFixed(1) : '0.0'}%</td><td></td></tr></table></div>
         <h2 class="sec">重賞の勝ち鞍</h2>
         ${j.big.length ? `<div class="panel">${j.big.slice().reverse().map(b => `<div>${W.yLabel(b.y)} ${UI.gradeTag({ grade: b.grade, region: b.region, year: b.y })} ${e(b.race)}　${e(b.horse)}</div>`).join('')}</div>` : '<div class="panel empty">まだ重賞を勝っていません。</div>'}`;
+    } else if (tab === 'rival' && UI.rivalTab) {
+      body = UI.rivalTab();
     } else if (tab === 'lead') {
       const years = Object.keys(G.records.jockeys || {}).map(Number).sort((a, b) => b - a);
       const y = st.ly || years[0] || G.year;
@@ -491,6 +494,7 @@
           <div class="pd-band"></div></div>
         ${UI.entryTable(card)}
         ${UI.paddockOwner ? UI.paddockOwner(card, runner) : ''}
+        ${UI.paddockRivals ? UI.paddockRivals(card, runner) : ''}
         <div class="panel mt offer"><div class="row"><b>${e(h.name)}</b><span class="small muted">${e(J.trainerOf(h))}調教師より</span></div>
           <div class="comment">「${tip}${kireTip}」</div>
           ${UI.hasSkills(h) ? `<div class="pd-myskills mt">${UI.skillList(h)}</div>` : ''}${UI.numStats(h, wIdx, { surface: card.race.surface })}</div>
@@ -503,7 +507,7 @@
       const pdImg = pdSrc ? (UI._pdImg || (UI._pdImg = Object.assign(new Image(), { src: pdSrc }))) : null;
       const show = () => {
         const x = rows[sel], m = UI.mood(x.horse, wIdx), me = x === runner;
-        band.innerHTML = `${UI.waku(x.frame, x.num)}<b class="nm ${me ? 'me' : ''}">${e(x.horse.name)}</b><span>${x.horse.gelding ? 'セ' : x.horse.sex}${W.get().year - x.horse.born}</span><span>${x.weight}kg</span><span>${e(x.jockey ? x.jockey.name : '')}</span><span>単勝 <b>${x.odds}</b>（${x.pop}番人気）</span><span class="md ${m.cls}">${m.text}</span>${me ? UI.condMark(x.horse, wIdx) : ''}<div class="pd-skills">${UI.hasSkills(x.horse) ? UI.skillChips(x.horse) : '<span class="small muted">特殊能力なし</span>'}</div>`;
+        band.innerHTML = `${UI.waku(x.frame, x.num)}<b class="nm ${me ? 'me' : ''}">${e(x.horse.name)}</b><span>${x.horse.gelding ? 'セ' : x.horse.sex}${W.get().year - x.horse.born}</span><span>${x.weight}kg</span><span>${UI.rivalChip ? UI.rivalChip(x) : ''}${e(x.jockey ? x.jockey.name : '')}</span><span>単勝 <b>${x.odds}</b>（${x.pop}番人気）</span><span class="md ${m.cls}">${m.text}</span>${me ? UI.condMark(x.horse, wIdx) : ''}<div class="pd-skills">${UI.hasSkills(x.horse) ? UI.skillChips(x.horse) : '<span class="small muted">特殊能力なし</span>'}</div>`;
         x0 = -80; t0 = performance.now();
       };
       const move = d => { sel = (sel + d + rows.length) % rows.length; show(); };
@@ -596,7 +600,7 @@
         <td class="nm">${e(x.horse.name)}${x.horse.legend ? ' <span class="chip legend">スペシャル</span>' : x.horse.hist ? ' <span class="chip hist">史</span>' : ''}</td>
         <td>${UI.kyakuArrows(x.horse.style, x.horse)}<div class="small muted">${e(x.horse.style)}${H.has(x.horse, 'jiyu') ? '・自在' : ''}</div></td>
         <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td>
-        <td class="small">${x.allowance ? J.allowanceMark(x.allowance) : ''}${e(x.jockey ? x.jockey.name : '')}</td>
+        <td class="small">${x.allowance ? J.allowanceMark(x.allowance) : ''}${UI.rivalChip ? UI.rivalChip(x) : ''}${e(x.jockey ? x.jockey.name : '')}</td>
         <td class="num">${x.pop}<div class="small muted">${x.odds}</div></td><td class="recent">${recent(x.horse)}</td></tr>`; }).join('')}
       </table></div></div>`;
   };
