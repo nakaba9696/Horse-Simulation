@@ -1,7 +1,7 @@
 // 騎乗の画面：自分の馬の映像（3D は js/ui/race3d.js、使えなければ js/ui/ridecam.js）に計器を重ね、
 // タッチのボタン・ゲームパッド・キーボードで「しごく・引く・進路・左右のムチ・持ち替え」を操作する。
 // 計器の置き方：左上に順位と残り、上の真ん中に地点のペース、右上にコースレコードと時計、右に縦長の馬群レーダーと照準の馬、
-// 左下にスタミナ（8つ）・速さ・脚質の矢印・気性。特殊能力が発動したら、右上に札と集中線
+// 左下にスタミナ（8つ）・速さ・気合・脚質の矢印・気性。特殊能力が発動したら、右上に札と集中線
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const U = HS.U, S = HS.Sim;
@@ -210,7 +210,7 @@
         }
         const k = clock < 0 ? 0 : U.clamp(acc / 0.1, 0, 1);
         // コントローラーの振動：自分の馬の蹄の拍子（js/ui/rumble.js）
-        if (RB && clock >= 0) RB.gallop(prev[sim.me][0] + (me.x - prev[sim.me][0]) * k, me.r.num, me.v, sim.ctl ? U.clamp(sim.ctl.gear + (me.spurting ? 0.4 : 0), 0, 1) : 0);
+        if (RB && clock >= 0) RB.gallop(prev[sim.me][0] + (me.x - prev[sim.me][0]) * k, me.r.num, me.v, sim.ctl ? U.clamp(sim.ctl.gear + (me.spurting ? 0.4 : 0) + Math.max(0, me.fight || 0) / 200, 0, 1) : 0); // 気合が乗ると蹄の震えも強く
         const view = {
           t: clock, D: sim.D, surface: race.surface, ground: race.ground,
           course: { name: race.course, dir: course.dir, lap: sim.geo.lap, straight: sim.geo.straight, slope: sim.geo.slope },
@@ -291,6 +291,8 @@
           else { const o = sim.st[f.i]; if (Math.abs(o.x - me.x) < 40) side.unshift({ text: `${o.r.num} ${o.h.name}「${label}」`, bad, t: performance.now() }); }
         }
         if (skillTag) drawSkill(skillTag);
+        // 競り合いの気合：上がっている間は画面の縁が橙に脈打ち、気合が50を越えたら FIGHT・音・振動（文字の説明は出さない）
+        drawFight();
         // 上の真ん中：ペース。決まった地点を通るまでは予想、通ったら判定を出し続ける（スローは前が楽で早めに、ハイは後ろでためて遅めに）
         if (sim.check && !paceShown) { paceShown = true; pace = { text: `${sim.check.at}m通過　${sim.check.t.toFixed(1)}`, verdict: sim.check.verdict, t: performance.now() }; if (AU) AU.se('click'); }
         drawPace();
@@ -320,6 +322,39 @@
           ctx.fillStyle = HUD.panel; rr(VW / 2 - fw / 2, fy - 15, fw, 30, 15); ctx.fill();
           txt(flash.text, VW / 2, fy + 1, `bold 15px ${FONT}`, flash.cls === 'bad' ? '#ffa48a' : flash.cls === 'good' || flash.cls === 'go' ? HUD.gold : '#fff', 'center', 'middle');
           ctx.globalAlpha = 1;
+        }
+      }
+      // 競り合いの気合（js/core/racesim.js の S.FIGHT）。画面の縁の光と、気合が上がりきった瞬間の FIGHT
+      let fightFx = null, fightArmed = true, fightPrev = 0;
+      function drawFight() {
+        const f = me.fight || 0, now = performance.now();
+        if (!me.done && f >= 50 && fightArmed && f > fightPrev) {
+          fightArmed = false; fightFx = { t: now };
+          if (AU) AU.se('fight'); if (RB) RB.fx('fight');
+        }
+        if (f < 25) fightArmed = true;
+        fightPrev = f;
+        // 縁の光：競り合っていて気合が上がっているほど強く、拍子をつけて脈打つ
+        if (!me.done && f > 15 && me.duel) {
+          const k = U.clamp((f - 10) / 60, 0, 1), pulse = 0.6 + 0.4 * Math.sin(now / 110);
+          ctx.save();
+          const side = me.duel.lane > me.lane === (course.dir !== '左') ? 0 : 1; // 相手のいる側を強く（内ラチが右の回りなら、外は左）
+          for (const [x0, strong] of [[0, side === 0], [VW, side === 1]]) {
+            const gw = VW * (strong ? 0.2 : 0.1);
+            const g = ctx.createLinearGradient(x0, 0, x0 === 0 ? gw : VW - gw, 0);
+            g.addColorStop(0, `rgba(255,${Math.round(120 + 80 * k)},40,${(strong ? 0.5 : 0.25) * k * pulse})`); g.addColorStop(1, 'rgba(255,140,40,0)');
+            ctx.fillStyle = g; ctx.fillRect(x0 === 0 ? 0 : VW - gw, 0, gw, VH);
+          }
+          ctx.restore();
+        }
+        if (fightFx) {
+          const age = now - fightFx.t;
+          if (age > 1100) { fightFx = null; return; }
+          const a = age < 120 ? age / 120 : age > 800 ? (1100 - age) / 300 : 1, sc = 1 + 0.25 * Math.max(0, 1 - age / 180);
+          ctx.save(); ctx.globalAlpha = a;
+          ctx.translate(VW / 2, VH * 0.25); ctx.scale(sc, sc);
+          outlined('FIGHT', 0, 0, `900 italic 40px "Noto Serif JP", serif`, '#ffb347', 'center');
+          ctx.restore();
         }
       }
       // RECORD の札（ゴールの後だけ。合図なので英語）：上寄りに、光の帯と差
@@ -421,7 +456,7 @@
       }
       // 左下の計器
       function meters(c, order, rank) {
-        const w = 250, h = 112, x = 10, y = VH - h - 10;
+        const w = 250, h = 134, x = 10, y = VH - h - 10;
         panel(x, y, w, h);
         // スタミナ：8つのブロック。使うたびに1つずつ消える
         txt('スタミナ', x + 10, y + 20, `12px ${FONT}`, HUD.label);
@@ -438,24 +473,55 @@
         const gTxt = c.gear > 0.05 ? '▲'.repeat(Math.ceil(c.gear * 4)) : c.gear < -0.05 ? '▼'.repeat(Math.ceil(-c.gear * 4)) : '－';
         txt(`手綱 ${gTxt}`, x + 10, y + 64, `12px ${FONT}`, c.gear > 0.05 ? '#ffd34d' : c.gear < -0.05 ? '#7fc8ff' : HUD.label);
         txt(`ムチ ${c.hand === 'R' ? '右' : '左'}手${c.whips ? '・' + c.whips : ''}`, x + 120, y + 64, `12px ${FONT}`, HUD.label);
+        // 気合：競り合うと上がる（根性の高い馬ほど）。上がっている間は橙から金に燃え、火の粉が立つ。ひるむと青く沈む
+        fightMeter(x + 10, y + 86);
         // 脚質の矢印：右が逃げ（前）・左が追込（後ろ）（持ち主の指摘 2026-10-16）。光っているのがこの馬の得意な位置（自由自在は全部）。白い枠が今の位置
-        txt('脚質', x + 10, y + 92, `12px ${FONT}`, HUD.label);
+        txt('脚質', x + 10, y + 114, `12px ${FONT}`, HUD.label);
         const nowK = Math.min(3, Math.floor((rank - 1) / Math.max(1, sim.st.length) * 4));
         const jiyuMe = HS.Horse.has(me.h, 'jiyu');
         STYLES.forEach((st, i) => {
-          const ax = x + 52 + (3 - i) * 34, ay = y + 82, lit = jiyuMe || me.h.style === st;
+          const ax = x + 52 + (3 - i) * 34, ay = y + 104, lit = jiyuMe || me.h.style === st;
           ctx.fillStyle = lit ? '#ffd34d' : 'rgba(255,255,255,0.18)';
           ctx.beginPath(); ctx.moveTo(ax + 26, ay + 8); ctx.lineTo(ax + 4, ay); ctx.lineTo(ax + 4, ay + 16); ctx.closePath(); ctx.fill();
           if (i === nowK) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(ax + 1, ay - 2, 28, 20); }
           txt(st[0], ax + 11, ay + 12, `bold 10px ${FONT}`, lit ? '#3a2a00' : HUD.label, 'center', 'middle');
         });
         // 気性：針と色（青＝落ち着き、緑、黄、赤＝掛かり）
-        const cx = x + w - 30, cy = y + 96, r = 20;
+        const cx = x + w - 30, cy = y + 120, r = 20;
         const seg = (a0, a1, col) => { ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI + a0 * Math.PI, Math.PI + a1 * Math.PI); ctx.stroke(); };
         seg(0, 0.35, '#3d8bfd'); seg(0.35, 0.55, '#4cc27a'); seg(0.55, 0.75, '#ffd34d'); seg(0.75, 1, '#ff5a4d');
         const v = U.clamp(c.tension / 100, 0, 1), ang = Math.PI + v * Math.PI;
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(ang) * (r + 3), cy + Math.sin(ang) * (r + 3)); ctx.stroke();
         txt('気性', cx, cy - r - 6, `11px ${FONT}`, HUD.label, 'center');
+      }
+      // 気合の計器（12の目盛り）。label の右に並べる
+      function fightMeter(x, y) {
+        const f = me.fight || 0, now = performance.now(), rising = !!me.duel && f > 0;
+        txt('気合', x, y + 6, `12px ${FONT}`, f >= 50 ? '#ffb347' : HUD.label);
+        const n = 12, bw = 9, gap = 1.5, x0 = x + 60;
+        const lit = f > 0 ? Math.ceil(f / 100 * n) : 0;
+        for (let i = 0; i < n; i++) {
+          const bx = x0 + i * (bw + gap);
+          if (i < lit) {
+            const k = i / (n - 1);
+            const flick = rising ? 0.75 + 0.25 * Math.sin(now / 60 + i * 1.7) : 1;
+            ctx.globalAlpha = flick;
+            ctx.fillStyle = k < 0.5 ? '#ff7a2e' : k < 0.85 ? '#ffb347' : '#ffe9a6';
+          } else ctx.fillStyle = HUD.off;
+          ctx.fillRect(bx, y - 4, bw, 12);
+          ctx.globalAlpha = 1;
+        }
+        // 火の粉：上がっている間、光っている目盛りの上に小さな粒が立ちのぼる
+        if (rising && lit) {
+          for (let j = 0; j < 7; j++) {
+            const ph = ((now / 700) + j * 0.37) % 1, px = x0 + ((j * 47) % (lit * (bw + gap))) + Math.sin(now / 200 + j) * 2;
+            ctx.globalAlpha = (1 - ph) * 0.9; ctx.fillStyle = j % 2 ? '#ffd34d' : '#ff8a3d';
+            ctx.beginPath(); ctx.arc(px, y - 6 - ph * 16, 1.6 + (1 - ph) * 1.2, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+        // ひるみ：青い帯を左から
+        if (f < 0) { ctx.fillStyle = 'rgba(110,160,230,0.85)'; ctx.fillRect(x0, y - 4, (n * (bw + gap)) * (-f / 100), 12); }
       }
       // 縦長の馬群レーダー：上が前。先頭から最後方までを1本に。紫が自分、白い輪が照準。内ラチは回る向きの側
       function radar(view, order) {
@@ -475,6 +541,7 @@
           ctx.fillStyle = isMe ? '#b45cff' : hh.cap;
           ctx.fillRect(x - 3.5, y - 5, 7, 10);
           ctx.strokeStyle = isMe ? '#fff' : 'rgba(0,0,0,0.6)'; ctx.lineWidth = isMe ? 1.5 : 1; ctx.strokeRect(x - 3.5, y - 5, 7, 10);
+          if (me.duel && j === me.duel.i && (me.fight || 0) > 15) { ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke(); }
           if (j === target && !isMe) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.stroke(); }
         });
         const tg = sim.st[target];

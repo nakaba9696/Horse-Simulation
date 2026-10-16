@@ -10,17 +10,17 @@
   const SASHI = ['差し', '追込'];
 
   // at：調べる区間（start＝スタートから4秒、mid＝直線の前、st＝直線、any＝いつも）。group：爆発・損・速さ・気性・根性（この順に1つずつ回して選ぶ）。
-  // fx：spd＝速さの倍率と秒（free なら脚を使わず、出だしの消耗も軽い）、E＝スタミナの増減、drift＝よれる（進路を外へ）、pos＝隊列の位置の目標を前へ（m）。ikki＝一気系（1レースに1つだけ発動）
+  // fx：spd＝速さの倍率と秒（free なら脚を使わず、出だしの消耗も軽い）、top＝終いの伸びの上限を上げる（ためた脚を使い切れる。脚が残っていないと効かない）、E＝スタミナの増減、drift＝よれる（進路を外へ）、pos＝隊列の位置の目標を前へ（m）。ikki＝一気系（1レースに1つだけ発動）
   // 身につく条件は、史実馬のうち持つ馬が5〜25%（弱みは少なめ）になるように合わせた（tools/skills_bench.js count）
   K.LIST = [
     // 爆発
-    { id: 'saikoubi', at: 'st', label: '最後方一気', group: '爆発', ikki: true, note: '直線で最後方近くからムチを入れると、大きく伸びる', fx: { spd: 0.07, sec: 4, free: true },
+    { id: 'saikoubi', at: 'st', label: '最後方一気', group: '爆発', ikki: true, note: '直線で最後方近くからムチを入れると、大きく伸びる', fx: { spd: 0.07, sec: 4, free: true, top: 0.3 },
       learn: p => p.style === '追込' && p.kire >= 6,
       when: x => x.inStraight && x.R > 100 && x.rank >= x.n - 2 && x.whipping },
-    { id: 'chokusen', at: 'st', label: '直線一気', group: '爆発', ikki: true, note: '直線で中団より後ろからムチを入れると伸びる', fx: { spd: 0.05, sec: 4, free: true },
+    { id: 'chokusen', at: 'st', label: '直線一気', group: '爆発', ikki: true, note: '直線で中団より後ろからムチを入れると伸びる', fx: { spd: 0.05, sec: 4, free: true, top: 0.2 },
       learn: p => SASHI.includes(p.style) && p.kire >= 6,
       when: x => x.inStraight && x.R > 100 && x.rank > x.n / 2 && x.whipping },
-    { id: 'oosoto', at: 'st', label: '大外一気', group: '爆発', ikki: true, note: '直線で外に持ち出してムチを入れると伸びる', fx: { spd: 0.045, sec: 4, free: true },
+    { id: 'oosoto', at: 'st', label: '大外一気', group: '爆発', ikki: true, note: '直線で外に持ち出してムチを入れると伸びる', fx: { spd: 0.045, sec: 4, free: true, top: 0.2 },
       learn: p => SASHI.includes(p.style) && p.slope >= 82,
       when: x => x.inStraight && x.R > 100 && x.s.lane >= 5 && x.whipping },
     { id: 'bagun', at: 'st', label: '馬群割り', group: '爆発', note: '直線で馬と馬の間を、まわりより速く抜ける', fx: { spd: 0.05, sec: 3, free: true },
@@ -166,10 +166,14 @@
       }
     }
   };
+  // 一気系は、ためた脚（発動したときのスタミナ）で伸びが変わる：倍率 a＋b×スタミナ（lo〜hi）。後ろでためて直線で使うと大きく、早めに脚を使ったあとだと小さい
+  K.IKKI = { a: 0.4, b: 2, lo: 0.6, hi: 1.6 };
   K.apply = function (sim, s, k) {
     const f = k.fx;
-    if (f.spd) s.boost = { mul: 1 + f.spd, until: sim.t + (f.sec || 1.5), id: k.id, free: !!f.free }; // free：脚を使わない速さ（スタートの能力）
+    const amp = k.ikki ? U.clamp(K.IKKI.a + K.IKKI.b * s.E, K.IKKI.lo, K.IKKI.hi) : 1;
+    if (f.spd) s.boost = { mul: 1 + f.spd * amp, until: sim.t + (f.sec || 1.5), id: k.id, free: !!f.free }; // free：脚を使わない速さ（スタートの能力）
     if (f.free && k.at === 'start') s.easyStart = true; // 楽に位置を取れたので、出だし（距離の22%まで）の脚の使い方が軽い
+    if (f.top) s.topAdd = (s.topAdd || 0) + f.top;
     if (f.E) s.E = U.clamp(s.E + f.E, -0.2, 1);
     if (f.drift && s.me && sim.ctl && sim.ctl.lastWhip) sim.ctl.lane = U.clamp(sim.ctl.lane + sim.ctl.lastWhip.away * f.drift, 0, 12);
     else if (f.drift) s.driftLane = (s.driftLane || 0) + f.drift * 1.5; // AI の馬は外へよれる（進路の目標が外へずれる）

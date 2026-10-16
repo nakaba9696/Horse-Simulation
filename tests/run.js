@@ -1290,6 +1290,7 @@ require('./extra_replay.js')(check, assert, HS); // レコード・リプレイ�
 require('./extra_owners.js')(check, assert, HS); // 馬主と騎乗依頼
 require('./extra_audio.js')(check, assert, HS); // BGM の曲の書式と長さ
 require('./extra_rumble.js')(check, assert, HS); // コントローラーの振動
+require('./extra_balance.js')(check, assert, HS); // 立ち回りの噛み合い・競り合いの気合
 
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
