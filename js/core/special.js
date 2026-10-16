@@ -17,7 +17,7 @@
     if (g1) return g1;
     g1 = new Map();
     const ey = HS.Eraless ? HS.Eraless.ERA : 2025;
-    for (const r of HS.DATA.races || []) if (r.grade === 'G1' && r.from <= ey && ey <= (r.to || 9999)) g1.set(r.name, { short: r.short || r.name, prize: r.prize || 0, at: r.month * 10 + r.week });
+    for (const r of HS.DATA.races || []) if (r.grade === 'G1' && r.from <= ey && ey <= (r.to || 9999)) g1.set(r.name, { short: r.short || r.name, prize: r.prize || 0, at: r.month * 10 + r.week, age: r.age, region: r.region });
     return g1;
   };
   SP.mapWin = function (s) {
@@ -58,6 +58,17 @@
     { id: 'g1five', label: 'G1を5勝した名馬', note: 'G1を4勝して、次のG1へ', finals: null, legs: (h, race) => race.grade === 'G1' && gw(h).length && (h.gradedWins || []).filter(g => g.grade === 'G1').length === 4, member: d => g1Count(d) >= 5 },
     { id: 'unbeaten', label: '無敗の名馬', note: `デビューから無敗で${SP.STREAK - 1}連勝して、次のレースへ`, finals: null, legs: h => (h.starts || 0) === (h.wins || 0) && (h.wins || 0) === SP.STREAK - 1, member: d => SP.unbeatenOf(d) >= SP.STREAK },
   ];
+  // 大レースごとのグループ「歴代の○○馬」：いまの番組の G1 それぞれ。G1 を勝った馬がそのレースに出ると、そのレースの歴代の勝ち馬が出てくる
+  // （2歳の G1 は、重賞を勝った馬が出ると）。1回に出てくるのは強い順に SP.RACE_IN_RACE 頭まで
+  SP.RACE_IN_RACE = 2;
+  const seenShort = new Set();
+  for (const [name, m] of g1Map()) {
+    if (seenShort.has(m.short)) continue; seenShort.add(m.short);
+    const two = m.age === '2';
+    SP.GROUPS.push({ id: 'r:' + m.short, label: `歴代の${m.short}馬`, note: two ? `重賞を勝って${m.short}へ` : `G1を勝った馬で${m.short}へ`, finals: [m.short], race: true, at: m.at,
+      legs: (h, race) => !won(h, race.short) && (two ? (h.gradedWins || []).length > 0 : (h.gradedWins || []).some(g => g.grade === 'G1')),
+      member: d => (d.wins || []).some(x => { const k = SP.mapWin(x); return k && k.short === m.short; }) });
+  }
   SP.BY = {}; SP.GROUPS.forEach(g => { SP.BY[g.id] = g; });
 
   // スペシャルホースの元：1989年より前に走り終えた史実馬と、data/legends.js
@@ -84,8 +95,10 @@
   SP.pending = function (h, race) {
     const G = W.get(), un = G.unlocked || [];
     const out = [];
+    // 条件の組み合わせのグループを先に（強い順）、大レースのグループはそのあと（強い順）
     for (const g of SP.GROUPS) if (SP.reach(h, g, race)) for (const d of SP.members(g)) if (!un.includes(d.name) && !out.some(x => x.d === d)) out.push({ d, g });
-    return out.sort((a, b) => (b.d.rating || 0) - (a.d.rating || 0));
+    const key = x => (x.g.race ? 1000 : 0) - (x.d.rating || 0);
+    return out.sort((a, b) => key(a) - key(b));
   };
   // 自分の馬のリーチ（次に勝てばよいレースと、出てくるグループ）。ホームに出す
   SP.reachInfo = function (h) {
@@ -111,10 +124,13 @@
   // prepareWeek から：自分の馬がリーチをかけて出るレースに、スペシャルホースを足す
   SP.forRace = function (race, entries) {
     const names = new Set(), out = [];
+    let fromRace = 0;
     for (const e of entries) {
       if (!e.mine || !e.horse) continue;
       for (const sp of SP.pending(e.horse, race)) {
         if (names.has(sp.d.name) || out.length >= SP.MAX_IN_RACE) continue;
+        if (sp.g.race && fromRace >= SP.RACE_IN_RACE) continue;
+        if (sp.g.race) fromRace++;
         if (race.sex === '牝' && sp.d.sex !== '牝') continue; // 牝馬限定のレースには牝馬だけ
         names.add(sp.d.name); out.push({ horse: SP.horse(sp.d, race), legend: true });
       }
