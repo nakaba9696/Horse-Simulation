@@ -926,7 +926,7 @@ check('look: 毛色の表に抜けがない・芦毛は年を取ると白い・�
   for (const k of Object.keys(HS.Race3D.GEAR)) assert(GK.includes(k), `描く馬具 ${k} が表の項目に無い`);
   // 馬の形：三角形の数の上限と、骨の重み
   const out = [];
-  for (const [q, max] of [[1, 6000], [0, 2500]]) {
+  for (const [q, max] of [[1, 8000], [0, 2500]]) {
     const geo = HS.Race3D.horseGeometry(q), tri = geo.index.count / 3;
     assert(tri <= max, `馬の形（${q ? '近く' : '遠く'}）の三角形 ${tri} が ${max} を超える`);
     const si = geo.attributes.skinIndex.array, sw = geo.attributes.skinWeight.array;

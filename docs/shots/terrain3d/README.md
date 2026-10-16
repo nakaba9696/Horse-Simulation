@@ -11,3 +11,5 @@
 - `result_bg.jpg`：結果の画面の背景にした止め絵（assets/ui_bg_result.js）
 
 馬の作り込み（区切り2）：`docs/shots/horse3d_v2/before_after.jpg`（左が前・右が後。横からの襲歩6コマ・頭と首・脚・後ろ・肖像）と `portrait.jpg`。`compare_*` はこの区切りで撮り直した。
+
+区切り3（背と腹の線・頭の彫り・毛のつや）：`docs/shots/horse3d_v2/before_after_2.jpg`（左が区切り2・右が区切り3）、`portrait_coats.jpg`（左上が区切り2の鹿毛、右上・左下・右下が区切り3の鹿毛・黒鹿毛・芦毛）、`head_before_after.jpg`、`portrait.jpg`。`compare_*` はこの区切りで撮り直した。

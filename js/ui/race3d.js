@@ -417,8 +417,8 @@
   // ---- 馬と騎手の形（全頭で共有） ----
   // 馬の向き：+X が前、+Y が上、+Z が右。地面が y=0。頂点ごとに骨を2本まで混ぜ、関節でなめらかに曲がる
   // 胴・首・頭・脚・尾・たてがみ・騎手は、断面（楕円）を並べてつないだ形（ロフト）で作る
-  // 三角形の数の目安（騎手・鞍・馬具を含む1頭）：近くの形 6,000 まで（PC だけなので）・遠くの形 2,500 まで（28m で切り替える）。
-  //   16頭がみな近くにいても 9 万ほど。形は全頭で共有し、馬ごとに違うのは小さな絵（256×256）だけ
+  // 三角形の数の目安（騎手・鞍・馬具を含む1頭）：近くの形 8,000 まで（PC だけなので）・遠くの形 2,500 まで（28m で切り替える）。
+  //   16頭がみな近くにいても 10 万ほど。形は全頭で共有し、馬ごとに違うのは小さな絵（256×256）だけ
   // 骨：0 根元、1 胴、2・3 首、4 頭、5〜7 尾、8〜11 左前・12〜15 右前（肩・肘・膝・球節）、16〜19 左後・20〜23 右後（股・後膝・飛節・球節）
   //     24 騎手の腰、25 上体、26 頭、27・28 左腕（上・下）、29・30 右腕、31 ムチ、32〜35 馬具（シャドーロール・ブリンカー・メンコ・チークピーシーズ）
   const FJ = [[0.60, 1.26], [0.47, 0.97], [0.485, 0.53], [0.495, 0.215]];   // 前脚の関節：肩・肘・膝・球節
@@ -445,10 +445,10 @@
 
   // 胴の断面：[x, 背の高さ, 腹の高さ, 横の半幅, 上ほど細く]
   const BODY_T = [
-    [0.89, 1.42, 1.12, 0.1, 0.1], [0.84, 1.53, 0.99, 0.2, 0.15], [0.74, 1.6, 0.92, 0.25, 0.22], [0.59, 1.645, 0.88, 0.27, 0.32],
-    [0.41, 1.65, 0.86, 0.28, 0.36], [0.23, 1.6, 0.86, 0.29, 0.26], [0.03, 1.565, 0.88, 0.3, 0.15], [-0.17, 1.565, 0.915, 0.3, 0.1],
-    [-0.35, 1.585, 0.97, 0.3, 0.06], [-0.53, 1.625, 1.03, 0.305, 0.04], [-0.69, 1.64, 1.07, 0.305, 0.06], [-0.83, 1.615, 1.1, 0.28, 0.1],
-    [-0.94, 1.56, 1.14, 0.23, 0.14], [-1.01, 1.48, 1.2, 0.15, 0.2], [-1.05, 1.39, 1.27, 0.065, 0.2],
+    [0.89, 1.42, 1.12, 0.1, 0.1], [0.84, 1.54, 0.99, 0.2, 0.15], [0.74, 1.625, 0.92, 0.25, 0.24], [0.59, 1.685, 0.875, 0.27, 0.36],
+    [0.41, 1.665, 0.845, 0.28, 0.36], [0.23, 1.595, 0.85, 0.29, 0.26], [0.03, 1.555, 0.875, 0.3, 0.15], [-0.17, 1.555, 0.925, 0.3, 0.1],
+    [-0.35, 1.575, 1.0, 0.3, 0.06], [-0.53, 1.625, 1.075, 0.305, 0.04], [-0.69, 1.655, 1.1, 0.305, 0.06], [-0.83, 1.635, 1.12, 0.28, 0.1],
+    [-0.94, 1.58, 1.15, 0.23, 0.14], [-1.01, 1.49, 1.2, 0.15, 0.2], [-1.05, 1.39, 1.27, 0.065, 0.2],
   ];
   // 首の断面：[たてがみの側の点 x, y, のどの側の点 x, y, 半幅, 骨a, 骨b, bの重み]
   const NECK_T = [
@@ -630,6 +630,24 @@
     }
     return P.addScaledVector(d, h);
   }
+  // 頭の彫り：[t（うなじ 0 → 鼻先 1）, 角度（0＝のど・π＝顔の前。左右は同じ）, t の幅, 角度の幅, 高さ(m)]
+  const CARVE = [
+    [0.16, 2.45, 0.06, 0.28, -0.022],  // 目の上のくぼみ
+    [0.24, 2.25, 0.045, 0.22, 0.012],  // 目の縁の張り
+    [0.6, Math.PI, 0.3, 0.32, 0.012],  // 鼻筋
+    [0.55, 2.4, 0.22, 0.25, -0.012],   // 鼻筋の横の平ら
+    [0.9, 2.25, 0.06, 0.3, 0.018],     // 鼻の穴のふくらみ
+    [0.2, 0.75, 0.1, 0.45, 0.032],     // 顎（頬）のふくらみ
+    [0.38, 1.05, 0.08, 0.3, -0.015],   // 頬の前のくぼみ
+    [0.86, 0.4, 0.06, 0.4, 0.008],     // 下あご（口の下）
+  ];
+  function carve(P, c, t, th) {
+    const d = P.clone().sub(c).normalize();
+    let h = 0;
+    const a = th > Math.PI ? TAU - th : th;  // 左右を同じに
+    for (const [t0, a0, dt, da, amp] of CARVE) { const u = (t - t0) / dt, v = (a - a0) / da; h += amp * Math.exp(-u * u - v * v); }
+    return P.addScaledVector(d, h);
+  }
   // o.noJockey：騎手を描かない（騎手は素材の形で別に描くとき。鐙・手綱・ムチは残す）
   // o.bare：鞍・ゼッケン・鐙・手綱・ムチも描かない（肖像用。頭絡と馬具は残す。騎手も描かない）
   function horseGeometry(q, o) {
@@ -638,7 +656,7 @@
     const X = V3(1, 0, 0), Y = V3(0, 1, 0), Z = V3(0, 0, 1);
     const cell = k => { const uv = cellUV(CELL[k]); return () => uv; };
     const rig = b => [b, b, 0];
-    const mBody = hi ? 20 : 10, mNeck = hi ? 12 : 8, mHead = hi ? 12 : 8, mLeg = hi ? 8 : 6, mTail = hi ? 8 : 5;
+    const mBody = hi ? 22 : 10, mNeck = hi ? 12 : 8, mHead = hi ? 18 : 8, mLeg = hi ? 8 : 6, mTail = hi ? 8 : 5;
 
     // 胴（近くの形は、肩・胸前・尻の筋肉のふくらみを面に足す）
     {
@@ -651,8 +669,8 @@
     loft(B, NECK.map(s => ell(s.c, s.u, Z, s.h, s.w, mNeck, 0.28, 0.95)), NECK.map(s => s.sk), (i, j, P) => sideUV(P), { cap0: true, cap1: true });
     // 頭
     {
-      const ts = hi ? [0, 0.08, 0.2, 0.32, 0.44, 0.58, 0.72, 0.85, 0.94, 1] : [0, 0.2, 0.44, 0.72, 0.9, 1];
-      loft(B, ts.map(t => { const s = headSec(t); return ell(s.c, vHU(), Z, s.h, s.w, mHead, s.k, 0.9); }), ts.map(() => rig(4)),
+      const ts = hi ? [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.32, 0.4, 0.48, 0.57, 0.66, 0.75, 0.83, 0.89, 0.94, 0.975, 1] : [0, 0.2, 0.44, 0.72, 0.9, 1];
+      loft(B, ts.map(t => { const s = headSec(t), r = ell(s.c, vHU(), Z, s.h, s.w, mHead, s.k, 0.9); return hi ? r.map((P, j) => carve(P, s.c, t, j / mHead * TAU)) : r; }), ts.map(() => rig(4)),
         (i, j) => rUV(R_HEAD, ts[i], mth(j, mHead)), { cap0: true, cap1: true });
       // 耳・目・鼻の穴
       for (const sd of [-1, 1]) {
@@ -662,7 +680,7 @@
         g.translate(0, 0.085, 0);
         const m = new THREE.Matrix4().compose(base, new THREE.Quaternion().setFromUnitVectors(Y, dir), V3(0.62, 1, 1));
         B.add(g, m, { uv: sideUV(base), bone: 4 });
-        blob(B, headPt(0.21, Math.PI - sd * 1.0, -0.012), 0.027, 0.027, 0.027, hi ? 7 : 5, hi ? 5 : 4, { uv: cellUV(CELL.eye), bone: 4 });
+        blob(B, headPt(0.21, Math.PI - sd * 1.0, -0.012), 0.03, 0.022, 0.02, hi ? 8 : 5, hi ? 6 : 4, { uv: cellUV(CELL.eye), bone: 4 }, -0.9);
         if (hi) blob(B, headPt(0.93, Math.PI - sd * 0.78, -0.014), 0.02, 0.026, 0.016, 5, 4, { uv: cellUV(CELL.dark), bone: 4 });
       }
       // 前髪
@@ -717,9 +735,6 @@
       for (const sd of [-1, 1]) {
         const h0 = sd < 0 ? 16 : 20;
         blob(B, V3(-0.795, 0.6, sd * HZ * 0.95), 0.032, 0.05, 0.03, 6, 4, { uvf: P => legUV(sd < 0 ? 2 : 3, P), bone: h0 + 2 }); // 飛節の角
-        // 頬（下あごの丸み）
-        const hc = headSec(0.17).c.clone().addScaledVector(vHU(), -0.055).addScaledVector(Z, sd * 0.042);
-        blob(B, hc, 0.085, 0.085, 0.06, 8, 6, { uv: rUV(R_HEAD, 0.17, 0.25), bone: 4 });
       }
       // のど（首と頭のつなぎ）
       blob(B, V3(1.045, 1.72, 0), 0.1, 0.1, 0.082, 8, 6, { uvf: sideUV, skinf: () => [3, 4, 0.5] }, -0.6);
@@ -899,9 +914,25 @@
         spot(x, y, 0.045 + hash01(i, 93) * 0.04, L.dappleCol, L.dapple * (0.5 + hash01(i, 94) * 0.5));
       }
       if (L.roan > 0) { g.fillStyle = 'rgba(235,232,226,' + (0.25 * L.roan) + ')'; for (let i = 0; i < 900; i++) { const x = -1.0 + hash01(i, 95) * 1.8, y = 0.9 + hash01(i, 96) * 0.75; g.fillRect(px(x), py(y), 1, 1); } }
-      // 肩・尻の筋肉の光り
-      const gk = res > 256 ? 0.25 : 1; // 細かい絵（光を計算する材質）では、描き込みの光りは控えめに
-      spot(0.5, 1.32, 0.2, 'rgba(255,255,255,0.5)', (0.08 + 0.1 * L.gloss) * gk); spot(-0.66, 1.42, 0.24, 'rgba(255,255,255,0.5)', (0.08 + 0.1 * L.gloss) * gk);
+      // 筋肉の境の陰（肩の後ろ・肘・首の下・脇腹・尻の後ろ・後膝）。ぼかした線で
+      const pxm = rw / (x1 - x0) * res / 256;
+      const groove = (pts, w, a) => {
+        g.save(); g.filter = `blur(${Math.max(0.5, w * 0.6 * pxm).toFixed(1)}px)`;
+        g.strokeStyle = `rgba(0,0,0,${a})`; g.lineWidth = w / (SY1 - SY0) * rh; g.lineCap = 'round'; g.lineJoin = 'round';
+        g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(px(x), py(y)) : g.moveTo(px(x), py(y))); g.stroke(); g.restore();
+      };
+      const dk = (L.dapple > 0 ? 0.6 : 1) * 1.5;
+      groove([[0.45, 1.52], [0.39, 1.27], [0.36, 1.03]], 0.05, 0.17 * dk);
+      groove([[0.33, 1.0], [0.5, 0.97], [0.63, 1.04]], 0.04, 0.13 * dk);
+      groove([[0.74, 1.2], [0.93, 1.48], [1.04, 1.67]], 0.035, 0.09 * dk);
+      groove([[-0.3, 1.0], [-0.41, 1.21], [-0.5, 1.43]], 0.06, 0.13 * dk);
+      groove([[-0.93, 1.5], [-0.89, 1.26], [-0.8, 1.02]], 0.05, 0.17 * dk);
+      groove([[-0.5, 1.42], [-0.45, 1.16], [-0.52, 0.98]], 0.045, 0.1 * dk);
+      // 筋肉の山の光り（肩・上腕・尻・太もも・首すじ・胴）。光を計算する材質（細かい絵）では控えめに
+      const gk = res > 256 ? 0.45 : 1, ga = (0.08 + 0.1 * L.gloss) * gk;
+      spot(0.53, 1.36, 0.17, 'rgba(255,255,255,0.5)', ga * 1.2); spot(0.6, 1.1, 0.1, 'rgba(255,255,255,0.5)', ga);
+      spot(-0.66, 1.43, 0.21, 'rgba(255,255,255,0.5)', ga * 1.2); spot(-0.62, 1.18, 0.13, 'rgba(255,255,255,0.5)', ga);
+      spot(0.8, 1.68, 0.12, 'rgba(255,255,255,0.5)', ga * 0.8); spot(0.0, 1.32, 0.3, 'rgba(255,255,255,0.5)', ga * 0.6);
       // 頭の側（耳）
       spot(1.1, 2.05, 0.12, L.top, 0.5);
     });
@@ -1319,7 +1350,7 @@
     return bones;
   }
   // テスト用：騎手の IK（src＝骨だけの形でもよい）
-  R3._ik = { horseBones, makeJockey: (h, src) => makeJockey(h, m => m, src), poseJockey, poseHorse, atBone };
+  R3._ik = { horseBones, makeJockey: (h, src) => makeJockey(h, m => m, src), poseJockey, poseHorse, atBone, paintHorse };
 
   // テスト用：馬の形（q＝1 近く・0 遠く）と骨の数
   R3.horseGeometry = (q, o) => horseGeometry(q, o);
@@ -2101,7 +2132,7 @@
       const tex = T(texOf(paintHorse(h, photo ? 512 : 256), false, aniso));
       const L = coatLook(h.coat, h.age), gl = L.gloss || 0;
       const mat = photo
-        ? M(new THREE.MeshStandardMaterial({ map: tex, normalMap: norTex, normalScale: new THREE.Vector2(1, 1), skinning: true, roughness: 0.56 - 0.24 * gl, metalness: 0, envMapIntensity: 0.9 }))
+        ? M(new THREE.MeshStandardMaterial({ map: tex, normalMap: norTex, normalScale: new THREE.Vector2(1, 1), skinning: true, roughness: 0.5 - 0.22 * gl, metalness: 0, envMapIntensity: 1.0 }))
         : M(new THREE.MeshPhongMaterial({ map: tex, skinning: true, shininess: 18 + 30 * gl, specular: new THREE.Color(0x111111).lerp(new THREE.Color(0x3a3a3a), gl) }));
       const mesh = new THREE.SkinnedMesh(hgeo, mat);
       mesh.castShadow = shadowOn;
@@ -2538,7 +2569,8 @@
       const h = { coat, age, gear, name: horse.name || horse.id || '', noMarks: small };
       const tex = texOf(paintHorse(h, small ? 256 : 1024), false, 8);
       const L = coatLook(coat, age), gl = L.gloss || 0;
-      const mat = new THREE.MeshStandardMaterial({ map: tex, normalMap: K.nor, skinning: true, roughness: 0.56 - 0.24 * gl, metalness: 0, envMapIntensity: 0.9 });
+      // 肖像は毛のつやを薄い上塗り（clearcoat）で出す
+      const mat = new THREE.MeshPhysicalMaterial({ map: tex, normalMap: K.nor, skinning: true, roughness: 0.52 - 0.22 * gl, metalness: 0, envMapIntensity: 1.0, clearcoat: 0.18 + 0.25 * gl, clearcoatRoughness: 0.42 });
       const mesh = new THREE.SkinnedMesh(K.geo, mat);
       const bones = horseBones();
       mesh.add(bones[0]); mesh.updateMatrixWorld(true); mesh.bind(new THREE.Skeleton(bones));
