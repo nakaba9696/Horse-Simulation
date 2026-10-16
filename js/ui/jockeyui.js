@@ -503,18 +503,26 @@
   const STYLE_CLS = { '逃げ': 'nige', '先行': 'sen', '差し': 'sashi', '追込': 'oi' };
   UI.courseSvg = function (race) {
     const course = HS.DATA.courses[race.course] || HS.DATA.courses['東京'];
-    const geo = (race.surface === 'ダ' ? course.dirt : course.turf) || course.turf || course.dirt;
-    const tr = HS.Track.make(geo.lap, geo.straight, course.dir);
-    const W0 = 220, H0 = 120, pad = 14;
-    const sc = Math.min((W0 - pad * 2) / (tr.a + 2 * tr.r), (H0 - pad * 2) / (2 * tr.r));
-    const P = sx => { const p = tr.at(sx); return [(W0 / 2 + p.x * sc).toFixed(1), (H0 / 2 + p.y * sc).toFixed(1)]; };
+    const cf = HS.Track.forRace(race), geo = cf.geo, tr = cf.track;
+    const prof = !tr.flat, W0 = 220, H0 = prof ? 150 : 120, pad = 14, HM = 120;
+    const sc = Math.min((W0 - pad * 2) / (tr.a + 2 * tr.r), (HM - pad * 2) / (2 * tr.r));
+    const P = sx => { const p = tr.at(sx); return [(W0 / 2 + p.x * sc).toFixed(1), (HM / 2 + p.y * sc).toFixed(1)]; };
+    // 高低差（スタートからゴールまで。左がスタート）
+    let profSvg = '', hd = 0;
+    if (prof) {
+      const hs = []; for (let k = 0; k <= 60; k++) hs.push(tr.hAt(race.dist * (1 - k / 60)));
+      const h0 = Math.min(...hs), h1 = Math.max(...hs); hd = h1 - h0;
+      const hy = h => (H0 - 6 - (h - h0) / Math.max(4, hd) * 22).toFixed(1);
+      profSvg = `<polyline points="${hs.map((h, k) => `${(pad + (W0 - pad * 2) * k / 60).toFixed(1)},${hy(h)}`).join(' ')}" fill="none" stroke="#c8d3e2" stroke-width="1.5"/>`;
+      hd = Math.round(hd * 10) / 10;
+    }
     const pts = []; for (let k = 0; k <= 80; k++) pts.push(P(tr.L * k / 80).join(','));
     const [gx, gy] = P(0), [sx, sy] = P(race.dist);
     return `<svg viewBox="0 0 ${W0} ${H0}" class="course-svg" role="img" aria-label="コース図">
       <polyline points="${pts.join(' ')}" fill="none" stroke="${race.surface === 'ダ' ? '#b88a57' : '#59a84f'}" stroke-width="7" stroke-linejoin="round"/>
       <line x1="${gx}" y1="${+gy - 8}" x2="${gx}" y2="${+gy + 8}" stroke="#fff" stroke-width="2.5"/><text x="${gx}" y="${+gy + 18}" fill="#fff" font-size="9" text-anchor="middle">ゴール</text>
       <circle cx="${sx}" cy="${sy}" r="5" fill="#ffd34d" stroke="#000"/><text x="${sx}" y="${+sy - 8}" fill="#ffd34d" font-size="9" text-anchor="middle">スタート</text>
-      <text x="6" y="12" fill="#c8d3e2" font-size="9">${course.dir}回り・直線 ${geo.straight}m・坂 ${geo.slope}</text></svg>`;
+      <text x="6" y="12" fill="#c8d3e2" font-size="9">${course.dir}回り${geo.loop && !tr.line ? `（${geo.loop}回り）` : ''}・直線 ${geo.straight}m・${prof ? `高低差 ${hd}m` : `坂 ${geo.slope}`}</text>${profSvg}</svg>`;
   };
   // 脚質の矢印（逃げ・先行・差し・追込の4つ。光っているのがこの馬の脚質）
   UI.kyakuArrows = st => `<span class="ka" title="${e(st)}">${['逃げ', '先行', '差し', '追込'].map(k => `<i class="${k === st ? 'on' : ''}"></i>`).join('')}</span>`;
