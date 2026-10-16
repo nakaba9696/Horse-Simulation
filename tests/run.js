@@ -523,6 +523,10 @@ check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデ�
   const act = E.activeNames();
   assert(shop.length > 1000 && !shop.some(it => act.has(it.horse.name)), '走っている馬が店に並んでいる');
   assert(shop.every(it => G.year - it.horse.born === 2), '店の馬が2歳でない');
+  // 値段は強さで大きく開く（評価が4上がると2倍）。始めの資金で、いちばん強い馬は買えない
+  const pr = r => E.priceOf({ rating: r });
+  assert(pr(100) >= pr(80) * 20 && pr(90) > pr(86) * 1.8, `値段の差が小さい（80: ${pr(80)}・100: ${pr(100)}）`);
+  assert(Math.max(...shop.map(x => x.price)) > G.player.money * 3, 'いちばん強い馬が始めの資金で買える');
   // 買うと店から消える
   G.player.money = 1e9;
   const it = shop.sort((a, b) => b.price - a.price)[0];

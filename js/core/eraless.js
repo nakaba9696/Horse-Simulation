@@ -63,7 +63,11 @@
   };
 
   // ---------- 馬の店：走っていない馬（と、倒したスペシャルホース）を、デビュー前の2歳として売る ----------
-  const priceOf = (d, legend) => Math.round((1000 + Math.max(0, (d.rating || 80) - 78) * 110) * U.priceIndex() * 1.3 * (legend ? 1.6 : 1) / 10) * 10;
+  // 値段は強さ（評価）で大きく開く：評価が4上がるごとに2倍（持ち主の指摘 2026-10-16「強い馬以外買う価値なくなるから値段差を」）。
+  // 評価80で約1,400万円・90で約8,000万円・96で約2.3億円・100で約4.6億円。安い馬は300万円から。スペシャルホースはその1.6倍
+  E.PRICE_BASE = 1000; E.PRICE_DOUBLE = 4;
+  E.priceOf = (d, legend) => Math.round(Math.max(300, E.PRICE_BASE * Math.pow(2, ((d.rating || 80) - 80) / E.PRICE_DOUBLE)) * U.priceIndex() * 1.3 * (legend ? 1.6 : 1) / 10) * 10;
+  const priceOf = E.priceOf;
   let mk = null;
   E.market = function () {
     const G = W.get();
