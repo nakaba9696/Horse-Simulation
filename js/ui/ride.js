@@ -21,6 +21,7 @@
     return new Promise(resolve => {
       const race = card.race;
       const sim = HS.World.startSim(card, { ride: true });
+      RD.cur = sim; // 確かめ用（いま走っているレース）
       const me = sim.st[sim.me];
       const course = HS.DATA.courses[race.course] || HS.DATA.courses['東京'];
       el.innerHTML = `
@@ -34,11 +35,11 @@
             </div>
             <button class="rb swap" data-c="swap">持ち替え</button>
             <div class="pad-r">
-              <button class="rb whip" data-c="whipL">左ムチ</button>
-              <button class="rb whip" data-c="whipR">右ムチ</button>
+              <button class="rb whip" data-c="whipL">左ムチ<small>${S.dirOf(sim) === '左' ? '外へ寄る' : '内へ寄る'}</small></button>
+              <button class="rb whip" data-c="whipR">右ムチ<small>${S.dirOf(sim) === '左' ? '内へ寄る' : '外へ寄る'}</small></button>
             </div>
           </div>
-          <div class="ride-help small muted">十字キー：↑しごく（連打が速いほど速く）・↓引く・←→進路　B 右ムチ・X 左ムチ（続けて打つと風車ムチ）・A 持ち替え　LT/RT 左右を見る・LB/RB 照準・Back 視点・Y ガッツポーズ<br>キーボード：↑↓←→・X 右ムチ・Z 左ムチ・C 持ち替え・Q/E 左右を見る・A/S 照準・V 視点・G ガッツポーズ　画面をドラッグでカメラを回す（2回タップで戻す）</div>
+          <div class="ride-help small muted">十字キー：↑しごく（連打が速いほど速く）・↓引く・←→進路　B 右ムチ・X 左ムチ（直線で打つともうひと伸び。続けて打つと風車ムチ。馬はムチと反対の側へ寄る）・A 持ち替え（持っていない手のムチを押すと、まず持ち替える）　LT/RT 左右を見る・LB/RB 照準・Back 視点・Y ガッツポーズ<br>キーボード：↑↓←→・X 右ムチ・Z 左ムチ・C 持ち替え・Q/E 左右を見る・A/S 照準・V 視点・G ガッツポーズ　画面をドラッグでカメラを回す（2回タップで戻す）</div>
         </div>`;
       const cv = el.querySelector('.ride-canvas');
       const narrow = (el.clientWidth || 960) < 600;
@@ -72,7 +73,7 @@
       const say = (text, cls) => { flash = { text, cls, t: performance.now() }; };
 
       // ---------- 操作 ----------
-      let whipAt = -9, poseAt = null;
+      let whipAt = -9, poseAt = null, whipFx = null;
       const doUp = () => {
         const b = S.ctl.up(sim);
         if (b === 'good' && sim.ctl.pushes === 0) say('好スタート！', 'good');
@@ -84,10 +85,11 @@
         const b = S.ctl.whip(sim, side);
         if (b == null) return say(sim.ctl && !sim.ctl.started ? 'まだゲートの中' : '', '');
         if (b === 'swap') { say(`${sim.ctl.hand === 'R' ? '右' : '左'}手に持ち替え`, ''); return; }
-        whipAt = sim.t;
-        if (b === 'yore') say('よれた！', 'bad');
+        whipAt = sim.t; whipFx = { t: performance.now(), side, b, inward: sim.ctl.lastWhip && sim.ctl.lastWhip.away < 0, zone: sim.D - me.x < sim.straight + 200 };
+        if (b === 'yore') say(`よれた！（${whipFx.inward ? '内' : '外'}へ）`, 'bad');
         else if (b === 'tired') say('ムチが効かない', 'bad');
         else if (b === 'windmill') say('風車ムチ！', 'whip');
+        else if (!whipFx.zone) say('まだ早い（行きたがるだけ）', 'bad');
         if (AU) AU.se('whip');
       };
       const doSwap = () => { if (S.ctl.swap(sim)) say(`${sim.ctl.hand === 'R' ? '右' : '左'}手に持ち替え`, ''); };
@@ -264,6 +266,7 @@
         if (c.wide) notes.push(['外を回っている', '']);
         if (c.gear < -0.05 && !c.kakariNow) notes.push(['ためている', 'good']);
         if (me.E <= 0) notes.push(['バテた', 'bad']);
+        if (me.boost && sim.t < me.boost.until && me.boost.id && HS.Skills) notes.push([`⚡${HS.Skills.label(me.boost.id)} 発動中`, 'skill']);
         msgEl.innerHTML = notes.map(([t, k]) => `<span class="${k}">${t}</span>`).join('');
         // 特殊能力の発動（自分の馬は右上に札と集中線、近くの馬は小さな字幕）
         while (fxSeen < sim.skillFx.length) {
@@ -273,17 +276,11 @@
           else { const o = sim.st[f.i]; if (Math.abs(o.x - me.x) < 40) side.unshift({ text: `${o.r.num} ${o.h.name}「${label}」`, bad, t: performance.now() }); }
         }
         if (skillTag) drawSkill(skillTag);
-        // 上の真ん中：決まった地点を通ったときのペースとラップ
-        if (sim.check && !paceShown) { paceShown = true; pace = { text: `${sim.check.at}m通過　${sim.check.t.toFixed(1)}`, verdict: sim.check.verdict, t: performance.now() }; }
-        if (pace && performance.now() - pace.t < 3200) {
-          const a = Math.min(1, (3200 - (performance.now() - pace.t)) / 400);
-          ctx.globalAlpha = a;
-          const bw = 300, bx = VW / 2 - bw / 2, by = 12;
-          panel(bx, by, bw, 46);
-          txt(pace.verdict, VW / 2, by + 22, `900 20px ${FONT}`, pace.verdict === 'ハイペース' ? '#ff8a6a' : pace.verdict === 'スローペース' ? '#7fc8ff' : '#ffe9a6', 'center', 'middle');
-          txt(pace.text, VW / 2, by + 39, `12px ${FONT}`, '#fff', 'center', 'middle');
-          ctx.globalAlpha = 1;
-        }
+        // 上の真ん中：ペース。決まった地点を通るまでは予想、通ったら判定を出し続ける（スローは前が楽で早めに、ハイは後ろでためて遅めに）
+        if (sim.check && !paceShown) { paceShown = true; pace = { text: `${sim.check.at}m通過　${sim.check.t.toFixed(1)}`, verdict: sim.check.verdict, t: performance.now() }; if (AU) AU.se('click'); }
+        drawPace();
+        // ムチ：打った側から光の筋、画面が揺れ、寄った向きの矢印
+        drawWhip();
         side = side.filter(x => performance.now() - x.t < 2500).slice(0, 3);
         side.forEach((x, k) => {
           ctx.fillStyle = x.bad ? 'rgba(110,40,30,0.85)' : 'rgba(30,110,150,0.85)'; ctx.fillRect(VW - 330, 128 + k * 22, 230, 20);
@@ -306,7 +303,56 @@
           ctx.globalAlpha = 1;
         }
       }
-      // 発動の札：得なものは水色、損なものは赤茶。小さな馬の印と、画面の集中線
+      // ペースの札：予想（逃げ馬の数から）→ 判定（決まった地点を通ったとき）。判定のあとは小さくして出し続ける。目盛りでスロー〜ハイのどこか
+      const nNige = sim.st.filter(s => s.h.style === '逃げ').length;
+      const guess = nNige >= 2 ? 'ハイペース' : nNige === 0 ? 'スローペース' : '平均ペース';
+      const paceCol = v => v === 'ハイペース' ? '#ff8a6a' : v === 'スローペース' ? '#7fc8ff' : '#ffe9a6';
+      function drawPace() {
+        if (clock < 0 || me.done) return;
+        const bw = 300, bx = VW / 2 - bw / 2, by = 12;
+        if (!pace) {
+          panel(bx, by, bw, 40);
+          txt(`予想 ${guess}`, VW / 2, by + 18, `bold 14px ${FONT}`, paceCol(guess), 'center', 'middle');
+          txt(`逃げ馬${nNige}頭・${sim.checkAt}m地点で判定`, VW / 2, by + 32, `11px ${FONT}`, '#cfe3c9', 'center', 'middle');
+          return;
+        }
+        const age = performance.now() - pace.t, big = age < 3200;
+        const h = big ? 80 : 60;
+        panel(bx, by, bw, h);
+        txt(pace.verdict, VW / 2, by + (big ? 24 : 18), `900 ${big ? 22 : 16}px ${FONT}`, paceCol(pace.verdict), 'center', 'middle');
+        txt(S.paceHint(pace.verdict), VW / 2, by + (big ? 44 : 33), `bold ${big ? 13 : 11}px ${FONT}`, '#fff', 'center', 'middle');
+        // 目盛り：左がスロー、右がハイ
+        const gx = bx + 34, gw = bw - 68, gy = by + h - 18;
+        const grd = ctx.createLinearGradient(gx, 0, gx + gw, 0); grd.addColorStop(0, '#7fc8ff'); grd.addColorStop(0.5, '#ffe9a6'); grd.addColorStop(1, '#ff8a6a');
+        ctx.fillStyle = grd; ctx.fillRect(gx, gy, gw, 4);
+        const k = U.clamp((sim.paceF - 0.982) / 0.036, 0, 1);
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(gx + gw * k, gy + 5); ctx.lineTo(gx + gw * k - 5, gy + 11); ctx.lineTo(gx + gw * k + 5, gy + 11); ctx.closePath(); ctx.fill();
+        txt('スロー', gx - 4, gy + 4, `9px ${FONT}`, '#7fc8ff', 'right', 'middle'); txt('ハイ', gx + gw + 4, gy + 4, `9px ${FONT}`, '#ff8a6a', 'left', 'middle');
+        if (big) txt(pace.text, bx + bw - 8, by + 14, `10px ${FONT}`, '#cfe3c9', 'right', 'middle');
+      }
+      // ムチ：打った側の端から光の筋、少しの揺れ、寄った向きの矢印（右回りは右ムチで外、左ムチで内）
+      function drawWhip() {
+        const stg = el.querySelector('.ride-stage');
+        if (!whipFx) { if (stg) stg.style.transform = ''; return; }
+        const age = performance.now() - whipFx.t;
+        if (age > 900) { whipFx = null; if (stg) stg.style.transform = ''; return; }
+        if (stg) stg.style.transform = age < 160 ? `translate(${Math.round(Math.sin(age / 18) * 5)}px, ${Math.round(Math.cos(age / 23) * 3)}px)` : '';
+        const right = whipFx.side === 'R', k = 1 - age / 900;
+        ctx.save(); ctx.globalAlpha = 0.65 * k; ctx.strokeStyle = whipFx.zone ? '#fff3b0' : '#ffb199'; ctx.lineWidth = 3;
+        for (let i = 0; i < 9; i++) {
+          const y = VH * (0.3 + i * 0.05), x0 = right ? VW : 0, len = VW * (0.18 + (i % 3) * 0.05) * Math.min(1, age / 120);
+          ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(right ? x0 - len : x0 + len, y - 10); ctx.stroke();
+        }
+        ctx.restore();
+        ctx.globalAlpha = Math.min(1, k * 1.5);
+        const ax = right ? VW * 0.78 : VW * 0.22, ay = VH * 0.62;
+        outlined(`${right ? '右' : '左'}ムチ`, ax, ay, `900 30px ${FONT}`, whipFx.zone ? '#ffe680' : '#ffb199', 'center');
+        // 馬が寄る向き（ムチと反対の側）
+        const toLeft = right;
+        outlined(`${toLeft ? '◀' : ''} ${whipFx.inward ? '内' : '外'}へ寄る ${toLeft ? '' : '▶'}`, ax, ay + 28, `bold 17px ${FONT}`, '#fff', 'center');
+        ctx.globalAlpha = 1;
+      }
+      // 発動の札：得なものは水色、損なものは赤茶。小さな馬の印と、画面の集中線。はじめの1.2秒は真ん中に大きく「発動！」
       function drawSkill(tag) {
         const age = performance.now() - tag.t;
         if (age > 2200) return;
@@ -330,6 +376,15 @@
         horseIcon(x + 22, y + 21, tag.bad ? '#ffd9cf' : '#fff');
         outlined(tag.text, x + 44, y + 27, `900 18px ${FONT}`, '#fff');
         ctx.globalAlpha = 1;
+        if (age < 1300) {
+          const s0 = Math.min(1, age / 140), fade = age > 1000 ? (1300 - age) / 300 : 1;
+          ctx.globalAlpha = fade;
+          // 画面の縁を光らせる
+          ctx.strokeStyle = tag.bad ? 'rgba(255,120,90,0.8)' : 'rgba(120,220,255,0.85)'; ctx.lineWidth = 10 * (1 - age / 1300) + 2; ctx.strokeRect(4, 4, VW - 8, VH - 8);
+          outlined(`${tag.bad ? '▼' : '⚡'} ${tag.text}`, VW / 2, VH * 0.21, `900 ${Math.round(30 + 10 * (1 - s0))}px "Noto Serif JP", serif`, tag.bad ? '#ffb199' : '#bff0ff', 'center');
+          outlined(tag.bad ? '発動してしまった' : '発動！', VW / 2, VH * 0.21 + 26, `bold 16px ${FONT}`, '#fff', 'center');
+          ctx.globalAlpha = 1;
+        }
       }
       function horseIcon(x, y, col) {
         ctx.save(); ctx.translate(x, y); ctx.fillStyle = col;

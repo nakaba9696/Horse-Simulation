@@ -157,7 +157,7 @@
   };
   K.apply = function (sim, s, k) {
     const f = k.fx;
-    if (f.spd) s.boost = { mul: 1 + f.spd, until: sim.t + (f.sec || 1.5) };
+    if (f.spd) s.boost = { mul: 1 + f.spd, until: sim.t + (f.sec || 1.5), id: k.id };
     if (f.E) s.E = U.clamp(s.E + f.E, -0.2, 1);
     if (f.drift && s.me && sim.ctl && sim.ctl.lastWhip) sim.ctl.lane = U.clamp(sim.ctl.lane + sim.ctl.lastWhip.away * f.drift, 0, 12);
   };

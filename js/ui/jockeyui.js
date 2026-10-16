@@ -214,7 +214,7 @@
         <td class="num"><b style="color:var(--gold2)">${U.money(it.price)}</b></td></tr>`;
     }).join('');
     return `<h2 class="sec">馬の店<span class="r">資金 ${U.money(G.player.money)}・お手馬 ${T.ownCount()}/${T.MAX_OWN}${full ? '（いっぱい）' : ''}</span></h2>
-      <div class="small muted">1989〜2026年に走った馬で、いま走っていない馬を、デビュー前の2歳として売る。${T.FH_NAME}（伸びきったときの強さ。史実馬は50〜80で、オリジナルホースは99まで）の芝・ダートの高いほうの順。倒したスペシャルホースは上に並ぶ。行を押すと馬の画面が開き、そこで買えます。</div>
+      <div class="small muted">1989〜2026年に走った馬で、いま走っていない馬を、デビュー前の2歳として売る。${T.FH_NAME}（伸びきったときの強さ。史実馬は45〜90で、オリジナルホースは99まで）の芝・ダートの高いほうの順。倒したスペシャルホースは上に並ぶ。行を押すと馬の画面が開き、そこで買えます。</div>
       ${items.length ? `<div class="tblwrap mt"><table class="t shop"><tr><th>馬名</th><th>性別</th><th class="num">年齢</th><th class="num">芝</th><th class="num">ダ</th><th class="num">値段</th></tr>${rows}</table></div>
         ${items.length > lim ? `<div class="center mt"><button class="btn" data-act="mmore">もっと見る（残り${items.length - lim}頭）</button></div>` : ''}`
         : '<div class="panel empty">いま買えるデビュー前の史実馬はいません。毎年3月に新しい世代が生まれます。</div>'}`;
@@ -495,7 +495,7 @@
     const cnt = { '逃げ': 0, '先行': 0, '差し': 0, '追込': 0 };
     for (const x of runners) cnt[x.horse.style] = (cnt[x.horse.style] || 0) + 1;
     const pace = cnt['逃げ'] >= 2 ? 'ハイペース' : cnt['逃げ'] === 0 ? 'スローペース' : '平均ペース';
-    const favor = pace === 'ハイペース' ? '差し・追込に向く' : pace === 'スローペース' ? '逃げ・先行に向く' : '力どおりの流れ';
+    const favor = pace === 'ハイペース' ? '差し・追込に向く。仕掛けは遅めに' : pace === 'スローペース' ? '逃げ・先行に向く。仕掛けは早めに' : '力どおりの流れ';
     const recent = h => (h.results || []).slice(-3).map(r => `<span class="${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos > 9 ? '×' : r.pos}</span>`).join('') || '<span class="muted">新</span>';
     return `<div class="entry">
       <div class="entry-head"><div>${UI.gradeTag(race)} <b class="serif" style="font-size:20px">${e(race.short || race.name)}</b></div>

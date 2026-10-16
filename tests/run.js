@@ -336,9 +336,10 @@ check('sim: 特殊能力の効き目が極端でない', () => {
     assert(r.win < 0.5, `${sk} の勝率 ${r.win}`);
     out.push(`${H.SKILLS[sk].label}${Math.round(r.win * 100)}%`);
   }
-  const bad = fieldTest('東京', 2000, h => { h.skills = ['deokure']; }, 120);
-  const base = fieldTest('東京', 2000, () => {}, 120);
-  assert(bad.pos >= base.pos, '出遅れ癖が得になっている');
+  // 出遅れ癖は出遅れたレースだけに効くので、種を変えて数を重ねて比べる
+  let badPos = 0, basePos = 0;
+  for (let sd = 1; sd <= 4; sd++) { badPos += fieldTest('東京', 2000, h => { h.skills = ['deokure']; }, 100, sd).pos; basePos += fieldTest('東京', 2000, h => { h.skills = []; }, 100, sd).pos; }
+  assert(badPos >= basePos, `出遅れ癖が得になっている（平均着順 ${(badPos / 4).toFixed(2)}・癖なし ${(basePos / 4).toFixed(2)}）`);
   return out.join(' ');
 });
 
@@ -444,10 +445,12 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・調子の
   x.lastRaceW = W.wIdx() - 30; assert(T.condLevel(x, W.wIdx()) === 0, '休みすぎにならない');
   const fh = T.fhBoth(x, W.wIdx());
   assert(fh.turf >= 1 && fh.turf <= 99 && fh.dirt >= 1 && fh.dirt <= 99, JSON.stringify(fh));
-  // 総合力：史実馬は伸びきったとき50〜80に入る（ごく弱い馬を除く）。能力の上限がそろうと99
+  // 総合力：史実馬は伸びきったとき45〜90に入る（ごく弱い馬を除く）。キンチェムで90前後。能力の上限がそろうと99
   const pks = HS.Eraless.pool().map(d => { const p = T.fhPeak(H.fromHistoric(d, 'x')); return Math.max(p.turf, p.dirt); }).sort((a, b) => a - b);
   const q = f => pks[Math.floor(f * (pks.length - 1))];
-  assert(q(0.02) >= 48 && q(0.5) >= 55 && q(0.5) <= 70 && pks[pks.length - 1] >= 78 && pks[pks.length - 1] <= 81, `史実馬の総合力 ${q(0.02)}〜${q(0.5)}〜${pks[pks.length - 1]}`);
+  assert(q(0.02) >= 44 && q(0.5) >= 58 && q(0.5) <= 72 && pks[pks.length - 1] >= 86 && pks[pks.length - 1] <= 90, `史実馬の総合力 ${q(0.02)}〜${q(0.5)}〜${pks[pks.length - 1]}`);
+  const kin = T.fhPeak(H.fromHistoric(HS.Special.data('キンチェム'), 'x'));
+  assert(Math.max(kin.turf, kin.dirt) >= 88 && Math.max(kin.turf, kin.dirt) <= 91, 'キンチェムが90前後でない: ' + JSON.stringify(kin));
   const top = {}; for (const k of H.STATS) top[k] = 118;
   assert(T.fhOf(top, '芝') === 99 && T.fhOf(top, 'ダ') === 99, '能力の上限で99にならない');
   // 出走の予約：1年先までの重賞を押さえると、その週に出走登録になる

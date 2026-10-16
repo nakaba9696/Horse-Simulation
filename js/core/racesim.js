@@ -64,8 +64,8 @@
       else if (id === 'inner' && ctx && ctx.num && ctx.num <= 4) a += 1.2;
       else if (id === 'travel' && race.region === '海外') a += 2;
       else if (id === 'homebody' && race.region === '海外') a -= 3;
-      else if (id === 'hipace' && ctx && ctx.paceF > 1.003) a += 1.8;
-      else if (id === 'slowpace' && ctx && ctx.paceF && ctx.paceF < 0.995) a += 1.8;
+      else if (id === 'hipace' && ctx && ctx.paceF > S.PACE_HI) a += 1.8;
+      else if (id === 'slowpace' && ctx && ctx.paceF && ctx.paceF < S.PACE_LO) a += 1.8;
     }
     return a;
   };
@@ -86,8 +86,15 @@
 
   // 脚の切れの効き方（s＝終いの伸び、r＝仕掛けの早さ、a＝加速、c＝スパートの消耗、z＝バテたあとの粘り）
   S.OONIGE = { early: 1.02, mid: 1.02, kick: 0.5, lead: 0.055 }; // 大逃げの速さ（道中）・終いの伸び・離す差（直線の長さに対して）
-  S.DS = 0.78; // スタミナの持ちの全体の倍率
-  S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0.01, z: 0.0015, top: 1.6 };
+  S.DS = 0.68; // スタミナの持ちの全体の倍率
+  // ペース（持ち主の指摘 2026-10-16）：スローなら前の馬が楽で、早めに動くのが得。ハイなら前の馬が脚を使い、後ろでためて遅めに動くのが得。
+  // paceF が PACE_HI より上でハイ、PACE_LO より下でスロー。道中、隊列の前にいるほど（paceF-1）×PACE_K の割合でスタミナの減りが増える（スローなら減る）
+  S.LATE_E = 0.15; // 出遅れた馬は、位置を取り戻すのに脚を使う（スタミナの減り）
+  S.PUSH = { base: 0.25 }; // 追い出したあと、しごかずに馬なりで行くときの伸び（段に置き換えた値）
+  S.PACE_HI = 1.006; S.PACE_LO = 0.994; S.PACE_K = 70; S.DRAFT = 0.12; S.PACE_TOP = 50; S.PACE_EARLY = 60;
+  S.paceVerdict = f => f > S.PACE_HI ? 'ハイペース' : f < S.PACE_LO ? 'スローペース' : '平均ペース';
+  S.paceHint = v => v === 'ハイペース' ? '前は苦しい。後ろでためて遅めに' : v === 'スローペース' ? '前が楽。早めに動け' : '力どおりの流れ';
+  S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0, z: 0.0015, top: 2.2 };
 
   // 本体。runners: [{horse, jockey, weight, num, frame, rider?}]。rider==='P' の馬はプレイヤーが乗る（opts.ride のとき操作を受け付ける）
   // S.create で始め、S.step で 0.1 秒ずつ進め、S.finish で結果を出す。S.run はそれを一度に行う
@@ -106,13 +113,13 @@
     const v0 = S.baseSpeed(D, race.surface, race.ground, geo.speed) * U.eraSpeed(race.year);
     const straight = Math.min(geo.straight, D * 0.6);
     const nNige = runners.filter(r => r.horse.style === '逃げ').length;
-    const paceF = 1 + (nNige >= 2 ? 0.006 : nNige === 0 ? -0.01 : 0) + rng.normal(0, 0.004);
+    const paceF = 1 + (nNige >= 3 ? 0.014 : nNige === 2 ? 0.009 : nNige === 0 ? -0.012 : 0) + rng.normal(0, 0.006);
     const st = runners.map((r, i) => {
       const h = r.horse;
       const pw = S.power(h, race, wIdx, Object.assign({ paceF }, r));
-      const form = rng.normal(0, 2.2);
+      const form = rng.normal(0, 1.9);
       const A = pw.total + form;
-      const vc = v0 * (1 + 0.0008 * (A - 85));
+      const vc = v0 * (1 + 0.0012 * (A - 85));
       const sta = pw.cur.sta, guts = pw.cur.guts, mind = pw.cur.mind, slopeP = pw.cur.slope;
       const has = id => H.has(h, id);
       const Ds = Math.max(800, (h.distMax + 300 + (sta - 75) * 12) * S.DS);
@@ -128,7 +135,7 @@
       if (late) delay += rng.float(0.5, 1.4);
       const kakari = rng.chance(Math.max(0, (72 - mind) / 100) * 0.3 + (has('kakari') ? 0.25 : 0));
       return {
-        r, h, i, A, vc, Ds, kickS, spurtR, guts, mind, slopeP, x: 0, v: 0, E: 1, delay, late, kakari,
+        r, h, i, A, vc, Ds, kickS, spurtR, guts, mind, slopeP, x: 0, v: 0, E: late ? 1 - S.LATE_E : 1, delay, late, kakari,
         acc: K.a0 + K.a1 * kire, zubu: (8 - kire) * K.z + (has('longspurt') ? 0.003 : 0), spurtCost: K.c0 + K.c1 * (kire - 1),
         oonige: has('oonige') && h.style === '逃げ', nino: has('nino'), narabu: has('narabu'), sora: has('sora'),
         me: false, fired: {}, boost: null, trig: [], sk: null, passive: [], passiveShown: false,
@@ -146,6 +153,8 @@
       me: -1, ctl: null, _byX: null,
       checkAt: D >= 2400 ? 1200 : D >= 1600 ? 1000 : 600, check: null, skillFx: [],
     };
+    // 終いの伸びの上限はペースで変わる：スローは脚が余っても伸びきれない（早めに動いて余った脚を使う）。ハイは脚の残りで決まる
+    sim.top = S.KIRE.top * U.clamp(1 + (paceF - 1) * S.PACE_TOP, 0.55, 1.6);
     if (HS.Skills) HS.Skills.setup(sim);
     // このレースで効く特殊能力（直線で見せる）
     for (const s of st) {
@@ -193,7 +202,7 @@
       if (!c.started) {
         c.started = true;
         if (sim.t < 0.05) { s.delay = 0.05; c.startGood = true; return 'good'; }
-        s.delay = sim.t; if (sim.t > 0.5) { s.late = true; S.say(sim, sim.t, `${s.h.name}、出遅れた！`, 'trouble'); return 'late'; }
+        s.delay = sim.t; if (sim.t > 0.5) { s.late = true; s.E -= S.LATE_E; S.say(sim, sim.t, `${s.h.name}、出遅れた！`, 'trouble'); return 'late'; }
         c.startGood = sim.t < 0.25;
         return c.startGood ? 'good' : 'ok';
       }
@@ -265,6 +274,7 @@
     sim.t += DT; sim.step++;
     const t = sim.t;
     const order = S.byX(sim).filter(s => !s.done);
+    for (let k = 0; k < order.length; k++) order[k].rk = order.length > 1 ? k / (order.length - 1) : 0.5;
     // 隊列の先頭（大逃げの馬は追いかけず、2番手以下の集団で隊列を作る）
     const pack = order.find(o => !o.oonige) || order[0];
     const leaderX = pack ? pack.x : D;
@@ -272,7 +282,7 @@
     for (const s of st) {
       // ゴールした馬は止まらず、少しずつ速さを落として流す（描画のため。着順・時計は変わらない）
       if (s.done) { s.v = Math.max(6, s.v - 0.9 * DT); s.x += s.v * DT; continue; }
-      if (s.me && c && !c.started && t >= 0.9) { c.started = true; s.delay = 0.9; s.late = true; S.say(sim, t, `${s.h.name}、出遅れた！`, 'trouble'); }
+      if (s.me && c && !c.started && t >= 0.9) { c.started = true; s.delay = 0.9; s.late = true; s.E -= S.LATE_E; S.say(sim, t, `${s.h.name}、出遅れた！`, 'trouble'); }
       if (t < s.delay) continue;
       const R = D - s.x;
       const prog = s.x / D;
@@ -303,19 +313,22 @@
         if (s.E <= 0) target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu);
         else {
           if (s.spurting) {
-            // 馬なりの伸び（おまかせと同じ。しごけばさらに伸びる）
+            // 馬なりでは伸びきらない。しごいて段を上げるほど、残っている脚を使って伸びる（段がいちばん上で、おまかせと同じ伸び）。
+            // いつ追い出すかが腕の見せどころ：スローなら早め、ハイなら遅め（脚が残っていれば伸び、無ければバテる）
             const ratioE = Math.cbrt(Math.max(0, s.E) * s.Ds / (0.9 * Math.max(R, 30) * s.spurtCost));
-            target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * S.KIRE.top);
+            target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * (1 + (sim.top - 1) * U.clamp(g, S.PUSH.base, 1)));
           } else if (prog < 0.22) target = pace * s.styleMult * (s.nino && prog < 0.08 ? 1.02 : 1);
           else target = pace * (1 + U.clamp((leaderX - s.x - s.gap) * 0.0012, -0.02, 0.02));
           // 引く：段の深さだけ下げて、脚をためる（スタミナの減りが小さい）
           if (g < 0) { target *= 1 + g * (prog < 0.15 ? 0.03 : 0.012); costMul *= 1 + 0.1 * g; }
           // しごく：段の高さだけ速く。道中で上げると脚を使う
-          if (g > 0) { target = Math.max(target, (s.spurting ? s.vc : target) * (1 + g * (s.spurting ? 0.012 + s.kickS * 2.0 : 0.03))); if (!s.spurting) costMul *= 1 + 0.6 * g; }
+          // 追い出してからしごくと、少しだけ速くなるが、そのぶん脚を使う（追うだけで楽に勝てないように）
+          if (g > 0 && !s.spurting) { target *= 1 + g * 0.03; costMul *= 1 + 0.6 * g; }
           if (t < c.whipUntil) {
             const inZone = R < straight + 200;
             const k = c.windmill ? 0.9 : 0.6;
-            target *= 1 + (inZone ? k : 0.2) * s.kickS * S.whipEff(c); costMul *= c.windmill ? 1.2 : 1.1;
+            // 直線のムチは気合が入って、もうひと伸びし、脚ももつ。直線の前のムチは脚を使うだけ
+            target *= 1 + (inZone ? k : 0.2) * s.kickS * S.whipEff(c); costMul *= inZone ? (c.windmill ? 0.95 : 0.9) : 1.2;
           }
           // 掛かると行きたがって脚を使う。落ち着いていれば脚がもつ
           if (kakariNow) { target *= 1.012; costMul *= 1.35; }
@@ -344,7 +357,7 @@
         } else if (s.spurting) {
           // 残りの脚をゴールまでに使い切る速さ（切れの上限まで）
           const ratioE = Math.cbrt(Math.max(0, s.E) * s.Ds / (0.9 * Math.max(R, 30) * s.spurtCost));
-          target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * S.KIRE.top);
+          target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * sim.top);
           // 大逃げは道中で脚を使っているので、終いは粘るだけ
           if (s.oonige) target = s.vc * (1 + s.kickS * S.OONIGE.kick);
           // 叩き合い（根性）
@@ -368,6 +381,11 @@
         }
         if (s.kakari && prog < 0.5) costMul *= 1.3;
       }
+      // ペース：道中は前にいるほど、ハイなら脚を使い、スローなら楽をする
+      // ハイペースで直線の前から追い出すと、脚がもたない（早仕掛けは損）
+      if (s.spurting && R > straight && sim.paceF > 1) costMul *= 1 + (sim.paceF - 1) * S.PACE_EARLY;
+      // （後ろの馬は前の馬を風よけにして、ペースにかかわらず少し楽をする）
+      if (!s.spurting && prog > 0.08 && !s.oonige) { const rk = s.rk == null ? 0.5 : s.rk; costMul *= Math.max(0.5, 1 + (sim.paceF - 1) * S.PACE_K * (1 - 2 * rk)) * (1 - S.DRAFT * rk); } // 大逃げは集団と離れて自分のペースで行く
       // 発動した特殊能力の、一時の速さ
       if (s.boost && t < s.boost.until) target *= s.boost.mul;
       // 坂：ゴール前の上りで脚を使う。坂が弱いほど大きく減る
@@ -414,7 +432,7 @@
     }
     // ペースの目安：先頭がチェックポイントを過ぎたとき
     if (!sim.check && order[0] && order[0].x >= sim.checkAt) {
-      const verdict = sim.paceF > 1.003 ? 'ハイペース' : sim.paceF < 0.995 ? 'スローペース' : '平均ペース';
+      const verdict = S.paceVerdict(sim.paceF);
       sim.check = { t, at: sim.checkAt, verdict };
       if (opts.frames) S.say(sim, t, `${sim.checkAt}m通過は${t.toFixed(1)}秒。${verdict}です。`, 'pace');
     }

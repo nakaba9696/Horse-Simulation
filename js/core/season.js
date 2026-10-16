@@ -35,17 +35,18 @@
   T.cond = (h, wIdx) => T.COND[T.condLevel(h, wIdx)];
 
   // ---------- 総合力（芝・ダートそれぞれの強さを1〜99の数で）と国内の順位 ----------
-  // 持ち主の指摘 2026-10-16：前の名は「フリーハンデ」（斤量 kg の数）。史実馬は伸びきったとき50〜80に入り、
-  // オリジナルホースは能力を伸ばせば99まで届く（能力の上限118がそろうと99）
+  // 持ち主の指摘 2026-10-16：前の名は「フリーハンデ」（斤量 kg の数）。史実馬は伸びきったとき45〜90に入り（キンチェム・マンノウォーで90）、
+  // オリジナルホースは能力を伸ばせば99まで届く
   T.FH_NAME = '総合力';
-  T.FH_LOW = 72; T.FH_HIGH = 100; // 能力の重み付きの値が72で50、100で80（史実馬の下から1%〜いちばん上）
+  T.FH_MIN = 45; T.FH_MAX = 90;
+  T.FH_LOW = 72; T.FH_HIGH = 101; // 能力の重み付きの値が72で45、101で90（史実馬の下から1%〜いちばん上の伝説級）
   T.fh = (h, wIdx, surface) => T.fhOf(H.cur(h, wIdx), surface);
   // 能力の値（いまの値でも、伸びきった値でも）から総合力を出す
   T.fhOf = function (c0, surface) {
     const c = Object.assign({}, c0, H.onSurface(c0, surface));
     const w = surface === 'ダ' ? { spd: 0.42, sta: 0.20, guts: 0.15, mind: 0.11, slope: 0.12 } : { spd: 0.45, sta: 0.22, guts: 0.16, mind: 0.12, slope: 0.05 };
     let a = 0; for (const k in w) a += (c[k] || 0) * w[k];
-    return U.clamp(Math.round(50 + (a - T.FH_LOW) * 30 / (T.FH_HIGH - T.FH_LOW)), 1, 99);
+    return U.clamp(Math.round(T.FH_MIN + (a - T.FH_LOW) * (T.FH_MAX - T.FH_MIN) / (T.FH_HIGH - T.FH_LOW)), 1, 99);
   };
   T.fhBoth = (h, wIdx) => ({ turf: T.fh(h, wIdx, '芝'), dirt: T.fh(h, wIdx, 'ダ') });
   // 伸びきったとき（完成）の総合力

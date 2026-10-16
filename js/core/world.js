@@ -378,9 +378,10 @@
     if (race.region === '海外') return 86;
     if (race.region === '地方') return race.grade === 'G1' ? 74 : 70;
     if (race.graded) {
-      if (race.age === '2') return { G1: 71, G2: 68, G3: 66 }[race.grade];
-      if (race.age === '3' && m <= 6) return { G1: 77, G2: 74, G3: 71 }[race.grade];
-      return { G1: 81, G2: 78, G3: 76 }[race.grade];
+      const gr = race.grade === 'GF' ? 'G1' : race.grade; // グランドフィナーレ（GF）は G1 と同じ
+      if (race.age === '2') return { G1: 71, G2: 68, G3: 66 }[gr] || 66;
+      if (race.age === '3' && m <= 6) return { G1: 77, G2: 74, G3: 71 }[gr] || 71;
+      return { G1: 81, G2: 78, G3: 76 }[gr] || 76;
     }
     const base = { newcomer: 52, maiden: 54, C1: 62, C2: 67, C3: 72, OP: 75 }[race.cls] || 60;
     if (race.age === '2') return base - 6 + (m >= 10 ? 2 : 0);
