@@ -22,12 +22,29 @@
     if (App.pages && App.pages[st.screen]) { App.pages[st.screen](app, anim); return; } // ゲームの外の画面（リプレイ・フリーレース。js/ui/replayui.js・freerace.js）
     if (st.screen === 'editor') { App.setScene('home'); app.innerHTML = UI.screens.editor(st.ed || (st.ed = {})); App.hydrate(app); return; }
     const view = st.view || { name: st.tab };
-    const html = UI.screens[view.name] ? UI.screens[view.name](view) : '';
+    let html = UI.screens[view.name] ? UI.screens[view.name](view) : '';
+    if (UI.withBand) html = UI.withBand(view, html); // 頭の帯（js/ui/uikit.js）
     App.setScene(App.sceneOf(view));
-    app.innerHTML = UI.header() + `<main>${html}</main>` + UI.nav(st.tab);
+    app.innerHTML = UI.header() + `<main>${html}</main>` + UI.nav(st.tab) + (UI.kit ? UI.kit.keybar(App.keyHints(view)) : '');
     App.enter(app.querySelector('main'), anim);
     App.hydrate(app);
+    App.afterRender();
   };
+  // 画面ごとの操作の案内（下の帯の右）。Q・E はタブのある画面だけ
+  App.keyHints = view => ['market', 'jrecord', 'records', 'races', 'horse'].includes(view.name) ? [['Q/E', 'LB/RB', '切り替え']] : [];
+  // 描いたあと：もどったときは前に選んでいた札とスクロールの位置に戻す（カーソルの記憶）。キー・パッドで遊んでいるなら、決めた札を最初から選んでおく
+  App.afterRender = function () {
+    if (UI.kit) UI.kit.pvReset();
+    const mem = App._restore; App._restore = null;
+    if (mem && mem.scroll != null) window.scrollTo(0, mem.scroll);
+    if (!/^(key|pad)$/.test(document.body.dataset.input || '')) return;
+    const root = $('#app');
+    const el = (mem && mem.focus && App.findSig(root, mem.focus)) || root.querySelector('[data-autofocus]');
+    if (el) App.navSelect(el, !!mem);
+  };
+  // 札の名札（data-act と鍵の data-*）。描き直したあとに同じ札を探すのに使う
+  App.sigOf = el => { if (!el || !el.dataset) return null; const d = el.dataset; return JSON.stringify([d.act || '', d.id || '', d.tab || '', d.k || '', d.v || '', d.key || '', d.name || '', d.i || '', d.pv || '']); };
+  App.findSig = (root, sig) => [...root.querySelectorAll('[data-act]')].find(x => App.sigOf(x) === sig) || null;
 
   // ---------- 背景の絵と画面の入り（持ち主の決定 2026-10-16「画面はゲームらしく派手に」） ----------
   // 背景は assets/ui_bg_*.js（HS.ASSETS）。読めないときは色の地のまま
@@ -104,6 +121,7 @@
   App.confirm = function (text, okLabel) {
     return new Promise(res => {
       const bg = App.modal(`<h3>確認</h3><p>${text}</p><div class="btns"><button class="btn gold" data-x="ok">${okLabel || 'はい'}</button><button class="btn" data-x="no">やめる</button></div>`, { noClose: true });
+      if (/^(key|pad)$/.test(document.body.dataset.input || '')) App.navSelect(bg.querySelector('[data-x=no]')); // キー・パッドでは「やめる」を選んでおく（取り返しのつかない操作を連打で通さない）
       bg.querySelector('[data-x=ok]').onclick = () => { App.closeModal(); res(true); };
       bg.querySelector('[data-x=no]').onclick = () => { App.closeModal(); res(false); };
     });
@@ -120,8 +138,16 @@
   };
 
   // ---------- 移動 ----------
-  App.go = function (view) { App.st.stack.push(App.st.view || { name: App.st.tab }); App.st.view = view; App.navAnim = 'push'; App.render(); window.scrollTo(0, 0); };
-  App.back = function () { App.st.view = App.st.stack.pop() || { name: App.st.tab }; App.navAnim = 'back'; App.render(); };
+  App.go = function (view) {
+    const from = App.st.view || { name: App.st.tab };
+    from._mem = { focus: App.sigOf(navEl), scroll: window.scrollY || 0 }; // もどったときに同じ札・同じ位置へ
+    App.st.stack.push(from); App.st.view = view; App.navAnim = 'push'; App.render(); window.scrollTo(0, 0);
+  };
+  App.back = function () {
+    const v = App.st.stack.pop() || { name: App.st.tab };
+    App._restore = v._mem || null; delete v._mem;
+    App.st.view = v; App.navAnim = 'back'; App.render();
+  };
   App.save = function () { if (!W.saveLocal()) App.toast('この端末に保存できませんでした（セーブの書き出しを使ってください）'); };
 
   // ---------- 操作 ----------
@@ -447,13 +473,13 @@
   const navOff = () => App.inRace || !!document.querySelector('.ride, .fx') || (App.st.screen === 'title' && !App.st.titleOpen);
   const visible = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
   let navEl = null;
-  App.navSelect = function (el) {
+  App.navSelect = function (el, noScroll) {
     if (navEl && navEl !== el) navEl.classList.remove('navsel');
     navEl = el; if (!el) return;
     el.classList.add('navsel');
     if (el.tabIndex < 0 && !/^(BUTTON|A|SELECT|INPUT|TEXTAREA)$/.test(el.tagName)) el.tabIndex = 0;
     el.focus({ preventScroll: true });
-    el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: App.reduced() ? 'auto' : 'smooth' });
+    if (!noScroll) el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: App.reduced() ? 'auto' : 'smooth' });
   };
   App.navMove = function (dir) {
     const root = navRoot();
@@ -485,7 +511,10 @@
   App.navBack = function () {
     const m = $('#modal-root').lastElementChild;
     if (m) { const c = m.querySelector('[data-act=close], [data-x=no]'); if (c) c.click(); return; }
+    const bk = $('#app [data-back]'); // 画面が自分の「もどる」を持っていれば、それを押す（フリーレースなど）
+    if (bk && visible(bk)) { bk.click(); return; }
     if (App.st.screen === 'game' && App.st.stack.length) App.back();
+    else if (App.st.screen === 'game' && App.st.tab !== 'home') act.tab({ tab: 'home' }); // タブの一番上でもどる＝ホームへ
   };
   const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
   document.addEventListener('keydown', ev => {
@@ -501,7 +530,16 @@
     else if ((ev.key === 'q' || ev.key === 'e' || ev.key === 'PageUp' || ev.key === 'PageDown') && !typing) App.navLR(ev.key === 'q' || ev.key === 'PageUp' ? 'prev' : 'next');
   });
   // 左右の切り替え（Q・E／PageUp・PageDown／LB・RB）：画面に [data-lr] の札があれば押す（馬の店の牡馬・牝馬など）
-  App.navLR = function (side) { const b = navRoot().querySelector(`[data-lr=${side}]`); if (b && visible(b)) b.click(); };
+  // [data-lr] が無ければ、いちばん上のタブ（.u-tabs・.tabs）の隣を押す（どの画面でも同じ手で切り替わる）
+  App.navLR = function (side) {
+    const root = navRoot();
+    const b = root.querySelector(`[data-lr=${side}]`); if (b && visible(b)) { b.click(); return; }
+    const bar = [...root.querySelectorAll('.u-tabs, .tabs')].find(visible); if (!bar) return;
+    const tabs = [...bar.querySelectorAll('button')].filter(x => visible(x) && !x.disabled);
+    const i = tabs.findIndex(x => x.classList.contains('on')); if (i < 0) return;
+    const t = tabs[(i + (side === 'prev' ? -1 : 1) + tabs.length) % tabs.length];
+    if (t && t !== tabs[i]) { const sel = navEl && bar.contains(navEl); t.click(); if (sel) { const nt = App.findSig(navRoot(), App.sigOf(t)); if (nt) App.navSelect(nt, true); } }
+  };
   document.addEventListener('pointerdown', () => { if (navEl) { navEl.classList.remove('navsel'); navEl = null; } }, true);
   // ゲームパッド：十字キーで選ぶ（長押しで続けて動く）・A で押す・B で閉じる・もどる
   const padPrev = {};
@@ -514,6 +552,7 @@
       const st = { up: btn(12) || ax[1] < -0.6, down: btn(13) || ax[1] > 0.6, left: btn(14) || ax[0] < -0.6, right: btn(15) || ax[0] > 0.6, a: btn(0), b: btn(1), lb: btn(4), rb: btn(5) };
       // 騎乗中などは見るだけ（押しっぱなしのボタンが、戻ったときに押したことにならないように）
       if (navOff()) { Object.assign(padPrev, st); setTimeout(pollPad, 50); return; }
+      if (g.buttons.some(b => b.pressed) || st.up || st.down || st.left || st.right) App.setInput && App.setInput('pad');
       const now = performance.now();
       for (const d of ['up', 'down', 'left', 'right']) {
         if (st[d] && (!padPrev[d] || now > padRepeat)) {
