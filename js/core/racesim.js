@@ -89,6 +89,11 @@
   S.DS = 0.68; // スタミナの持ちの全体の倍率
   // ペース（持ち主の指摘 2026-10-16）：スローなら前の馬が楽で、早めに動くのが得。ハイなら前の馬が脚を使い、後ろでためて遅めに動くのが得。
   // paceF が PACE_HI より上でハイ、PACE_LO より下でスロー。道中、隊列の前にいるほど（paceF-1）×PACE_K の割合でスタミナの減りが増える（スローなら減る）
+  // 脚質ごとの居心地のよい位置（前から何割目か。0＝先頭、1＝最後方）。外れた分（割合）× MISFIT が、気分の上がる速さ（毎秒）に足される
+  S.ZONE = { '逃げ': [0, 0.12], '先行': [0.05, 0.4], '差し': [0.3, 0.75], '追込': [0.6, 1] };
+  S.MISFIT = 14; S.TENSE_COST = 0.5;
+  // 気性の荒さ（mind が70より低いほど大きい。45で2倍）
+  S.temperF = s => 1 + Math.max(0, 70 - s.mind) / 25;
   S.LATE_E = 0.15; // 出遅れた馬は、位置を取り戻すのに脚を使う（スタミナの減り）
   S.PUSH = { base: 0.25 }; // 追い出したあと、しごかずに馬なりで行くときの伸び（段に置き換えた値）
   S.PACE_HI = 1.006; S.PACE_LO = 0.994; S.PACE_K = 70; S.DRAFT = 0.12; S.PACE_TOP = 50; S.PACE_EARLY = 60;
@@ -298,13 +303,19 @@
         const ahead1 = st.find(o => o !== s && !o.done && o.x > s.x && o.x - s.x < 5 && Math.abs(o.lane - s.lane) < 0.8);
         c.behind = !!ahead1;
         if (!s.spurting) {
-          const ner = (0.3 + Math.max(0, 75 - s.mind) * 0.03 + (s.kakari ? 1.2 : 0)) * (prog < 0.65 ? 1 : 0.4);
+          // 気性が荒い（mind が低い）ほど、気分が動きやすい（上がるのも速い）
+          const tf = S.temperF(s);
+          // 脚質に合った位置にいないと、折り合いを欠いて気分が悪くなる（ペースを見越してわざと位置を変えるなら、そのぶん気分の管理が要る）
+          const zone = S.ZONE[s.h.style] || S.ZONE['先行'];
+          const off = prog > 0.08 && s.rk != null ? Math.max(0, zone[0] - s.rk, s.rk - zone[1]) : 0;
+          c.misfit = off > 0.05;
+          const ner = (0.3 + Math.max(0, 75 - s.mind) * 0.03 + (s.kakari ? 1.2 : 0) + off * S.MISFIT) * tf * (prog < 0.65 ? 1 : 0.4);
           const sides = st.filter(o => o !== s && !o.done && Math.abs(o.x - s.x) < 3 && Math.abs(o.lane - s.lane) < 1.6).length;
           const boxed = sides >= 2 && (s.h.style === '逃げ' || s.h.style === '追込') ? 1.5 : sides ? 0.4 : 0;
           // 掛かり癖の馬は、引いて遅く走らせると余計に行きたがる
           const pull = g < -0.05 ? (H.has(s.h, 'kakari') ? 1.5 : -2.5 * -g) : 0;
-          const calm = ahead1 && s.h.style !== '逃げ' ? 2.6 : 0;
-          c.tension = U.clamp(c.tension + (ner + boxed + pull - calm) * DT, 0, 100);
+          const calm = (ahead1 && s.h.style !== '逃げ' ? 2.6 : 0) / Math.sqrt(tf);
+          c.tension = U.clamp(c.tension + (ner + boxed * tf + pull - calm) * DT, 0, 100);
         } else c.tension = Math.max(0, c.tension - 3 * DT);
         const kakariNow = c.tension > 75 && !s.spurting;
         if (kakariNow && !c.kakariNow && H.has(s.h, 'kakari')) S.fire(sim, s, 'kakari');
@@ -333,6 +344,8 @@
           // 掛かると行きたがって脚を使う。落ち着いていれば脚がもつ
           if (kakariNow) { target *= 1.012; costMul *= 1.35; }
           else if (c.tension < 35 && !s.spurting) costMul *= 0.94;
+          // 折り合いを欠くほど（気分が悪いほど）脚を使う
+          else if (c.tension > 50 && !s.spurting) costMul *= 1 + (c.tension - 50) / 100 * S.TENSE_COST;
           if (R < 250 && (g > 0.3 || s.spurting)) {
             const rival = st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5);
             if (rival) { target *= 1 + 0.004 * (s.guts - 70) / 30 + (s.narabu ? 0.004 : 0); if (s.narabu) S.fire(sim, s, 'narabu'); }

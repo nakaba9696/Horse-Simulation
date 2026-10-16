@@ -269,6 +269,7 @@
         if (c.kakariNow) notes.push(['掛かっている', 'bad']);
         else if (c.behind && c.tension < 50 && !me.spurting) notes.push(['折り合っている', 'good']);
         if (me.spurting && !me.done && sim.D - me.x < 1000) notes.push(['追い出した', 'good']);
+        if (c.misfit && !me.spurting && !c.kakariNow) notes.push([`${me.h.style}の位置ではない（気分が悪くなる）`, 'bad']);
         if (c.wide) notes.push(['外を回っている', '']);
         if (c.gear < -0.05 && !c.kakariNow) notes.push(['ためている', 'good']);
         if (me.E <= 0) notes.push(['バテた', 'bad']);
