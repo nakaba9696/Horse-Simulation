@@ -1,7 +1,8 @@
 // 騎乗の画面（計器つき）を Playwright（/opt/pw-browsers の Chromium）で撮る道具。競り合いの気合の計器を確かめる
 //   NODE_PATH=$(npm root -g) node tools/shot_ride.js [出力先]
 // 東京・芝1600・12頭。模擬を直線の手前まで進めてから画面を開き、自分の馬のすぐ横に1頭並べて競り合いにする。
-// 撮る絵：fight_rise.jpg（気合が上がっている途中）・fight_max.jpg（気合が上がりきって FIGHT が出た瞬間）。大きさは 1600×1000
+// 撮る絵：fight_rise.jpg（気合が上がっている途中）・fight_max.jpg（気合が上がりきって FIGHT が出た瞬間）、
+// oriai_fight.jpg（気性の荒い馬を道中で引きすぎてケンカしている：気性の針が震え、文字盤が赤く脈打つ）。大きさは 1600×1000
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
@@ -57,6 +58,29 @@ async function main() {
   await page.waitForFunction(() => HS.Ride.cur.st[HS.Ride.cur.me].fight >= 50, null, { timeout: 120000 });
   await page.waitForTimeout(2000);
   await page.screenshot({ path: path.join(out, 'fight_max.jpg'), type: 'jpeg', quality: 88 });
+  // 引きすぎてケンカ：気性45の馬を道中（500m）まで進め、気分82で手綱を深く引いたままにする
+  await page.goto('file://' + path.join(ROOT, 'index.html'));
+  await page.waitForFunction(() => globalThis.HS && HS.Ride && HS.Sim);
+  await page.evaluate(() => {
+    const U = HS.U, H = HS.Horse, S = HS.Sim;
+    document.body.innerHTML = '<div id="rideshot" style="width:1580px;margin:8px auto"></div>';
+    const rng = new U.RNG(7), runners = [];
+    for (let i = 0; i < 12; i++) {
+      const h = H.makeFiller(rng, { level: 82, surface: '芝', dist: 1600, born: 2000 }); h.name = '馬' + (i + 1);
+      if (i === 0) { h.name = 'アラシノコ'; h.pot.mind = 45; h.style = '先行'; }
+      runners.push({ horse: h, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: Math.ceil((i + 1) * 8 / 12), rider: i === 0 ? 'P' : undefined });
+    }
+    const race = { name: '確かめ', dist: 1600, surface: '芝', course: '東京', ground: '良', year: 2004, month: 5, weather: '晴', free: true };
+    const makeSim = () => {
+      const sim = S.create(race, runners, H.weekIndex(2004, 5, 1), new U.RNG(11), { frames: true, ride: true, bond: 0 });
+      S.ctl.up(sim); while (sim.st[sim.me].x < 500) S.step(sim);
+      sim.ctl.tension = 82; sim.ctl.gear = -0.8; sim.ctl.pullT = 2; HS.ShotT0 = sim.t;
+      return sim;
+    };
+    HS.Ride.ride(document.getElementById('rideshot'), { race, runners }, { makeSim, record: null });
+  });
+  await page.waitForFunction(() => HS.Ride.cur && HS.Ride.cur.t > HS.ShotT0 + 2 && HS.Ride.cur.ctl.reinFight, null, { timeout: 120000 });
+  await page.screenshot({ path: path.join(out, 'oriai_fight.jpg'), type: 'jpeg', quality: 88 });
   await browser.close();
   if (errors.length) { console.log('エラー：\n' + errors.join('\n')); process.exitCode = 1; }
   console.log('撮った：' + out);

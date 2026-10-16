@@ -293,6 +293,7 @@
         if (skillTag) drawSkill(skillTag);
         // 競り合いの気合：上がっている間は画面の縁が橙に脈打ち、気合が50を越えたら FIGHT・音・振動（文字の説明は出さない）
         drawFight();
+        oriaiFeel(c);
         // 上の真ん中：ペース。決まった地点を通るまでは予想、通ったら判定を出し続ける（スローは前が楽で早めに、ハイは後ろでためて遅めに）
         if (sim.check && !paceShown) { paceShown = true; pace = { text: `${sim.check.at}m通過　${sim.check.t.toFixed(1)}`, verdict: sim.check.verdict, t: performance.now() }; if (AU) AU.se('click'); }
         drawPace();
@@ -322,6 +323,25 @@
           ctx.fillStyle = HUD.panel; rr(VW / 2 - fw / 2, fy - 15, fw, 30, 15); ctx.fill();
           txt(flash.text, VW / 2, fy + 1, `bold 15px ${FONT}`, flash.cls === 'bad' ? '#ffa48a' : flash.cls === 'good' || flash.cls === 'go' ? HUD.gold : '#fff', 'center', 'middle');
           ctx.globalAlpha = 1;
+        }
+      }
+      // 折り合いの手ざわり（文字は出さない）：掛かり始め・引きすぎのケンカで鼻息、折り合うと息を吐く。
+      // 掛かっている間はコントローラーが不規則にガツガツ震え（折り合っていれば蹄の拍子だけで静か）
+      let oriaiPrev = { kakari: false, fight: false, high: false }, oriaiBin = -1;
+      function oriaiFeel(c) {
+        if (!c || me.done) return;
+        const fightNow = !!c.reinFight, kak = !!c.kakariNow;
+        if ((kak && !oriaiPrev.kakari) || (fightNow && !oriaiPrev.fight)) { if (AU) AU.se('snort'); if (RB) RB.play(160, 1, 0.3); }
+        if (c.tension > 60) oriaiPrev.high = true;
+        if (oriaiPrev.high && c.tension < 35) { oriaiPrev.high = false; if (AU) AU.se('exhale'); }
+        oriaiPrev.kakari = kak; oriaiPrev.fight = fightNow;
+        if (RB && (kak || fightNow)) {
+          const bin = Math.floor(performance.now() / 110);
+          if (bin !== oriaiBin) {
+            oriaiBin = bin;
+            const h = Math.abs(Math.sin(bin * 12.9898) * 43758.5453) % 1; // 拍子の外れた揺れ（結果には関わらない）
+            if (h > (fightNow ? 0.45 : 0.6)) RB.play(50 + Math.round(h * 40), 0.6 + 0.4 * h, 0.15);
+          }
         }
       }
       // 競り合いの気合（js/core/racesim.js の S.FIGHT）。画面の縁の光と、気合が上がりきった瞬間の FIGHT
@@ -490,7 +510,13 @@
         const cx = x + w - 30, cy = y + 120, r = 20;
         const seg = (a0, a1, col) => { ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI + a0 * Math.PI, Math.PI + a1 * Math.PI); ctx.stroke(); };
         seg(0, 0.35, '#3d8bfd'); seg(0.35, 0.55, '#4cc27a'); seg(0.55, 0.75, '#ffd34d'); seg(0.75, 1, '#ff5a4d');
-        const v = U.clamp(c.tension / 100, 0, 1), ang = Math.PI + v * Math.PI;
+        // 針は生き物のように：高ぶっている・掛かっているほど不規則に震え、引きすぎでケンカすると大きく暴れる。折り合うと静かに落ち着く
+        const now = performance.now(), v = U.clamp(c.tension / 100, 0, 1);
+        const shake = (c.kakariNow ? 0.09 : 0) + Math.min(0.08, (c.surge || 0) / 300) + (c.reinFight ? 0.14 : 0) + Math.max(0, v - 0.5) * 0.08;
+        const ang = Math.PI + v * Math.PI + shake * (Math.sin(now / 43) * 0.6 + Math.sin(now / 17 + 1.3) * 0.4);
+        // 掛かっている間は文字盤が赤く脈打ち、折り合っている間は青く静かに光る
+        if (c.kakariNow || c.reinFight) { ctx.save(); ctx.globalAlpha = 0.35 + 0.35 * Math.abs(Math.sin(now / 140)); ctx.strokeStyle = '#ff5a4d'; ctx.lineWidth = 12; ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+        else if (c.tension < 35 && !me.spurting) { ctx.save(); ctx.globalAlpha = 0.18 + 0.06 * Math.sin(now / 900); ctx.strokeStyle = '#7fc8ff'; ctx.lineWidth = 12; ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, Math.PI * 2); ctx.stroke(); ctx.restore(); }
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(ang) * (r + 3), cy + Math.sin(ang) * (r + 3)); ctx.stroke();
         txt('気性', cx, cy - r - 6, `11px ${FONT}`, HUD.label, 'center');
       }
@@ -542,9 +568,6 @@
           ctx.fillRect(x - 3.5, y - 5, 7, 10);
           ctx.strokeStyle = isMe ? '#fff' : 'rgba(0,0,0,0.6)'; ctx.lineWidth = isMe ? 1.5 : 1; ctx.strokeRect(x - 3.5, y - 5, 7, 10);
           if (me.duel && j === me.duel.i && (me.fight || 0) > 15) { ctx.strokeStyle = '#ffb347'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke(); }
-          // ライバル騎手の馬は、その騎手の札の色の枠（js/core/rivals.js）
-          const rv = !isMe && HS.Rivals && HS.Rivals.ofRunner(sim.st[j].r);
-          if (rv) { ctx.strokeStyle = rv.colors.base; ctx.lineWidth = 2; ctx.strokeRect(x - 5.5, y - 7, 11, 14); ctx.strokeStyle = rv.colors.sub; ctx.lineWidth = 1; ctx.strokeRect(x - 7, y - 8.5, 14, 17); }
           if (j === target && !isMe) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.stroke(); }
         });
         const tg = sim.st[target];
