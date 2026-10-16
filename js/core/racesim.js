@@ -93,14 +93,24 @@
   S.DS = 0.68; // スタミナの持ちの全体の倍率
   // ペース（持ち主の指摘 2026-10-16）：スローなら前の馬が楽で、早めに動くのが得。ハイなら前の馬が脚を使い、後ろでためて遅めに動くのが得。
   // paceF が PACE_HI より上でハイ、PACE_LO より下でスロー。道中、隊列の前にいるほど（paceF-1）×PACE_K の割合でスタミナの減りが増える（スローなら減る）
-  // 脚質ごとの居心地のよい位置（前から何割目か。0＝先頭、1＝最後方）。外れた分（割合）× MISFIT が、気分の上がる速さ（毎秒）に足される
+  // 脚質ごとの居心地のよい位置（前から何割目か。0＝先頭、1＝最後方）。外れた分（割合）× MISFIT ×（気性の荒さ）² が、気分の上がる速さ（毎秒）に足される（距離の MISFIT_FROM まではまだ数えない）。
+  // 気分が50を越えると脚の使い方が ×(1＋(気分−50)/100×TENSE_COST)、75を越えると掛かって ×KAKARI_COST
   S.ZONE = { '逃げ': [0, 0.12], '先行': [0.05, 0.4], '差し': [0.3, 0.75], '追込': [0.6, 1] };
-  S.MISFIT = 14; S.TENSE_COST = 0.5;
+  S.MISFIT = 10; S.MISFIT_FROM = 0.2; S.TENSE_COST = 1; S.KAKARI_COST = 1.6;
+  // 気分（テンション）の動き：落ち着く先＝base＋(70−mind)×hot（掛かりやすい日は＋kakari）、そこへ毎秒 settle の割合で寄る。前の馬の真後ろで calm だけ落ち着く。
+  // 道中の進路の変更は、1つにつき lane×(気性の荒さ−1＋0.15) だけ気分を上げる（荒い馬を外へ出すと掛かる）。しごく・引くも気性の荒い馬ほど気分が動く
+  S.TENSION = { base: 25, hot: 0.5, kakari: 15, settle: 0.08, calm: 1.2, lane: 8 };
   // 気性の荒さ（mind が70より低いほど大きい。45で2倍）
   S.temperF = s => 1 + Math.max(0, 70 - s.mind) / 25;
   S.START_ACC = 7.5; S.START_SKILL_ACC = 1.35; S.EASY_START = 0.95; // スタートの特殊能力が出たときの、出だしの加速の倍率と、距離の22%までの消耗の倍率
   S.LATE_E = 0.15; // 出遅れた馬は、位置を取り戻すのに脚を使う（スタミナの減り）
   S.PUSH = { base: 0.25 }; // 追い出したあと、しごかずに馬なりで行くときの伸び（段に置き換えた値）
+  // 自分で乗る馬：しごいて巡航より速く走ると脚を大きく使う境目（直線の手前 m）。道中は手綱の段が隊列の位置の注文（段 1 で GEAR_GAP m 前・しごいている間の脚の使い方 GEAR_COST）。
+  // 注文の位置へ寄せる強さ（差 1m あたりの速さの割合 POS_K と上限 POS_MAX）
+  S.EARLY_PUSH = 500; S.GEAR_GAP = 18; S.GEAR_COST = 0.05; S.POS_K = 0.004; S.POS_MAX = 0.03;
+  // ムチ（直線で打ったときの伸びの倍率・風車ムチ・脚の使い方、直線の前で打ったとき）。折り合っている（気分 35 未満）間の脚の使い方
+  // 前は伸び 0.6・0.9、脚 0.9・0.95、折り合い 0.94 で、直線の手前から追ってムチを入れるだけで、おまかせの3倍以上勝てた（tools/balance_bench.js）
+  S.WHIP = { k: 0.4, wind: 0.6, cost: 0.96, windCost: 0.98, early: 0.2, earlyCost: 1.2 }; S.CALM_SAVE = 0.97;
   // PACE_K・DRAFT・PACE_NIGE は、頭数合わせの馬の脚質が平均ペースでおおむね釣り合うように合わせた（tools/skills_bench.js style。前は 70・0.12・2頭で +0.009 で、ハイペースが半分を占め、逃げ馬が平均10〜11着だった）
   S.PACE_HI = 1.006; S.PACE_LO = 0.994; S.PACE_K = 25; S.DRAFT = 0.08; S.PACE_TOP = 50; S.PACE_EARLY = 60;
   // 逃げ馬の数（0・1・2・3頭以上）で決まるペースの片寄りと、レースごとのぶれ
@@ -179,6 +189,7 @@
         me: false, fired: {}, boost: null, trig: [], sk: null, passive: [], passiveShown: false,
         lane: (r.num - 1) * 0.5, laneT: 0, spurting: false, done: false, finishT: null, t600: null, blocked: 0, blockedOnce: false,
         styleMult: rp.mult, gap: rp.gap, jiyuMove: rp.jiyu,
+        fight: 0, duel: null, fightPeak: 0, // 競り合いの気合（-40〜100）・いま競り合っている相手・このレースでの気合の最大
       };
     });
     const medVc = st.map(s => s.vc).sort((a, b) => a - b)[Math.floor(st.length / 2)];
@@ -245,7 +256,7 @@
       }
       const n = rateOf(c, sim.t), d = gearStep(n);
       const g0 = c.gear; c.gear = Math.min(1, c.gear + d);
-      if (!s.spurting) c.tension = U.clamp(c.tension + (c.gear - g0) * 16, 0, 100);
+      if (!s.spurting) c.tension = U.clamp(c.tension + (c.gear - g0) * 12 * S.temperF(s), 0, 100);
       c.pushes++; c.lastPush = sim.t;
       return n >= 5 ? 'fast' : 'ok';
     },
@@ -254,7 +265,7 @@
       const c = sim.ctl; if (!c || !c.started || sim.over) return null;
       const n = rateOf(c, sim.t), d = gearStep(n);
       const g0 = c.gear; c.gear = Math.max(-1, c.gear - d);
-      c.tension = U.clamp(c.tension + (g0 - c.gear) * (n >= 5 ? 14 : 4), 0, 100);
+      c.tension = U.clamp(c.tension + (g0 - c.gear) * (n >= 5 ? 14 : 4) * S.temperF(sim.st[sim.me]), 0, 100);
       c.lastPull = sim.t;
       return n >= 5 ? 'fast' : 'ok';
     },
@@ -285,7 +296,12 @@
       c.hand = c.hand === 'R' ? 'L' : 'R'; c.swapUntil = sim.t + 0.35;
       return 'swap';
     },
-    lane(sim, d) { const c = sim.ctl; if (c) { c.lane = U.clamp(Math.round(c.lane + d), 0, 12); c.laneT = sim.t; } },
+    lane(sim, d) {
+      const c = sim.ctl; if (!c) return;
+      const l0 = c.lane; c.lane = U.clamp(Math.round(c.lane + d), 0, 12); c.laneT = sim.t;
+      const s = sim.st[sim.me];
+      if (c.started && c.lane !== l0 && !s.spurting && s.x > sim.D * 0.05) c.tension = U.clamp(c.tension + S.TENSION.lane * (S.temperF(s) - 1 + 0.15), 0, 100);
+    },
     // 前の形の呼び名（push＝しごく、hold＝押している間は引く）
     push(sim) { return S.ctl.up(sim); },
     hold(sim, on) { if (on && sim.ctl && sim.ctl.started && sim.ctl.gear > -1 && sim.t - (sim.ctl.lastPull || -9) > 0.4) S.ctl.down(sim); },
@@ -293,6 +309,29 @@
   S.dirOf = sim => (HS.DATA.courses[sim.race.course] || {}).dir || '右';
   S.whipEff = c => Math.max(0.25, 1 - 0.07 * Math.max(0, c.whips - 1));
   S.mood = c => c ? U.clamp(100 - c.tension, 0, 100) : 50; // 気分（高いほど良い）
+
+  // 競り合いの気合（持ち主の指摘 2026-10-16「競り合ったときに根性が高い馬なら上げて欲しい」）。
+  // 3〜4コーナーから先（残り 直線＋from m）で、すぐ横（前後 dx m 以内・進路が l0〜l1 離れた隣・速さの差 dv m/s 以内）に馬がいる間、
+  // 根性が g0 より高いほど気合が上がり（根性100で毎秒 up）、低いとひるむ（下がる。下限 low）。並ぶと強い馬は上がり方が narabu 倍。
+  // 横に馬がいなくなると、毎秒 decay の割合で 0 へ戻る（競り合いが終わってもしばらく残る）。
+  // 効き目（気合100のとき）：追い出してから・バテたあとの速さ ×(1+spd)、脚の使い方 ×(1−cost)。気性の掛かり（騎乗の気分）とは別の、良い向きの上がり方
+  S.FIGHT = { from: 300, dx: 2.4, l0: 0.45, l1: 1.8, dv: 0.6, g0: 72, up: 10, low: -40, narabu: 1.3, decay: 0.05, spd: 0.012, cost: 0.12 };
+  S.fightStep = function (sim, s, R, prog) {
+    const F = S.FIGHT;
+    let duel = null;
+    if (prog > 0.3 && (R < sim.straight + F.from || s.spurting)) {
+      for (const o of sim.st) {
+        if (o === s || o.done) continue;
+        const dl = Math.abs(o.lane - s.lane);
+        if (Math.abs(o.x - s.x) < F.dx && dl > F.l0 && dl < F.l1 && Math.abs(o.v - s.v) < F.dv) { duel = o; break; }
+      }
+    }
+    s.duel = duel;
+    if (duel) {
+      s.fight = U.clamp(s.fight + (s.guts - F.g0) / (100 - F.g0) * F.up * (s.narabu ? F.narabu : 1) * DT, F.low, 100);
+      if (s.fight > s.fightPeak) s.fightPeak = s.fight;
+    } else if (s.fight) s.fight *= 1 - F.decay * DT;
+  };
 
   // 前にいる順の並び（前の刻みの並びを、挿し込みで並べ直す。ほとんど並んでいるので速い）
   S.byX = function (sim) {
@@ -335,18 +374,21 @@
         const ahead1 = st.find(o => o !== s && !o.done && o.x > s.x && o.x - s.x < 5 && Math.abs(o.lane - s.lane) < 0.8);
         c.behind = !!ahead1;
         if (!s.spurting) {
-          // 気性が荒い（mind が低い）ほど、気分が動きやすい（上がるのも速い）
-          const tf = S.temperF(s);
-          // 脚質に合った位置にいないと、折り合いを欠いて気分が悪くなる（ペースを見越してわざと位置を変えるなら、そのぶん気分の管理が要る）
+          // 気性が荒い（mind が低い）ほど、気分が動きやすい
+          const tf = S.temperF(s), T = S.TENSION;
+          // 脚質に合った位置にいないと、折り合いを欠いて気分が悪くなる。気性の荒い馬ほど大きく（tf の2乗）、自由自在の馬は小さく
+          // （ペースを見越してわざと位置を変えるなら、気性の穏やかな馬なら融通がきく。荒い馬はすぐ掛かる）
           const zone = S.ZONE[s.h.style] || S.ZONE['先行'];
-          const off = prog > 0.08 && s.rk != null ? Math.max(0, zone[0] - s.rk, s.rk - zone[1]) : 0;
+          const off = prog > S.MISFIT_FROM && s.rk != null ? Math.max(0, zone[0] - s.rk, s.rk - zone[1]) : 0; // 出だし（隊列が決まるまで）は数えない
           c.misfit = off > 0.05;
-          const ner = (0.3 + Math.max(0, 75 - s.mind) * 0.03 + (s.kakari ? 1.2 : 0) + off * S.MISFIT * (s.jiyu ? S.JIYU.misfit : 1)) * tf * (prog < 0.65 ? 1 : 0.4);
-          const sides = st.filter(o => o !== s && !o.done && Math.abs(o.x - s.x) < 3 && Math.abs(o.lane - s.lane) < 1.6).length;
-          const boxed = sides >= 2 && (s.h.style === '逃げ' || s.h.style === '追込') ? 1.5 : sides ? 0.4 : 0;
+          // 何もしなければ、その馬の落ち着く気分（気性の荒い馬・掛かりやすい日は高め）へ寄っていく
+          const rest = T.base + Math.max(0, 70 - s.mind) * T.hot + (s.kakari ? T.kakari : 0);
+          const ner = (rest - c.tension) * T.settle + off * S.MISFIT * tf * tf * (s.jiyu ? S.JIYU.misfit : 1) * (prog < 0.65 ? 1 : 0.5);
+          const sides = st.filter(o => o !== s && !o.done && o.x - s.x > -1.5 && o.x - s.x < 3 && Math.abs(o.lane - s.lane) < 1.6).length; // 横と前の馬
+          const boxed = prog < 0.08 ? 0 : sides >= 2 && (s.h.style === '逃げ' || s.h.style === '追込') ? 1.5 : sides ? 0.4 : 0; // ゲートを出てすぐは横に並んでいて当たり前
           // 掛かり癖の馬は、引いて遅く走らせると余計に行きたがる
           const pull = g < -0.05 ? (H.has(s.h, 'kakari') ? 1.5 : -2.5 * -g) : 0;
-          const calm = (ahead1 && s.h.style !== '逃げ' ? 2.6 : 0) / Math.sqrt(tf);
+          const calm = (ahead1 && s.h.style !== '逃げ' ? T.calm : 0) / Math.sqrt(tf);
           c.tension = U.clamp(c.tension + (ner + boxed * tf + pull - calm) * DT, 0, 100);
         } else c.tension = Math.max(0, c.tension - 3 * DT);
         const kakariNow = c.tension > 75 && !s.spurting;
@@ -359,29 +401,33 @@
             // 馬なりでは伸びきらない。しごいて段を上げるほど、残っている脚を使って伸びる（段がいちばん上で、おまかせと同じ伸び）。
             // いつ追い出すかが腕の見せどころ：スローなら早め、ハイなら遅め（脚が残っていれば伸び、無ければバテる）
             const ratioE = Math.cbrt(Math.max(0, s.E) * s.Ds / (0.9 * Math.max(R, 30) * s.spurtCost));
-            target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * (1 + (sim.top - 1) * U.clamp(g, S.PUSH.base, 1)));
-          } else if (prog < 0.22) { target = pace * s.styleMult * (s.nino ? S.NINO.spd : 1); if (s.nino) costMul *= S.NINO.cost; if (s.easyStart) costMul *= S.EASY_START; }
-          else target = pace * (1 + U.clamp((leaderX - s.x - s.gap) * 0.0012, -0.02, 0.02));
-          // 引く：段の深さだけ下げて、脚をためる（スタミナの減りが小さい）
-          if (g < 0) { target *= 1 + g * (prog < 0.15 ? 0.03 : 0.012); costMul *= 1 + 0.1 * g; }
-          // しごく：段の高さだけ速く。道中で上げると脚を使う
-          // 追い出してからしごくと、少しだけ速くなるが、そのぶん脚を使う（追うだけで楽に勝てないように）
-          if (g > 0 && !s.spurting) { target *= 1 + g * 0.03; costMul *= 1 + 0.6 * g; }
+            target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * (1 + (sim.top + (s.topAdd || 0) - 1) * U.clamp(g, S.PUSH.base, 1)));
+          } else if (prog < 0.22) {
+            // 出だし：段の高さだけ速く（前へ）、深さだけ遅く（後ろへ）。出だしで押すと脚を使う
+            target = pace * s.styleMult * (s.nino ? S.NINO.spd : 1); if (s.nino) costMul *= S.NINO.cost; if (s.easyStart) costMul *= S.EASY_START;
+            if (g > 0) { target *= 1 + g * 0.03; costMul *= 1 + 0.6 * g; } else if (g < 0) target *= 1 + g * (prog < 0.15 ? 0.03 : 0.012);
+          } else {
+            // 道中：手綱の段で隊列の位置を決める（しごけば前へ・引けば後ろへ、段 1 で S.GEAR_GAP m）。段を戻さなければ、その位置を保つ。
+            // 位置を変える間は速く（遅く）走るぶん脚を使い、しごいている間は少し余計に使う（前の形は段のぶんずっと速さを足していて、位置を保つだけで脚を大きく使った）
+            const gapT = Math.max(0, s.gap + (s.gapAdj || 0) - g * S.GEAR_GAP);
+            target = pace * (1 + U.clamp((leaderX - s.x - gapT) * S.POS_K, -S.POS_MAX, S.POS_MAX));
+            if (g > 0) costMul *= 1 + S.GEAR_COST * g;
+          }
+          // 引く：脚をためる（スタミナの減りが小さい）
+          if (g < 0) costMul *= 1 + 0.1 * g;
           if (t < c.whipUntil) {
             const inZone = R < straight + 200;
-            const k = c.windmill ? 0.9 : 0.6;
+            const W = S.WHIP, k = c.windmill ? W.wind : W.k;
             // 直線のムチは気合が入って、もうひと伸びし、脚ももつ。直線の前のムチは脚を使うだけ
-            target *= 1 + (inZone ? k : 0.2) * s.kickS * S.whipEff(c); costMul *= inZone ? (c.windmill ? 0.95 : 0.9) : 1.2;
+            target *= 1 + (inZone ? k : W.early) * s.kickS * S.whipEff(c); costMul *= inZone ? (c.windmill ? W.windCost : W.cost) : W.earlyCost;
           }
           // 掛かると行きたがって脚を使う。落ち着いていれば脚がもつ
-          if (kakariNow) { target *= 1.012; costMul *= 1.35; }
-          else if (c.tension < 35 && !s.spurting) costMul *= 0.94;
+          if (kakariNow) { target *= 1.012; costMul *= S.KAKARI_COST; }
+          else if (c.tension < 35 && !s.spurting) costMul *= S.CALM_SAVE;
           // 折り合いを欠くほど（気分が悪いほど）脚を使う
           else if (c.tension > 50 && !s.spurting) costMul *= 1 + (c.tension - 50) / 100 * S.TENSE_COST;
-          if (R < 250 && (g > 0.3 || s.spurting)) {
-            const rival = st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5);
-            if (rival) { target *= 1 + 0.004 * (s.guts - 70) / 30 + (s.narabu ? 0.004 : 0); if (s.narabu) S.fire(sim, s, 'narabu'); }
-          }
+          // 叩き合い：根性の効きは競り合いの気合（S.FIGHT）で。並ぶと強い馬は、並ぶとさらにひと伸び
+          if (s.narabu && R < 250 && (g > 0.3 || s.spurting) && st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5)) { target *= 1.004; S.fire(sim, s, 'narabu'); }
         }
         // 進路を触らずにいると、空いていれば少しずつ内ラチへ寄る（馬はラチ沿いを走りたがる）
         if (c.lane > 0 && t - (c.laneT || 0) > 3 && t - (c.driftT || 0) > 1.2 && !st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 3.2 && o.lane < s.lane - 0.2 && o.lane > c.lane - 1.9)) { c.lane -= 1; c.driftT = t; }
@@ -402,14 +448,11 @@
         } else if (s.spurting) {
           // 残りの脚をゴールまでに使い切る速さ（切れの上限まで）
           const ratioE = Math.cbrt(Math.max(0, s.E) * s.Ds / (0.9 * Math.max(R, 30) * s.spurtCost));
-          target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * sim.top);
+          target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * (sim.top + (s.topAdd || 0)));
           // 大逃げは道中で脚を使っているので、終いは粘るだけ
           if (s.oonige) target = s.vc * (1 + s.kickS * S.OONIGE.kick);
-          // 叩き合い（根性）
-          if (R < (s.narabu ? 350 : 250)) {
-            const rival = st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5);
-            if (rival) { target *= 1 + 0.004 * (s.guts - 70) / 30 + (s.narabu ? 0.004 : 0); if (s.narabu) S.fire(sim, s, 'narabu'); }
-          }
+          // 叩き合い：根性の効きは競り合いの気合（S.FIGHT）で。並ぶと強い馬は、並ぶとさらにひと伸び
+          if (s.narabu && R < 350 && st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5)) { target *= 1.004; S.fire(sim, s, 'narabu'); }
           // ソラを使う：抜け出すと気を抜く
           if (s.sora && R < 200 && order[0] === s && order[1] && s.x - order[1].x > 2) { target *= 0.985; S.fire(sim, s, 'sora'); }
         } else if (prog < 0.22) {
@@ -436,6 +479,10 @@
       if (!s.spurting && prog > 0.08 && !s.oonige) { const rk = s.rk == null ? 0.5 : s.rk; costMul *= Math.max(0.5, 1 + (sim.paceF - 1) * S.PACE_K * (1 - 2 * rk)) * (1 - S.DRAFT * rk); } // 大逃げは集団と離れて自分のペースで行く
       // 砂かぶり×：ダートで、すぐ前に馬がいると砂をかぶって嫌がり、脚を使う
       if (s.sunaB && !s.spurting && prog > 0.05 && st.some(o => o !== s && !o.done && o.x > s.x && o.x - s.x < 4 && Math.abs(o.lane - s.lane) < 0.8)) { costMul *= S.SUNA; s.sunaT = (s.sunaT || 0) + DT; if (s.sunaT > 3) S.fire(sim, s, 'sunaB'); }
+      // 競り合いの気合：追い出してから（とバテたあと）の伸びと粘りに効く。ひるんだ馬は少し遅くなる
+      S.fightStep(sim, s, R, prog);
+      const fk = s.fight / 100;
+      if (fk && (s.spurting || s.E <= 0)) { target *= 1 + S.FIGHT.spd * fk; if (fk > 0) costMul *= 1 - S.FIGHT.cost * fk; }
       // 発動した特殊能力の、一時の速さ
       if (s.boost && t < s.boost.until) { target *= s.boost.mul; if (s.boost.free) costMul /= s.boost.mul * s.boost.mul * s.boost.mul; }
       // 坂：ゴール前の上りで脚を使う。坂が弱いほど大きく減る
@@ -468,8 +515,9 @@
       if (onHill) cost *= 1 + ({ '急': 2.2, '中': 1.4, '小': 0.8 }[slope] || 0) * U.clamp(1 - s.slopeP / 100, 0, 0.6);
       if (grade > 0) cost *= 1 + grade * S.HILL.e * hillW * U.clamp(1 - s.slopeP / 100, 0, 0.6);
       else if (grade < 0) cost *= Math.max(0.7, 1 + grade * S.HILL.de);
-      // 早くから追い通すと、馬がもたない
-      if (s.me && c && R > 600) cost *= 1 + 8 * Math.max(0, ratio - 1);
+      // 早くから追い通すと、馬がもたない（直線の手前 S.EARLY_PUSH m より前でしごいて巡航より速く走ると、脚を大きく使う）
+      // 前は「残り600mより前」で、自然の仕掛けどころ（残り800m前後）で追っても損になり、自分で乗るとおまかせより大きく負けていた
+      if (s.me && c && c.gear > 0.05 && R > straight + S.EARLY_PUSH) cost *= 1 + 8 * Math.max(0, ratio - 1);
       s.E -= cost;
       const xPrev = s.x;
       let dx = (vPrev + s.v) / 2 * DT;

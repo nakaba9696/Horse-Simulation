@@ -46,6 +46,7 @@
     whip: () => RB.play(70, 0.15, 0.9),
     skill: () => { RB.play(120, 0.5, 1); setTimeout(() => RB.play(160, 0.8, 1), 170); },
     bad: () => RB.play(220, 0.7, 0.2),
+    fight: () => { RB.play(90, 0.9, 0.5); setTimeout(() => RB.play(90, 0.9, 0.5), 160); setTimeout(() => RB.play(220, 0.5, 1), 330); }, // 競り合いで気合が乗った：鼓動のように2回と、長めに1回
     finish: () => RB.play(350, 0.6, 0.6),
     win: () => { RB.play(300, 1, 1); setTimeout(() => RB.play(500, 0.7, 1), 420); },
   };
