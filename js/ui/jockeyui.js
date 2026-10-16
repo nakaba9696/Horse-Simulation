@@ -281,7 +281,7 @@
   S.jrecord = function (st) {
     const G = W.get(), j = J.me();
     const tab = st.jtab || 'me';
-    const tabs = [['me', 'わたしの成績'], ['special', 'スペシャルホース'], ['trophy', 'トロフィー'], ['lead', 'リーディング'], ['awards', '騎手の表彰'], ['hall', '殿堂'], ['course', 'コースレコード'], ['mounts', '乗った馬'], ['hist', '騎乗の記録']];
+    const tabs = [['me', 'わたしの成績'], ['special', 'スペシャルホース'], ['trophy', 'トロフィー'], ['lead', 'リーディング'], ['awards', '騎手の表彰'], ['hall', '殿堂'], ['course', 'コースレコード'], ['replay', 'リプレイ'], ['mounts', '乗った馬'], ['hist', '騎乗の記録']];
     let body = '';
     if (tab === 'me') {
       const ys = Object.keys(j.years).map(Number).sort((a, b) => b - a);
@@ -321,9 +321,11 @@
             <div class="small">${e(t.note)}</div></div>`; }).join('')}</div>`;
     } else if (tab === 'hall') {
       const hall = (G.records.hall || []).slice().sort((a, b) => b.titles.length - a.titles.length || b.g1 - a.g1);
-      body = hall.length ? `<div class="small muted">冠（勝ったレースの組み合わせで付く称号）を手にした自分の馬。</div><div class="list mt">${hall.map(x => `<div class="panel"><div class="row"><b class="nm">${e(x.name)}</b><span class="small muted">${x.born}年生 ${x.sex}</span><span class="right small">${x.starts}戦${x.wins}勝・G1 ${x.g1}勝</span></div><div class="mt">${x.titles.map(l => `<span class="chip crown">👑 ${e(l)}</span>`).join('')}</div><div class="small muted">総獲得賞金 ${U.money(x.prize)}・${x.since}年に殿堂入り</div></div>`).join('')}</div>` : '<div class="panel empty">まだ殿堂入りした馬はいません。三冠・グランプリ制覇などの冠を取ると殿堂入りします。</div>';
+      body = UI.hallOwn() + `<h2 class="sec">冠を手にした馬</h2>` + (hall.length ? `<div class="small muted">冠（勝ったレースの組み合わせで付く称号）を手にした自分の馬。</div><div class="list mt">${hall.map(x => `<div class="panel"><div class="row"><b class="nm">${e(x.name)}</b><span class="small muted">${x.born}年生 ${x.sex}</span><span class="right small">${x.starts}戦${x.wins}勝・G1 ${x.g1}勝</span></div><div class="mt">${x.titles.map(l => `<span class="chip crown">👑 ${e(l)}</span>`).join('')}</div><div class="small muted">総獲得賞金 ${U.money(x.prize)}・${W.yLabel(x.since)}に冠</div></div>`).join('')}</div>` : '<div class="panel empty">まだ冠を手にした馬はいません。</div>');
     } else if (tab === 'course') {
       body = UI.courseRecords(st); // js/ui/records.js
+    } else if (tab === 'replay') {
+      body = UI.replayList(st); // js/ui/replayui.js
     } else if (tab === 'mounts') {
       const ms = Object.entries(j.mounts || {}).sort((a, b) => b[1].wins - a[1].wins || a[1].best - b[1].best || b[1].rides - a[1].rides);
       body = ms.length ? `<div class="small muted">これまでに乗った馬。</div><div class="tblwrap mt"><table class="t"><tr><th>馬</th><th>騎乗</th><th>1着</th><th>最高</th><th>最後</th></tr>${ms.slice(0, 60).map(([n, m]) => `<tr><td>${m.best <= 3 ? '<b>' + e(n) + '</b>' : e(n)}</td><td class="num">${m.rides}</td><td class="num">${m.wins}</td><td class="num">${m.best}着</td><td class="num">${m.last || ''}</td></tr>`).join('')}</table></div>` : '<div class="panel empty">まだお手馬はいません。</div>';

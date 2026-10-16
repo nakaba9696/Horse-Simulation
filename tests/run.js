@@ -410,7 +410,7 @@ check('sim: 芝の馬はダートで沈み、ダートの馬はダートで走�
 check('sim: 坂が弱い馬は坂のあるコースで沈む', () => {
   const weak = h => { h.pot.slope = 50; };
   const hill = fieldTest('中山', 2000, weak, 150).pos, flat = fieldTest('京都', 2000, weak, 150).pos;
-  assert(hill - flat > 0.6, `中山 ${hill.toFixed(2)} 京都 ${flat.toFixed(2)}`);
+  assert(hill - flat > 0.35, `中山 ${hill.toFixed(2)} 京都 ${flat.toFixed(2)}`); // 京都も3コーナーに坂がある（実際の高低差）。ゴール前の急坂の分だけ中山で沈む
   return `平均着順 中山 ${hill.toFixed(1)}・京都 ${flat.toFixed(1)}`;
 });
 check('track: 実際の形と高低差（data/layouts.js の形）から、コースの位置・高さ・勝ち負けへの効きを出す', () => {
@@ -647,12 +647,13 @@ check('dream: 資格（G1・前年の勝ち馬・ファンの票）と、出な�
   const v = T.votesOf({ results: [{ y: G.year, grade: 'G1', pos: 1, pop: 1 }, { y: G.year, grade: 'G3', pos: 2 }, { y: G.year - 1, grade: 'G1', pos: 1 }] }, G.year);
   assert(v === 117, `票の数え方（${v}）`);
   // 自分の馬を3頭：G1を勝った馬・票で圏内の馬・圏外の馬
-  const pool = W.all().filter(h => h.loc === 'stable' && !h.injury && G.year - h.born >= 3 && h.owner !== 'P' && !h.foreignTrained);
+  const pool = W.all().filter(h => h.loc === 'stable' && !h.injury && G.year - h.born >= 3 && h.owner !== 'P' && !h.foreignTrained && !T.g1Wins(h, G.year).length && !T.dcChamp(h, G.year));
   const st0 = T.dcStanding();
   const inside = st0.find(x => x.in && x.tier === 2 && !x.h.foreignTrained && !T.g1Wins(x.h, G.year).length && !T.dcChamp(x.h, G.year)).h;
   const outside = pool.find(h => !st0.some(x => x.h === h && x.in));
   const g1 = pool.find(h => h !== inside && h !== outside && !st0.some(x => x.h === h && x.in));
   for (const h of [inside, outside, g1]) { h.owner = 'P'; h.auto = false; }
+  inside.results.push({ y: G.year, grade: 'G2', pos: 1 }); // 境目の馬だと、G1 の馬を足したときに押し出されるので、票を足して圏内に
   g1.gradedWins.push({ y: G.year, race: '天皇賞（秋）', short: '天皇賞・秋', grade: 'G1', region: 'JRA' });
   W.dirty();
   const s = h => T.dcStatus(h);
@@ -759,6 +760,25 @@ check('shop: 馬の店は少しずつ開く（はじめは G3 まで。G1・G2�
   const k = E.migrateKeys(g);
   assert(k.includes('g2') && k.includes('local') && !k.includes('g1'), `前のセーブの鍵 ${k}`);
   return `はじめの店 ${new Set(W.marketHistoric().map(x => x.horse.name)).size}頭（G1 とドイツを開けたあと）・鍵 ${locks.map(l => l.label + l.n).join(' ')}`;
+});
+
+check('hall: トロフィーを2つ以上手にした自分の馬は、引退したときに殿堂入りし、記録が残る', () => {
+  const HL = HS.Hall, J = HS.Jockey;
+  W.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get();
+  G.player.money = 1e9; G.shopKeys = HS.Eraless.locks().map(l => l.key);
+  const shop = W.marketHistoric().sort((a, b) => b.price - a.price);
+  W.buy(shop[0]); W.buy(shop[1]);
+  const [a, b] = W.mine();
+  a.results = [{ y: G.year, m: 5, w: 4, race: '日本ダービー', course: '東京', surface: '芝', dist: 2400, pos: 1, n: 18, time: 143.5, jockey: 'テスト騎手' }]; a.starts = 1; a.wins = 1;
+  G.trophies = { triple: { y: G.year, horse: a.name, hid: a.id, bonus: 1 }, autumn: { y: G.year, horse: a.name, bonus: 1 }, spring: { y: G.year, horse: b.name, hid: b.id, bonus: 1 } }; // autumn は前のセーブの形（名前だけ）
+  assert(HL.trophiesOf(a).length === 2 && HL.eligible(a) && !HL.eligible(b), 'トロフィーの数え方が違う');
+  assert(!(J.retire(a.id) || {}).err && !(J.retire(b.id) || {}).err, '引退できない');
+  const x = HL.byId(a.id);
+  assert(x && x.trophies.length === 2 && x.results.length === 1 && x.results[0].race === '日本ダービー' && !HL.byId(b.id), '殿堂の写しが違う');
+  J.retire(a.id); assert(G.hallOwn.length === 1, '二度入る');
+  const s1 = W.serialize(); W.load(s1); assert(W.get().hallOwn.length === 1, 'セーブの往復で殿堂が消える');
+  return `${x.name}：トロフィー ${x.trophies.map(t => t.label).join('・')}`;
 });
 
 check('special: 1989年より前の名馬はグループごとの条件にリーチで出てきて、勝つと店に並ぶ', () => {
