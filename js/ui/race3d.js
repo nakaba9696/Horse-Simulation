@@ -428,7 +428,7 @@
   const HD = [0.62, -0.785], HU = [0.785, 0.62];        // 頭の向き（鼻先へ）と、顔の前の向き
   const GEAR0 = [1.3, 1.63];                            // 馬具の骨の付け根（頭の中。使わない馬具はここへ縮める）
   const GEAR = { shadowRoll: 32, blinkers: 33, hood: 34, cheekPieces: 35 };
-  const BONES = (() => {
+  const BONES0 = (() => {
     const b = [];
     const put = (i, par, x, y, z) => { b[i] = [par, x, y, z || 0]; };
     put(0, -1, 0, 0); put(1, 0, 0, 1.25);
@@ -442,12 +442,42 @@
     for (let i = 32; i <= 35; i++) put(i, 4, GEAR0[0], GEAR0[1]);
     return b;
   })();
+  // ---- 体の比（サラブレッド：体長と体高がほぼ同じ、首は細く長く、頭は小さく） ----
+  // 形と骨は上の表の座標で作り、最後にこの写し方で比を直す（表を書き直さずに済むように）。uv は写す前の座標のまま
+  //   胴・脚・尾：前脚より後ろ（x < PIV）を前後に KX 倍に縮める
+  //   首：付け根から首の向きに伸ばし、太さを細く。頭：首の先へ動かして小さく。騎手：胴の上で前後にずらすだけ
+  const PIV = 0.66, KX = 0.85, NK = { base: [0.5, 1.45], ang: 0.9, along: 1.1, across: 0.9, z: 0.86 }, HK0 = 0.9;
+  const tX = x => x < PIV ? PIV + (x - PIV) * KX : x;
+  const JSH = tX(0.1) - 0.1;
+  function neckMap(x, y, z) {
+    x = tX(x);
+    const bx = tX(NK.base[0]), by = NK.base[1], ca = Math.cos(NK.ang), sa = Math.sin(NK.ang);
+    const dx = x - bx, dy = y - by, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
+    const u2 = u * NK.along, v2 = v * NK.across;
+    return [bx + u2 * ca - v2 * sa, by + u2 * sa + v2 * ca, z * NK.z];
+  }
+  const HEADP = neckMap(HEAD0[0], HEAD0[1], 0);
+  function mapBone(x, y, z, bone) {
+    if (bone >= 24 && bone <= 31) return [x + JSH, y, z];
+    if (bone === 2 || bone === 3) return neckMap(x, y, z);
+    if (bone === 4 || bone >= 32) return [HEADP[0] + (x - HEAD0[0]) * HK0, HEADP[1] + (y - HEAD0[1]) * HK0, z * HK0];
+    return [tX(x), y, z];
+  }
+  // 点 P（表の座標）を、骨 a・b（b の重み w）で写す
+  function mapPt(x, y, z, a, b, w) {
+    const A = mapBone(x, y, z, a);
+    if (!w || a === b) return A;
+    const Bp = mapBone(x, y, z, b);
+    return [A[0] + (Bp[0] - A[0]) * w, A[1] + (Bp[1] - A[1]) * w, A[2] + (Bp[2] - A[2]) * w];
+  }
+  // 骨の付け根は、その骨の写し方で
+  const BONES = BONES0.map(([par, x, y, z], i) => [par].concat(mapBone(x, y, z || 0, i)));
 
   // 胴の断面：[x, 背の高さ, 腹の高さ, 横の半幅, 上ほど細く]
   const BODY_T = [
-    [0.89, 1.42, 1.12, 0.1, 0.1], [0.84, 1.54, 0.99, 0.2, 0.15], [0.74, 1.625, 0.92, 0.25, 0.24], [0.59, 1.685, 0.875, 0.27, 0.36],
-    [0.41, 1.665, 0.845, 0.28, 0.36], [0.23, 1.595, 0.85, 0.29, 0.26], [0.03, 1.555, 0.875, 0.3, 0.15], [-0.17, 1.555, 0.925, 0.3, 0.1],
-    [-0.35, 1.575, 1.0, 0.3, 0.06], [-0.53, 1.625, 1.075, 0.305, 0.04], [-0.69, 1.655, 1.1, 0.305, 0.06], [-0.83, 1.635, 1.12, 0.28, 0.1],
+    [0.86, 1.42, 1.13, 0.1, 0.1], [0.82, 1.54, 1.01, 0.19, 0.15], [0.74, 1.625, 0.95, 0.24, 0.24], [0.59, 1.685, 0.91, 0.26, 0.36],
+    [0.41, 1.665, 0.895, 0.275, 0.36], [0.23, 1.595, 0.9, 0.285, 0.26], [0.03, 1.555, 0.915, 0.295, 0.15], [-0.17, 1.555, 0.955, 0.295, 0.1],
+    [-0.35, 1.575, 1.02, 0.295, 0.06], [-0.53, 1.625, 1.075, 0.305, 0.04], [-0.69, 1.655, 1.1, 0.305, 0.06], [-0.83, 1.635, 1.12, 0.28, 0.1],
     [-0.94, 1.58, 1.15, 0.23, 0.14], [-1.01, 1.49, 1.2, 0.15, 0.2], [-1.05, 1.39, 1.27, 0.065, 0.2],
   ];
   // 首の断面：[たてがみの側の点 x, y, のどの側の点 x, y, 半幅, 骨a, 骨b, bの重み]
@@ -616,8 +646,8 @@
   // 胴の面の筋肉のふくらみ：[中心 x, y, 長い向きの半径, 短い向きの半径, 長い向きの傾き(rad), 高さ(m), 横を向いた面だけ(1)か前も(0)]
   const MUSCLES = [
     [0.6, 1.36, 0.28, 0.1, 1.15, 0.045, 1],    // 肩（き甲から肩の先へ斜め）
-    [0.8, 1.12, 0.13, 0.09, 0.3, 0.05, 0],     // 胸前（前脚の付け根）
-    [0.69, 1.07, 0.1, 0.06, 1.4, 0.028, 1],     // 上腕
+    [0.78, 1.13, 0.12, 0.08, 0.3, 0.026, 0],   // 胸前（前脚の付け根）
+    [0.67, 1.08, 0.1, 0.06, 1.4, 0.022, 1],    // 上腕
     [-0.64, 1.3, 0.26, 0.17, 1.2, 0.046, 1],   // 尻から太もも
     [-0.5, 1.56, 0.22, 0.1, 0.1, 0.014, 0],    // 腰の張り
   ];
@@ -739,11 +769,11 @@
       // のど（首と頭のつなぎ）
       blob(B, V3(1.045, 1.72, 0), 0.1, 0.1, 0.082, 8, 6, { uvf: sideUV, skinf: () => [3, 4, 0.5] }, -0.6);
       // 尾の房：付け根から3本に分かれて下へ流れる
-      for (const [dz, dy, ext] of [[-0.04, 0.0, 0.16], [0.04, 0.01, 0.12], [0, -0.03, 0.22]]) {
+      for (const [dz, dy, ext] of [[-0.04, 0.0, 0.1], [0.04, 0.01, 0.07], [0, -0.03, 0.13]]) {
         const pts = [], rr = [], sks = [];
         TAIL_T.forEach((r, i) => { if (i < 2) return; const f = (i - 2) / (TAIL_T.length - 3); pts.push(V3(r[0] - 0.01, r[1] + dy * f, dz * f)); rr.push(r[3] * 0.62 * (1 - 0.3 * f)); sks.push([r[4], r[5], r[6]]); });
         const e = pts[pts.length - 1];
-        pts.push(e.clone().add(V3(-ext * 0.45, -ext, dz * 0.5))); rr.push(0.008); sks.push([7, 7, 0]);
+        pts.push(e.clone().add(V3(-ext * 0.45, -ext, dz * 0.5))); rr.push(0.022); sks.push([7, 7, 0]);
         tube(B, pts, rr, 4, sks, (i, j, P) => rUV(R_HAIR, 0.5 + (j % 4) * 0.12, 1 - i / (pts.length - 1)), { cap0: true });
       }
     }
@@ -880,6 +910,16 @@
       }
     }
     const g = B.build();
+    // 体の比を直す（上の mapPt）。法線は写したあとの形から計算し直す
+    {
+      const P = g.attributes.position, si = g.attributes.skinIndex.array, sw = g.attributes.skinWeight.array;
+      for (let i = 0; i < P.count; i++) {
+        const m = mapPt(P.getX(i), P.getY(i), P.getZ(i), si[i * 4], si[i * 4 + 1], sw[i * 4 + 1]);
+        P.setXYZ(i, m[0], m[1], m[2]);
+      }
+      g.computeVertexNormals();
+      g.computeBoundingSphere();
+    }
     g.boundingSphere.radius += 0.8; // 脚・首・尾が動いても切れないように
     return g;
   }
@@ -889,6 +929,13 @@
   function coatLook(c, age) {
     const A = HS.Art;
     return A && A.coatLook ? A.coatLook(c, age) : DEF_LOOK;
+  }
+  // 色（#rrggbb・rgb()・rgba()）を、同じ色で不透明度 a に
+  function clear(col, a) {
+    let r = 0, gg = 0, b = 0, a0 = 1;
+    if (col[0] === '#') { r = parseInt(col.slice(1, 3), 16); gg = parseInt(col.slice(3, 5), 16); b = parseInt(col.slice(5, 7), 16); }
+    else { const m = col.match(/[\d.]+/g) || []; r = +m[0] || 0; gg = +m[1] || 0; b = +m[2] || 0; if (m[3] != null) a0 = +m[3]; }
+    return `rgba(${r},${gg},${b},${a0 * a})`;
   }
   function paintHorse(h, res) {
     res = res || 256;
@@ -907,11 +954,14 @@
       const gr = g.createLinearGradient(0, py(1.7), 0, py(0.85));
       gr.addColorStop(0, L.top); gr.addColorStop(0.3, L.body); gr.addColorStop(0.75, L.body); gr.addColorStop(1, L.belly);
       g.fillStyle = gr; g.fillRect(rx, ry, rw, rh);
-      const spot = (x, y, rr, col, a) => { const R = rr / (SY1 - SY0) * rh; const gg = g.createRadialGradient(px(x), py(y), 0, px(x), py(y), R); gg.addColorStop(0, col); gg.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = a; g.fillStyle = gg; g.fillRect(px(x) - R, py(y) - R, R * 2, R * 2); g.globalAlpha = 1; };
+      // 丸いぼかし（外へ同じ色のまま透ける。黒へ透けると縁が輪になる）
+      const spot = (x, y, rr, col, a) => { const R = rr / (SY1 - SY0) * rh; const gg = g.createRadialGradient(px(x), py(y), 0, px(x), py(y), R); gg.addColorStop(0, col); gg.addColorStop(0.45, clear(col, 0.7)); gg.addColorStop(1, clear(col, 0)); g.globalAlpha = a; g.fillStyle = gg; g.fillRect(px(x) - R, py(y) - R, R * 2, R * 2); g.globalAlpha = 1; };
       if (L.tan) { spot(-0.42, 1.08, 0.3, L.tan, 0.75); spot(0.38, 1.0, 0.22, L.tan, 0.6); spot(-0.7, 1.15, 0.2, L.tan, 0.35); }
-      if (L.dapple > 0) for (let i = 0; i < 70; i++) {
+      // 連銭：ぼかした丸の斑点（胴と尻に多く、腹・胸の前には少なく）
+      if (L.dapple > 0) for (let i = 0; i < 90; i++) {
         const x = -1.05 + hash01(i, 91) * 1.9, y = 0.95 + hash01(i, 92) * 0.68;
-        spot(x, y, 0.045 + hash01(i, 93) * 0.04, L.dappleCol, L.dapple * (0.5 + hash01(i, 94) * 0.5));
+        const edge = Math.min(1, Math.max(0, (y - 0.95) / 0.15)) * Math.min(1, Math.max(0, (0.85 - x) / 0.25));
+        spot(x, y, 0.035 + hash01(i, 93) * 0.035, L.dappleCol, L.dapple * edge * (0.45 + hash01(i, 94) * 0.45));
       }
       if (L.roan > 0) { g.fillStyle = 'rgba(235,232,226,' + (0.25 * L.roan) + ')'; for (let i = 0; i < 900; i++) { const x = -1.0 + hash01(i, 95) * 1.8, y = 0.9 + hash01(i, 96) * 0.75; g.fillRect(px(x), py(y), 1, 1); } }
       // 筋肉の境の陰（肩の後ろ・肘・首の下・脇腹・尻の後ろ・後膝）。ぼかした線で
@@ -1099,7 +1149,7 @@
   const BOB = [[0, -0.3], [0.13, -0.7], [0.3, -0.2], [0.46, -0.6], [0.6, -0.5], [0.75, 0.2], [0.88, 0.8]];  // 胴の上下（浮く間が高い）
   const PITCH = [[0, 0.3], [0.16, 0.7], [0.34, 0.1], [0.5, -0.6], [0.66, -0.6], [0.84, -0.1]];          // 胴の前後の傾き（＋＝鼻が上）
   const NOD = [[0, 0.5], [0.2, 0.8], [0.4, 0.0], [0.56, -0.8], [0.72, -0.6], [0.86, 0.0]];               // 首の上下（＋＝上げる）
-  const HOOF_OFF = [0.07, -0.215, 0];
+  const HOOF_OFF = [0.07 * KX, -0.215, 0];
   const _m = { a: null, v: null };
   // 蹄の底の高さ（馬の形の中で。胴の骨から関節をたどる）
   function hoofY(b, b0) {
@@ -1303,7 +1353,7 @@
   }
   // 手作りの骨 bone の中の点（馬の形の座標で書いた点 P から、その骨の付け根 J を引いた差）→ 世界の点
   const atBone = (bones, i, x, y, z) => {
-    const J = BONES[i], v = new THREE.Vector3(x - J[1], y - J[2], z - J[3]);
+    const J = BONES[i], m = mapBone(x, y, z, i), v = new THREE.Vector3(m[0] - J[1], m[1] - J[2], m[2] - J[3]);
     return v.applyMatrix4(bones[i].matrixWorld);
   };
   // 馬の形の向き（胴の骨の向き）→ 世界の向き
@@ -1355,6 +1405,7 @@
   // テスト用：馬の形（q＝1 近く・0 遠く）と骨の数
   R3.horseGeometry = (q, o) => horseGeometry(q, o);
   R3.BONES = BONES.length;
+  R3.BONE_AT = i => BONES[i].slice(1); // テスト用：骨の付け根（体の比を直したあとの座標）
   R3.GEAR = GEAR;
 
   // ---- 本体 ----

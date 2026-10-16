@@ -38,7 +38,8 @@
     if (!L.grey) return L;
     const a = age == null || !isFinite(age) ? 4 : age;
     const w = Math.max(0, Math.min(1, (a - 1.5) / 7));
-    const out = { gloss: L.gloss, grey: true, dapple: 0.9 * Math.max(0, 1 - Math.abs(w - 0.35) / 0.45), pointsSoft: true };
+    // 連銭は2〜4歳ではっきり、年を取って白くなるほど薄く消える
+    const out = { gloss: L.gloss, grey: true, dapple: 0.85 * Math.max(0, Math.min(1, w / 0.12)) * Math.max(0, 1 - Math.max(0, w - 0.3) / 0.45), pointsSoft: true };
     for (const k of Object.keys(L.young)) out[k] = mixHex(L.young[k], L.old[k], w);
     return out;
   };
