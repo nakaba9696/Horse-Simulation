@@ -759,7 +759,7 @@ check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中�
     uris[key] = uri;
   }
   for (const a of LIST) assert(files.includes(a.key + '.js'), `assets/${a.key}.js が無い`);
-  assert(total <= 15 * 1024 * 1024, `素材の合計 ${(total / 1048576).toFixed(1)}MB が 15MB を超える`);
+  assert(total <= 40 * 1024 * 1024, `素材の合計 ${(total / 1048576).toFixed(1)}MB が 40MB を超える`); // 目安（持ち主の決定「PC だけ」で 15MB → 40MB）
   // 読む順：three → GLTFLoader・SkeletonUtils、素材 → race3d.js
   const at = f => html.indexOf(`src="${f}"`);
   assert(at('lib/three.min.js') < at('lib/GLTFLoader.js') && at('lib/GLTFLoader.js') < at('lib/SkeletonUtils.js') && at('lib/SkeletonUtils.js') < at('js/ui/race3d.js'), 'lib の読む順が違う');
@@ -814,8 +814,9 @@ check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中�
   assert(worst.hand < 0.05 && worst.foot < 0.05 && worst.hip < 0.01, `騎手の IK のずれ：手 ${worst.hand.toFixed(3)}・足 ${worst.foot.toFixed(3)}・腰 ${worst.hip.toFixed(3)} m`);
   // 騎手を抜いた馬の形
   const g1 = HS.Race3D.horseGeometry(1), g2 = HS.Race3D.horseGeometry(1, { noJockey: true });
-  assert(g2.index.count < g1.index.count, '騎手を抜いた馬の形が小さくならない');
-  g1.dispose(); g2.dispose();
+  const g3 = HS.Race3D.horseGeometry(1, { bare: true });
+  assert(g2.index.count < g1.index.count && g3.index.count < g2.index.count, '騎手を抜いた馬・鞍もない馬（肖像）の形が小さくならない');
+  g1.dispose(); g2.dispose(); g3.dispose();
   return `素材 ${files.length}・合計 ${(total / 1048576).toFixed(2)}MB・騎手 ${tHi}/${tLo} 面・骨 ${names.length}・IK のずれ 手 ${(worst.hand * 100).toFixed(1)}cm 足 ${(worst.foot * 100).toFixed(1)}cm`;
 });
 

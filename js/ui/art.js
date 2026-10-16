@@ -279,9 +279,13 @@
   };
 
   // 肖像（牧場の背景に、立ち止まり気味に走る馬）
+  // 肖像：3D の馬で描けるとき（素材の絵と WebGL がある）はそれを使い、無ければ下の 2D の絵（js/ui/race3d.js の R3.portrait）
   A.portrait = function (canvas, horse, silks) {
     const ctx = canvas.getContext('2d');
     const w = canvas.width, h = canvas.height;
+    let done3d = false;
+    try { done3d = !!(HS.Race3D && HS.Race3D.portrait && HS.Race3D.portrait(canvas, horse)); } catch (e) { done3d = false; }
+    if (done3d) { coatTag(ctx, horse); return; }
     const sky = ctx.createLinearGradient(0, 0, 0, h);
     sky.addColorStop(0, '#7fb6e8'); sky.addColorStop(0.55, '#cfe6f5'); sky.addColorStop(0.56, '#6fa94a'); sky.addColorStop(1, '#3f7a2c');
     ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
@@ -294,10 +298,13 @@
     for (let i = 0; i < 10; i++) { ctx.beginPath(); ctx.moveTo(w * i / 9, h * 0.6); ctx.lineTo(w * i / 9, h * 0.7); ctx.stroke(); }
     const s = Math.min(w / 190, h / 120);
     A.horse(ctx, w * 0.5, h * 0.74, s, 0.18, { coat: horse.coat, marks: A.marks(horse.name || horse.id), jockey: false, shadow: true });
-    // 毛色の札
+    coatTag(ctx, horse);
+    void silks;
+  };
+  // 毛色の札
+  function coatTag(ctx, horse) {
     ctx.fillStyle = 'rgba(12,26,43,0.75)'; ctx.fillRect(8, 8, 64, 22);
     ctx.fillStyle = '#f3d27a'; ctx.font = 'bold 13px "Noto Sans JP", sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     ctx.fillText(horse.coat || '鹿毛', 14, 19);
-    void silks;
-  };
+  }
 })();

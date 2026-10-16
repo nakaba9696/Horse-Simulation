@@ -607,8 +607,9 @@
   const neckPt = (i, th, off) => { const s = NECK[i]; return ellPt(s.c, s.u, vZ(), s.h, s.w, 0.28, 0.95, th, off); };
 
   // o.noJockey：騎手を描かない（騎手は素材の形で別に描くとき。鐙・手綱・ムチは残す）
+  // o.bare：鞍・ゼッケン・鐙・手綱・ムチも描かない（肖像用。頭絡と馬具は残す。騎手も描かない）
   function horseGeometry(q, o) {
-    const hi = q > 0, rider = !(o && o.noJockey);
+    const bare = !!(o && o.bare), hi = q > 0, rider = !(o && (o.noJockey || o.bare));
     const B = new Builder({ skin: true });
     const X = V3(1, 0, 0), Y = V3(0, 1, 0), Z = V3(0, 0, 1);
     const cell = k => { const uv = cellUV(CELL[k]); return () => uv; };
@@ -670,26 +671,28 @@
       loft(B, rows.map(([x, y, h, w]) => ell(V3(x, y, sd * (z0 - (y < 0.9 ? 0.012 * (0.9 - y) : 0))), X, Z, h, w, mLeg, -0.08, 1)),
         rows.map(r => [b0 + r[4], b0 + r[5], r[6]]), (i, j, P) => legUV(k, P), { cap0: true, cap1: true });
     });
-    // ゼッケン（鞍の下の布。両脇に番号。外から読めるように）
-    {
-      const xs = [], nx = hi ? 6 : 3, nt = hi ? 5 : 3, x0 = -0.2, x1 = 0.3;
-      for (let i = 0; i < nx; i++) xs.push(x0 + (x1 - x0) * i / (nx - 1));
-      for (const sd of [1, -1]) {
-        const ta = sd > 0 ? 0.3 * Math.PI : 1.07 * Math.PI, tb = sd > 0 ? 0.93 * Math.PI : 1.7 * Math.PI;
-        const rings = xs.map(x => { const out = []; for (let j = 0; j < nt; j++) out.push(bodyPt(x, ta + (tb - ta) * j / (nt - 1), 0.012)); return out; });
-        loft(B, rings, xs.map(() => rig(1)), (i, j) => {
-          const fx = i / (nx - 1), fy = j / (nt - 1);
-          return rUV(R_NUM, sd > 0 ? fx : 1 - fx, sd > 0 ? fy : 1 - fy);
-        }, { open: true, inside: i => bodySec(xs[i]).c });
+    if (!bare) {
+      // ゼッケン（鞍の下の布。両脇に番号。外から読めるように）
+      {
+        const xs = [], nx = hi ? 6 : 3, nt = hi ? 5 : 3, x0 = -0.2, x1 = 0.3;
+        for (let i = 0; i < nx; i++) xs.push(x0 + (x1 - x0) * i / (nx - 1));
+        for (const sd of [1, -1]) {
+          const ta = sd > 0 ? 0.3 * Math.PI : 1.07 * Math.PI, tb = sd > 0 ? 0.93 * Math.PI : 1.7 * Math.PI;
+          const rings = xs.map(x => { const out = []; for (let j = 0; j < nt; j++) out.push(bodyPt(x, ta + (tb - ta) * j / (nt - 1), 0.012)); return out; });
+          loft(B, rings, xs.map(() => rig(1)), (i, j) => {
+            const fx = i / (nx - 1), fy = j / (nt - 1);
+            return rUV(R_NUM, sd > 0 ? fx : 1 - fx, sd > 0 ? fy : 1 - fy);
+          }, { open: true, inside: i => bodySec(xs[i]).c });
+        }
       }
-    }
-    // 鞍・腹帯
-    {
-      const xs = [-0.05, 0.07, 0.2, 0.33], n = hi ? 5 : 3;
-      loft(B, xs.map(x => arc(bodySec(x).c, Y, Z, bodySec(x).h, bodySec(x).w, bodySec(x).k, 0.92, 0.8 * Math.PI, 1.2 * Math.PI, n, 0.042)
-        .concat(arc(bodySec(x).c, Y, Z, bodySec(x).h, bodySec(x).w, bodySec(x).k, 0.92, 1.2 * Math.PI, 0.8 * Math.PI, n, 0.014))), xs.map(() => rig(1)), cell('saddle'), { cap0: true, cap1: true });
-      const gx = [0.315, 0.36];
-      loft(B, gx.map(x => { const s = bodySec(x); return ell(s.c, Y, Z, s.h + 0.012, s.w + 0.012, mBody, s.k * s.w / (s.w + 0.012), 0.92); }), gx.map(() => rig(1)), cell('goggle'));
+      // 鞍・腹帯
+      {
+        const xs = [-0.05, 0.07, 0.2, 0.33], n = hi ? 5 : 3;
+        loft(B, xs.map(x => arc(bodySec(x).c, Y, Z, bodySec(x).h, bodySec(x).w, bodySec(x).k, 0.92, 0.8 * Math.PI, 1.2 * Math.PI, n, 0.042)
+          .concat(arc(bodySec(x).c, Y, Z, bodySec(x).h, bodySec(x).w, bodySec(x).k, 0.92, 1.2 * Math.PI, 0.8 * Math.PI, n, 0.014))), xs.map(() => rig(1)), cell('saddle'), { cap0: true, cap1: true });
+        const gx = [0.315, 0.36];
+        loft(B, gx.map(x => { const s = bodySec(x); return ell(s.c, Y, Z, s.h + 0.012, s.w + 0.012, mBody, s.k * s.w / (s.w + 0.012), 0.92); }), gx.map(() => rig(1)), cell('goggle'));
+      }
     }
     // 頭絡（鼻革・額革・頬革）と手綱
     {
@@ -700,7 +703,7 @@
         const pts = [0.04, 0.3, 0.56, 0.84].map(t => headPt(t, Math.PI - sd * 1.32, 0.006));
         tube(B, pts, 0.011, 3, pts.map(() => rig(4)), cell('bridle'));
       }
-      for (const sd of [-1, 1]) {
+      if (!bare) for (const sd of [-1, 1]) {
         const a = headPt(0.86, Math.PI - sd * 1.75, 0.01), b = V3(0.86, 1.8, sd * 0.085), n = 5, pts = [];
         for (let i = 0; i < n; i++) pts.push(a.clone().lerp(b, i / (n - 1)).add(V3(0, 0.03 * Math.sin(i / (n - 1) * Math.PI), 0)));
         tube(B, pts, 0.008, hi ? 4 : 3, pts.map((p, i) => [4, sd < 0 ? 28 : 30, i / (n - 1)]), cell('bridle'));
@@ -716,8 +719,10 @@
         B.box(0.29, 1.335, sd * 0.29, 0.17, 0.06, 0.075, 0, { uv: cellUV(CELL.boots), bone: 1 });
       }
       // 鐙と鐙革
-      limb(B, V3(0.14, 1.6, sd * 0.25), V3(0.27, 1.34, sd * 0.31), 0.008, 0.008, 3, { uv: cellUV(CELL.bridle), bone: 1 });
-      B.box(0.29, 1.3, sd * 0.29, 0.1, 0.016, 0.1, 0, { uv: cellUV(CELL.goggle), bone: 1 });
+      if (!bare) {
+        limb(B, V3(0.14, 1.6, sd * 0.25), V3(0.27, 1.34, sd * 0.31), 0.008, 0.008, 3, { uv: cellUV(CELL.bridle), bone: 1 });
+        B.box(0.29, 1.3, sd * 0.29, 0.1, 0.016, 0.1, 0, { uv: cellUV(CELL.goggle), bone: 1 });
+      }
     }
     if (rider) {
       // 上体（勝負服）・尻
@@ -750,11 +755,13 @@
         blob(B, hd.clone().add(V3(0.02, -0.005, 0)), 0.045, 0.04, 0.04, hi ? 6 : 4, 4, { uv: cellUV(CELL.white), bone: fa });
       }
     }
-    // ムチ（右手。ふだんは肩の方へ寝かせる）
-    {
-      const a = V3(0.86, 1.81, 0.11), b = V3(0.36, 2.15, 0.27);
-      limb(B, a, b, 0.014, 0.008, 4, { uv: cellUV(CELL.dark), bone: 31 });
-      B.add(new THREE.BoxGeometry(0.06, 0.035, 0.008), new THREE.Matrix4().compose(b, new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.6)), V3(1, 1, 1)), { uv: cellUV(CELL.dark), bone: 31 });
+    if (!bare) {
+      // ムチ（右手。ふだんは肩の方へ寝かせる）
+      {
+        const a = V3(0.86, 1.81, 0.11), b = V3(0.36, 2.15, 0.27);
+        limb(B, a, b, 0.014, 0.008, 4, { uv: cellUV(CELL.dark), bone: 31 });
+        B.add(new THREE.BoxGeometry(0.06, 0.035, 0.008), new THREE.Matrix4().compose(b, new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0.6)), V3(1, 1, 1)), { uv: cellUV(CELL.dark), bone: 31 });
+      }
     }
     // 馬具（使う馬だけ骨を伸ばして見せる）
     {
@@ -811,7 +818,7 @@
     res = res || 256;
     const cv = canvasOf(res, res), g = cv.getContext('2d');
     g.scale(res / 256, res / 256); // 割り付けは 256 の目盛りで書く
-    const L = coatLook(h.coat, h.age), mk = marksOf(h.name || String(h.num)), sk = h.silks || DEF_SILKS, gear = h.gear || {};
+    const L = coatLook(h.coat, h.age), mk = h.noMarks ? { blaze: 'none', socks: [false, false, false, false] } : marksOf(h.name || String(h.num)), sk = h.silks || DEF_SILKS, gear = h.gear || {};
     const cell = (k, col) => { const i = CELL[k]; g.fillStyle = col; g.fillRect((i % 8) * 32, Math.floor(i / 8) * 32, 32, 32); };
     cell('saddle', '#1d1a18'); cell('pants', '#f2f2f0'); cell('boots', '#141414'); cell('bootTop', '#8a5a34'); cell('skin', '#e3bf9c');
     cell('cap', h.cap || frameColor(h.frame)); cell('sleeve', sk.sub || sk.base); cell('goggle', '#2a2f36'); cell('white', '#f4f4f2'); cell('eye', '#0c0a08');
@@ -832,7 +839,8 @@
       }
       if (L.roan > 0) { g.fillStyle = 'rgba(235,232,226,' + (0.25 * L.roan) + ')'; for (let i = 0; i < 900; i++) { const x = -1.0 + hash01(i, 95) * 1.8, y = 0.9 + hash01(i, 96) * 0.75; g.fillRect(px(x), py(y), 1, 1); } }
       // 肩・尻の筋肉の光り
-      spot(0.5, 1.32, 0.2, 'rgba(255,255,255,0.5)', 0.08 + 0.1 * L.gloss); spot(-0.66, 1.42, 0.24, 'rgba(255,255,255,0.5)', 0.08 + 0.1 * L.gloss);
+      const gk = res > 256 ? 0.25 : 1; // 細かい絵（光を計算する材質）では、描き込みの光りは控えめに
+      spot(0.5, 1.32, 0.2, 'rgba(255,255,255,0.5)', (0.08 + 0.1 * L.gloss) * gk); spot(-0.66, 1.42, 0.24, 'rgba(255,255,255,0.5)', (0.08 + 0.1 * L.gloss) * gk);
       // 頭の側（耳）
       spot(1.1, 2.05, 0.12, L.top, 0.5);
     });
@@ -930,7 +938,7 @@
     };
     // 体（横から見た x, y）
     const side = [
-      [0.52, 1.3, 0.2, 0.26, 0.45, -0.3], [0.5, 0.92, 0.07, 0.17, 0.35], [0.7, 1.15, 0.1, 0.18, 0.25, 0.4],
+      [0.52, 1.3, 0.2, 0.26, 0.3, -0.3], [0.5, 0.92, 0.07, 0.17, 0.35], [0.7, 1.15, 0.1, 0.18, 0.25, 0.4],
       [-0.6, 1.42, 0.27, 0.22, 0.5], [-0.72, 1.08, 0.13, 0.22, 0.45, 0.2], [-0.35, 1.2, 0.16, 0.1, -0.2], [-0.92, 1.35, 0.1, 0.14, 0.25],
       [0.0, 1.0, 0.36, 0.08, 0.25], [0.15, 1.5, 0.3, 0.06, 0.15], [0.86, 1.48, 0.16, 0.08, 0.3, -0.9], [0.98, 1.68, 0.1, 0.06, 0.25, -0.9],
     ];
@@ -1305,7 +1313,7 @@
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
       sun.castShadow = true;
-      sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
+      sun.shadow.mapSize.set(mobile ? 1024 : 4096, mobile ? 1024 : 4096);
       sun.shadow.bias = -0.0004;
       sun.shadow.normalBias = 0.03;
       const sc = sun.shadow.camera;
@@ -2139,5 +2147,120 @@
     const info = () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, photo, jockey: useJockey, shadow: shadowOn && sun.castShadow, dust: !!dust, level: perf.level });
 
     return { render, resize, dispose, info, renderer, scene, camera };
+  };
+
+  // ---- 肖像：3D の馬（毛色・白徴・馬具つき、鞍なし）をパドックで横から描いた止め絵 ----
+  // R3.portrait(canvas, horse) → 描けたら true（素材の絵と WebGL があるときだけ。無ければ false で、呼んだ側が今の 2D の絵を描く）
+  // 描き手（WebGL）は1つを使い回し、描いた絵は覚えておく。小さな絵（幅 320 まで）は白徴を省いて、同じ毛色・馬具の馬で使い回す
+  const PT = { r: null, cache: new Map(), fail: false };
+  function portraitKit() {
+    if (PT.r || PT.fail) return PT.r;
+    try {
+      const cv = document.createElement('canvas');
+      const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: false, preserveDrawingBuffer: true });
+      LIN = true;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 0.95;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      const scene = new THREE.Scene();
+      const look = lookOf('芝', '良'), sky = IMG[look.sky], fogCol = horizonColor(look.sky, sky);
+      scene.fog = new THREE.FogExp2(new THREE.Color(fogCol), 0.004);
+      // 空
+      const sg = new THREE.SphereGeometry(400, 48, 24), P = sg.attributes.position, UV = sg.attributes.uv;
+      for (let i = 0; i < P.count; i++) { const r = Math.hypot(P.getX(i), P.getY(i), P.getZ(i)) || 1; UV.setXY(i, 1 - UV.getX(i) + 0.35, skyV(P.getY(i) / r)); }
+      const st = new THREE.Texture(sky); st.wrapS = THREE.RepeatWrapping; st.encoding = THREE.sRGBEncoding; st.needsUpdate = true;
+      scene.add(new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ map: st, side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: false })));
+      // 映り込み
+      const ec = canvasOf(256, 128), eg = ec.getContext('2d'), ch = Math.round(128 * SKY_CROP);
+      eg.drawImage(sky, 0, 0, 256, ch); eg.fillStyle = '#5f7a44'; eg.fillRect(0, ch, 256, 128 - ch);
+      const et = new THREE.CanvasTexture(ec); et.mapping = THREE.EquirectangularReflectionMapping; et.encoding = THREE.sRGBEncoding;
+      const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromEquirectangular(et).texture; pm.dispose(); et.dispose();
+      // 光
+      scene.add(new THREE.HemisphereLight(lin('#dfeaff'), lin('#6b7a52'), 0.45));
+      const sun = new THREE.DirectionalLight(lin('#fff4e2'), 2.6);
+      sun.position.set(3, 7, 6); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+      Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 30 }); sun.shadow.camera.updateProjectionMatrix();
+      sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+      scene.add(sun);
+      // パドックの芝・柵・木
+      const gt = imgTex('grass_col', true, 8); gt.repeat.set(1 / 3, 1 / 3);
+      const gg = new THREE.CircleGeometry(120, 48); gg.rotateX(-Math.PI / 2);
+      const uvg = gg.attributes.uv, pg = gg.attributes.position;
+      for (let i = 0; i < uvg.count; i++) uvg.setXY(i, pg.getX(i), pg.getZ(i));
+      const ground = new THREE.Mesh(gg, new THREE.MeshLambertMaterial({ map: gt, color: lin('#c8dcb4') }));
+      ground.receiveShadow = true; scene.add(ground);
+      const rail = new Builder();
+      for (const z of [-7]) {
+        for (const y of [0.55, 1.05]) rail.box(0, y, z, 80, 0.08, 0.06, 0);
+        for (let x = -40; x <= 40; x += 2.5) rail.box(x, 0.55, z, 0.1, 1.1, 0.1, 0);
+      }
+      scene.add(new THREE.Mesh(rail.build(), new THREE.MeshStandardMaterial({ color: lin('#f4f2ec'), roughness: 0.5 })));
+      if (imgOk('tree')) {
+        const tb = new Builder();
+        for (let k = 0; k < 9; k++) {
+          const x = -36 + k * 9 + hash01(k, 3) * 4, z = -26 - hash01(k, 4) * 10, sc = 2.2 + hash01(k, 5) * 0.8, hw = 2.565 * sc, u0 = hash01(k, 6) < 0.5 ? 0 : 0.5;
+          tb.quad(V3(x - hw, -0.07 * sc, z), V3(x + hw, -0.07 * sc, z), V3(x + hw, 5.06 * sc, z), V3(x - hw, 5.06 * sc, z), { uvs: [[u0 + 0.002, 0], [u0 + 0.498, 0], [u0 + 0.498, 1], [u0 + 0.002, 1]] });
+        }
+        scene.add(new THREE.Mesh(tb.build(), new THREE.MeshBasicMaterial({ map: imgTex('tree', false, 4), alphaTest: 0.45, side: THREE.DoubleSide, color: lin('#c6d6b4') })));
+      }
+      const camera = new THREE.PerspectiveCamera(26, 2, 0.1, 900);
+      PT.r = { renderer, scene, camera, cv, geo: horseGeometry(1, { bare: true }), nor: texOf(HORSE_NOR || (HORSE_NOR = horseNormalCanvas(512)), false, 8, true) };
+    } catch (e) { PT.fail = true; PT.r = null; }
+    return PT.r;
+  }
+  function portraitAge(h) {
+    if (h.age != null) return h.age;
+    try { if (h.born != null && HS.World && HS.World.wIdx && HS.Horse && HS.Horse.ageAt) return HS.Horse.ageAt(h, HS.World.wIdx()); } catch (e) { /* 分からなければ */ }
+    return ageOf(h);
+  }
+  R3.portrait = function (canvas, horse) {
+    if (!canvas || !horse || typeof document === 'undefined' || !R3.supported()) return false;
+    if (!imgOk('grass_col') || !imgOk('sky_clear')) return false;
+    const w = canvas.width | 0, hgt = canvas.height | 0;
+    if (w < 8 || hgt < 8) return false;
+    const small = w <= 320;
+    const age = portraitAge(horse), gear = gearOf(horse);
+    const coat = horse.coat || '鹿毛';
+    const key = [w, hgt, coat, coat === '芦毛' ? Math.min(12, age || 0) : '', small ? '' : (horse.name || horse.id || ''), JSON.stringify(gear)].join('|');
+    let img = PT.cache.get(key);
+    if (!img) {
+      const K = portraitKit();
+      if (!K) return false;
+      const { renderer, scene, camera } = K;
+      const sc = small ? 2 : 1;  // 小さな絵は 2 倍で描いて縮める
+      renderer.setPixelRatio(1);
+      renderer.setSize(w * sc, hgt * sc, false);
+      LIN = true;
+      const h = { coat, age, gear, name: horse.name || horse.id || '', noMarks: small };
+      const tex = texOf(paintHorse(h, small ? 256 : 1024), false, 8);
+      const L = coatLook(coat, age), gl = L.gloss || 0;
+      const mat = new THREE.MeshStandardMaterial({ map: tex, normalMap: K.nor, skinning: true, roughness: 0.56 - 0.24 * gl, metalness: 0, envMapIntensity: 0.9 });
+      const mesh = new THREE.SkinnedMesh(K.geo, mat);
+      const bones = horseBones();
+      mesh.add(bones[0]); mesh.updateMatrixWorld(true); mesh.bind(new THREE.Skeleton(bones));
+      for (const [k, bi] of Object.entries(GEAR)) if (!gear[k]) bones[bi].scale.set(0, 0, 0);
+      poseHorse({ bones, lead: 1 }, 0, 0, 0, 1.3, hash01(strHash(h.name), 3), null, null);
+      bones[2].rotation.z += 0.06; bones[4].rotation.z -= 0.05; // 首を少し上げて前を見る
+      mesh.castShadow = true;
+      scene.add(mesh);
+      // カメラ：馬の右から少し前寄り・少し下から。横長でも縦長でも馬全体が入る距離
+      const asp = w / hgt;
+      camera.aspect = asp; camera.fov = 24; camera.updateProjectionMatrix();
+      const vf = Math.tan(camera.fov * Math.PI / 360), need = Math.max(2.55 / (2 * vf), 4.3 / (2 * vf * asp));
+      const tgt = V3(0.1, small ? 1.18 : 1.12, 0), dir = V3(0.28, 0.06, 1).normalize();
+      camera.position.copy(tgt).addScaledVector(dir, need * (small ? 0.9 : 1.05));
+      camera.lookAt(tgt);
+      renderer.render(scene, camera);
+      img = canvasOf(w, hgt);
+      img.getContext('2d').drawImage(renderer.domElement, 0, 0, w, hgt);
+      scene.remove(mesh); mat.dispose(); tex.dispose(); if (mesh.skeleton.dispose) mesh.skeleton.dispose();
+      PT.cache.set(key, img);
+      if (PT.cache.size > 160) PT.cache.delete(PT.cache.keys().next().value);
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    return true;
   };
 })();
