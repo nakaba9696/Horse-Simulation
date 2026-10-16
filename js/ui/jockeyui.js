@@ -242,7 +242,7 @@
       <div class="hs-foot"><span class="tag ${sex}">${sex === 'f' ? 'FEMALE' : 'MALE'}</span><span class="jp">${sex === 'f' ? '牝馬' : '牡馬'}リスト</span>
         <span class="note">毎月入れ替え（次は${nextM}月）・TURF / DIRT は${T.FH_NAME}（伸びきったときの強さ）・赤い値段は資金が足りない</span></div>
     </div>
-      <div class="small muted mt">1989〜2026年に走った馬のうち、いま走っていない馬から選んで、デビュー前の2歳として売る。倒したスペシャルホースはいつも並ぶ（★）。外＝外国の馬、地＝地方の馬。はじめは G3 までの馬だけで、自分の馬で勝つとその格・地方・国の馬も選ばれるようになる。</div>
+      <div class="small muted mt">1989〜2026年に走った馬のうち、いま走っていない馬から選んで、デビュー前の2歳として売る。倒したスペシャルホースはいつも並ぶ（★）。外＝外国の馬、地＝地方の馬。はじめは G3 までの馬だけで、自分の馬で勝つと、次の月の入れ替えからその格・地方・国の馬も選ばれるようになる。</div>
       ${E && E.locks ? `<div class="shop-locks mt">${E.locks().map(l => `<span class="lk ${l.open ? 'open' : ''}"><b>${l.open ? '' : '🔒 '}${e(l.label)}</b> ${l.n}頭<small>${l.open ? '選ばれる' : `${e(l.hint)}と選ばれる`}</small></span>`).join('')}</div>` : ''}`;
   };
   App.act.msex = d => { App.st.view = App.st.view || { name: App.st.tab }; App.st.view.msex = d.sex; App.render(); };
