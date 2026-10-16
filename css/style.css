@@ -510,9 +510,9 @@ input[type=range] { accent-color: var(--accent); min-width: 0; min-height: 28px;
 .pd-band { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--sp-3); padding: var(--sp-3) var(--sp-4); background: linear-gradient(180deg, var(--brand), var(--brand-2)); color: #fff; font-size: 13.5px; border-top: 1px solid var(--line-strong); font-variant-numeric: tabular-nums; }
 .pd-band .nm { font-family: var(--ff-serif); font-size: var(--fs-md); letter-spacing: .03em; } .pd-band .nm.me { color: #ffb19f; }
 .pd-band .md { padding: 1px var(--sp-3); border-radius: var(--r-pill); background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .12); } .pd-band .md.good { color: #a6f2c2; } .pd-band .md.bad { color: #ffa48a; }
+.pd-band .pd-skills { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.pd-myskills .sk-row { display: flex; gap: var(--sp-2); align-items: baseline; margin-top: var(--sp-1); } .pd-myskills .sk-row .chip { flex: none; }
 
-.pd-band .pd-skills { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px; }
-.pd-myskills .sk-row { display: flex; gap: 8px; align-items: baseline; margin-top: 4px; } .pd-myskills .sk-row .chip { flex: none; }
 
 /* ---------- 馬の店（総合力の順の一覧） ---------- */
 .shop-row { cursor: pointer; transition: background-color var(--dur) var(--ease); } .shop-row:hover td { background: var(--hover); }

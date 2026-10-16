@@ -86,11 +86,11 @@
       const doWhip = side => {
         const b = S.ctl.whip(sim, side);
         if (b == null) return say(sim.ctl && !sim.ctl.started ? 'まだゲートの中' : '', '');
-        if (b === 'swap') { say(`${sim.ctl.hand === 'R' ? '右' : '左'}手に持ち替え`, ''); return; }
+        if (b === 'swap') return; // 持ち替えは左下の計器（ムチ 右手・左手）で分かる
         whipAt = sim.t; whipFx = { t: performance.now(), side, b, inward: sim.ctl.lastWhip && sim.ctl.lastWhip.away < 0, zone: sim.D - me.x < sim.straight + 200 };
         if (AU) AU.se('whip');
       };
-      const doSwap = () => { if (S.ctl.swap(sim)) say(`${sim.ctl.hand === 'R' ? '右' : '左'}手に持ち替え`, ''); };
+      const doSwap = () => { S.ctl.swap(sim); };
       const doLane = d => S.ctl.lane(sim, d);
       const doPose = () => { if (me.done && poseAt == null) { poseAt = sim.t; if (AU) AU.se('skill'); } };
       // 照準（レーダーで見る馬）
@@ -297,11 +297,14 @@
           if (poseAt == null) txt('Y／G／2回タップ：ガッツポーズ', VW / 2, VH * 0.36 + 58, `12px ${FONT}`, '#ffe9a6', 'center');
           ctx.globalAlpha = 1;
         }
-        // 真ん中の言葉
-        if (flash && flash.text && performance.now() - flash.t < 1400) {
-          const a = 1 - (performance.now() - flash.t) / 1400;
-          ctx.globalAlpha = Math.min(1, a * 2);
-          outlined(flash.text, VW / 2, VH * 0.5, `bold 34px "Noto Serif JP", serif`, flash.cls === 'bad' ? '#ff8a6a' : flash.cls === 'good' || flash.cls === 'whip' ? '#ffe680' : '#fff', 'center');
+        // 短い言葉（スタート・好スタート・視点など）：大きく出さず、下寄りに小さな札で
+        if (flash && flash.text && performance.now() - flash.t < 1200) {
+          const a = 1 - (performance.now() - flash.t) / 1200;
+          ctx.globalAlpha = Math.min(1, a * 2.5);
+          ctx.font = `bold 15px ${FONT}`;
+          const fw = ctx.measureText(flash.text).width + 28, fy = VH * 0.66;
+          ctx.fillStyle = HUD.panel; rr(VW / 2 - fw / 2, fy - 15, fw, 30, 15); ctx.fill();
+          txt(flash.text, VW / 2, fy + 1, `bold 15px ${FONT}`, flash.cls === 'bad' ? '#ffa48a' : flash.cls === 'good' || flash.cls === 'go' ? HUD.gold : '#fff', 'center', 'middle');
           ctx.globalAlpha = 1;
         }
       }
