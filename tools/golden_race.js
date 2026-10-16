@@ -194,9 +194,36 @@ function mathCases() {
   return out;
 }
 
+// フリーレース（js/core/freerace.js）：出走表の作り方（騎手・枠・人気）と、そのまま走らせた結果
+function freeCases() {
+  const FR = HS.FreeRace, m = new U.RNG(4242);
+  const pool = D.historic.filter(d => d.rating >= 85);
+  const sp = FR.specials();
+  const out = [];
+  for (let k = 0; k < 6; k++) {
+    const crs = FR.courses();
+    const c = m.pick(crs);
+    const surface = c.dirt && (!c.turf || m.chance(0.4)) ? 'ダ' : '芝';
+    const ds = FR.dists(c.name, surface);
+    const entries = [];
+    const n = m.int(6, 18);
+    for (let i = 0; i < n; i++) {
+      if (k % 2 && sp.length && m.chance(0.25)) entries.push({ kind: 'special', key: m.pick(sp).name });
+      else entries.push({ kind: 'hist', key: m.pick(pool).name });
+    }
+    const o = { course: c.name, surface, dist: m.chance(0.2) ? 1750 : m.pick(ds), ground: m.pick(['良', '稍重', '重', '不良', 'x']), weather: m.pick(['晴', '雨', '?']), entries, ride: k % 3 === 0 ? 0 : -1, seed: m.int(1, 2147483646), n: k };
+    const card = FR.build(o, null);
+    const res = FR.run(card);
+    out.push({ o, race: card.race, card: card.runners.map(x => [x.horse.name, x.jockey.name, x.jockey.skill, x.num, x.frame, x.weight, x.odds, x.pop, x.rider]), seed: card.seed,
+      results: res.results.map(x => [x.horse.name, hex(x.time)]), events: res.events.map(e => [hex(e.t), e.text]) });
+  }
+  return out;
+}
+
 function build() {
   const races = raceList();
   return {
+    'free.json': JSON.stringify(freeCases()) + '\n',
     'races.json': JSON.stringify({ note: 'tools/golden_race.js が作る。手で直さない', cases: races.map(runCase) }, null, 0).replace(/\},\{"name"/g, '},\n{"name"') + '\n',
     'math.json': JSON.stringify(mathCases()) + '\n',
   };

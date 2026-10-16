@@ -32,6 +32,12 @@ func _ops(ops: Array) -> Array:
 			"retire":
 				var r := HSJockey.retire(op[1])
 				out.append(r.err if r.has("err") else r.to)
+			"win":
+				var h = HSWorld.horse(op[1]); var G = HSWorld.G
+				var race := { name = op[3], short = op[2], grade = op[4], region = "JRA", year = G.year }
+				h.gradedWins.append({ y = G.year, race = race.name, short = race.short, grade = race.grade, region = race.region })
+				out.append(",".join(HSSeason.on_win(h, race, G.year)))
+			"pts": out.append(HSOwners.add_pts(op[1], op[2]))
 			"make":
 				var r := HSOriginal.make(op[1], op[2], op[3])
 				out.append(r.err if r.has("err") else "%s:%s" % [r.horse.name, ",".join(r.skills)])

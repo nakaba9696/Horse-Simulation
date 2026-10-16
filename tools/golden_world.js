@@ -24,12 +24,15 @@ function canon(v, out) {
 }
 const digest = v => crypto.createHash('sha256').update(canon(v, []).join(''), 'utf8').digest('hex').slice(0, 16);
 
-// 週の初めに行う操作（ops）：['reserve', 馬の id, レース名]・['retire', 馬の id]・['make', 父の id, 母の id, 名前]
+// 週の初めに行う操作（ops）：['reserve', 馬の id, レース名]・['retire', 馬の id]・['make', 父の id, 母の id, 名前]・
+//   ['win', 馬の id, 短い名, レース名, 格]（その年の重賞の勝ちを足して、冠とトロフィーを見る）・['pts', 馬主の id, 好感度]（段階とご褒美）
 function runOps(HS, ops) {
   const { World: W, Jockey: J, Season: T, Original: Ori } = HS;
   return (ops || []).map(op => {
     if (op[0] === 'reserve') { const r = W.upcomingGraded(52).find(x => x.name === op[2]); return r ? T.reserve(op[1], r) : 'no race'; }
     if (op[0] === 'retire') { const r = J.retire(op[1]); return r.err || r.to; }
+    if (op[0] === 'win') { const h = W.horse(op[1]), G = W.get(); const race = { name: op[3], short: op[2], grade: op[4], region: 'JRA', year: G.year }; h.gradedWins.push({ y: G.year, race: race.name, short: race.short, grade: race.grade, region: race.region }); return T.onWin(h, race, G.year).join(','); }
+    if (op[0] === 'pts') return HS.Owners.addPts(op[1], op[2]);
     if (op[0] === 'make') { const r = Ori.make(op[1], op[2], op[3]); return r.err || (r.horse.name + ':' + r.skills.join(',')); }
     return 'unknown';
   });
@@ -120,7 +123,7 @@ function build(log) {
     W.dirty(); W._week = null;
     var craftSave = W.serialize();
     HS = load(); HS.World.load(craftSave);
-    var ops = { 0: [['reserve', p1.id, 'フェブラリーステークス']], 5: [['retire', p1.id], ['retire', p2.id]], 6: [['make', p1.sex === '牝' ? p2.id : p1.id, p1.sex === '牝' ? p1.id : p2.id, 'テストホース']] };
+    var ops = { 0: [['reserve', p1.id, 'フェブラリーステークス']], 1: [['win', p2.id, '皐月賞', '皐月賞', 'G1'], ['win', p2.id, '日本ダービー', '東京優駿', 'G1'], ['win', p2.id, '菊花賞', '菊花賞', 'G1'], ['pts', 'takenouchi', 300], ['pts', 'saginomiya', 900]], 2: [['win', p2.id, '宝塚記念', '宝塚記念', 'G1'], ['win', p2.id, '有馬記念', '有馬記念', 'G1']], 5: [['retire', p1.id], ['retire', p2.id]], 6: [['make', p1.sex === '牝' ? p2.id : p1.id, p1.sex === '牝' ? p1.id : p2.id, 'テストホース']] };
     var craftStart = digest(JSON.parse(HS.World.serialize()));
     var craftWeeks = play(HS, 8, log, ops);
   }
