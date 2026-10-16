@@ -407,7 +407,7 @@
     const still = App.reduced();
     const draw = ts => {
       if (last == null) last = ts;
-      const dt = still ? 0 : Math.min(0.05, (ts - last) / 1000); last = ts; t += dt;
+      const dt = still ? 0 : U.clamp((ts - last) / 1000, 0, 0.05); last = ts; t += dt; // 時刻が戻ったとき（タブの切り替えなど）に負にしない
       ctx.clearRect(0, 0, w, h);
       // 外の柵（流れて速さが出る）
       const ry = h * 0.36;
