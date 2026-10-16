@@ -44,6 +44,8 @@ const SCENES = {
   dirt_tv: { course: '東京', surface: 'ダ', dist: 1600, rem: 300, cam: 'tv' },
   dirt_ride: { course: '東京', surface: 'ダ', dist: 1600, rem: 500, cam: 'ride' },
   // 勝ったときの画面の背景（スタンドとゴール前を内馬場から）
+  // 走る馬の横（自分の馬のまわりを回り込む。1600×1000）
+  run_side: { course: '東京', surface: '芝', dist: 2400, rem: 700, cam: 'ride', orbit: { yaw: 1.5, pitch: 0.02, zoom: 0.95 }, w: 1600, h: 1000 },
   result_bg: { course: '東京', surface: '芝', dist: 2400, rem: 28, cam: 'fixed', w: 1600, h: 900, fix: { s: -38, u: -8, h: 2.4, ls: 70, lu: 22, lh: 5.5, fov: 58 } },
 };
 

@@ -2596,9 +2596,10 @@
       const et = new THREE.CanvasTexture(ec); et.mapping = THREE.EquirectangularReflectionMapping; et.encoding = THREE.sRGBEncoding;
       const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromEquirectangular(et).texture; pm.dispose(); et.dispose();
       // 光
-      scene.add(new THREE.HemisphereLight(lin('#dfeaff'), lin('#6b7a52'), 0.45));
-      const sun = new THREE.DirectionalLight(lin('#fff4e2'), 2.6);
-      sun.position.set(3, 7, 6); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+      // 日は頭の側の斜め上から当て、体の丸み（肩・尻の張り）に陰を付ける
+      scene.add(new THREE.HemisphereLight(lin('#dfeaff'), lin('#6b7a52'), 0.4));
+      const sun = new THREE.DirectionalLight(lin('#fff4e2'), 2.7);
+      sun.position.set(5.5, 6.5, 3.5); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
       Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 30 }); sun.shadow.camera.updateProjectionMatrix();
       sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
       scene.add(sun);
