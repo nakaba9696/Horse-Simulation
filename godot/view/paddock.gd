@@ -173,8 +173,14 @@ func _horse_at(i: int) -> Array:
 	var p2 := _ring(a - 0.01)
 	return [p, (p2 - p).normalized(), a]
 
+var _faded := -1
 func step(dt: float) -> void:
 	t += dt
+	# 選んだ馬はカメラが近くても網目に消さない（ほかの馬は、カメラの前を横切るときだけ消す）
+	if _faded != focus:
+		_faded = focus
+		for i in horses.size():
+			horses[i].set_fade(i != focus)
 	for i in horses.size():
 		var h := horses[i]
 		var q := _horse_at(i)

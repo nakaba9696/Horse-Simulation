@@ -13,6 +13,7 @@
 | `assets/textures/dirt_aerial_02_*_1k.jpg` | ダートの質感（色・法線） | Rob Tuytel | CC0 1.0 | Poly Haven https://polyhaven.com/a/dirt_aerial_02 |
 | `assets/textures/aerial_grass_rock_*_1k.jpg` | 内馬場・外の草地の質感（色・法線） | Rob Tuytel | CC0 1.0 | Poly Haven https://polyhaven.com/a/aerial_grass_rock |
 | `assets/fonts/NotoSansJP_700Bold.ttf`（と `OFL.txt`） | 画面の字（Noto Sans JP Bold） | Adobe（Source Han Sans）・Google | SIL Open Font License 1.1 | Google Fonts の Noto Sans JP。npm の `@expo-google-fonts/noto-sans-jp@0.4.4` に入っているものを使った |
+| `assets/fonts/NotoSerifJP_900Black_sub.ttf` | 見出しの明朝（Noto Serif JP Black）。ゲームで使う字だけに減らした（`tools/subset_font.py`） | Adobe（Source Han Serif）・Google | SIL Open Font License 1.1 | Google Fonts の Noto Serif JP。npm の `@expo-google-fonts/noto-serif-jp@0.4.4` に入っているものから作った（減らしたものも同じ OFL で配れる。`OFL.txt` を一緒に配る） |
 
 ## 確かめたこと
 - 骨入りの馬は CC-BY 4.0（作者 abhayexe。`../assets/src/horse_rigged/license.txt`）。作者の名前とクレジットの文をゲームの中のクレジットに出す。

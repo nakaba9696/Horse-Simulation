@@ -57,7 +57,8 @@ func _ready() -> void:
 	if shots.size() > 0 or not video.is_empty():
 		_capture()
 	else:
-		rows[sel].grab_focus.call_deferred()
+		# 最初のカーソルは主な操作（ゲートイン）。表は十字キーの上で入る
+		btn_gate.grab_focus.call_deferred()
 
 # 騎手（データの主戦。架空の名前）と人気・単勝（強さの見込みから。js/core/world.js の setOdds と同じ式。種はレースの名前から）
 # 世界の進み（world.js）が Godot に移ったら、そちらの人気を使う
@@ -356,8 +357,8 @@ func _build_right() -> void:
 		r.focus_neighbor_right = r.get_path_to(btn_gate)
 	if rows.size() > 0:
 		rows[rows.size() - 1].focus_neighbor_bottom = rows[rows.size() - 1].get_path_to(btn_gate)
-		btn_gate.focus_neighbor_top = btn_gate.get_path_to(btn_gate)
-		btn_paddock.focus_neighbor_top = btn_paddock.get_path_to(btn_paddock)
+		btn_gate.focus_neighbor_top = btn_gate.get_path_to(rows[sel])
+		btn_paddock.focus_neighbor_top = btn_paddock.get_path_to(rows[sel])
 		btn_gate.focus_neighbor_left = btn_gate.get_path_to(btn_paddock)
 		btn_paddock.focus_neighbor_left = btn_paddock.get_path_to(rows[sel])
 		btn_gate.focus_neighbor_bottom = btn_gate.get_path_to(btn_gate)
@@ -415,7 +416,7 @@ func _open_paddock() -> void:
 	paddock.orbit = 0.0
 	var tw := create_tween().set_parallel(true)
 	tw.tween_property(table, "position:x", -TABLE_W - 40.0, 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-	tw.tween_property(shade, "modulate:a", 0.25, 0.24)
+	tw.tween_property(shade, "modulate:a", 0.0, 0.24)
 	btn_gate.grab_focus()
 
 func _close_paddock() -> void:

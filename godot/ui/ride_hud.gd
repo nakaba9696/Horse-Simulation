@@ -198,11 +198,21 @@ func _fill_board() -> void:
 		board_rows.add_child(row)
 
 # 中継のカメラのとき：上位の並びと実況の字幕
+var tv_panel: PanelContainer
+var gate_keys: PanelContainer
 func _build_tv() -> void:
+	tv_panel = PanelContainer.new()
+	tv_panel.add_theme_stylebox_override("panel", UiTheme.panel(0.72, 12))
+	tv_panel.position = Vector2(30, 176)
+	root.add_child(tv_panel)
 	tv_box = VBoxContainer.new()
-	tv_box.position = Vector2(30, 210)
 	(tv_box as VBoxContainer).add_theme_constant_override("separation", 3)
-	root.add_child(tv_box)
+	tv_panel.add_child(tv_box)
+	# ゲートの中だけ：スタートの操作の案内（走り出したら消える）
+	gate_keys = UiTheme.keybar([["↑", "十字↑", "スタート"], ["←→", "十字←→", "進路"], ["V", "Back", "視点"]], Input.get_connected_joypads().size() > 0)
+	gate_keys.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	gate_keys.position = Vector2(-170, -64)
+	root.add_child(gate_keys)
 	for k in 6:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
@@ -296,6 +306,9 @@ func update(st: Dictionary) -> void:
 		board.position = Vector2(root.size.x - 640 + 80.0 * pow(1.0 - b, 3.0), root.size.y / 2.0 - board.size.y / 2.0)
 	# 中継の表示
 	tv_box.visible = mode == "tv" and phase == "run"
+	tv_panel.visible = tv_box.visible
+	gate_keys.visible = phase == "gate" or (phase == "run" and t < 1.5)
+	gate_keys.modulate.a = 1.0 if phase == "gate" else clampf(1.0 - t / 1.5, 0.0, 1.0)
 	telop_panel.visible = false
 	if tv_box.visible:
 		var order: Array = st.order

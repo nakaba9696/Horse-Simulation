@@ -55,3 +55,5 @@ sh godot/tools/run_scene.sh res://scenes/horse_lab.tscn -- --out=DIR --cam=side|
 ```
 - container で動かすには `apt-get install mesa-vulkan-drivers` と Godot の本体（`GODOT=` で場所を渡す。既定は `/home/user/godot-bin/godot`）が要る。本体はリポジトリに入れない。
 - 撮るときは決まった刻み（1/30 秒か fps）で進めるので、同じ引数なら同じ絵になる。
+- 重さ：`godot --headless --path godot -s res://tools/bench_view.gd` で 1 コマの GDScript の重さ（馬の形・騎手の IK・模擬・表示）。この container の CPU で 3 ms ほど（60fps の 1 コマは 16.6 ms）。
+- 絵の決まり（毛色・白徴・勝負服）が JS と同じか：`-s res://tools/check_art.gd`。模擬の入れ口が JS と同じレースになるか：`-s res://tools/check_live.gd` と `node tools/check_live.js`。この3つと操作の確かめは `node tests/run.js` が Godot があれば回す（`tests/extra_gdview.js`）。
