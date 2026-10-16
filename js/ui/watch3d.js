@@ -128,7 +128,7 @@
         const P = posAt(Math.max(0, T));
         const lead = Math.max(...P.map(p => p[0]));
         if (opts.onTick) opts.onTick(sim.D - lead, sim.D - lead < sim.straight, T > 0 && T < winT, T >= winT);
-        r3.render({ t: T, me: focus, phase: T < 0 ? 'gate' : T > winT ? 'finish' : 'race', horses: P.map(p => ({ x: p[0], lane: p[1], v: p[2] })) }, T < 0 ? 'gate' : cam, orbit);
+        r3.render({ t: T, me: focus, phase: T < 0 ? 'gate' : T > winT ? 'finish' : 'race', horses: P.map(p => ({ x: p[0], lane: p[1], v: p[2], fight: 0, ears: 0.3 })) }, T < 0 ? 'gate' : cam, orbit); // 掛かり・耳は記録のコマに無いので既定
         hud(P);
         if (T > Math.min(tEnd, winT + 6) && !shownEnd) {
           shownEnd = true;

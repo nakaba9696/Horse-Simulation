@@ -176,6 +176,7 @@
         x: prev[j][0] + (s.x - prev[j][0]) * k, lane: prev[j][1] + (s.lane - prev[j][1]) * k, v: s.v,
         num: s.r.num, frame: s.r.frame, cap: meta[j].cap, silks: meta[j].silks, coat: s.h.coat, name: s.h.name, mine: !!s.me,
         whip: s.me ? sim.t - whipAt : null, pose: s.me && poseAt != null ? sim.t + acc - poseAt : null,
+        fight: s.fight || 0, ears: s.ears != null ? s.ears : 0.3,
       }));
 
       function frame(ts) {
