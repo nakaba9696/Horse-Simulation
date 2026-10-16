@@ -258,6 +258,7 @@
   App.theme = () => { try { return localStorage.getItem(App.THEME_KEY) || 'green'; } catch (e) { return 'green'; } };
   App.applyTheme = t => { document.documentElement.dataset.theme = t || App.theme(); };
   change.theme = (el) => { try { localStorage.setItem(App.THEME_KEY, el.value); } catch (e) { /* 覚えられなくても切り替える */ } App.applyTheme(el.value); };
+  change.rumble = (el) => { const RB = HS.Rumble; RB.setLevel((+el.value) / 100); RB.play(180, 0.8, 0.8); };
   change.volume = (el) => { const AU = HS.Audio; AU.settings[el.dataset.k] = (+el.value) / 100; AU.saveSettings(); AU.applyVolume(); if (el.dataset.k === 'se') AU.se('click'); };
   change.setting = (el) => { const G = W.get(); const k = el.dataset.k; G.settings[k] = k === 'watch' ? +el.value : el.value === '1'; App.save(); };
 
@@ -497,7 +498,10 @@
       ev.preventDefault(); App.navMove(dir);
     } else if (ev.key === 'Enter' && navEl && t === navEl && !/^(BUTTON|A|INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) { ev.preventDefault(); App.navPress(); }
     else if (ev.key === 'Escape') { ev.preventDefault(); App.navBack(); }
+    else if ((ev.key === 'q' || ev.key === 'e' || ev.key === 'PageUp' || ev.key === 'PageDown') && !typing) App.navLR(ev.key === 'q' || ev.key === 'PageUp' ? 'prev' : 'next');
   });
+  // 左右の切り替え（Q・E／PageUp・PageDown／LB・RB）：画面に [data-lr] の札があれば押す（馬の店の牡馬・牝馬など）
+  App.navLR = function (side) { const b = navRoot().querySelector(`[data-lr=${side}]`); if (b && visible(b)) b.click(); };
   document.addEventListener('pointerdown', () => { if (navEl) { navEl.classList.remove('navsel'); navEl = null; } }, true);
   // ゲームパッド：十字キーで選ぶ（長押しで続けて動く）・A で押す・B で閉じる・もどる
   const padPrev = {};
@@ -507,7 +511,7 @@
     if (pads.length) {
       const g = pads[0], btn = i => !!(g.buttons[i] && g.buttons[i].pressed);
       const ax = g.axes || [];
-      const st = { up: btn(12) || ax[1] < -0.6, down: btn(13) || ax[1] > 0.6, left: btn(14) || ax[0] < -0.6, right: btn(15) || ax[0] > 0.6, a: btn(0), b: btn(1) };
+      const st = { up: btn(12) || ax[1] < -0.6, down: btn(13) || ax[1] > 0.6, left: btn(14) || ax[0] < -0.6, right: btn(15) || ax[0] > 0.6, a: btn(0), b: btn(1), lb: btn(4), rb: btn(5) };
       // 騎乗中などは見るだけ（押しっぱなしのボタンが、戻ったときに押したことにならないように）
       if (navOff()) { Object.assign(padPrev, st); setTimeout(pollPad, 50); return; }
       const now = performance.now();
@@ -520,6 +524,8 @@
       }
       if (st.a && !padPrev.a) { if (navEl && document.contains(navEl)) App.navPress(); else App.navMove('down'); }
       if (st.b && !padPrev.b) App.navBack();
+      if (st.lb && !padPrev.lb) App.navLR('prev');
+      if (st.rb && !padPrev.rb) App.navLR('next');
       Object.assign(padPrev, st);
     }
     setTimeout(pollPad, 50);

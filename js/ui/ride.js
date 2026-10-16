@@ -53,7 +53,7 @@
       const ctx = cv.getContext('2d');
       ctx.scale(dpr, dpr);
       const msgEl = el.querySelector('.ride-msg');
-      const AU = HS.Audio;
+      const AU = HS.Audio, RB = HS.Rumble;
       const meta = sim.st.map(s => ({ silks: HS.RaceView.silksOf(s.h), cap: FC()[(s.r.frame - 1) % 8], capText: FT()[(s.r.frame - 1) % 8] }));
       const record = 'record' in opts ? opts.record : HS.World.courseRecord ? HS.World.courseRecord(race) : null;
       let recFx = null; // 勝ち馬がレコードを破ったら、ゴールの後に「RECORD」と前のレコードとの差
@@ -89,6 +89,7 @@
         const b = S.ctl.whip(sim, side);
         if (b == null) return say('', '');
         if (b === 'swap') return; // 持ち替えは左下の計器（ムチ 右手・左手）で分かる
+        if (RB) RB.fx('whip');
         whipAt = sim.t; whipFx = { t: performance.now(), side, b, inward: sim.ctl.lastWhip && sim.ctl.lastWhip.away < 0, zone: sim.D - me.x < sim.straight + 200 };
         if (AU) AU.se('whip');
       };
@@ -189,7 +190,7 @@
         lookNow += (look * Math.PI / 2 - lookNow) * Math.min(1, realDt * 8);
         if (clock < 0) {
           const before = clock; clock += dt;
-          if (before < 0 && clock >= 0) { if (AU) { AU.se('gate'); AU.raceStart(); } say('START', 'go'); }
+          if (before < 0 && clock >= 0) { if (AU) { AU.se('gate'); AU.raceStart(); } if (RB) RB.fx('gate'); say('START', 'go'); }
         } else if (!sim.over) {
           acc += dt;
           let guard = 0;
@@ -199,6 +200,7 @@
             finishedAt = sim.t;
             myPos = sim.st.filter(s => s.done && s.finishT <= me.finishT).length;
             if (myPos !== 1) say(ordinal(myPos), '');
+            if (RB) RB.fx(myPos === 1 ? 'win' : 'finish');
           }
           if (record && !recFx) {
             const first = sim.st.filter(s => s.done).sort((a, b) => a.finishT - b.finishT)[0];
@@ -207,6 +209,8 @@
           if (AU) { const lead = Math.max(...sim.st.map(s => s.x)); AU.raceUpdate(sim.D - lead, sim.D - lead < sim.straight, sim.st.filter(s => !s.done).length, sim.st.filter(s => s.done).length); }
         }
         const k = clock < 0 ? 0 : U.clamp(acc / 0.1, 0, 1);
+        // コントローラーの振動：自分の馬の蹄の拍子（js/ui/rumble.js）
+        if (RB && clock >= 0) RB.gallop(prev[sim.me][0] + (me.x - prev[sim.me][0]) * k, me.r.num, me.v, sim.ctl ? U.clamp(sim.ctl.gear + (me.spurting ? 0.4 : 0), 0, 1) : 0);
         const view = {
           t: clock, D: sim.D, surface: race.surface, ground: race.ground,
           course: { name: race.course, dir: course.dir, lap: sim.geo.lap, straight: sim.geo.straight, slope: sim.geo.slope },
@@ -231,6 +235,7 @@
       }
       function finish() {
         done = true;
+        if (RB) RB.reset();
         if (r3) { r3.dispose(); r3 = null; }
         window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp);
         resolve(result);
@@ -282,7 +287,7 @@
         while (fxSeen < sim.skillFx.length) {
           const f = sim.skillFx[fxSeen++];
           const label = HS.Skills ? HS.Skills.label(f.id) : f.id, bad = HS.Skills ? HS.Skills.isBad(f.id) : false;
-          if (f.i === sim.me) { skillTag = { text: label, bad, t: performance.now() }; if (AU) AU.se('skill'); }
+          if (f.i === sim.me) { skillTag = { text: label, bad, t: performance.now() }; if (AU) AU.se('skill'); if (RB) RB.fx(bad ? 'bad' : 'skill'); }
           else { const o = sim.st[f.i]; if (Math.abs(o.x - me.x) < 40) side.unshift({ text: `${o.r.num} ${o.h.name}「${label}」`, bad, t: performance.now() }); }
         }
         if (skillTag) drawSkill(skillTag);
@@ -433,11 +438,12 @@
         const gTxt = c.gear > 0.05 ? '▲'.repeat(Math.ceil(c.gear * 4)) : c.gear < -0.05 ? '▼'.repeat(Math.ceil(-c.gear * 4)) : '－';
         txt(`手綱 ${gTxt}`, x + 10, y + 64, `12px ${FONT}`, c.gear > 0.05 ? '#ffd34d' : c.gear < -0.05 ? '#7fc8ff' : HUD.label);
         txt(`ムチ ${c.hand === 'R' ? '右' : '左'}手${c.whips ? '・' + c.whips : ''}`, x + 120, y + 64, `12px ${FONT}`, HUD.label);
-        // 脚質の矢印：光っているのがこの馬の得意な位置。白い枠が今の位置
+        // 脚質の矢印：右が逃げ（前）・左が追込（後ろ）（持ち主の指摘 2026-10-16）。光っているのがこの馬の得意な位置（自由自在は全部）。白い枠が今の位置
         txt('脚質', x + 10, y + 92, `12px ${FONT}`, HUD.label);
         const nowK = Math.min(3, Math.floor((rank - 1) / Math.max(1, sim.st.length) * 4));
+        const jiyuMe = HS.Horse.has(me.h, 'jiyu');
         STYLES.forEach((st, i) => {
-          const ax = x + 52 + i * 34, ay = y + 82, lit = me.h.style === st;
+          const ax = x + 52 + (3 - i) * 34, ay = y + 82, lit = jiyuMe || me.h.style === st;
           ctx.fillStyle = lit ? '#ffd34d' : 'rgba(255,255,255,0.18)';
           ctx.beginPath(); ctx.moveTo(ax + 26, ay + 8); ctx.lineTo(ax + 4, ay); ctx.lineTo(ax + 4, ay + 16); ctx.closePath(); ctx.fill();
           if (i === nowK) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(ax + 1, ay - 2, 28, 20); }

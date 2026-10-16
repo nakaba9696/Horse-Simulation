@@ -205,32 +205,47 @@
       </div></div>`;
   }
 
-  // ---------- 馬の店：デビュー前の史実馬を、完成したときの総合力の高い順に一行ずつ（芝とダートを別の列で）。行を押すと馬の画面（解説もそこで読める） ----------
+  // ---------- 馬の店：品ぞろえ（開いている走っていない馬から、牡馬・牝馬それぞれ10頭を毎月選ぶ。js/core/eraless.js の E.shop）----------
+  // 見た目は古典的な騎手ゲームの店（持ち主の指摘 2026-10-16「店はこんな感じのUIを想定」）：牡馬・牝馬の切り替え（Q・E／LB・RB）、
+  // 一行ずつ 馬名・性齢・芝・ダート（完成の総合力）・値段。買えない値段は赤。行を押すと馬の画面（そこで買う）
   const market0 = S.market;
   S.market = function (st) {
     if (!isJ()) return market0(st);
-    const G = W.get(), wIdx = W.wIdx();
-    const items = W.marketHistoric().map((it, i) => ({ it, i, kind: 'hist' })).concat(W.marketForeign().map((it, i) => ({ it, i, kind: 'fhist' })));
-    for (const x of items) { x.fh = T.fhPeak(x.it.horse); x.top = Math.max(x.fh.turf, x.fh.dirt); }
-    items.sort((a, b) => ((b.it.legend ? 1 : 0) - (a.it.legend ? 1 : 0)) || b.top - a.top || b.it.price - a.it.price); // 倒したスペシャルホースは上に
-    const lim = st.mlimit || 40;
+    const G = W.get(), money = G.player.money;
+    const sex = st.msex === 'f' ? 'f' : 'm';
+    const all = W.marketHistoric().map((it, i) => ({ it, i, kind: 'hist' })).concat(W.marketForeign().map((it, i) => ({ it, i, kind: 'fhist' })));
+    for (const x of all) { x.fh = T.fhPeak(x.it.horse); x.f = x.it.horse.sex === '牝'; }
+    const nM = all.filter(x => !x.f).length, nF = all.length - nM;
+    const items = all.filter(x => x.f === (sex === 'f'));
+    items.sort((a, b) => ((b.it.legend ? 1 : 0) - (a.it.legend ? 1 : 0)) || b.it.price - a.it.price); // 倒したスペシャルホースは上に
     const full = !T.canBuy();
-    const rows = items.slice(0, lim).map(({ it, fh }, k) => {
+    const E = HS.Eraless;
+    const mark = it => it.legend ? '<i class="mk sp">★</i>' : HS.DATA.isForeign(it.data || {}) ? '<i class="mk">外</i>' : E && E.lockOf && it.data && E.lockOf(it.data) === 'local' ? '<i class="mk">地</i>' : '<i class="mk none"></i>';
+    const rows = items.map(({ it, fh }, k) => {
       const h = it.horse, best = fh.turf >= fh.dirt ? 'turf' : 'dirt';
-      return `<div class="shop-row ${it.legend ? 'legend' : ''}" data-act="horse" data-id="${e(h.id)}" style="--i:${Math.min(k, 12)}">
-        <span class="rk">${k + 1}</span>
-        <canvas class="thumb" width="168" height="112" data-art="thumbdata" data-coat="${e(h.coat || '鹿毛')}" data-key="${e(h.name)}"></canvas>
-        <span class="who"><b>${e(h.name)}</b>${h.legendBought ? ' <span class="chip legend">スペシャル</span>' : ''}<span class="sub"><span class="sexm ${h.sex === '牝' ? 'f' : 'm'}">${h.sex === '牝' ? '牝馬' : '牡馬'}</span> ${G.year - h.born}歳</span></span>
-        <span class="fhs"><span class="fhv turf ${best === 'turf' ? '' : 'dim'}"><small>芝</small>${fh.turf}</span><span class="fhv dirt ${best === 'dirt' ? '' : 'dim'}"><small>ダ</small>${fh.dirt}</span></span>
-        <span class="price">${U.money(it.price)}</span></div>`;
+      return `<div class="hs-row ${it.legend ? 'legend' : ''}" data-act="horse" data-id="${e(h.id)}" style="--i:${Math.min(k, 12)}">
+        ${mark(it)}<span class="bar"><b class="nm">${e(h.name)}</b><span class="sa">${h.sex === '牝' ? '牝' : h.sex === 'セ' ? 'セ' : '牡'}${G.year - h.born}</span>
+        <span class="vals"><span class="hx ${best === 'turf' ? 'hi' : ''}">${fh.turf}</span><span class="hx ${best === 'dirt' ? 'hi' : ''}">${fh.dirt}</span></span></span>
+        <span class="pr ${it.price > money ? 'over' : ''}">${U.money(it.price)}</span></div>`;
     }).join('');
-    return `<h2 class="sec">馬の店<span class="r">資金 ${U.money(G.player.money)}・お手馬 ${T.ownCount()}/${T.MAX_OWN}${full ? '（いっぱい）' : ''}</span></h2>
-      <div class="small muted">1989〜2026年に走った馬で、いま走っていない馬を、デビュー前の2歳として売る。${T.FH_NAME}（伸びきったときの強さ。史実馬は45〜85で、オリジナルホースは99まで）の芝・ダートの高いほうの順。倒したスペシャルホースは上に並ぶ。行を押すと馬の画面が開き、そこで買えます。はじめは G3 までの馬だけ。自分の馬で勝つと、その格・地方・国の馬が並ぶようになる。</div>
-      ${HS.Eraless && HS.Eraless.locks ? `<div class="shop-locks mt">${HS.Eraless.locks().map(l => `<span class="lk ${l.open ? 'open' : ''}"><b>${l.open ? '' : '🔒 '}${e(l.label)}</b> ${l.n}頭<small>${l.open ? '並んでいる' : `${e(l.hint)}と並ぶ`}</small></span>`).join('')}</div>` : ''}
-      ${items.length ? `<div class="shop-head mt"><span>馬名</span><span>芝・ダ</span><span>値段</span></div><div class="shop">${rows}</div>
-        ${items.length > lim ? `<div class="center mt"><button class="btn" data-act="mmore">もっと見る（残り${items.length - lim}頭）</button></div>` : ''}`
-        : '<div class="panel empty">いま買えるデビュー前の史実馬はいません。毎年3月に新しい世代が生まれます。</div>'}`;
+    const nextM = G.month === 12 ? 1 : G.month + 1;
+    return `<div class="hshop">
+      <div class="hs-top"><span class="yen">¥</span><span class="ttl">HORSE SHOP</span>
+        <span class="fund"><small>MONEY</small><b>${U.money(money)}</b></span></div>
+      <div class="hs-tabs"><button class="lr" data-act="msex" data-sex="${sex === 'm' ? 'f' : 'm'}" data-lr="prev" aria-label="切り替え">◀</button>
+        <button class="tb m ${sex === 'm' ? 'on' : ''}" data-act="msex" data-sex="m"><kbd>Q</kbd>MALE<small>${nM}</small></button>
+        <span class="own">お手馬 ${T.ownCount()}/${T.MAX_OWN}${full ? '（いっぱい）' : ''}</span>
+        <button class="tb f ${sex === 'f' ? 'on' : ''}" data-act="msex" data-sex="f">FEMALE<small>${nF}</small><kbd>E</kbd></button>
+        <button class="lr" data-act="msex" data-sex="${sex === 'm' ? 'f' : 'm'}" data-lr="next" aria-label="切り替え">▶</button></div>
+      <div class="hs-head"><span>NAME</span><span>SEX-AGE</span><span>TURF</span><span>DIRT</span><span class="p">PRICE</span></div>
+      ${items.length ? `<div class="hs-list">${rows}</div>` : `<div class="panel empty">いま並んでいる${sex === 'f' ? '牝馬' : '牡馬'}はいません。${nextM}月に入れ替わります。</div>`}
+      <div class="hs-foot"><span class="tag ${sex}">${sex === 'f' ? 'FEMALE' : 'MALE'}</span><span class="jp">${sex === 'f' ? '牝馬' : '牡馬'}リスト</span>
+        <span class="note">毎月入れ替え（次は${nextM}月）・TURF / DIRT は${T.FH_NAME}（伸びきったときの強さ）・赤い値段は資金が足りない</span></div>
+    </div>
+      <div class="small muted mt">1989〜2026年に走った馬のうち、いま走っていない馬から選んで、デビュー前の2歳として売る。倒したスペシャルホースはいつも並ぶ（★）。外＝外国の馬、地＝地方の馬。はじめは G3 までの馬だけで、自分の馬で勝つとその格・地方・国の馬も選ばれるようになる。</div>
+      ${E && E.locks ? `<div class="shop-locks mt">${E.locks().map(l => `<span class="lk ${l.open ? 'open' : ''}"><b>${l.open ? '' : '🔒 '}${e(l.label)}</b> ${l.n}頭<small>${l.open ? '選ばれる' : `${e(l.hint)}と選ばれる`}</small></span>`).join('')}</div>` : ''}`;
   };
+  App.act.msex = d => { App.st.view = App.st.view || { name: App.st.tab }; App.st.view.msex = d.sex; App.render(); };
   const retire0 = App.act.retire;
   App.act.retire = async d => {
     if (!isJ()) return retire0(d);
@@ -531,8 +546,8 @@
       <circle cx="${sx}" cy="${sy}" r="5" fill="#ffd34d" stroke="#000"/><text x="${sx}" y="${+sy - 8}" fill="#ffd34d" font-size="9" text-anchor="middle">スタート</text>
       <text x="6" y="12" fill="#c8d3e2" font-size="9">${course.dir}回り${geo.loop && !tr.line ? `（${geo.loop}回り）` : ''}・直線 ${geo.straight}m・${prof ? `高低差 ${hd}m` : `坂 ${geo.slope}`}</text>${profSvg}</svg>`;
   };
-  // 脚質の矢印（逃げ・先行・差し・追込の4つ。光っているのがこの馬の脚質）
-  UI.kyakuArrows = st => `<span class="ka" title="${e(st)}">${['逃げ', '先行', '差し', '追込'].map(k => `<i class="${k === st ? 'on' : ''}"></i>`).join('')}</span>`;
+  // 脚質の矢印（左から追込・差し・先行・逃げ。右が前。持ち主の指摘 2026-10-16）。光っているのがこの馬の脚質で、自由自在の馬は全部が光る
+  UI.kyakuArrows = (st, h) => { const all = h && H.has(h, 'jiyu'); return `<span class="ka" title="${e(st)}${all ? '・自由自在' : ''}">${['追込', '差し', '先行', '逃げ'].map(k => `<i class="${all || k === st ? 'on' : ''}"></i>`).join('')}</span>`; };
   UI.entryTable = function (card) {
     const { race, runners } = card;
     const G = race.free || !W.get() ? { year: race.year, month: race.month, week: race.week, seed: 0 } : W.get(); // フリーレースはセーブの年でなく、そのレースの年で
@@ -551,7 +566,7 @@
       <div class="tblwrap mt"><table class="t entry-t"><tr><th>枠</th><th>馬名</th><th>脚質</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th>騎手</th><th>人気</th><th>近走</th></tr>
       ${rows.map(x => { const me = x.rider === 'P' || x.mine; return `<tr class="${me ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td>
         <td class="nm">${e(x.horse.name)}${x.horse.legend ? ' <span class="chip legend">スペシャル</span>' : x.horse.hist ? ' <span class="chip hist">史</span>' : ''}</td>
-        <td>${UI.kyakuArrows(x.horse.style)}<div class="small muted">${e(x.horse.style)}</div></td>
+        <td>${UI.kyakuArrows(x.horse.style, x.horse)}<div class="small muted">${e(x.horse.style)}${H.has(x.horse, 'jiyu') ? '・自在' : ''}</div></td>
         <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td>
         <td class="small">${x.allowance ? J.allowanceMark(x.allowance) : ''}${e(x.jockey ? x.jockey.name : '')}</td>
         <td class="num">${x.pop}<div class="small muted">${x.odds}</div></td><td class="recent">${recent(x.horse)}</td></tr>`; }).join('')}

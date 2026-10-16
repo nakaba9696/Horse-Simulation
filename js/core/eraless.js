@@ -134,7 +134,7 @@
     G.shopKeys.push(...fresh);
     const shown = fresh.filter(k => k !== 'c:海外' || !fresh.some(x => x.startsWith('c:') && x !== 'c:海外'));
     const n = E.pool().filter(d => fresh.includes(E.lockOf(d))).length;
-    if (n) W.news(`馬の店に${shown.map(E.lockLabel).join('・')}が並ぶようになった！（${n}頭）`, 'g1');
+    if (n) { E.restock(true); W.news(`馬の店に${shown.map(E.lockLabel).join('・')}が並ぶようになった！（${n}頭。品ぞろえを入れ替えた）`, 'g1'); }
     return fresh;
   };
   // 店の上に出す表：まだ開いていない鍵と開け方・頭数（開いたものも）
@@ -163,24 +163,59 @@
     return [...keys];
   };
   let mk = null;
+  // 店で見せる馬（データ d から）。同じ年のうちは同じ馬を使う（馬の画面を開いても同じ値）
+  const itemOf = function (d, legend) {
+    const G = W.get();
+    if (!mk || mk.year !== G.year) mk = { year: G.year, horses: new Map() };
+    let h = mk.horses.get(d.name);
+    if (!h) {
+      h = H.fromHistoric(E.shift(d, (G.year - 2) - d.born), 'pool:' + d.name);
+      if (HS.DATA.isForeign(d)) h.country = d.country || '外';
+      h.owner = 'AI'; h.loc = 'shop'; if (legend) h.legendBought = true;
+      mk.horses.set(d.name, h);
+    }
+    return { kind: 'pool', horse: h, data: d, price: priceOf(d, legend), legend: !!legend };
+  };
+  // 開いている馬の全部（走っていない馬と、倒したスペシャルホース）。品ぞろえの元
   E.market = function () {
     const G = W.get();
     const act = E.activeNames();
-    if (!mk || mk.year !== G.year) mk = { year: G.year, horses: new Map() };
     const items = [];
-    const add = (d, legend) => {
-      if (act.has(d.name)) return;
-      let h = mk.horses.get(d.name);
-      if (!h) {
-        h = H.fromHistoric(E.shift(d, (G.year - 2) - d.born), 'pool:' + d.name);
-        if (HS.DATA.isForeign(d)) h.country = d.country || '外';
-        h.owner = 'AI'; h.loc = 'shop'; if (legend) h.legendBought = true;
-        mk.horses.set(d.name, h);
-      }
-      items.push({ kind: 'pool', horse: h, data: d, price: priceOf(d, legend), legend: !!legend });
-    };
-    for (const d of E.pool()) if (E.isOpen(d)) add(d, false);
-    for (const name of G.unlocked || []) { const d = HS.Special && HS.Special.data(name); if (d) add(d, true); }
+    for (const d of E.pool()) if (E.isOpen(d) && !act.has(d.name)) items.push(itemOf(d, false));
+    for (const name of G.unlocked || []) { const d = HS.Special && HS.Special.data(name); if (d && !act.has(d.name)) items.push(itemOf(d, true)); }
+    return items;
+  };
+
+  // ---------- 品ぞろえ（持ち主の指摘 2026-10-16「全部の馬を売るんじゃなくて、現役じゃない馬からランダムで選出して」）----------
+  // 開いている走っていない馬から、牡馬・牝馬それぞれ E.STOCK 頭を種付きの乱数で選ぶ。毎月の初めに入れ替え、
+  // 新しい鍵が開いたときも入れ替える。選んだ馬の名前は G.shopStock に持つ（セーブに入る。無ければその場で選ぶ）。
+  // 買った馬・デビューした馬は品ぞろえから消える。倒したスペシャルホースは品ぞろえと別に、いつも並ぶ
+  E.STOCK = 10;
+  const isMare = d => d.sex === '牝';
+  E.restock = function (reroll) {
+    const G = W.get();
+    const n = (G.shopStock && G.shopStock.y === G.year && G.shopStock.m === G.month ? G.shopStock.n || 0 : 0) + (reroll ? 1 : 0);
+    const rng = new U.RNG(((G.seed * 131 + G.year * 12 + G.month) * 7 + n * 7919) >>> 0);
+    const act = E.activeNames();
+    const free = E.pool().filter(d => E.isOpen(d) && !act.has(d.name));
+    const names = [];
+    for (const side of [false, true]) {
+      const list = free.filter(d => isMare(d) === side);
+      for (let i = 0; i < E.STOCK && list.length; i++) names.push(list.splice(rng.int(0, list.length - 1), 1)[0].name);
+    }
+    G.shopStock = { y: G.year, m: G.month, n, names };
+    return names;
+  };
+  // いま店に並んでいる馬（品ぞろえ＋倒したスペシャルホース）
+  E.shop = function () {
+    const G = W.get();
+    const s = G.shopStock;
+    if (!s || s.y !== G.year || s.m !== G.month) E.restock(false);
+    const act = E.activeNames();
+    const byName = new Map(E.pool().map(d => [d.name, d]));
+    const items = [];
+    for (const name of G.shopStock.names) { const d = byName.get(name); if (d && !act.has(name)) items.push(itemOf(d, false)); }
+    for (const name of G.unlocked || []) { const d = HS.Special && HS.Special.data(name); if (d && !act.has(d.name)) items.push(itemOf(d, true)); }
     return items;
   };
   // 店の馬（id が pool:馬名）を引く。馬の画面を開くため

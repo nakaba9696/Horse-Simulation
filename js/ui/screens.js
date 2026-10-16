@@ -498,7 +498,9 @@
       <div class="panel"><b>音</b>
         <div class="row mt"><label class="grow" for="vol-bgm">BGM の音量</label><input id="vol-bgm" type="range" min="0" max="100" value="${Math.round(HS.Audio.settings.bgm * 100)}" data-act-change="volume" data-k="bgm"></div>
         <div class="row mt"><label class="grow" for="vol-se">効果音の音量</label><input id="vol-se" type="range" min="0" max="100" value="${Math.round(HS.Audio.settings.se * 100)}" data-act-change="volume" data-k="se"></div>
-        <div class="small muted">音は画面にさわったあとで鳴り始めます。0 にすると消えます。</div></div>
+        <div class="small muted">音は画面にさわったあとで鳴り始めます。0 にすると消えます。</div>
+        ${HS.Rumble ? `<div class="row mt"><label class="grow" for="vol-rumble">コントローラーの振動</label><input id="vol-rumble" type="range" min="0" max="100" value="${Math.round(HS.Rumble.level * 100)}" data-act-change="rumble"></div>
+        <div class="small muted">騎乗中、馬の蹄が地面に着くたびに震えます（ゲートが開く・ムチ・特殊能力・ゴールでも）。0 にすると切れます。</div>` : ''}</div>
       <div class="panel"><b>設定</b>
         <div class="row mt"><span class="grow">画面の色</span><select data-act-change="theme"><option value="green" ${HS.App.theme() !== 'navy' ? 'selected' : ''}>深緑と金</option><option value="navy" ${HS.App.theme() === 'navy' ? 'selected' : ''}>紺と金</option></select></div>
         <div class="row mt"><span class="grow">自分の馬のレースを</span><select data-act-change="setting" data-k="watch"><option value="1" ${G.settings.watch !== 0 ? 'selected' : ''}>映像で見る</option><option value="0" ${G.settings.watch === 0 ? 'selected' : ''}>結果だけ見る</option></select></div>

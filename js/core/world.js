@@ -970,7 +970,7 @@
   };
   // 史実馬（デビュー前）と史実の繁殖牝馬
   W.marketHistoric = function () {
-    if (G.eraless && HS.Eraless) return HS.Eraless.market();
+    if (G.eraless && HS.Eraless) return HS.Eraless.shop();
     const out = [];
     for (const h of W.all()) {
       if (!h.hist || h.owner === 'P' || h.loc !== 'farm' || h.starts > 0 || h.foreignTrained) continue;

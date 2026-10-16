@@ -799,7 +799,7 @@ check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデ�
   for (const h of hist) { const d = W.histByName.get(h.name); assert(d && E.isPool(d), `${h.name} は1990〜2026年の馬ではない`); }
   // 生年をずらしても、勝ち鞍は本当の年の分だけ前に持つ
   G.shopKeys = E.locks().map(l => l.key); // 値段の開きを見るため、店を全部開ける（開き方は 'shop:' で見る）
-  const shop = W.marketHistoric();
+  const shop = E.market();
   const act = E.activeNames();
   assert(shop.length > 1000 && !shop.some(it => act.has(it.horse.name)), '走っている馬が店に並んでいる');
   assert(shop.every(it => G.year - it.horse.born === 2), '店の馬が2歳でない');
@@ -812,14 +812,14 @@ check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデ�
   const it = shop.sort((a, b) => b.price - a.price)[0];
   assert(!W.buy(it), '買えない');
   const mine = W.horse(it.horse.id);
-  assert(mine && mine.owner === 'P' && !W.marketHistoric().some(x => x.horse.name === mine.name), '買った馬が店に残る');
+  assert(mine && mine.owner === 'P' && !E.market().some(x => x.horse.name === mine.name), '買った馬が店に残る');
   // 年が明けると新しい2歳が出て、引退した馬は店に戻る
   const old = hist.find(h => G.year - h.born >= 6);
   let guard = 0;
   while (G.year === G.startYear && guard++ < 60) W.finishWeek({});
   const crop = W.all().filter(h => h.hist && G.year - h.born === 2 && h.owner !== 'P').length;
   assert(crop >= E.CROP * 0.8, `今年の2歳 ${crop}`);
-  if (old && !W.horse(old.id)) assert(W.marketHistoric().some(x => x.horse.name === old.name), '引退した馬が店に戻らない');
+  if (old && !W.horse(old.id)) assert(E.market().some(x => x.horse.name === old.name), '引退した馬が店に戻らない');
   const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1 && U.ERA === E.ERA, 'セーブの往復で中身が変わる');
   return `史実馬 ${hist.length}頭・店 ${shop.length}頭・2年目の2歳 ${crop}頭`;
 });
@@ -834,7 +834,7 @@ check('shop: 馬の店は少しずつ開く（はじめは G3 まで。G1・G2�
   assert(E.pool().some(d => lk(d.name) === 'c:独') && E.pool().some(d => lk(d.name) === 'c:英'), '国の鍵が無い');
   const gfN = E.pool().filter(d => (E.lockOf(d) || '').startsWith('gf:')).length;
   assert(gfN >= 60 && gfN <= 300 && HS.Season.GF_CATS.every(c => E.pool().some(d => E.lockOf(d) === 'gf:' + c.id)), `GF の馬の数（${gfN}）か、区分の抜け`);
-  const names = () => new Set(W.marketHistoric().map(x => x.horse.name));
+  const names = () => new Set(E.market().map(x => x.horse.name));
   let shop = names();
   const lockedNow = E.pool().filter(d => E.lockOf(d) && !E.activeNames().has(d.name));
   assert(lockedNow.every(d => !shop.has(d.name)), 'まだ開いていない馬が並んでいる');
@@ -869,7 +869,37 @@ check('shop: 馬の店は少しずつ開く（はじめは G3 まで。G1・G2�
   g2.shopKeys = []; delete g2.gfShop; const ph = Object.values(g2.horses).find(x => x.owner === 'P') || Object.values(g2.horses)[0]; ph.owner = 'P'; ph.gradedWins.push({ y: 2025, race: 'グランドフィナーレ', short: 'グランドフィナーレ', grade: 'GF' });
   W.load(JSON.stringify(g2));
   assert(W.get().shopKeys.includes('gf:classic'), `前のセーブで GF の鍵が開かない（${W.get().shopKeys}）`);
-  return `はじめの店 ${new Set(W.marketHistoric().map(x => x.horse.name)).size}頭（G1 とドイツを開けたあと）・鍵 ${locks.map(l => l.label + l.n).join(' ')}`;
+  return `はじめの店 ${new Set(E.market().map(x => x.horse.name)).size}頭（G1 とドイツを開けたあと）・鍵 ${locks.map(l => l.label + l.n).join(' ')}`;
+});
+
+check('shop: 品ぞろえは走っていない馬から牡馬・牝馬それぞれ10頭（毎月と鍵が開いたときに入れ替え・買うと消える・セーブに入る）', () => {
+  const E = HS.Eraless;
+  W.newGame({ seed: 24, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get();
+  const st = W.marketHistoric();
+  const names = st.map(x => x.horse.name), act = E.activeNames();
+  assert(st.filter(x => x.horse.sex === '牝').length === E.STOCK && st.filter(x => x.horse.sex !== '牝').length === E.STOCK, `品ぞろえの数 ${st.length}`);
+  assert(new Set(names).size === names.length && !names.some(n => act.has(n)) && st.every(x => E.isOpen(x.data)), '品ぞろえに走っている馬か、開いていない馬か、重なりがある');
+  assert(W.marketHistoric().map(x => x.horse.name).join() === names.join(), '同じ月のうちに品ぞろえが変わる');
+  // 買うと消える
+  G.player.money = 1e9;
+  assert(!W.buy(st[0]) && !W.marketHistoric().some(x => x.horse.name === names[0]) && W.marketHistoric().length === 2 * E.STOCK - 1, '買った馬が品ぞろえに残る');
+  // セーブの往復で同じ
+  const s1 = W.serialize(); W.load(s1);
+  assert(W.marketHistoric().map(x => x.horse.name).join() === names.slice(1).join(), 'セーブの往復で品ぞろえが変わる');
+  // 鍵が開くと入れ替わる
+  E.unlockWin({ grade: 'G1', region: 'JRA', course: '東京' });
+  const n2 = W.marketHistoric().map(x => x.horse.name);
+  assert(n2.join() !== names.slice(1).join(), '鍵が開いても品ぞろえが変わらない');
+  // 月が変わると入れ替わる
+  let guard = 0; const m0 = G.month;
+  while (G.month === m0 && guard++ < 8) W.finishWeek({});
+  const n3 = W.marketHistoric().map(x => x.horse.name);
+  assert(n3.join() !== n2.join() && n3.length >= 2 * E.STOCK - 2, `月が変わっても品ぞろえが変わらない（${n3.length}頭）`);
+  // 前のセーブ（shopStock が無い）でも並ぶ
+  const g = JSON.parse(W.serialize()); delete g.shopStock; W.load(JSON.stringify(g));
+  assert(W.marketHistoric().length === 2 * E.STOCK, '前のセーブで品ぞろえが出ない');
+  return `牡馬 ${n3.filter((n, i) => W.marketHistoric()[i].horse.sex !== '牝').length}・牝馬 ${E.STOCK}頭（開いている馬 ${E.market().length}頭から）`;
 });
 
 check('hall: トロフィーを2つ以上手にした自分の馬は、引退したときに殿堂入りし、記録が残る', () => {
@@ -877,7 +907,7 @@ check('hall: トロフィーを2つ以上手にした自分の馬は、引退し
   W.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
   G.player.money = 1e9; G.shopKeys = HS.Eraless.locks().map(l => l.key);
-  const shop = W.marketHistoric().sort((a, b) => b.price - a.price);
+  const shop = HS.Eraless.market().sort((a, b) => b.price - a.price);
   W.buy(shop[0]); W.buy(shop[1]);
   const [a, b] = W.mine();
   a.results = [{ y: G.year, m: 5, w: 4, race: '日本ダービー', course: '東京', surface: '芝', dist: 2400, pos: 1, n: 18, time: 143.5, jockey: 'テスト騎手' }]; a.starts = 1; a.wins = 1;
@@ -1243,6 +1273,7 @@ check('assets: 絵の素材は全部 CREDITS にあり大きさは上限の中�
 require('./extra_replay.js')(check, assert, HS); // レコード・リプレイ・フリーレース
 require('./extra_owners.js')(check, assert, HS); // 馬主と騎乗依頼
 require('./extra_audio.js')(check, assert, HS); // BGM の曲の書式と長さ
+require('./extra_rumble.js')(check, assert, HS); // コントローラーの振動
 
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
