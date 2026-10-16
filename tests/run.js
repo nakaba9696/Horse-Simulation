@@ -123,6 +123,24 @@ check('profiles: スペシャルホースは全頭に名鑑（年代・戦績・
   return `スペシャルホース ${SP.list().length}頭・解説 ${Math.min(...lens)}〜${Math.max(...lens)}字・名鑑 ${prof.size}頭`;
 });
 
+check('assets: 素材はすべて出典の一覧にあり、大きさが目安以内', () => {
+  const fs = require('fs'), path = require('path');
+  const dir = path.join(__dirname, '..', 'assets');
+  if (!fs.existsSync(dir)) return '素材なし';
+  const credits = fs.readFileSync(path.join(dir, 'CREDITS.md'), 'utf8');
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.js'));
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  let total = 0; const bad = [];
+  for (const f of files) {
+    total += fs.statSync(path.join(dir, f)).size;
+    if (!html.includes(`assets/${f}`)) bad.push(f + ':index.html で読んでいない');
+    if (!credits.includes(f.replace(/\.js$/, '')) && !credits.includes(f)) bad.push(f + ':CREDITS に無い');
+  }
+  assert(!bad.length, bad.join(', '));
+  assert(total < 60 * 1024 * 1024, `素材が大きすぎる（${(total / 1048576).toFixed(1)}MB）`);
+  return `${files.length}個・${(total / 1048576).toFixed(1)}MB`;
+});
+
 check('jockeys: 毎年 JRA の騎手が足りる・主戦騎手が実在する', () => {
   const J = D.jockeys || [];
   assert(J.length > 0, '騎手のデータがない');
