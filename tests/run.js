@@ -97,10 +97,30 @@ check('fictional: 騎手の名前は全部架空（実名は出ない）・一�
   assert(F.map.size > 500 && new Set(F.map.values()).size === F.map.size, '置き換えが一対一でない');
   const bad = (D.jockeys || []).filter(j => real.has(j.name)).map(j => j.name);
   for (const v of Object.values(D.historicJockeys || {})) for (const n of (typeof v === 'string' ? [v] : Object.values(v))) if (real.has(n)) bad.push(n);
-  const texts = (D.famous || []).map(f => f.text).filter(Boolean).join('\n');
+  const texts = (D.famous || []).concat(D.profiles || []).map(f => f.text).filter(Boolean).join('\n');
   for (const n of real) if (n.length >= 3 && texts.includes(n)) bad.push('解説:' + n);
   assert(!bad.length, '実名が残っている: ' + bad.slice(0, 8).join(', '));
   return `${F.map.size}人・例 ${['武豊', 'C.ルメール'].map(n => n + '→' + F.map.get(n)).join('・')}`;
+});
+
+check('profiles: スペシャルホースは全頭に名鑑（年代・戦績・主な勝鞍・8行ほどの解説）', () => {
+  HS.U.ERA = HS.Eraless.ERA;
+  const SP = HS.Special, bad = [];
+  for (const { d } of SP.list()) {
+    if (!/^\d{4}(〜\d{4})?年$/.test(d.years || '')) bad.push(d.name + ':年代');
+    if (!/^\d+戦\d+勝/.test(d.record || '')) bad.push(d.name + ':戦績');
+    if (!(d.mainWins || []).length) bad.push(d.name + ':主な勝鞍');
+    if ((d.text || '').length < 250) bad.push(d.name + ':解説' + (d.text || '').length + '字');
+  }
+  const known = new Set((D.historic || []).concat(D.legendsExtra || []).map(d => d.name));
+  for (const p of D.profiles || []) if (!known.has(p.name)) bad.push(p.name + ':史実馬にいない');
+  // 名馬の解説がある史実馬は、全頭に名鑑がある
+  const prof = new Set((D.profiles || []).map(p => p.name));
+  for (const d of D.historic || []) if (d.text && !d.record) bad.push(d.name + ':名鑑なし');
+  for (const p of D.profiles || []) if (/……|どこか|ふと|まるで|です。|ます。/.test(p.text)) bad.push(p.name + ':避ける癖');
+  assert(!bad.length, bad.slice(0, 10).join(', '));
+  const lens = SP.list().map(x => x.d.text.length);
+  return `スペシャルホース ${SP.list().length}頭・解説 ${Math.min(...lens)}〜${Math.max(...lens)}字・名鑑 ${prof.size}頭`;
 });
 
 check('jockeys: 毎年 JRA の騎手が足りる・主戦騎手が実在する', () => {
