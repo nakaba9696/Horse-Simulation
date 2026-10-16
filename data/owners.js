@@ -17,7 +17,7 @@
   const HS = globalThis.HS = globalThis.HS || {}; HS.DATA = HS.DATA || {};
   HS.DATA.owners = [
     {
-      id: 'takenouchi', name: '竹之内 源三郎', kana: 'たけのうち げんざぶろう', age: 74, title: '老舗の料亭のご隠居',
+      id: 'takenouchi', name: '竹之内 源三郎', kana: 'たけのうち げんざぶろう', age: 68, title: '老舗の料亭のご隠居',
       note: '六十年、競馬場に通っている。話が長い。長い距離のレースに目がない。',
       silks: { base: '#1f5f3a', sub: '#ffffff', pattern: 'cross' }, cap: '#ffffff',
       likes: ['long', 'veteran', 'turf'], memory: 'シンザン',
@@ -205,7 +205,7 @@
       },
     },
     {
-      id: 'sengoku', name: '千石 悠斗', kana: 'せんごく ゆうと', age: 29, title: 'アプリで当てた会社の若社長',
+      id: 'sengoku', name: '千石 悠斗', kana: 'せんごく ゆうと', age: 26, title: 'アプリで当てた会社の若社長',
       note: '家計簿のアプリが当たり、馬主になって二年目。せっかちで明るい。話は結論から。短い距離の速い馬が好き。',
       silks: { base: '#00a3e0', sub: '#ffffff', pattern: 'diamonds' }, cap: '#ffffff',
       likes: ['sprint', 'mile', 'young'], memory: 'ニホンピロウイナー',
@@ -299,7 +299,7 @@
       },
     },
     {
-      id: 'takarada', name: '宝田 マリエ', kana: 'たからだ まりえ', age: 47, title: '宝石店の社長',
+      id: 'takarada', name: '宝田 マリエ', kana: 'たからだ まりえ', age: 38, title: '宝石店の社長',
       note: '銀座で宝石店を営む。牝馬しか買わず、自分の馬を「お嬢さん」と呼ぶ。華やかで世話好き。',
       silks: { base: '#d9b23a', sub: '#7a2182', pattern: 'sash' }, cap: '#7a2182',
       likes: ['filly', 'mile', 'turf'], only: 'filly', memory: 'メジロラモーヌ',

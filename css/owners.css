@@ -76,3 +76,7 @@ button.own-face:hover .oface { transform: translateY(-2px); transition: transfor
 @media (prefers-reduced-motion: reduce) { .own-talk p, .own-reward, .own-scene-face, .own-offers .own-offer { animation: none; opacity: 1; } }
 .own-card .own-silks { position: absolute; top: 10px; right: 10px; }
 .own-card .own-who { padding-right: 30px; }
+
+/* 持ち主が作った顔の絵（小さいときは顔を切り抜き、大きいときは胸から上） */
+.oface.photo { background-repeat: no-repeat; background-color: #1c2a22; }
+.oface.photo.big { background-size: cover; background-position: 50% 0; border-radius: 14px; }
