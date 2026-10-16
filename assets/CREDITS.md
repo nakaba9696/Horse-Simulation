@@ -13,9 +13,10 @@ Poly Haven の HDRI（全周の写真）を、トーンマップ済みの JPG �
 | `assets/ui_bg_home.js` | ホーム・厩舎・データなど | Hayloft | Adrian Kubasa | CC0 | https://polyhaven.com/a/hayloft |
 | `assets/ui_bg_shop.js` | 馬の店・馬の画面 | Ladybrand Heritage House | Dario Barresi | CC0 | https://polyhaven.com/a/ladybrand_heritage_house |
 | `assets/ui_bg_paddock.js` | パドック | Ballawley Park | Savva Zakharov | CC0 | https://polyhaven.com/a/ballawley_park |
-| `assets/ui_bg_result.js` | 結果・勝ったときの見せ場・レース | Orlando Stadium | Greg Zaal・Dimitrios Savva | CC0 | https://polyhaven.com/a/orlando_stadium |
+| `assets/ui_bg_result.js` | 結果・勝ったときの見せ場・レース | このゲームの3Dの競馬場（`js/ui/race3d.js`）をゴール前の内から撮った止め絵（`node tools/shot3d.js <出力先> result_bg`。1600×900） | このゲーム（絵の中の空・芝・ダート・木は下の「3D のレース」の CC0 の素材） | CC0 の素材から作った自作の絵 | - |
 
 Poly Haven の素材はすべて CC0（https://polyhaven.com/license）。人物の顔や団体のロゴは写っていない所を切り出した。
+結果の画面の背景は、前はサッカー場の写真（Orlando Stadium）だったので、ゲームの3Dの競馬場の止め絵に替えた。
 
 ## 3D のレース（`js/ui/race3d.js`）
 
