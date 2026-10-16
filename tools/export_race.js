@@ -53,9 +53,10 @@ const runners = order.map((fi, k) => {
 const sim = Sim.create(race, runners, wIdx, rng, { frames: true, ride: true });
 const DT = 0.1;
 // 1コマ：各馬 [x, lane, v, 頭の上げ具合, 耳]。me＝自分の馬の [手綱の段, 気分（tension）, 脚の残り, ムチの手（1＝右）, 掛かり, 詰まり]
-const rowOf = s => [+s.x.toFixed(2), +s.lane.toFixed(3), +s.v.toFixed(2), s.headUp || 0, s.ears != null ? s.ears : 0.4];
+const kak = s => typeof s.kakari === 'number' ? s.kakari : (s.headUp || 0); // 掛かり 0〜1（前の名前は headUp）
+const rowOf = s => [+s.x.toFixed(2), +s.lane.toFixed(3), +s.v.toFixed(2), kak(s), s.ears != null ? s.ears : 0.4];
 const meRow = () => { const c = sim.ctl, s = sim.st[sim.me]; return [+c.gear.toFixed(2), +c.tension.toFixed(1), +s.E.toFixed(3), c.hand === 'R' ? 1 : 0, c.kakariNow ? 1 : 0, c.blockedNow ? 1 : 0]; };
-const frames = [{ t: 0, p: sim.st.map(s => [0, +s.lane.toFixed(2), 0, s.headUp || 0, 0.4]), me: meRow() }];
+const frames = [{ t: 0, p: sim.st.map(s => [0, +s.lane.toFixed(2), 0, kak(s), 0.4]), me: meRow() }];
 const whips = []; // 自分の馬のムチ [t, 手（1＝右）]
 let nWhip = 0;
 while (true) {

@@ -61,8 +61,15 @@ func _init(path := "res://assets/replay_race.json") -> void:
 func _snap() -> Array:
 	var out: Array = []
 	for s in sim.st:
-		out.append([s.x, s.lane, s.v, s.headUp, s.ears])
+		out.append([s.x, s.lane, s.v, _kak(s), s.ears])
 	return out
+
+# 掛かり（0〜1）：模擬の名前が kakari（数）でも headUp でも読む
+static func _kak(s) -> float:
+	if "headUp" in s:
+		return float(s.headUp)
+	var k = s.get("kakari")
+	return float(k) if (k is float or k is int) else 0.0
 
 # ---- 操作（ゲームの側から） ----
 func ctl(name: String, arg = null):

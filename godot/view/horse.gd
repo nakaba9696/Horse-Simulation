@@ -1,7 +1,7 @@
 # 1頭の馬：骨入りの馬の素材（ViewHorseModel）を毛色で塗り、手作りの骨の角度（ViewGait）を素材の骨へ写す。騎手・鞍・ゼッケンも
 # 根（この Node3D）＝手作りの馬の骨 0（地面・胴のまん中の下）。前は +Z、左は +X、上は +Y（実寸 m）
 # 写し方は js/ui/horse_rigged.js の HR.pose・HR.settle と同じ（腰と背のしなり・股と後膝の分け方・つなぎの返り）。
-# Godot 版で足したもの：尾の左右の振れ（rx）・耳（掛かると絞る・競ると伏せる）・手前の替わり（形を混ぜる）
+# Godot 版で足したもの：尾の左右の振れ（rx）・手前の替わり（形を混ぜる）
 class_name ViewHorse
 extends Node3D
 
@@ -260,15 +260,8 @@ func retarget() -> void:
 	_turn("rFi", 0.55 * minf(0.0, P[15 * 3]))
 	_turn("lTo", 0.55 * minf(0.0, P[19 * 3]))
 	_turn("rTo", 0.55 * minf(0.0, P[23 * 3]))
-	# 耳：立てる（前へ）〜伏せる（後ろへ寝かせる）
-	for e in ["earL", "earR"]:
-		if M.role.has(e):
-			var bi: int = M.role[e]
-			var sd := -1.0 if e == "earL" else 1.0
-			var back := clampf(-ears, 0.0, 1.0)
-			var fwd := clampf(ears, 0.0, 1.0)
-			var q := _rest_q[bi] * Quaternion(Vector3(1, 0, 0), -0.9 * back + 0.15 * fwd) * Quaternion(Vector3(0, 0, 1), sd * 0.35 * back)
-			skel.set_bone_pose_rotation(bi, q)
+	# 耳（素材の両耳の先は Ponytail2 の1本の骨）：+1 で前へ立て、-1 で後ろへ伏せる
+	_turn("pony2", 0.5 * ears)
 
 # 蹄を地面へ：地面を押している脚の蹄の高さの重みつきの平均を 0 に。4本とも浮く間はいちばん低い蹄を少し上げる
 func settle(ph: float, sp: float, walking: bool) -> void:

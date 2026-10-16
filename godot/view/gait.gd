@@ -105,7 +105,7 @@ static func walk_pose(P: PackedFloat32Array, phW: float, t: float, seed: float) 
 
 # 馬の形。ph＝襲歩の位相、sp＝走りの大きさ（0＝立つ）、push＝騎手の追い 0〜1、lead＝左手前の重み（1＝左・0＝右。間は混ぜる）
 # walk_ph・walk_w＝常歩の位相と重み、whip＝ムチを入れてからの秒（<0 で無し）、pose＝ゴールのあとのガッツポーズの秒（<0 で無し）
-# head_up＝掛かって頭を上げる 0〜1
+# head_up＝掛かり 0〜1（模擬の kakari。前の名前は headUp）
 static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: float, seed: float, lead: float,
 		walk_ph: float, walk_w: float, whip: float, pose_t: float, head_up: float) -> void:
 	P.fill(0.0)
@@ -113,7 +113,6 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 	if wk >= 1.0 or (wk > 0.0 and sp <= 0.0):
 		_stand(P, t, seed)
 		walk_pose(P, walk_ph, t, seed)
-		_head_up(P, head_up, 0.0)
 		return
 	var bob := 0.0
 	var pitch := 0.0
@@ -167,6 +166,7 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 		for ua in [27, 29]:
 			P[ua * 3] = pk * (0.12 + 0.3 * pump)
 			P[(ua + 1) * 3] = pk * (0.05 + 0.25 * pump)
+	_kakari(P, head_up, sp, t, seed)
 	# 襲歩と常歩のあいだ：両方の形を混ぜる
 	if wk > 0.0 and sp > 0.0:
 		var R := P.duplicate()
@@ -180,7 +180,6 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 				P[i * 3 + c] = R[i * 3 + c]
 		P[JX] = R[JX]
 		P[JY] = R[JY]
-	_head_up(P, head_up, minf(sp, 1.1))
 	# ムチ：入れてから 0.5 秒。右腕を振り上げ、尻へ振り下ろして戻す
 	if whip >= 0.0 and whip < 0.5:
 		var u := whip / 0.5
@@ -200,14 +199,25 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 		P[30 * 3] = P[30 * 3] * (1.0 - w) + 0.4 * w
 		P[29 * 3 + 2] = -0.3 * w
 
-# 掛かり：首を起こし、鼻先を上げてハミに逆らう（首の上下の振りは小さく）
-static func _head_up(P: PackedFloat32Array, h: float, _k: float) -> void:
-	if h <= 0.001:
+# 掛かり（0〜1）：ハミに逆らって首と頭を上げ、鼻先を突き出し、首を振る。騎手は上体を起こして手綱を引く（race3d.js と同じ）
+static func _kakari(P: PackedFloat32Array, fg: float, sp: float, t: float, seed: float) -> void:
+	if fg <= 0.01:
 		return
-	P[2 * 3] = lerpf(P[2 * 3], 0.12 + 0.03 * P[2 * 3], h)
-	P[3 * 3] = lerpf(P[3 * 3], 0.12, h * 0.8)
-	P[4 * 3] += 0.22 * h
-	P[2 * 3 + 1] *= 1.0 - 0.5 * h
+	var sh := sin(t * 6.3 + seed * 5.0)
+	var sh2 := sin(t * 6.3 + seed * 5.0 - 0.9)
+	var toss := sin(t * 4.1 + seed * 2.0)
+	var up := 1.0 + 0.6 * minf(1.0, sp)
+	P[2 * 3] += (0.2 * fg + 0.05 * fg * toss) * up
+	P[3 * 3] += 0.1 * fg * up
+	P[4 * 3] += (0.3 * fg + 0.12 * fg * sin(t * 4.1 + seed * 2.0 - 0.7)) * up
+	P[2 * 3 + 1] += 0.07 * fg * sh
+	P[4 * 3 + 1] += 0.12 * fg * sh2
+	P[25 * 3] += 0.3 * fg
+	P[26 * 3] -= 0.15 * fg
+	P[JX] -= 0.06 * fg
+	for ua in [27, 29]:
+		P[ua * 3] -= 0.35 * fg
+		P[(ua + 1) * 3] += 0.3 * fg
 
 # 立ち姿：息で胴がわずかに上下し、ゆっくり体重を移す。首と頭はあたりを見回し、尾はときどき振る
 static func _stand(P: PackedFloat32Array, t: float, seed: float) -> void:

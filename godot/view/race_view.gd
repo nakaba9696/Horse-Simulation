@@ -48,6 +48,9 @@ var hud_on := true
 var _last_order: Array = []
 var _fight_on := false
 var _t_prev := -99.0
+var _bump_seen = null      # 模擬の c.bumpT（横の馬にぶつかった時刻）
+var _bump_t := -99.0
+var _bump_side := 0.0
 
 func _ready() -> void:
 	ViewRideInput.ensure_actions()
@@ -152,11 +155,13 @@ func _on_act(name: String, arg) -> void:
 						_start_cue(r)
 				ctl.gear = minf(1.0, ctl.gear + 0.12)
 				ctl.pushes += 1
+				ViewRideInput.play(30, 0.0, 0.22)   # 押した手ごたえ（短く弱く）
 		"down":
 			if phase == "run":
 				if live:
 					src.ctl("down")
 				ctl.gear = maxf(-1.0, ctl.gear - 0.12)
+				ViewRideInput.play(30, 0.18, 0.0)
 		"lane":
 			if phase == "run" or phase == "gate":
 				if live:
@@ -255,6 +260,13 @@ func _feel(_H: Array) -> void:
 		if int(f.i) == me:
 			input.fx("skill")
 	var m: Dictionary = src.me_at(T)
+	# 横の馬にぶつかった（模擬の c.bumpT・c.bumpSide。ある模擬だけ）：振動と、馬が横へよれる小さな動き（カメラは揺らさない）
+	var c = src.sim.ctl
+	if c != null and "bumpT" in c and c.bumpT != null and c.bumpT != _bump_seen:
+		_bump_seen = c.bumpT
+		_bump_t = T
+		_bump_side = float(c.bumpSide) if "bumpSide" in c and c.bumpSide != null else 0.0
+		input.fx("bad")
 	var on: bool = float(m.get("fight", 0.0)) > 30.0 and bool(m.get("duel", false))
 	if on and not _fight_on:
 		input.fx("fight")
@@ -286,6 +298,10 @@ func place(H: Array, dt: float) -> void:
 		var k := minf(1.0, dt * 5.0) if dt > 0.0 else 1.0
 		lean[j] = lerpf(lean[j], clampf(absf(f.curv) * v * v / 9.8 * 0.5, 0.0, 0.14) if moving else 0.0, k)
 		yaw[j] = lerpf(yaw[j], clampf(atan2(vlat, maxf(v, 4.0)), -0.2, 0.2) if moving else 0.0, k)
+		if j == me and T - _bump_t < 0.5:
+			# ぶつかった向きと反対へ、短くよれる
+			var e := exp(-(T - _bump_t) * 9.0)
+			yaw[j] += -_bump_side * 0.1 * e * sin((T - _bump_t) * 22.0) * (1.0 if dt > 0.0 else 0.0)
 		var fw := tr.fwd3(f)
 		var ou := tr.out3(f)
 		var dir := (fw * cos(yaw[j]) + ou * sin(yaw[j])).normalized()

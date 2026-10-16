@@ -9,6 +9,7 @@ const PATH := "res://assets/horse_rigged/"
 const BN := {
 	"pelvis": "Bip01Pelvis", "spine": "Bip01Spine", "spine1": "Bip01Spine1",
 	"neck": "Bip01Neck", "neck1": "Bip01Neck1", "head": "Bip01Head",
+	"pony2": "Bip01Ponytail2",
 	"tail": "Bip01Tail", "tail1": "Bip01Tail1", "tail2": "Bip01Tail2", "tail3": "Bip01Tail3",
 	"lCla": "Bip01LClavicle", "lUp": "Bip01LUpperArm", "lFo": "Bip01LForearm", "lHa": "Bip01LHand", "lFi": "Bip01LFinger0",
 	"rCla": "Bip01RClavicle", "rUp": "Bip01RUpperArm", "rFo": "Bip01RForearm", "rHa": "Bip01RHand", "rFi": "Bip01RFinger0",
@@ -45,7 +46,6 @@ var info: Dictionary
 var handmade: Dictionary
 var place_s := 1.0
 var place_dx := 0.0
-var ear_bones := PackedInt32Array()   # 耳（素材に無いので足した骨）
 var cloth_mesh: ArrayMesh             # 鞍の下の布（体の面を浮かせた殻）
 var saddle_mesh: ArrayMesh            # 鞍
 const CLOTH := {"z0": -0.36, "z1": 0.2, "y0": 1.02}     # 布の範囲（素材の座標）
@@ -91,8 +91,6 @@ func _load() -> void:
 		var gp := globals[bi].origin
 		hoof[b0] = globals[bi].affine_inverse() * Vector3(gp.x, 0.0, gp.z)
 	var inv: Array = d.inverses
-	# 耳の骨を足す（頭の骨の子。うなじの上・左右）
-	_add_ears(d.body)
 	skin = Skin.new()
 	for i in names.size():
 		skin.add_bind(i, globals[i].affine_inverse() if i >= inv.size() else m4(inv[i]))
@@ -103,66 +101,6 @@ func _load() -> void:
 	bridle_mesh = _build(d.bridle, false)
 	shade_tex = load(PATH + "shade.jpg")
 	hair_tex = load(PATH + "hair.png")
-
-# 耳：頭の骨にいちばん重い頂点のうち、うなじより上にあるものを左右の耳の骨へ付け替える
-var _ear_w := {}   # 頂点の番号 → [骨, 重み]
-func _add_ears(g: Dictionary) -> void:
-	var hb: int = role["head"]
-	var hp: Vector3 = v3(info.headP)
-	var nose: Vector3 = v3(info.nose)
-	var pos: Array = g.pos
-	var si: Array = g.si
-	var sw: Array = g.sw
-	var n := pos.size() / 3
-	# 耳の候補：頭の骨が主で、頭の軸より上・うなじの近く
-	var ax := (nose - hp).normalized()
-	var up := (Vector3.UP - ax * ax.y).normalized()
-	var cand := {-1: [], 1: []}
-	var top := {-1: -1e9, 1: -1e9}
-	var tip := {-1: Vector3.ZERO, 1: Vector3.ZERO}
-	for k in n:
-		if int(si[k * 4]) != hb or float(sw[k * 4]) < 0.6:
-			continue
-		var p := Vector3(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2])
-		var rel := p - hp
-		var along := rel.dot(ax)
-		var high := rel.dot(up)
-		if along < 0.12 and high > 0.06 and absf(p.x) > 0.012:
-			var sd := 1 if p.x > 0.0 else -1
-			cand[sd].append(k)
-			if high > top[sd]:
-				top[sd] = high
-				tip[sd] = p
-	for sd in [-1, 1]:
-		if cand[sd].size() < 6:
-			continue
-		# 付け根：耳の頂点のうち低いほうの平均
-		var lo := 1e9
-		for k in cand[sd]:
-			lo = minf(lo, (Vector3(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2]) - hp).dot(up))
-		var base_sum := Vector3.ZERO
-		var cnt := 0
-		for k in cand[sd]:
-			var p := Vector3(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2])
-			if (p - hp).dot(up) < lo + 0.025:
-				base_sum += p; cnt += 1
-		var base := base_sum / maxi(1, cnt)
-		var bi := names.size()
-		names.append("Ear" + ("L" if sd > 0 else "R"))
-		parents.append(hb)
-		var gx := Transform3D(Basis(), base)
-		globals.append(gx)
-		rests.append(globals[hb].affine_inverse() * gx)
-		ear_bones.append(bi)
-		var h := maxf(0.02, top[sd] - lo)
-		for k in cand[sd]:
-			var p := Vector3(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2])
-			var w := clampf(((p - hp).dot(up) - lo) / h * 1.6, 0.0, 1.0)
-			_ear_w[k] = [bi, w]
-	if ear_bones.size() > 0:
-		role["earL"] = ear_bones[0]
-		if ear_bones.size() > 1:
-			role["earR"] = ear_bones[1]
 
 func _build(g: Dictionary, is_body: bool) -> ArrayMesh:
 	var pos: Array = g.pos
@@ -187,14 +125,6 @@ func _build(g: Dictionary, is_body: bool) -> ArrayMesh:
 			B[k * 4 + j] = int(si[k * 4 + j])
 			W[k * 4 + j] = float(sw[k * 4 + j])
 			s += W[k * 4 + j]
-		if is_body and _ear_w.has(k):
-			# 頭の骨の重みの一部を耳の骨へ
-			var ew: Array = _ear_w[k]
-			var w: float = ew[1]
-			for j in 4:
-				W[k * 4 + j] *= 1.0 - w
-			B[k * 4 + 3] = ew[0]
-			W[k * 4 + 3] = w * s
 		var s2 := 0.0
 		for j in 4:
 			s2 += W[k * 4 + j]
