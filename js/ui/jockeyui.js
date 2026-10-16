@@ -532,7 +532,7 @@
   UI.kyakuArrows = st => `<span class="ka" title="${e(st)}">${['逃げ', '先行', '差し', '追込'].map(k => `<i class="${k === st ? 'on' : ''}"></i>`).join('')}</span>`;
   UI.entryTable = function (card) {
     const { race, runners } = card;
-    const G = W.get();
+    const G = race.free || !W.get() ? { year: race.year, month: race.month, week: race.week, seed: 0 } : W.get(); // フリーレースはセーブの年でなく、そのレースの年で
     const rows = runners.slice().sort((a, b) => a.num - b.num);
     const cnt = { '逃げ': 0, '先行': 0, '差し': 0, '追込': 0 };
     for (const x of runners) cnt[x.horse.style] = (cnt[x.horse.style] || 0) + 1;
@@ -541,7 +541,7 @@
     const recent = h => (h.results || []).slice(-3).map(r => `<span class="${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos > 9 ? '×' : r.pos}</span>`).join('') || '<span class="muted">新</span>';
     return `<div class="entry">
       <div class="entry-head"><div>${UI.gradeTag(race)} <b class="serif" style="font-size:20px">${e(race.short || race.name)}</b></div>
-        <div class="small">${W.yLabel(G.year)}${race.month}月 ${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　${(w => `${T.weatherIcon(w)}${w}`)(T.weather(G.seed, G.year, G.month, G.week, race.course, race.ground))}・${race.ground}　${runners.length}頭</div></div>
+        <div class="small">${race.free ? '' : `${W.yLabel(G.year)}${race.month}月 `}${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　${(w => `${T.weatherIcon(w)}${w}`)(race.weather || T.weather(G.seed, G.year, G.month, G.week, race.course, race.ground))}・${race.ground}　${runners.length}頭</div></div>
       <div class="entry-top">${UI.courseSvg(race)}
         <div class="tenkai"><div class="small muted">展開予想</div><div class="big">${pace}</div><div class="small">${favor}</div>
           <div class="kyaku-cnt">${Object.entries(cnt).map(([k, v]) => `<span class="kyaku ${STYLE_CLS[k]}">${k[0]}</span>${v}`).join(' ')}</div></div></div>

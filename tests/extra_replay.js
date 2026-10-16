@@ -2,6 +2,7 @@
 // run.js から module.exports(check, assert, HS) で呼ぶ
 module.exports = function (check, assert, HS) {
   const W = HS.World, U = HS.U;
+  const S_step = sim => HS.Sim.step(sim);
 
   check('records: レコードの更新の判定・前との差・自分で乗った印・古いセーブの既定値', () => {
     W.newGame({ seed: 91, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
@@ -77,5 +78,62 @@ module.exports = function (check, assert, HS) {
     assert(RP.remove(res.id) && !RP.get(res.id), '消せない');
     RP.store = null;
     return `${(json.length / 1024).toFixed(1)}KB（もとのコマ ${(raw / 1024).toFixed(0)}KB）・ずれ 位置 ${ex.toFixed(2)}m 内外の平均 ${(sl / nl).toFixed(3)}m 速さ ${ev.toFixed(2)}`;
+  });
+  check('freerace: 1レースだけ遊ぶ。セーブ・世界の乱数・記録を一切変えない', () => {
+    const FR = HS.FreeRace, RP = HS.Replay;
+    W.newGame({ seed: 93, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+    for (let i = 0; i < 6; i++) W.finishWeek({});
+    const G = W.get();
+    // 自分の馬を1頭持たせる
+    G.player.money = 1e9;
+    const it = W.marketHistoric().sort((a, b) => b.price - a.price)[0];
+    assert(!W.buy(it), '買えない');
+    const mine = W.mine()[0];
+    const before = W.serialize();
+    const snap = FR.saveSnapshot();
+    assert(snap && snap.live && FR.myHorses(snap).some(h => h.id === mine.id), '自分の馬が候補にない');
+    const hist = FR.search('でぃーぷいんぱくと', 5);
+    assert(hist.length && hist[0].name === 'ディープインパクト', `名前で探せない（ひらがな）: ${hist.map(d => d.name)}`);
+    const sp = FR.specials();
+    assert(sp.length > 10, 'スペシャルホースが候補にない');
+    const entries = [{ kind: 'mine', key: mine.id }, { kind: 'special', key: sp[0].name }].concat(FR.search('', 30).slice(0, 20).map(d => ({ kind: 'hist', key: d.name })));
+    const o = { course: '京都', surface: '芝', dist: 3200, ground: '稍重', weather: '雨', entries, ride: 0, seed: 12345, n: 1 };
+    const card = FR.build(o, snap);
+    assert(card.runners.length === FR.MAX, `18頭にならない ${card.runners.length}`);
+    assert(card.race.dist === 3200 && card.race.ground === '稍重' && card.race.weather === '雨' && card.race.free, '条件が違う');
+    const me = card.runners.find(x => x.rider === 'P');
+    assert(me && me.horse.name === mine.name && me.horse !== mine && me.jockey.name === 'テスト騎手', '自分の馬に自分が乗っていない（または写しでない）');
+    assert(card.runners.some(x => x.horse.legend), 'スペシャルホースがいない');
+    // 騎乗（操作つき）と、見るだけ
+    const sim = FR.sim(card, { ride: true });
+    while (!S_step(sim)) { /* 進める */ }
+    const res = HS.Sim.finish(sim);
+    const res2 = FR.run(FR.build(Object.assign({}, o, { ride: -1 }), snap));
+    assert(res.results.length === 18 && res2.results.length === 18 && res.frames && res2.frames, '結果が出ない');
+    // 同じ種なら同じ結果（決定性）
+    const res3 = FR.run(FR.build(Object.assign({}, o, { ride: -1 }), snap));
+    assert(res3.results.map(x => x.horse.name).join() === res2.results.map(x => x.horse.name).join(), '同じ種で結果が変わる');
+    // リプレイにもできる
+    const rp = RP.make({ race: card.race, sim: res, runners: card.runners }, { free: true, yearLabel: 'フリー' });
+    assert(rp && rp.free && rp.rode && rp.horse === mine.name, 'フリーレースのリプレイが作れない');
+    FR.slim(card, res);
+    // セーブが変わっていない（前と後で JSON が同じ）
+    const after = W.serialize();
+    assert(after === before, 'フリーレースでセーブが変わった');
+    assert(W.horse(mine.id).starts === mine.starts && !mine.fatigue === !W.horse(mine.id).fatigue, '自分の馬に成績・疲れが付いた');
+    // セーブを読み込んでいないとき（タイトルから）も、端末のセーブの写しで動く
+    const mem = { [W.SAVE_KEY]: before };
+    globalThis.localStorage = { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); }, removeItem: k => { delete mem[k]; } };
+    try {
+      const live = W.get; W.get = () => null;
+      try {
+        const s2 = FR.saveSnapshot();
+        assert(s2 && !s2.live && FR.myHorses(s2).some(h => h.name === mine.name), 'タイトルから自分の馬が選べない');
+        const c2 = FR.build(Object.assign({}, o, { ride: 0 }), s2);
+        FR.run(c2);
+        assert(mem[W.SAVE_KEY] === before, 'タイトルからのフリーレースで端末のセーブが変わった');
+      } finally { W.get = live; }
+    } finally { delete globalThis.localStorage; }
+    return `${card.runners.length}頭・自分 ${mine.name} ${res.results.find(x => x.rider === 'P').pos}着・勝ち ${res2.results[0].horse.name}`;
   });
 };
