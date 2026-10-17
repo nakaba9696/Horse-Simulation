@@ -365,7 +365,8 @@ func _offer_card(o: Dictionary) -> Variant:
 	v.add_child(who)
 	var line := HSOwners.line(o.oid, "offer", float(o.line), {"horse": h.name, "race": HSRaces.label(race)}, {"race": race, "horse": h})
 	var say := UiTheme.label("「%s」" % line, 13, UiTheme.MUTED)
-	say.clip_text = true
+	say.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	say.max_lines_visible = 2
 	say.custom_minimum_size.x = 100
 	say.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(say)
