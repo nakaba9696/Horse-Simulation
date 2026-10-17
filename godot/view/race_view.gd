@@ -1,7 +1,7 @@
 # 3D のレース（騎乗）。docs/FEEL.md（騎乗の手ざわり）に合わせる
 # レースの入れ口（ViewLive＝gdcore の模擬。無いときは ViewReplay＝記録の再生）から各馬の状態を読み、競馬場・馬・騎手・カメラ・計器を動かす
 # 流れ：ゲート（3・2・1。開く 150ms 前からの ↑ は覚えて開いた瞬間に受け付ける）→ 走る（実時間の 1.35 倍）→
-#       ゴール板（白い光・160ms だけ時の進みを 15%・着順はまだ出さない）→ 流す（2.4 秒。馬は映像の側で減速、カメラは斜め横へ回る）→
+#       ゴール板（白い光と振動。時は止めない・遅くしない。着順はまだ出さない）→ 流す（2.4 秒。馬は映像の側で駈歩の 8.5m/s まで落として走り続ける。カメラは斜め横へ回る）→
 #       着順（英語の序数を叩きつける）→ A で確定の表 → A で出走表へ。流している間に A で着順へ飛ぶ
 # カメラ：JOCKEY CAM（6.4m 後ろ・3.2m 上・横の画角 68°）・HIGH CAM（上へ 0.42rad・1.7 倍引く）・TV CAM。揺れは kick（減衰する正弦。3D のカメラだけ）
 # 一時停止：Esc・P・Start。ほかの窓へ移ったら自動で止める
@@ -17,6 +17,7 @@ const BODY := 1.2
 const COUNT := 3.0
 const SPEED := 1.35        # 進む速さの倍率（JS の RD.speed。走破タイムの表示は本当の秒）
 const COOL := 2.4          # ゴール板から着順を出すまでの実時間（秒）
+const COAST_V := 8.5       # ゴールのあとは駈歩のこの速さまで毎秒 0.8m/s ずつ落とし、止めずに走り続ける（持ち主の指摘「ゴールしたあと止まらないで」）
 const BUFFER := 0.15       # ゲートの先行入力（開く何秒前からの ↑ を覚えるか）
 const VIEWS := ["jockey", "high", "tv"]
 const VIEW_NAME := {"jockey": "JOCKEY CAM", "high": "HIGH CAM", "tv": "TV CAM"}
@@ -45,7 +46,6 @@ var paused := false
 var buffered := false
 var target := 0            # 照準（レーダーで見る馬）
 var fin = null             # ゴール板を過ぎた：{at（実時間）, pos, shown（着順を出した実時間。-1 はまだ）}
-var slow_until := -1.0
 var pose_at := -1.0        # ガッツポーズ（実時間）
 var whip_at := -99.0       # 自分のムチ（レースの秒）
 var coast: Array = []      # ゴールした馬（と模擬が止まったあとの馬）は映像の側で流す {x, v}
@@ -323,7 +323,7 @@ func advance(dt_real: float) -> void:
 		hud.queue_redraw()
 		return
 	rt += dt_real
-	var dt := dt_real * SPEED * (0.15 if rt < slow_until else 1.0)
+	var dt := dt_real * SPEED
 	var t0 := T
 	T += dt
 	if t0 < 0.0:
@@ -347,20 +347,20 @@ func advance(dt_real: float) -> void:
 	if fin == null and src.finish_t[me] >= 0.0 and T >= src.finish_t[me]:
 		fin = {"at": rt, "pos": src.place_of(me), "shown": -1.0}
 		phase = "after"
-		slow_until = rt + 0.16
 		input.fx("cross")
 		hud.goal_fx()
 	if fin != null and float(fin.shown) < 0.0 and rt - float(fin.at) > COOL:
 		_reveal()
-	# 流す：ゴールした馬・止まったあとの馬は、映像の側で少しずつ速さを落とす（駈歩から常歩へ）
-	var over: bool = live and src.sim.over
+	# 流す：ゴールした馬・止まったあとの馬は、映像の側で駈歩の 8.5m/s まで落とし、止めずに走り続ける
+	var over: bool = (live and src.sim.over) or (not live and T > src.end_t())
 	for j in H.size():
 		var done: bool = src.finish_t[j] >= 0.0 and T >= src.finish_t[j]
 		if coast[j] == null and (done or over):
 			coast[j] = {"x": float(H[j][0]), "v": float(H[j][2])}
 		if coast[j] != null:
 			var c: Dictionary = coast[j]
-			c.v = maxf(3.2, float(c.v) - (2.4 if float(c.v) > 9.0 else 1.1) * dt)
+			if float(c.v) > COAST_V:
+				c.v = maxf(COAST_V, float(c.v) - 0.8 * dt)
 			c.x = float(c.x) + float(c.v) * dt
 			H[j] = [c.x, H[j][1], c.v, 0.2, 0.5]
 	_last_H = H
@@ -720,7 +720,7 @@ func run_capture() -> void:
 		var guard := 0
 		while T < tgt - 1e-4 and guard < 100000:
 			_apply_presses()
-			advance(minf(step, (tgt - T) / (SPEED * (0.15 if rt < slow_until else 1.0))))
+			advance(minf(step, (tgt - T) / (SPEED)))
 			guard += 1
 		_apply_presses()
 		if not String(sh.name).begins_with(String(video.get("name", "\u0000")) + "_"):
@@ -760,6 +760,6 @@ func _jump_to(t: float) -> void:
 		for pr in presses:
 			if not pr.done and float(pr.t) > T and float(pr.t) < nt:
 				nt = float(pr.t)
-		advance(maxf(1e-4, (nt - T) / (SPEED * (0.15 if rt < slow_until else 1.0))))
+		advance(maxf(1e-4, (nt - T) / (SPEED)))
 		_apply_presses()
 	cam_state.erase("p")
