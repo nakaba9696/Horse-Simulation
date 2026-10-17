@@ -60,9 +60,9 @@
       const on = picked.has(x.kind + ':' + x.key);
       return `<tr class="${on ? 'on' : ''}" data-act="fr-toggle" data-kind="${x.kind}" data-key="${e(x.key)}" data-name="${e(x.name)}"${k === 0 ? ' data-autofocus' : ''}>
         <td><div class="nm">${e(x.name)} <small class="sub">${x.sex}</small></div></td><td class="num">${x.born}</td><td class="num">${e(x.country)}</td>
-        <td class="num">${K.num(x.turf, '総合力（芝）', false, 40, 85)}</td><td class="num">${K.num(x.dirt, '総合力（ダート）', false, 40, 85)}</td>
-        ${FR.STAT_KEYS.map(s => `<td class="num">${K.num(x.pot[s])}</td>`).join('')}
-        <td class="num">${x.kire}</td><td class="num small w">${x.distMin}〜${x.distMax}</td><td class="num small">${e(x.style)}</td>
+        <td class="num">${K.num(x.turf, '総合力（芝）', false, 'fh')}</td><td class="num">${K.num(x.dirt, '総合力（ダート）', false, 'fh')}</td>
+        ${FR.STAT_KEYS.map(s => `<td class="num">${K.num(x.pot[s], null, false, 'stat')}</td>`).join('')}
+        <td class="num">${K.num(x.kire, '脚の切れ', false, 'kire')}</td><td class="num small w">${x.distMin}〜${x.distMax}</td><td class="num small">${e(x.style)}</td>
         <td class="num">${on ? '<span class="fr-add on">✓</span>' : `<span class="fr-add ${full ? 'off' : ''}">＋</span>`}</td></tr>`;
     }).join('');
     return `<div class="small muted">${rows.length}頭・見出しを押すと並べ替え（もう一度で逆順）・行を押すと出る馬に加える／外す</div>

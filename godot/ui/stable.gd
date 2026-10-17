@@ -120,7 +120,7 @@ func _fill() -> void:
 		for k in ["turf", "dirt"]:
 			var cw := CenterContainer.new()
 			cw.custom_minimum_size.x = 50
-			cw.add_child(UiScreen.num_chip(float(fh[k])))
+			cw.add_child(UiTheme.stat_chip(float(fh[k])))
 			hb.add_child(cw)
 		var last: Label
 		if tab == 0:
@@ -193,12 +193,12 @@ func _preview(i: int) -> void:
 	var pk := HSSeason.fh_peak(h)
 	if h.loc != "retired":
 		fr.add_child(UiTheme.label("総合力 いま", 13, UiTheme.MUTED))
-		fr.add_child(UiScreen.num_chip(float(now.turf), 40, 85, true))
-		fr.add_child(UiScreen.num_chip(float(now.dirt), 40, 85, true))
+		fr.add_child(UiTheme.stat_chip(float(now.turf), "fh", true))
+		fr.add_child(UiTheme.stat_chip(float(now.dirt), "fh", true))
 	fr.add_child(UiScreen.spacer())
 	fr.add_child(UiTheme.label("完成", 13, UiTheme.MUTED))
-	fr.add_child(UiScreen.num_chip(float(pk.turf)))
-	fr.add_child(UiScreen.num_chip(float(pk.dirt)))
+	fr.add_child(UiTheme.stat_chip(float(pk.turf)))
+	fr.add_child(UiTheme.stat_chip(float(pk.dirt)))
 	pv.add_child(fr)
 	var grid := GridContainer.new()
 	grid.columns = 4
@@ -207,8 +207,7 @@ func _preview(i: int) -> void:
 	var c := HSHorse.cur(h, wi)
 	for k in ["spd", "sta", "dspd", "dsta", "guts", "mind", "slope"]:
 		grid.add_child(_cell(HSHorse.STAT_SHORT[k], float(c[k])))
-	var kire := int(HSU.or_(h.get("kire"), 4.0))
-	grid.add_child(_cell("切れ", kire * 12.5, str(kire)))
+	grid.add_child(_cell("切れ", float(HSU.or_(h.get("kire"), 4.0)), "kire"))
 	pv.add_child(grid)
 	pv.add_child(_kv("距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]))
 	pv.add_child(_kv("脚質・成長", "%s・%s" % [HSHorse.style_text(h), HSU.or_(h.get("growth"), "")]))
@@ -290,12 +289,10 @@ func _release(id: String) -> void:
 	toast("牧場から放した", "good")
 	_fill()
 
-func _cell(name: String, v: float, txt := "") -> HBoxContainer:
+func _cell(name: String, v: float, kind := "stat") -> HBoxContainer:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 4)
-	var c := UiScreen.num_chip(v, 50.0, 110.0)
-	if txt != "": (c.get_child(0) as Label).text = txt
-	hb.add_child(c)
+	hb.add_child(UiTheme.stat_chip(v, kind))
 	hb.add_child(UiTheme.label(name, 12, UiTheme.MUTED))
 	return hb
 

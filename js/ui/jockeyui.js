@@ -11,9 +11,11 @@
     opts = opts || {};
     const c = H.cur(h, wIdx);
     const keys = opts.surface === 'ダ' ? ['dspd', 'dsta'] : opts.surface === '芝' ? ['spd', 'sta'] : ['spd', 'sta', 'dspd', 'dsta'];
-    const items = keys.concat(['guts', 'mind', 'slope']).map(k => [H.STAT_SHORT[k], Math.round(c[k])]);
-    items.push(['道悪', Math.round(h.apt.heavy != null ? h.apt.heavy : 50)], ['健康', Math.round(h.health != null ? h.health : 70)], ['切れ', h.kire || 4]);
-    return `<div class="nums">${items.map(([l, v]) => `<span>${l} <b>${v}</b></span>`).join('')}</div>`;
+    // 能力・切れは段の色の札（docs/UI.md「能力の段」）。道悪・健康は段を決めていないので数だけ
+    const K = UI.kit;
+    const items = keys.concat(['guts', 'mind', 'slope']).map(k => [H.STAT_SHORT[k], K ? K.num(c[k], H.STAT_LABEL[k], false, 'stat') : `<b>${Math.round(c[k])}</b>`]);
+    items.push(['道悪', `<b>${Math.round(h.apt.heavy != null ? h.apt.heavy : 50)}</b>`], ['健康', `<b>${Math.round(h.health != null ? h.health : 70)}</b>`], ['切れ', K ? K.num(h.kire || 4, '脚の切れ', false, 'kire') : `<b>${h.kire || 4}</b>`]);
+    return `<div class="nums">${items.map(([l, v]) => `<span>${l} ${v}</span>`).join('')}</div>`;
   };
   UI.recentRuns = h => (h.results || []).slice(-3).reverse().map(r => `${r.race}${r.pos}着`).join('・') || '初出走';
 
@@ -52,7 +54,7 @@
   };
 
   // ---------- 生産：オリジナルホース（引退させた牡馬と牝馬から） ----------
-  const potStats = h => `<div class="nums">${['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'].map(k => `<span>${H.STAT_SHORT[k]} <b>${Math.round(h.pot[k])}</b></span>`).join('')}<span>切れ <b>${h.kire || 4}</b></span></div>`;
+  const potStats = h => `<div class="nums">${['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'].map(k => `<span>${H.STAT_SHORT[k]}${UI.kit.num(h.pot[k], H.STAT_LABEL[k], false, 'stat')}</span>`).join('')}<span>切れ${UI.kit.num(h.kire || 4, '脚の切れ', false, 'kire')}</span></div>`;
   const skillChip = id => { const k = HS.Skills.BY[id]; return k ? UI.trigChip(id) : H.SKILLS[id] ? `<span class="chip skill ${H.SKILLS[id].bad ? 'bad' : ''}" title="${e(H.SKILLS[id].note)}">${e(H.SKILLS[id].label)}</span>` : ''; };
   S.breed = function (st) {
     const O = HS.Original, G = W.get();
@@ -241,7 +243,7 @@
       return `<tr class="${it.legend ? 'legend' : ''}" data-act="horse" data-id="${e(h.id)}" data-pv="shop:${e(h.id)}" style="--i:${Math.min(k, 12)}"${k === 0 ? ' data-autofocus' : ''}>
         <td class="mk">${shopMark(it)}</td><td><div class="nm">${e(h.name)}</div><div class="sub">${e(h.coat || '')}${h.sire && h.sire !== '?' ? `・父 ${e(h.sire)}` : ''}</div></td>
         <td class="c w">${h.sex === '牝' ? '牝' : h.sex === 'セ' ? 'セ' : '牡'}${G.year - h.born}</td>
-        <td class="c">${K.num(fh.turf, '総合力（芝）', false, 40, 85)}</td><td class="c">${K.num(fh.dirt, '総合力（ダート）', false, 40, 85)}</td>
+        <td class="c">${K.num(fh.turf, '総合力（芝）', false, 'fh')}</td><td class="c">${K.num(fh.dirt, '総合力（ダート）', false, 'fh')}</td>
         <td class="c w small">${h.distMin}〜${h.distMax}</td><td class="c">${UI.kyakuArrows(h.style, h)}<div class="sub">${e(H.styleText(h))}</div></td>
         <td class="r">${K.price(it.price, money)}</td></tr>`;
     }).join('');
@@ -264,7 +266,7 @@
       <div class="pv-nm">${e(h.name)}${x.it.legend ? ' <span class="chip legend">スペシャル</span>' : ''}</div>
       <div class="pv-sub">${h.sex === '牝' ? '牝' : '牡'}${G.year - h.born}・${e(h.coat || '')}${h.sire && h.sire !== '?' ? `・父 ${e(h.sire)}` : ''}${h.dam && h.dam !== '?' ? `・母 ${e(h.dam)}` : ''}</div>
       <div class="pv-row"><span>${T.FH_NAME}（完成）</span>${K.fh(x.fh.turf, x.fh.dirt)}</div>
-      <div class="pv-grid">${['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'].map(k => `<div>${K.num(h.pot[k], H.STAT_LABEL[k])}${H.STAT_SHORT[k]}</div>`).join('')}<div>${K.num((h.kire || 4) * 12.5, '脚の切れ')}<span>切れ ${h.kire || 4}</span></div></div>
+      <div class="pv-grid">${['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'].map(k => `<div>${K.num(h.pot[k], H.STAT_LABEL[k], false, 'stat')}${H.STAT_SHORT[k]}</div>`).join('')}<div>${K.num(h.kire || 4, '脚の切れ', false, 'kire')}切れ</div></div>
       <div class="pv-row"><span>距離</span><b>${h.distMin}〜${h.distMax}m</b></div>
       <div class="pv-row"><span>脚質・成長</span><b>${e(H.styleText(h))}・${e(h.growth || '')}</b></div>
       ${UI.hasSkills(h) ? `<div class="skills">${UI.skillChips(h)}</div>` : ''}

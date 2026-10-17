@@ -157,7 +157,7 @@ func _fill() -> void:
 		for k in ["turf", "dirt"]:
 			var cw := CenterContainer.new()
 			cw.custom_minimum_size.x = 50
-			cw.add_child(UiScreen.num_chip(float(x.fh[k])))
+			cw.add_child(UiTheme.stat_chip(float(x.fh[k])))
 			hb.add_child(cw)
 		var dl := UiTheme.num_label("%s〜%s" % [HSU.num(h.distMin), HSU.num(h.distMax)], 14, UiTheme.MUTED)
 		dl.custom_minimum_size.x = COLS[5][1]
@@ -239,17 +239,17 @@ func _preview(i: int) -> void:
 	fr.add_child(UiTheme.label("総合力（完成）", 13, UiTheme.MUTED))
 	fr.add_child(UiScreen.spacer())
 	fr.add_child(UiTheme.label("芝", 13, UiTheme.MUTED))
-	fr.add_child(UiScreen.num_chip(float(x.fh.turf), 40, 85, true))
+	fr.add_child(UiTheme.stat_chip(float(x.fh.turf), "fh", true))
 	fr.add_child(UiTheme.label("ダ", 13, UiTheme.MUTED))
-	fr.add_child(UiScreen.num_chip(float(x.fh.dirt), 40, 85, true))
+	fr.add_child(UiTheme.stat_chip(float(x.fh.dirt), "fh", true))
 	pv.add_child(fr)
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 6)
 	for k in ["spd", "sta", "dspd", "dsta", "guts", "mind", "slope"]:
-		grid.add_child(_stat_cell(HSHorse.STAT_SHORT[k], float(h.pot[k]), 50.0, 110.0))
-	grid.add_child(_stat_cell("切れ", float(HSU.or_(h.get("kire"), 4.0)) * 12.5, 50.0, 110.0, str(int(HSU.or_(h.get("kire"), 4.0)))))
+		grid.add_child(_stat_cell(HSHorse.STAT_SHORT[k], float(h.pot[k])))
+	grid.add_child(_stat_cell("切れ", float(HSU.or_(h.get("kire"), 4.0)), "kire"))
 	pv.add_child(grid)
 	pv.add_child(_kv("距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]))
 	pv.add_child(_kv("脚質・成長", "%s・%s" % [HSHorse.style_text(h), HSU.or_(h.get("growth"), "")]))
@@ -280,13 +280,10 @@ func _preview(i: int) -> void:
 	if over or full:
 		pv.add_child(UiTheme.label("資金が足りない" if over else "お手馬がいっぱい", 13, UiTheme.BAD if over else UiTheme.WARN))
 
-func _stat_cell(name: String, v: float, lo: float, hi: float, txt := "") -> HBoxContainer:
+func _stat_cell(name: String, v: float, kind := "stat") -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 4)
-	var c := UiScreen.num_chip(v, lo, hi)
-	if txt != "":
-		(c.get_child(0) as Label).text = txt
-	h.add_child(c)
+	h.add_child(UiTheme.stat_chip(v, kind))
 	h.add_child(UiTheme.label(name, 12, UiTheme.MUTED))
 	return h
 

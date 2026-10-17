@@ -135,8 +135,8 @@ func _col(v: VBoxContainer, title: String, list: Array, is_sire: bool) -> void:
 		nv.add_child(l2)
 		hb.add_child(nv)
 		var pk := HSSeason.fh_peak(h)
-		hb.add_child(UiScreen.num_chip(float(pk.turf)))
-		hb.add_child(UiScreen.num_chip(float(pk.dirt)))
+		hb.add_child(UiTheme.stat_chip(float(pk.turf)))
+		hb.add_child(UiTheme.stat_chip(float(pk.dirt)))
 		UiScreen.pass_mouse(hb)
 		var id: String = h.id
 		b.set_meta("id", id)

@@ -99,9 +99,9 @@ func _fill(refocus: bool) -> void:
 	var fh := HSSeason.fh_both(h, wi)
 	l1.add_child(UiTheme.label("総合力", 12, UiTheme.MUTED))
 	l1.add_child(UiTheme.label("芝", 13, UiTheme.MUTED))
-	l1.add_child(UiScreen.num_chip(float(fh.turf)))
+	l1.add_child(UiTheme.stat_chip(float(fh.turf)))
 	l1.add_child(UiTheme.label("ダ", 13, UiTheme.MUTED))
-	l1.add_child(UiScreen.num_chip(float(fh.dirt)))
+	l1.add_child(UiTheme.stat_chip(float(fh.dirt)))
 	# おまかせ（入っていると、出るレースを自動で選ぶ。js/ui/app.js の act.auto と同じ）
 	var ba := UiScreen.button("おまかせ：%s" % ("入" if h.get("auto") else "切"), false, 150, 34, 14)
 	ba.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT if h.get("auto") else UiTheme.MUTED)

@@ -50,7 +50,7 @@
     { k: 'born', label: '生年', val: d => d.born, dir: 1 },
     { k: 'rating', label: '評価', val: d => d.rating, dir: -1, heat: true },
     { k: 'fh', label: HS.Season.FH_NAME, val: d => fhOf(d).v, dir: -1, title: '伸びきったときの総合力（芝とダートの高いほう）', show: d => `${fhOf(d).v} ${fhOf(d).s}` },
-    ...H.STATS.map(k => ({ k, label: H.STAT_SHORT[k], val: d => Math.round(info(d).pot[k]), dir: -1, heat: true, title: H.STAT_LABEL[k] })),
+    ...H.STATS.map(k => ({ k, label: H.STAT_SHORT[k], val: d => Math.round(info(d).pot[k]), dir: -1, tier: 'stat', title: H.STAT_LABEL[k] })),
     { k: 'heavy', label: '道悪', val: d => Math.round(info(d).heavy), dir: -1, heat: true, title: '大きいほど重い馬場が得意' },
     { k: 'health', label: '健康', val: d => Math.round(info(d).health), dir: -1, heat: true, title: '大きいほど故障しにくく、疲れが早く取れる' },
     { k: 'kire', label: '切れ', val: d => info(d).kire, dir: -1, title: '脚の切れ（1＝ズブい〜8＝切れる）' },
@@ -102,6 +102,7 @@
     const cell = (c, d) => {
       if (c.k === 'name') return `<td class="nm"><b>${e(d.name)}</b>${ed[d.name] ? ' <span class="chip mine">編集</span>' : ''}<div class="small muted">${d.sex}・${e(d.coat || '')}・父 ${e(d.sire || '?')}</div></td>`;
       const v = c.val(d);
+      if (c.tier && UI.kit) return `<td class="num">${UI.kit.num(v, c.title, false, c.tier)}</td>`;
       if (c.heat) return `<td class="num" style="${heat(v)}">${v}</td>`;
       if (c.k === 'skills') return `<td class="small sk">${info(d).skills.map(x => `<span class="${H.SKILLS[x].bad ? 'bad' : ''}">${e(H.SKILLS[x].label)}</span>`).join('・')}</td>`;
       return `<td class="small ${c.str ? '' : 'num'}">${e(c.show ? c.show(d) : v)}</td>`;

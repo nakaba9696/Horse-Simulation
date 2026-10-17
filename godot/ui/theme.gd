@@ -1,6 +1,6 @@
 # 画面の共通の部品（docs/UI.md のテーマ「夕方の競馬場の貴賓席」：深い芝の緑の地・金の縁取り・明朝の題字）。どの画面もここの色・字・部品で作る
 # 値（色・px・角丸）は docs/UI.md（1600×1000 の画面が基準。project.godot の画面の大きさも 1600×1000）
-# 部品：見出しの帯（band）・数値の札（chip・num_chip）・格の札（grade_chip）・枠の色の札（frame_box）・表の行（row_box）・ボタン（Theme の Button、主な操作は gold_button）・操作の案内（keybar）
+# 部品：見出しの帯（band）・数値の札（chip）・能力の数の札（stat_chip。段の色）・格の札（grade_chip）・枠の色の札（frame_box）・表の行（row_box）・ボタン（Theme の Button、主な操作は gold_button）・操作の案内（keybar）
 # 参考の作品の画面・配色・英語の飾り文字は写さない（GAM-74）
 class_name UiTheme
 extends RefCounted
@@ -37,6 +37,17 @@ const SHADOW := Color(0, 0, 0, 0.5)
 # 枠の色（1〜8枠）と字の色（1・5・8 が黒）
 const FRAME_BG := [Color("ffffff"), Color("222222"), Color("e0312f"), Color("2a63d4"), Color("f2cf1d"), Color("2c9a48"), Color("f08a1c"), Color("f07fb0")]
 const FRAME_FG := [Color("111111"), Color("ffffff"), Color("ffffff"), Color("ffffff"), Color("111111"), Color("ffffff"), Color("ffffff"), Color("111111")]
+# ---- 能力の段（docs/UI.md「能力の段」。持ち主の指摘 2026-10-17「ステータスの数値によって色つけてください　数字だけだとわかりにくいので」） ----
+# 段：0 低い（暗い青）・1 ふつう（灰）・2 良い（緑）・3 とても良い（金）・4 飛び抜けている（紅。光る）
+# 境目は「この値から上がその段」。史実馬・スペシャルホースの値を数えて決めた（docs/UI.md）。JS 版（js/ui/uikit.js の K.TIER）と同じ値にする（tests/extra_ui.js が比べる）
+const TIER_NAMES := ["低い", "ふつう", "良い", "とても良い", "飛び抜けている"]
+const TIER_FH := [45, 55, 65, 75]      # 総合力（芝・ダ 1〜99）
+const TIER_STAT := [60, 75, 85, 95]    # 能力（芝SP・芝ST・ダSP・ダST・根性・気性・坂 20〜120）
+const TIER_KIRE := [3, 5, 7, 8]        # 脚の切れ（1〜8）
+const TIER_BG := [Color("15283a"), Color("26362e"), Color("1d6a42"), Color("7d5c14"), Color("a5233c")]
+const TIER_FG := [Color("8fb0c8"), Color("edf3ee"), Color("ffffff"), Color("ffe8a6"), Color("ffffff")]
+const TIER_LINE := [Color(0, 0, 0, 0), Color(0.87, 0.925, 0.886, 0.16), Color(0.39, 0.82, 0.58, 0.85), Color("f2d98e"), Color("ffb3a6")]
+const TIER_LINE_W := [0, 1, 1, 2, 2]
 # 前の名前（ほかのファイルの呼び名）
 const GREEN_DEEP := SUNK
 const GREEN := Color("0d2117")
@@ -213,6 +224,33 @@ static func chip(text: String, bg := SURFACE_3, fg := IVORY, size := 14, w := 0.
 	p.add_child(l)
 	if w > 0.0:
 		p.custom_minimum_size.x = w
+	return p
+
+# 能力の段（0〜4）。kind：fh（総合力）・stat（能力）・kire（脚の切れ）
+static func tier(v: float, kind := "fh") -> int:
+	var cut: Array = TIER_FH if kind == "fh" else (TIER_KIRE if kind == "kire" else TIER_STAT)
+	var t := 0
+	for c in cut:
+		if roundf(v) >= float(c):
+			t += 1
+	return t
+
+# 能力の数の札：段の色の地・字・縁。上の段ほど縁が太く、字も太く（色だけに頼らない）。飛び抜けている段は紅く光る
+static func stat_chip(v: float, kind := "fh", big := false, txt := "") -> PanelContainer:
+	var t := tier(v, kind)
+	var p := PanelContainer.new()
+	var sb := box(TIER_BG[t], TIER_LINE[t], TIER_LINE_W[t], R_CHIP, Vector4(7, 1, 7, 2) if not big else Vector4(9, 3, 9, 4))
+	if t == 4:
+		sb.shadow_color = Color(1.0, 0.33, 0.4, 0.55)
+		sb.shadow_size = 6
+	p.add_theme_stylebox_override("panel", sb)
+	var l := num_label(txt if txt != "" else str(int(roundf(v))), 17 if big else 14, TIER_FG[t])
+	if t >= 3:
+		l.add_theme_color_override("font_outline_color", TIER_FG[t])
+		l.add_theme_constant_override("outline_size", 2)
+	p.add_child(l)
+	p.custom_minimum_size.x = 48.0 if big else 34.0
+	p.tooltip_text = TIER_NAMES[t]
 	return p
 
 # 枠の色の札（馬番）
