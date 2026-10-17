@@ -95,6 +95,8 @@ double skill_adj(const Dictionary &horse, const Dictionary &race, const Variant 
 		else if (id == "summer" && month.get_type() != Variant::NIL && (double)month >= 6 && (double)month <= 8) a += 1.8;
 		else if (id == "winter" && month.get_type() != Variant::NIL && ((double)month == 12 || (double)month <= 2)) a += 1.8;
 		else if (id == "inner" && ctxOk && ctx.get("num", Variant()).booleanize() && (double)ctx["num"] <= 4) a += 1.2;
+		else if (id == "outer" && ctxOk && ctx.get("frame", Variant()).get_type() != Variant::NIL && (double)ctx["frame"] >= 7) a += 1.2;
+		else if (id == "mud" && (is_str(race.get("ground", Variant()), "重") || is_str(race.get("ground", Variant()), "不良"))) a += 2.0;
 		else if (id == "travel" && is_str(region, "海外")) a += 2.0;
 		else if (id == "homebody" && is_str(region, "海外")) a -= 3.0;
 		else if (id == "leftB" && is_str(dir, "左")) a -= 1.5;

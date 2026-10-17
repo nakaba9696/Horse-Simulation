@@ -68,6 +68,9 @@ class Runner:
 	var easyStart := false
 	var topAdd := 0.0
 	var sunaT := 0.0
+	var tsuiso := false # 追走○（HSSkills.flags）
+	var sotoM := false # 外回し○
+	var sabaki := false # 馬群さばき
 
 # ---------- 自分で乗る馬の操作の状態（JS の sim.ctl） ----------
 class Ctl:
@@ -182,6 +185,10 @@ static var HILL := { v = 0.4, e = 100.0, dv = 0.25, de = 10.0, mid = 0.4 }
 static var LONGSPURT := { r = 50.0, z = 0.002 }
 static var JIYU := { slow = 0.994, hi = 1.006, k = 0.5, misfit = 0.35 }
 static var SUNA := 1.08
+# 追走○・外回し○の脚の使い方の倍率。馬群さばき：横の動きの速さの倍率・止められる幅（進路の差 gap・前後 dx m）・AI の前が壁の長さの倍率
+static var TSUISO := 0.95
+static var SOTO := 0.96
+static var SABAKI := { v = 1.6, gap = 0.55, dx = 1.4, block = 0.4 }
 static var KIRE := { s0 = 0.03, s1 = 0.0035, r = 60.0, a0 = 0.85, a1 = 0.05, c0 = 0.95, c1 = 0.0, cS = 0.035, z = 0.0015, top = 2.2 }
 static var ORIAI := { ramp = 2.5, calmK = 5.0, over = 0.55, overHot = 0.25, fightAfter = 1.2, fightK = 14.0, surgeT = 6.0, match = 0.35, matchLo = 0.12,
 	keen = 40.0, passed = 9.0, wall = 4.0, sand = 3.0, cover = 4.0, shrinkT = 4.0, shrinkSpd = 0.012, pushSurge = 10.0, surgeMax = 45.0 }
@@ -267,6 +274,8 @@ static func skill_adj(horse: Dictionary, race: Dictionary, w_idx: Variant, ctx: 
 		elif id == "summer" and month != null and month >= 6 and month <= 8: a += 1.8
 		elif id == "winter" and month != null and (month == 12 or month <= 2): a += 1.8
 		elif id == "inner" and ctx and ctx.get("num") and ctx.num <= 4: a += 1.2
+		elif id == "outer" and ctx and ctx.get("frame") != null and ctx.frame >= 7: a += 1.2
+		elif id == "mud" and (race.get("ground") == "重" or race.get("ground") == "不良"): a += 2.0
 		elif id == "travel" and region == "海外": a += 2.0
 		elif id == "homebody" and region == "海外": a -= 3.0
 		elif id == "leftB" and dir == "左": a -= 1.5
@@ -347,7 +356,7 @@ static func use_native() -> bool:
 		var labels := {}
 		for id in HSHorse.SKILLS: labels[id] = HSHorse.SKILLS[id].label
 		var d := HSData.d()
-		ClassDB.class_call_static(&"HSNativeSim", &"set_data", d.get("courses", {}), d.get("layouts", {}), labels)
+		ClassDB.class_call_static(&"HSNativeSim", &"set_data", d.get("courses", {}), d.get("layouts", {}), labels, d.get("uniques", []))
 	return true
 # 模擬を作る。戻り値は Sim（GDScript）か HSNativeSim（C++）。どちらも同じ名前で値を読める（sim.t・sim.st[i].x・sim.ctl …）
 static func create(race: Dictionary, runners: Array, w_idx: Variant, rng: HSRng, opts: Dictionary = {}):
@@ -443,6 +452,7 @@ static func _create_gd(race: Dictionary, runners: Array, w_idx: Variant, rng: HS
 	sim.checkAt = 1200.0 if D >= 2400 else (1000.0 if D >= 1600 else 600.0)
 	sim.top = KIRE.top * HSU.clamp(1.0 + (paceF - 1.0) * PACE_TOP, 0.55, 1.6)
 	HSSkills.setup(sim)
+	for s: Runner in st: HSSkills.flags(s)
 	for s: Runner in st:
 		s.passive = []
 		for id in HSU.or_(s.h.get("skills"), []):
@@ -780,6 +790,12 @@ static func _step_gd(sim: Sim) -> bool:
 		if s.sunaB and not s.spurting and prog > 0.05 and _ahead_of(st, s, 4.0, 0.8) != null:
 			costMul *= SUNA; s.sunaT = s.sunaT + DT
 			if s.sunaT > 3: fire(sim, s, "sunaB")
+		# 追走○：直線の前、すぐ前に馬がいる間は、脚の減りが少ない
+		if s.tsuiso and not s.spurting and prog > 0.08 and R > straight and _ahead_of(st, s, 4.0, 0.8) != null:
+			costMul *= TSUISO; fire(sim, s, "tsuiso")
+		# 外回し○：3〜4コーナーで追い出している間は、脚の減りが少ない。自分で乗る馬は外（進路1.5より外）にいるときだけ
+		if s.sotoM and s.spurting and R > straight and ((sim.track.corner_at(R) != 0 and R < straight + 700) if sim.track else R < straight + 350) and (not (s.me and c) or s.lane > 1.5):
+			costMul *= SOTO; fire(sim, s, "sotomawashi")
 		fight_step(sim, s, R, prog)
 		var fk := s.fight / 100.0
 		if fk and (s.spurting or s.E <= 0):
@@ -798,7 +814,9 @@ static func _step_gd(sim: Sim) -> bool:
 			s.blockedOnce = true
 			var jk: float = s.r.jockey.skill if s.r.get("jockey") else 70.0
 			if rng.chance(0.1 * (1.0 - s.mind / 160.0) * (1.2 - jk / 150.0)):
-				s.blocked = rng.float_(1.0, 2.4); say(sim, t, "%s、前が壁になった！" % s.h.name, "trouble")
+				# 外回し○は外を回して壁を避け、馬群さばきはすぐに進路を見つける（くじは同じように引く）
+				s.blocked = rng.float_(1.0, 2.4) * (0.0 if s.sotoM else (SABAKI.block if s.sabaki else 1.0))
+				if s.blocked > 0: say(sim, t, "%s、前が壁になった！" % s.h.name, "trouble")
 		if s.blocked > 0:
 			target *= 0.93; s.blocked -= DT
 		var accel: float = START_ACC * (START_SKILL_ACC if (s.boost and s.boost.free and t < s.boost.until) else 1.0) if s.v < s.vc * 0.9 else s.acc + s.slopeP * 0.0015
@@ -819,7 +837,7 @@ static func _step_gd(sim: Sim) -> bool:
 		if s.me and c and sim.track:
 			var corner := sim.track.corner_at(R) != 0
 			c.wide = corner and s.lane > 1.5
-			if corner: dx *= 1.0 - 0.005 * HSU.mx(0.0, s.lane - 0.5)
+			if corner and not s.sotoM: dx *= 1.0 - 0.005 * HSU.mx(0.0, s.lane - 0.5) # 外回し○は遠回りにならない
 		s.x += dx
 		mood_out(sim, s, c if s.me else null)
 		if s.t600 == null and s.x >= D - 600: s.t600 = t - DT + (D - 600.0 - xPrev) / maxf(0.1, s.x - xPrev) * DT
@@ -836,19 +854,23 @@ static func _step_gd(sim: Sim) -> bool:
 		if s.jiyuMove and t > 8 and t < 8.5: fire(sim, s, "jiyu")
 	if not sim.check and order.size() and order[0].x >= sim.checkAt:
 		var verdict := pace_verdict(sim.paceF)
-		sim.check = { t = t, at = sim.checkAt, verdict = verdict }
+		sim.check = { t = t, at = sim.checkAt, verdict = verdict, lead = order[0].i } # lead＝チェックポイントを先頭で通った馬（幻惑逃げ）
 		if opts.get("frames"): say(sim, t, "%sm通過は%s秒。%sです。" % [HSU.num(sim.checkAt), HSMath.to_fixed(t, 1), verdict], "pace")
 	# 進路：前から順に、近くの馬と重ならない一番内の位置
 	var live := by_x(sim)
 	var me: Runner = st[sim.me] if c else null
 	if me:
 		# 押したらすぐ動き出し（毎秒 LANE.v 進路）、横に馬がいれば止まる（ぶつかった印 c.bumpT・c.bumpSide。振動と揺れに使う）
-		var want := HSU.clamp(c.lane - me.lane, -LANE.v * DT, LANE.v * DT)
+		# 馬群さばき：横に動くのが速く、横の馬に止められにくい
+		var lv: float = LANE.v * (SABAKI.v if me.sabaki else 1.0)
+		var ldx: float = SABAKI.dx if me.sabaki else LANE.dx
+		var lgap: float = SABAKI.gap if me.sabaki else LANE.gap
+		var want := HSU.clamp(c.lane - me.lane, -lv * DT, lv * DT)
 		if absf(want) > 1e-6:
 			var nl := me.lane + want; var dir := signf(want)
 			var hit := false
 			for o: Runner in st:
-				if o != me and not o.done and absf(o.x - me.x) < LANE.dx and dir * (o.lane - me.lane) > 0 and absf(o.lane - nl) < LANE.gap: hit = true; break
+				if o != me and not o.done and absf(o.x - me.x) < ldx and dir * (o.lane - me.lane) > 0 and absf(o.lane - nl) < lgap: hit = true; break
 			if hit:
 				if t - (-9.0 if c.bumpT == null else c.bumpT) > 0.4:
 					c.bumpT = t; c.bumpSide = dir

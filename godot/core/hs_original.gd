@@ -39,7 +39,9 @@ static func release(id: String) -> Variant:
 static func skills_of(h: Dictionary) -> Array:
 	var hand: Array = HSU.or_(h.get("skills"), []).filter(func(id): return HSHorse.SKILLS.has(id))
 	var trig := HSSkills.of(h, HSWorld.w_idx())
-	return (hand + trig.filter(func(id): return not hand.has(id))).slice(0, MAX_SKILLS)
+	# 伝説級の名馬の固有の能力は先頭に置き、必ず候補に入る
+	var uniq: Array = trig.filter(func(id): return HSSkills.is_unique(id))
+	return (uniq + hand + trig.filter(func(id): return not hand.has(id) and not uniq.has(id))).slice(0, MAX_SKILLS)
 static func candidates(s: Dictionary, m: Dictionary) -> Array:
 	var out: Array = []
 	for id in skills_of(s) + skills_of(m):

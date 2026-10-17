@@ -31,6 +31,8 @@ static const double HILL_V = 0.4, HILL_E = 100.0, HILL_DV = 0.25, HILL_DE = 10.0
 static const double LONGSPURT_R = 50.0, LONGSPURT_Z = 0.002;
 static const double JIYU_SLOW = 0.994, JIYU_HI = 1.006, JIYU_K = 0.5, JIYU_MISFIT = 0.35;
 static const double SUNA = 1.08;
+// 追走○・外回し○の脚の使い方の倍率。馬群さばき：横の動きの速さの倍率・止められる幅・AI の前が壁の長さの倍率
+static const double TSUISO = 0.95, SOTO = 0.96, SABAKI_V = 1.6, SABAKI_GAP = 0.55, SABAKI_DX = 1.4, SABAKI_BLOCK = 0.4;
 static const double K_S0 = 0.03, K_S1 = 0.0035, K_R = 60.0, K_A0 = 0.85, K_A1 = 0.05, K_C0 = 0.95, K_C1 = 0.0, K_CS = 0.035, K_Z = 0.0015, K_TOP = 2.2;
 static const double O_RAMP = 2.5, O_CALMK = 5.0, O_OVER = 0.55, O_OVERHOT = 0.25, O_FIGHTAFTER = 1.2, O_FIGHTK = 14.0, O_SURGET = 6.0, O_MATCH = 0.35, O_MATCHLO = 0.12,
 	O_KEEN = 40.0, O_PASSED = 9.0, O_WALL = 4.0, O_SAND = 3.0, O_COVER = 4.0, O_SHRINKT = 4.0, O_SHRINKSPD = 0.012, O_PUSHSURGE = 10.0, O_SURGEMAX = 45.0;
@@ -165,6 +167,7 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 		s.hist = truthy(h.get("hist", Variant()));
 		Variant jk = r.get("jockey", Variant());
 		s.jockSkill = jk.booleanize() ? (double)((Dictionary)jk)["skill"] : 70.0;
+		s.weightV = num_or(r.get("weight", Variant()), 0.0);
 	}
 	std::vector<double> vcs;
 	for (auto &s : sim.st) vcs.push_back(s.vc);
@@ -185,6 +188,7 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 	sim.checkAt = D >= 2400 ? 1200.0 : (D >= 1600 ? 1000.0 : 600.0);
 	sim.top = K_TOP * clamp(1.0 + (paceF - 1.0) * PACE_TOP, 0.55, 1.6);
 	skills_setup(sim);
+	for (auto &s : sim.st) skills_flags(s);
 	for (auto &s : sim.st) {
 		s.passive.clear();
 		Variant skv = s.h.get("skills", Variant());
@@ -413,7 +417,7 @@ static void commentary(Sim &sim);
 bool sim_step(Sim &sim) {
 	if (sim.over) return true;
 	static const int kakariId = SK("kakari"), longspurt = SK("longspurt"), soraId = SK("sora"), oonigeId = SK("oonige"),
-		sunaBId = SK("sunaB"), jiyuId = SK("jiyu"), oosoto = SK("oosoto");
+		sunaBId = SK("sunaB"), tsuisoId = SK("tsuiso"), sotoId = SK("sotomawashi"), jiyuId = SK("jiyu"), oosoto = SK("oosoto");
 	double D = sim.D, straight = sim.straight, pace = sim.pace;
 	auto &st = sim.st;
 	Rng &rng = sim.rng;
@@ -529,6 +533,10 @@ bool sim_step(Sim &sim) {
 			costMul *= SUNA; s.sunaT = s.sunaT + DT;
 			if (s.sunaT > 3) fire(sim, s, sunaBId);
 		}
+		// 追走○：直線の前、すぐ前に馬がいる間は、脚の減りが少ない
+		if (s.tsuiso && !s.spurting && prog > 0.08 && R > straight && ahead_of(sim, s, 4.0, 0.8) != nullptr) { costMul *= TSUISO; fire(sim, s, tsuisoId); }
+		// 外回し○：3〜4コーナーで追い出している間は、脚の減りが少ない。自分で乗る馬は外（進路1.5より外）にいるときだけ
+		if (s.sotoM && s.spurting && R > straight && (tr ? tr->corner_at(R) != 0 && R < straight + 700 : R < straight + 350) && (!(s.me && c) || s.lane > 1.5)) { costMul *= SOTO; fire(sim, s, sotoId); }
 		fight_step(sim, s, R, prog);
 		double fk = s.fight / 100.0;
 		if (fk != 0.0 && (s.spurting || s.E <= 0)) {
@@ -549,7 +557,9 @@ bool sim_step(Sim &sim) {
 			s.blockedOnce = true;
 			double jk = s.jockSkill;
 			if (rng.chance(0.1 * (1.0 - s.mind / 160.0) * (1.2 - jk / 150.0))) {
-				s.blocked = rng.float_(1.0, 2.4); say(sim, t, s.name + U8("、前が壁になった！"), "trouble");
+				// 外回し○は外を回して壁を避け、馬群さばきはすぐに進路を見つける（くじは同じように引く）
+				s.blocked = rng.float_(1.0, 2.4) * (s.sotoM ? 0.0 : s.sabaki ? SABAKI_BLOCK : 1.0);
+				if (s.blocked > 0) say(sim, t, s.name + U8("、前が壁になった！"), "trouble");
 			}
 		}
 		if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
@@ -570,7 +580,7 @@ bool sim_step(Sim &sim) {
 		if (s.me && c && tr) {
 			bool corner = tr->corner_at(R) != 0;
 			c->wide = corner && s.lane > 1.5;
-			if (corner) dx *= 1.0 - 0.005 * mx(0.0, s.lane - 0.5);
+			if (corner && !s.sotoM) dx *= 1.0 - 0.005 * mx(0.0, s.lane - 0.5); // 外回し○は遠回りにならない
 		}
 		s.x += dx;
 		mood_out(sim, s, s.me ? c : nullptr);
@@ -592,18 +602,20 @@ bool sim_step(Sim &sim) {
 	}
 	if (!sim.hasCheck && !order.empty() && st[order[0]].x >= sim.checkAt) {
 		String verdict = pace_verdict(sim.paceF);
-		sim.hasCheck = true; sim.checkT = t; sim.checkVerdict = verdict;
+		sim.hasCheck = true; sim.checkT = t; sim.checkVerdict = verdict; sim.checkLead = st[order[0]].i;
 		if (sim.optFrames) say(sim, t, String(num_str(sim.checkAt).c_str()) + U8("m通過は") + String(to_fixed(t, 1).c_str()) + U8("秒。") + verdict + U8("です。"), "pace");
 	}
 	// 進路：前から順に、近くの馬と重ならない一番内の位置
 	auto &live = by_x(sim);
 	Runner *me = c ? &st[sim.me] : nullptr;
 	if (me) {
-		double want = clamp(c->lane - me->lane, -LANE_V * DT, LANE_V * DT);
+		// 馬群さばき：横に動くのが速く、横の馬に止められにくい
+		double lv = LANE_V * (me->sabaki ? SABAKI_V : 1.0), ldx = me->sabaki ? SABAKI_DX : LANE_DX, lgap = me->sabaki ? SABAKI_GAP : LANE_GAP;
+		double want = clamp(c->lane - me->lane, -lv * DT, lv * DT);
 		if (std::fabs(want) > 1e-6) {
 			double nl = me->lane + want, dir = want > 0 ? 1.0 : (want < 0 ? -1.0 : 0.0);
 			bool hit = false;
-			for (auto &o : st) if (&o != me && !o.done && std::fabs(o.x - me->x) < LANE_DX && dir * (o.lane - me->lane) > 0 && std::fabs(o.lane - nl) < LANE_GAP) { hit = true; break; }
+			for (auto &o : st) if (&o != me && !o.done && std::fabs(o.x - me->x) < ldx && dir * (o.lane - me->lane) > 0 && std::fabs(o.lane - nl) < lgap) { hit = true; break; }
 			if (hit) {
 				if (t - (c->hasBumpT ? c->bumpT : -9.0) > 0.4) { c->hasBumpT = true; c->bumpT = t; c->bumpSide = dir; }
 				c->lane = clamp(round_js(me->lane - dir * 0.49), 0.0, 12.0);

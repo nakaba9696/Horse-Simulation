@@ -60,6 +60,8 @@ const SKILLS := {
 	longspurt = { label = "ロングスパート", note = "早めに動いて長く脚を使う" },
 	jiyu = { label = "脚質自在", style = true, note = "脚質の一つとして見せる（特殊能力の並びには出さない）。流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい" },
 	inner = { label = "内枠○", note = "内の枠で走る" },
+	outer = { label = "外枠○", note = "外の枠（7・8枠）で走る" },
+	mud = { label = "道悪○", note = "重・不良の馬場で力を出す" },
 	travel = { label = "海外○", note = "海外の大レースで力を出す" },
 	homebody = { label = "海外×", note = "海外では力を出しきれない", bad = true },
 	deokure = { label = "出遅れ癖", note = "ゲートの出が悪い", bad = true },
@@ -241,6 +243,7 @@ static func from_historic(d: Dictionary, id: Variant) -> Dictionary:
 	if custom and custom.get("dspd") != null and custom.get("dsta") != null: sync_apt(h)
 	else: split_surface(h, rng)
 	if not (custom and custom.get("mind") != null) and (h.skills.has("kakari") or h.skills.has("deokure")): pot.mind = HSU.clamp(pot.mind - 14.0, 20.0, 120.0)
+	if not (d.get("skills") is Array): hist_skills2(d, h)
 	return h
 
 # 史実馬の特殊能力を、史実の勝ち鞍（競馬場・時期・格）から見立てる
@@ -316,6 +319,13 @@ static func hist_skills(d: Dictionary, rng: HSRng) -> Array:
 	return sk
 
 # 架空の馬（モブ・生産馬）の素質を、総合の目安 mean から作る
+# あとから足した特性（2026-10-17）。前の見立ての運（hist:名前）の並びを変えないよう、別の運（hist2:名前）を使う
+const MUD_HEAVY := 86.0
+const OUTER_P := 0.06
+static func hist_skills2(d: Dictionary, h: Dictionary) -> void:
+	var rng := HSU.hash_rng("hist2:" + d.name)
+	if float(HSU.or_(h.apt.get("heavy"), 0.0)) >= MUD_HEAVY: h.skills.append("mud") # 道悪○：道悪の適性がとくに高い馬
+	if rng.chance(OUTER_P): h.skills.append("outer") # 外枠○：勝ち鞍からは見えない癖なので、運で少しだけ
 static func make_stats(rng: HSRng, mean: float, sd: float) -> Dictionary:
 	var pot := {}
 	for k in STATS: pot[k] = HSU.clamp(mean + rng.normal(0.0, sd), 20.0, 106.0)

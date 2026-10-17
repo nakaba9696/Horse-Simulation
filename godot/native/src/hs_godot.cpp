@@ -57,7 +57,7 @@ public:
 	Ref<HSNativeTrack> trackObj;
 	~HSNativeSim() { delete sim; }
 
-	static void set_data(const Dictionary &courses, const Dictionary &layouts, const Dictionary &labels) { hs::set_data({ courses, layouts, labels }); }
+	static void set_data(const Dictionary &courses, const Dictionary &layouts, const Dictionary &labels, const Array &uniques) { hs::set_data({ courses, layouts, labels, uniques }); hs::skills_init(); }
 	static Ref<HSNativeSim> create(const Dictionary &race, const Array &runners, const Variant &w_idx, int64_t rng_state, const Dictionary &opts, double era_speed);
 	static Dictionary power(const Dictionary &horse, const Dictionary &race, const Variant &w_idx, const Dictionary &ctx) { return hs::power(horse, race, w_idx, ctx); }
 	static Array skills_of(const Dictionary &h, const Variant &w_idx) { Array a; for (int id : hs::skills_of(h, w_idx)) a.push_back(hs::skill_name(id)); return a; }
@@ -87,7 +87,7 @@ public:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 protected:
 	static void _bind_methods() {
-		ClassDB::bind_static_method("HSNativeSim", D_METHOD("set_data", "courses", "layouts", "labels"), &HSNativeSim::set_data);
+		ClassDB::bind_static_method("HSNativeSim", D_METHOD("set_data", "courses", "layouts", "labels", "uniques"), &HSNativeSim::set_data);
 		ClassDB::bind_static_method("HSNativeSim", D_METHOD("create", "race", "runners", "w_idx", "rng_state", "opts", "era_speed"), &HSNativeSim::create);
 		ClassDB::bind_static_method("HSNativeSim", D_METHOD("power", "horse", "race", "w_idx", "ctx"), &HSNativeSim::power);
 		ClassDB::bind_static_method("HSNativeSim", D_METHOD("skills_of", "h", "w_idx"), &HSNativeSim::skills_of);
@@ -143,7 +143,7 @@ static Array dvec(const std::vector<double> &v) { Array a; for (double x : v) a.
 static const char *RUNNER_KEYS[] = { "r", "h", "i", "A", "vc", "Ds", "kickS", "spurtR", "guts", "mind", "slopeP", "x", "v", "E", "delay", "late", "kakariDay",
 	"acc", "zubu", "spurtCost", "oonige", "nino", "narabu", "sora", "sunaB", "jiyu", "gapAdj", "driftLane", "me", "fired", "boost", "trig", "sk", "passive",
 	"passiveShown", "lane", "laneT", "spurting", "done", "finishT", "t600", "blocked", "blockedOnce", "styleMult", "gap", "jiyuMove", "fight", "duel",
-	"fightPeak", "kakari", "headUp", "ears", "rk", "easyStart", "topAdd", "sunaT" };
+	"fightPeak", "kakari", "headUp", "ears", "rk", "easyStart", "topAdd", "sunaT", "tsuiso", "sotoM", "sabaki" };
 static const int N_RUNNER_KEYS = sizeof(RUNNER_KEYS) / sizeof(RUNNER_KEYS[0]);
 static std::unordered_map<std::string, int> make_index(const char *const *keys, int n) { std::unordered_map<std::string, int> m; for (int i = 0; i < n; i++) m[keys[i]] = i; return m; }
 
@@ -174,6 +174,7 @@ bool HSNativeRunner::_get(const StringName &name, Variant &r) const {
 		case 48: r = s.fightPeak; break; case 49: r = s.kakari; break; case 50: r = s.kakari; break; case 51: r = s.ears; break;
 		case 52: r = s.hasRk ? Variant(s.rk) : Variant(); break;
 		case 53: r = s.easyStart; break; case 54: r = s.topAdd; break; case 55: r = s.sunaT; break;
+		case 56: r = s.tsuiso; break; case 57: r = s.sotoM; break; case 58: r = s.sabaki; break;
 		default: return false;
 	}
 	return true;
@@ -234,7 +235,7 @@ bool HSNativeSim::_get(const StringName &name, Variant &r) const {
 		case 18: { Dictionary d; d["lastLeader"] = runner_obj(s.talk.lastLeader); d["straight"] = s.talk.straight; d["mid"] = s.talk.mid; d["corner"] = s.talk.corner;
 			d["f400"] = s.talk.f400; d["f200"] = s.talk.f200; r = d; } break;
 		case 19: r = trackObj; break; case 20: r = s.me; break; case 21: r = ctlObj; break; case 22: r = s.checkAt; break;
-		case 23: if (s.hasCheck) { Dictionary d; d["t"] = s.checkT; d["at"] = s.checkAt; d["verdict"] = s.checkVerdict; r = d; } else r = Variant(); break;
+		case 23: if (s.hasCheck) { Dictionary d; d["t"] = s.checkT; d["at"] = s.checkAt; d["verdict"] = s.checkVerdict; d["lead"] = s.checkLead; r = d; } else r = Variant(); break;
 		case 24: r = s.skillFx; break; case 25: r = s.top; break;
 		default: return false;
 	}
@@ -259,7 +260,7 @@ Ref<HSNativeSim> HSNativeSim::create(const Dictionary &race, const Array &runner
 	return o;
 }
 
-void hs_cleanup() { hs::track_cache_clear(); hs::skill_ids_clear(); hs::data_clear(); }
+void hs_cleanup() { hs::track_cache_clear(); hs::skills_clear(); hs::skill_ids_clear(); hs::data_clear(); }
 
 void hs_register_classes() {
 	GDREGISTER_CLASS(HSNativeTrack);
