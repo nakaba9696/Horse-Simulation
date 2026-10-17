@@ -152,8 +152,11 @@ static func priority(horse: Dictionary, race: Dictionary, year: float, rng: HSRn
 		if g.get("grade") == "G1": g1 += 1
 	p += g1 * 1e5
 	if not race.get("graded") and race.get("cls"):
-		var diff: int = HSHorse.CLASS_RANK[race.cls] - HSHorse.CLASS_RANK[HSHorse.class_of(horse)]
-		p -= diff * 5e4
+		# JS では表に無い格（新馬戦の newcomer）は undefined で、差が NaN になる（並べ替えでは「同じ」扱い）。同じにする
+		var ra = HSHorse.CLASS_RANK.get(race.cls)
+		var ha = HSHorse.CLASS_RANK.get(HSHorse.class_of(horse))
+		if ra == null or ha == null: p = NAN   # 乱数は JS と同じく下で引く
+		else: p -= (ra - ha) * 5e4
 	p += float(HSU.or_(horse.get("earn"), 0.0))
 	p += rng.next() * 500.0
 	return p
