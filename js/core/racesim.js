@@ -188,7 +188,7 @@
       return {
         r, h, i, A, vc, Ds, kickS, spurtR, guts, mind, slopeP, x: 0, v: 0, E: late ? 1 - S.LATE_E : 1, delay, late, kakariDay: kakari, // kakariDay＝この日は掛かりやすい（レースの初めのくじ）
         acc: K.a0 + K.a1 * kire, zubu: (8 - kire) * K.z + (has('longspurt') ? S.LONGSPURT.z : 0), spurtCost: K.c0 + K.c1 * (kire - 1) + K.cS * (kire - 4.5) * (330 - geo.straight) / 200, // 直線が長いほど切れる馬が、短いほどズブい馬が脚を効率よく使える
-        oonige: has('oonige') && h.style === '逃げ', nino: has('nino'), narabu: has('narabu'), sora: has('sora'), sunaB: has('sunaB') && race.surface === 'ダ', jiyu: has('jiyu'),
+        oonige: has('oonige') && h.style === '逃げ', nino: has('nino'), sora: has('sora'), sunaB: has('sunaB') && race.surface === 'ダ', jiyu: has('jiyu'),
         gapAdj: has('nino') ? -S.NINO.pos : 0, driftLane: 0,
         me: false, fired: {}, boost: null, trig: [], sk: null, passive: [], passiveShown: false,
         lane: (r.num - 1) * 0.5, laneT: 0, spurting: false, done: false, finishT: null, t600: null, blocked: 0, blockedOnce: false,
@@ -393,10 +393,10 @@
 
   // 競り合いの気合（持ち主の指摘 2026-10-16「競り合ったときに根性が高い馬なら上げて欲しい」）。
   // 3〜4コーナーから先（残り 直線＋from m）で、すぐ横（前後 dx m 以内・進路が l0〜l1 離れた隣・速さの差 dv m/s 以内）に馬がいる間、
-  // 根性が g0 より高いほど気合が上がり（根性100で毎秒 up）、低いとひるむ（下がる。下限 low）。並ぶと強い馬は上がり方が narabu 倍。
+  // 根性が g0 より高いほど気合が上がり（根性100で毎秒 up）、低いとひるむ（下がる。下限 low）。
   // 横に馬がいなくなると、毎秒 decay の割合で 0 へ戻る（競り合いが終わってもしばらく残る）。
   // 効き目（気合100のとき）：追い出してから・バテたあとの速さ ×(1+spd)、脚の使い方 ×(1−cost)。気性の掛かり（騎乗の気分）とは別の、良い向きの上がり方
-  S.FIGHT = { from: 300, dx: 2.4, l0: 0.45, l1: 1.8, dv: 0.6, g0: 72, up: 10, low: -40, narabu: 1.3, decay: 0.05, spd: 0.012, cost: 0.12 };
+  S.FIGHT = { from: 300, dx: 2.4, l0: 0.45, l1: 1.8, dv: 0.6, g0: 72, up: 10, low: -40, decay: 0.05, spd: 0.012, cost: 0.12 };
   S.fightStep = function (sim, s, R, prog) {
     const F = S.FIGHT;
     let duel = null;
@@ -409,7 +409,7 @@
     }
     s.duel = duel;
     if (duel) {
-      s.fight = U.clamp(s.fight + (s.guts - F.g0) / (100 - F.g0) * F.up * (s.narabu ? F.narabu : 1) * DT, F.low, 100);
+      s.fight = U.clamp(s.fight + (s.guts - F.g0) / (100 - F.g0) * F.up * DT, F.low, 100);
       if (s.fight > s.fightPeak) s.fightPeak = s.fight;
     } else if (s.fight) s.fight *= 1 - F.decay * DT;
   };
@@ -495,7 +495,6 @@
           // 折り合いを欠くほど（気分が悪いほど）脚を使う
           else if (c.tension > 50 && !s.spurting) costMul *= 1 + (c.tension - 50) / 100 * S.TENSE_COST;
           // 叩き合い：根性の効きは競り合いの気合（S.FIGHT）で。並ぶと強い馬は、並ぶとさらにひと伸び
-          if (s.narabu && R < 250 && (g > 0.3 || s.spurting) && st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5)) { target *= 1.004; S.fire(sim, s, 'narabu'); }
         }
         // 進路を触らずにいると、空いていれば少しずつ内ラチへ寄る（馬はラチ沿いを走りたがる）
         // （持ち主の指摘「十字キーで横移動できない」：前は手を離して3秒で戻り始め、押しても動かないように感じた。いまは何もしないまま S.LANE.drift 秒たってから）
@@ -522,7 +521,6 @@
           // 大逃げは道中で脚を使っているので、終いは粘るだけ
           if (s.oonige) target = s.vc * (1 + s.kickS * S.OONIGE.kick);
           // 叩き合い：根性の効きは競り合いの気合（S.FIGHT）で。並ぶと強い馬は、並ぶとさらにひと伸び
-          if (s.narabu && R < 350 && st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 1.5)) { target *= 1.004; S.fire(sim, s, 'narabu'); }
           // ソラを使う：抜け出すと気を抜く
           if (s.sora && R < 200 && order[0] === s && order[1] && s.x - order[1].x > 2) { target *= 0.985; S.fire(sim, s, 'sora'); }
         } else if (prog < 0.22) {

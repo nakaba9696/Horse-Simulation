@@ -14,7 +14,7 @@
     const o = { show: st.pshow || 'ok', kind: st.pkind || 'all', surf: st.psurf || '' };
     const rows = P.rows(h, o);
     const wIdx = W.wIdx();
-    const head = `<div class="pg-head"><span>距離 <b>${h.distMin}〜${h.distMax}m</b></span><span>芝 ${K.mark(P.fitSurf(h, '芝'))} ダート ${K.mark(P.fitSurf(h, 'ダ'))}</span><span>脚質 <b>${e(h.style)}</b></span>
+    const head = `<div class="pg-head"><span>距離 <b>${h.distMin}〜${h.distMax}m</b></span><span>芝 ${K.mark(P.fitSurf(h, '芝'))} ダート ${K.mark(P.fitSurf(h, 'ダ'))}</span><span>脚質 <b>${e(H.styleText(h))}</b></span>
       ${h.loc === 'stable' ? `<span>調子 ${UI.condMark(h, wIdx)}</span>` : `<span class="muted">${h.loc === 'farm' ? '牧場（2歳の4月から入厩）' : ''}</span>`}
       <span class="next">次走：${nextLabel(h)}</span></div>
       ${h.auto ? `<div class="panel small mt row"><span class="grow">おまかせ中：出るレースは自動で決まる。表から選ぶと、おまかせは切れる。</span><button class="btn sm" data-act="auto" data-id="${h.id}">おまかせを切る</button></div>` : ''}`;

@@ -42,34 +42,37 @@
   H.kireLabel = k => '切れ' + U.clamp(Math.round(k || 4), 1, 8);
   // 特殊能力。bad＝弱み
   H.SKILLS = {
-    big: { label: '大一番', note: 'G1で力を出す' },
-    fresh: { label: '鉄砲駆け', note: '休み明けでも走る' },
+    big: { label: '大舞台', note: 'G1で力を出す' },
+    fresh: { label: '鉄砲駆け', note: '長期休みでも気分が悪くならない（休み明けでも走る）' },
     tataki: { label: '叩き良化', note: '休み明けは割り引き。使われて良くなる' },
-    left: { label: '左回り巧者', note: '左回りのコースで走る' },
-    right: { label: '右回り巧者', note: '右回りのコースで走る' },
-    small: { label: '小回り巧者', note: '直線の短いコースが得意' },
+    left: { label: '左回り○', note: '左回りのコースで走る' },
+    right: { label: '右回り○', note: '右回りのコースで走る' },
+    small: { label: '小回り○', note: '直線の短いコースが得意' },
     long: { label: '直線巧者', note: '長い直線で伸びる' },
     summer: { label: '夏馬', note: '6〜8月に調子を上げる' },
     winter: { label: '冬馬', note: '12〜2月に調子を上げる' },
-    hipace: { label: 'ハイペース巧者', note: '流れが速いほど良い' },
-    slowpace: { label: 'スローペース巧者', note: '上がりの勝負に強い' },
+    hipace: { label: 'ハイペース○', note: '流れが速いほど良い' },
+    slowpace: { label: 'スローペース○', note: '上がりの勝負に強い' },
     oonige: { label: '大逃げ', note: '後ろを大きく離して逃げる' },
     longspurt: { label: 'ロングスパート', note: '早めに動いて長く脚を使う' },
-    narabu: { label: '並ぶと強い', note: '競り合いで抜かせない' },
-    nino: { label: '二の脚', note: 'スタート後の加速が速く、脚を使わずに前の位置を取る' },
-    jiyu: { label: '自由自在', note: '流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい' },
-    inner: { label: '内枠巧者', note: '内の枠で走る' },
-    travel: { label: '遠征巧者', note: '海外の大レースで力を出す' },
-    homebody: { label: '遠征下手', note: '海外では力を出しきれない', bad: true },
+    nino: { label: 'テンが速い', note: 'スタート後の加速が速く、脚を使わずに前の位置を取る' },
+    jiyu: { label: '脚質自在', style: true, note: '脚質の一つとして見せる（特殊能力の並びには出さない）。流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい' },
+    inner: { label: '内枠○', note: '内の枠で走る' },
+    travel: { label: '海外○', note: '海外の大レースで力を出す' },
+    homebody: { label: '海外×', note: '海外では力を出しきれない', bad: true },
     deokure: { label: '出遅れ癖', note: 'ゲートの出が悪い', bad: true },
     kakari: { label: '掛かり癖', note: '折り合いを欠きやすい', bad: true },
-    sora: { label: 'ソラを使う', note: '先頭に立つと気を抜く', bad: true },
+    sora: { label: 'ソラ癖', note: '先頭に立つと気を抜く', bad: true },
     sunaB: { label: '砂かぶり×', note: 'ダートで前の馬の砂をかぶると嫌がり、脚を使う', bad: true },
     leftB: { label: '左回り×', note: '左回りのコースでは力を出しきれない', bad: true },
     rightB: { label: '右回り×', note: '右回りのコースでは力を出しきれない', bad: true },
   };
   H.SKILL_IDS = Object.keys(H.SKILLS);
   H.has = (h, id) => !!(h.skills && h.skills.includes(id));
+  // 脚質の見せ方：脚質自在の馬は「先行・自在」のように出す（持ち主の決定 2026-10-17「脚質自在」「スキル削除」）
+  H.styleText = h => h ? (h.style || '') + (H.has(h, 'jiyu') ? '・自在' : '') : '';
+  // 特殊能力の並びに出すもの（脚質自在は脚質の側で見せる）
+  H.shownSkills = h => (h.skills || []).filter(x => H.SKILLS[x] && !H.SKILLS[x].style);
 
   // 前の版の能力（瞬発力・パワー・賢さ・気性）を今の形に直す。pot・bonus・temper を持つものに使う
   H.fromLegacy = function (h) {
@@ -284,7 +287,7 @@
     if (HS.DATA.isForeign && !HS.DATA.isForeign(d) && cnt(r => r.region === '海外') >= 1) sk.push('travel');
     // 勝ち鞍から見えない癖は、名前ごとに決まった運で少しだけ
     if (sk.length < 2 && rng.chance(0.25)) {
-      const pool = d.style === '逃げ' ? ['nino', 'narabu', 'hipace'] : d.style === '先行' ? ['nino', 'narabu', 'fresh', 'tataki'] : ['longspurt', 'slowpace', 'hipace', 'tataki', 'fresh'];
+      const pool = d.style === '逃げ' ? ['nino', 'hipace'] : d.style === '先行' ? ['nino', 'fresh', 'tataki'] : ['longspurt', 'slowpace', 'hipace', 'tataki', 'fresh'];
       const x = rng.pick(pool); if (!sk.includes(x)) sk.push(x);
     }
     if (rng.chance(0.06)) sk.push(rng.pick(['deokure', 'kakari', 'sora']));

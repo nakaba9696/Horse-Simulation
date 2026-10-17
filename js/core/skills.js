@@ -14,10 +14,10 @@
   // 身につく条件は、史実馬のうち持つ馬が5〜25%（弱みは少なめ）になるように合わせた（tools/skills_bench.js count）
   K.LIST = [
     // 爆発
-    { id: 'saikoubi', at: 'any', label: '最後方一気', group: '爆発', ikki: true, note: '残り500mから、最後方近くでムチを入れると大きく伸びる（直線の長さに関係なく、残りの距離で決まる）', fx: { spd: 0.07, sec: 4, free: true, top: 0.3 },
+    { id: 'saikoubi', at: 'any', label: '豪脚', group: '爆発', ikki: true, note: '残り500mから、最後方近くでムチを入れると大きく伸びる（直線の長さに関係なく、残りの距離で決まる）', fx: { spd: 0.07, sec: 4, free: true, top: 0.3 },
       learn: p => p.style === '追込' && p.kire >= 6,
       when: x => x.R <= 500 && x.R > 100 && x.rank >= x.n - 2 && (x.c ? x.whipping : x.s.spurting) }, // AI は直線の外でも追い出していれば
-    { id: 'chokusen', at: 'st', label: '末脚', group: '爆発', ikki: true, note: '直線で中団より後ろからムチを入れると伸びる', fx: { spd: 0.05, sec: 4, free: true, top: 0.2 },
+    { id: 'chokusen', at: 'st', label: '直線一気', group: '爆発', ikki: true, note: '直線で中団より後ろからムチを入れると伸びる', fx: { spd: 0.05, sec: 4, free: true, top: 0.2 },
       learn: p => SASHI.includes(p.style) && p.kire >= 6,
       when: x => x.inStraight && x.R > 100 && x.rank > x.n / 2 && x.whipping },
     { id: 'oosoto', at: 'st', label: '大外一気', group: '爆発', ikki: true, note: '直線で外に持ち出してムチを入れると伸びる', fx: { spd: 0.045, sec: 4, free: true, top: 0.2 },
@@ -40,17 +40,17 @@
     { id: 'hanno', at: 'st', label: '抜群の反応', group: '速さ', note: '直線までムチを使わず、直線に入ってすぐムチを入れると一気に伸びる', fx: { spd: 0.045, sec: 3, free: true },
       learn: p => p.kire >= 7 || (p.kire >= 6 && p.mind >= 82),
       when: x => x.inStraight && x.straight - x.R < 100 && x.whipping && !x.sk.whipBefore },
-    { id: 'startdash', at: 'start', label: '好発', group: '速さ', note: 'うまく出ると、すっと前へ行く', fx: { spd: 0.06, sec: 3, pos: 2, free: true },
+    { id: 'startdash', at: 'start', label: 'ロケットスタート', group: '速さ', note: 'うまく出ると、すっと前へ行く', fx: { spd: 0.06, sec: 3, pos: 2, free: true },
       learn: p => p.mind >= 82 && (p.style === '逃げ' || p.style === '先行'),
       when: x => x.t - x.s.delay < 0.6 && x.s.delay < 0.25 && !x.s.late },
-    { id: 'nebari', at: 'st', label: '粘り込み', group: '速さ', note: '残り600mで先頭にいた馬が、残り300mからつかまりかけると、もうひと踏ん張り', fx: { spd: 0.05, sec: 3.5, free: true },
+    { id: 'nebari', at: 'st', label: '二の脚', group: '速さ', note: '残り600mで先頭にいた馬が、残り300mからつかまりかけると、もうひと踏ん張り', fx: { spd: 0.05, sec: 3.5, free: true },
       learn: p => (p.style === '逃げ' || p.style === '先行') && p.sta >= 85,
       when: x => x.R <= 300 && x.sk.led600 && x.rank <= 3 && x.leader.x - x.s.x < LEN },
     // 気性
     { id: 'tanki', at: 'mid', label: '単騎逃げ', group: '気性', note: '後ろを2馬身以上離して逃げると、気分よく走る', fx: { E: 0.06 },
       learn: p => p.style === '逃げ' && p.mind >= 65,
       when: x => !x.inStraight && x.sk.soloFor >= 10 },
-    { id: 'yonkaku', at: 'st', label: '4角先頭', group: '気性', note: '先頭で直線に入ると、脚が戻る', fx: { E: 0.05 },
+    { id: 'yonkaku', at: 'st', label: '四角先頭', group: '気性', note: '先頭で直線に入ると、脚が戻る', fx: { E: 0.05 },
       learn: p => (p.style === '先行' || p.style === '差し') && p.spd >= 86 && p.kire <= 4,
       when: x => x.inStraight && x.straight - x.R < 30 && x.rank === 1 },
     { id: 'oriai', at: 'mid', label: '折り合い上手', group: '気性', note: '中間点まで一度も掛からなければ、脚が残る', fx: { E: 0.02 },
@@ -60,7 +60,7 @@
     { id: 'nimai', at: 'st', label: '差し返し', group: '根性', note: '先頭でゴール前、2番手に詰め寄られると、もう一度伸びる', fx: { E: 0.05, spd: 0.025, sec: 2, free: true },
       learn: p => p.style === '逃げ' && p.guts >= 82,
       when: x => x.R < 300 && x.rank === 1 && x.second && x.s.x - x.second.x < LEN },
-    { id: 'demuchi', at: 'start', label: '出ムチ', group: '根性', note: 'スタート直後にムチを入れると、前へ行ける', fx: { spd: 0.05, sec: 2.5, pos: 1.5, free: true },
+    { id: 'demuchi', at: 'start', label: '出ムチ○', group: '根性', note: 'スタート直後にムチを入れると、前へ行ける', fx: { spd: 0.05, sec: 2.5, pos: 1.5, free: true },
       learn: p => (p.style === '逃げ' || p.style === '先行') && p.guts >= 86,
       when: x => x.t - x.s.delay < 3 && (x.c ? x.c.whips > 0 : true) },
     { id: 'makuri', at: 'st', label: '大まくり', group: '根性', note: '中間点で後ろ半分にいた馬が、6頭以上抜いて先頭から1馬身以内で直線に入ると、脚が戻ってひと伸び', fx: { E: 0.1, spd: 0.04, sec: 4, free: true },
