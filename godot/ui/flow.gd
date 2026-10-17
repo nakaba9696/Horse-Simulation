@@ -14,6 +14,11 @@ const SCENES := {
 	"card": "res://scenes/race_card.tscn",
 	"race": "res://scenes/race.tscn",
 	"result": "res://scenes/week_result.tscn",
+	"stable": "res://scenes/stable.tscn",
+	"breed": "res://scenes/breed.tscn",
+	"data": "res://scenes/data.tscn",
+	"owners": "res://scenes/owners.tscn",
+	"gf": "res://scenes/gf.tscn",
 }
 
 static var rides: Array = []        # 今週自分が乗るレース [{card, runner}]
@@ -195,9 +200,27 @@ static func ride_done(res) -> String:
 		ride_i += 1
 	return "card" if current() != null else close_week()
 
+static var trophies0: Array = []     # 週の初めに手にしていたトロフィー（週の結果の見せ場で、増えた分を出す）
+static var unlocked0: Array = []     # 週の初めに破っていたスペシャルホース
+
 static func mark_news() -> void:
-	var n: Array = HSWorld.G.news
+	var G = HSWorld.G
+	var n: Array = G.news
 	news_head = n[0] if n.size() else null
+	trophies0 = HSU.or_(G.get("trophies"), {}).keys()
+	unlocked0 = HSU.or_(G.get("unlocked"), []).duplicate()
+
+# この週に手にしたトロフィー（[{id, label, horse, bonus}]）と、破ったスペシャルホースの名前
+static func week_trophies() -> Array:
+	var out: Array = []
+	var tr: Dictionary = HSU.or_(HSWorld.G.get("trophies"), {})
+	for id in tr:
+		if not trophies0.has(id):
+			out.append({"id": id, "label": HSTrophy.BY[id].label if HSTrophy.BY.has(id) else id, "horse": tr[id].horse, "bonus": float(HSU.or_(tr[id].get("bonus"), 0.0))})
+	return out
+
+static func week_beaten() -> Array:
+	return HSU.or_(HSWorld.G.get("unlocked"), []).filter(func(n): return not unlocked0.has(n))
 
 # 週の初めからあとに増えたニュース（新しい順）
 static func week_news() -> Array:
