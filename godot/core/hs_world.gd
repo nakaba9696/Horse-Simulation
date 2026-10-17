@@ -21,6 +21,7 @@ static var mareByName := {}
 static var histFoalsOfDam := {}
 static var stallionByName := {}
 static var foreignTrained := {}
+static var jockeysByName := {}   # 騎手の名前 → データの騎手（同じ名前が年代で分かれていれば、データの順に）
 static func index() -> void:
 	var D := HSData.d()
 	histByName = {}; histByBorn = {}; histWinner = {}; mareByName = {}; histFoalsOfDam = {}; stallionByName = {}; foreignTrained = {}
@@ -42,6 +43,10 @@ static func index() -> void:
 			var arr: Array = histFoalsOfDam[m.name]
 			if not arr.any(func(x): return x.name == name): arr.append(histByName.get(name, { name = name, born = y, sire = sire, dam = m.name, rating = 88.0, missing = true }))
 	for s in D.get("stallions", []): stallionByName[s.name] = s
+	jockeysByName = {}
+	for j in D.get("jockeys", []):
+		if not jockeysByName.has(j.name): jockeysByName[j.name] = []
+		jockeysByName[j.name].append(j)
 	var FOREIGN_EXTRA := ["ファルブラヴ", "サイレントウィットネス", "テイクオーバーターゲット"]
 	var re_a := RegEx.create_from_string("調教馬|外国馬"); var re_b := RegEx.create_from_string("日本調教馬")
 	for h in D.get("historic", []):
@@ -301,12 +306,18 @@ static func entry_of(horseId: String) -> Variant:
 	return null
 
 # ---------- 騎手（年代ごと） ----------
+static var _skillPts := {} # 騎手（データの辞書） → 年の順に並べた [年, 腕前]（データは変わらないので一度だけ並べる）
 static func skill_at(j: Dictionary, year: float) -> float:
 	if typeof(j.get("skill")) in [TYPE_FLOAT, TYPE_INT]: return j.skill
-	var pts: Array = []
-	var sk = HSU.or_(j.get("skill"), {})
-	for y in sk: pts.append([float(y), sk[y]])
-	pts = HSU.sort_by(pts, func(p): return p[0])
+	var key := "%s|%s|%s" % [j.get("name"), j.get("from"), j.get("region")]
+	var pts: Array
+	if _skillPts.has(key) and is_same(_skillPts[key][0], j): pts = _skillPts[key][1]
+	else:
+		pts = []
+		var sk = HSU.or_(j.get("skill"), {})
+		for y in sk: pts.append([float(y), sk[y]])
+		pts = HSU.sort_by(pts, func(p): return p[0])
+		_skillPts[key] = [j, pts]
 	if not pts.size(): return 70.0
 	if year <= pts[0][0]: return pts[0][1]
 	if year >= pts[pts.size() - 1][0]: return pts[pts.size() - 1][1]
@@ -320,7 +331,7 @@ static func jockeys_of(year: float, regions: Variant = null) -> Array:
 	if not c.has("jk"): c.jk = {}
 	var key: String = HSU.num(year) + ":" + (",".join(regions) if regions else "*")
 	if not c.jk.has(key): c.jk[key] = _jockeys_of0(year, regions)
-	return c.jk[key].map(func(j): return j.duplicate())
+	return c.jk[key].duplicate() # JS は1人ずつ写すが、騎手の辞書を書き換える所は無いので、並びだけ写す
 static func _jockeys_of0(year: float, regions: Variant) -> Array:
 	var out: Array = []
 	for j in HSData.d().get("jockeys", []):
@@ -352,7 +363,7 @@ static func best_free_jockey(raceKey: String, horseId: Variant) -> String:
 	return list[0].name
 static func jockey(name: Variant) -> Dictionary:
 	var yr: float = G.year if G else 2000.0
-	var all_j: Array = HSData.d().get("jockeys", []).filter(func(j): return j.name == name)
+	var all_j: Array = jockeysByName.get(name, [])
 	var j = null
 	for x in all_j:
 		if x.from <= yr and yr <= float(HSU.or_(x.get("to"), 9999.0)): j = x; break
@@ -524,14 +535,13 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 	var taken := {}
 	for x in runners:
 		if x.jockey: taken[x.jockey.name] = true
-	var js: Array = HSData.d().get("jockeys", [])
 	for x in runners:
 		if x.jockey or not x.horse.get("hist"): continue
 		var nm = hist_jockey(x.horse, year)
 		if not nm or taken.has(nm): continue
 		var ok := false
-		for j in js:
-			if j.name == nm and (x.horse.get("legend") or ((float(HSU.or_(j.get("to"), 9999.0)) >= 1990 and j.from <= 2026) if HSU.ERA else (j.from <= year and year <= float(HSU.or_(j.get("to"), 9999.0))))):
+		for j in jockeysByName.get(nm, []):
+			if (x.horse.get("legend") or ((float(HSU.or_(j.get("to"), 9999.0)) >= 1990 and j.from <= 2026) if HSU.ERA else (j.from <= year and year <= float(HSU.or_(j.get("to"), 9999.0))))):
 				ok = true; break
 		if not ok: continue
 		x.jockey = jockey(nm); taken[nm] = true
