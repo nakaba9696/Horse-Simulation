@@ -61,7 +61,7 @@
     const ps = sires.find(h => h.id === st.osire), pd = dams.find(h => h.id === st.odam);
     const card = (h, role, on) => `<div class="card ${on ? 'sel' : ''}" data-act="orig-pick" data-role="${role}" data-id="${h.id}">${UI.thumb(h)}<div class="grow">
         <div class="row"><span class="nm">${e(h.name)}</span>${h.hist ? UI.histMark(h) : ''}${h.parentBonus ? `<span class="chip crown">ボーナス +${h.parentBonus}</span>` : ''}${role === 'dam' && h.foalY === G.year ? '<span class="chip">今年は産んだ</span>' : ''}<button class="btn sm right" data-act="orig-release" data-id="${h.id}">放す</button></div>
-        <div class="sub">${h.starts || 0}戦${h.wins || 0}勝・${e(h.style)}・${H.distLabel(h.distMin, h.distMax)}</div>${potStats(h)}
+        <div class="sub">${h.starts || 0}戦${h.wins || 0}勝・${e(H.styleText(h))}・${H.distLabel(h.distMin, h.distMax)}</div>${potStats(h)}
         <div class="skills">${O.skillsOf(h).map(skillChip).join('')}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}</div></div>`;
     const cand = ps && pd ? O.candidates(ps, pd) : [];
     const bonus = ps && pd ? Math.min(O.BONUS_MAX, (ps.parentBonus || 0) + (pd.parentBonus || 0)) : 0;
@@ -195,7 +195,7 @@
       <canvas class="thumb" width="168" height="112" data-art="thumbdata" data-coat="${e(h.coat || '鹿毛')}" data-key="${e(h.name)}"></canvas>
       <div class="grow">
         <div class="small">${UI.gradeTag(race)} <b>${e(R.label(race))}</b>　${race.course} ${UI.surf(race.surface)} ${race.dist}m</div>
-        <div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${(J.me().mounts || {})[h.name] && !h.filler ? `<span class="chip mine">お手馬</span>` : ''}<span class="small muted">${h.gelding ? 'セ' : h.sex}${W.get().year - h.born}・${e(h.style)}・切れ${h.kire || 4}</span></div>
+        <div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${(J.me().mounts || {})[h.name] && !h.filler ? `<span class="chip mine">お手馬</span>` : ''}<span class="small muted">${h.gelding ? 'セ' : h.sex}${W.get().year - h.born}・${e(H.styleText(h))}・切れ${h.kire || 4}</span></div>
         <div class="small muted">${e(trainer)}厩舎・${x.pop ? `${x.pop}番人気（${x.odds}倍）` : ''}・斤量 ${(() => { const al = x.allowance || (accepted ? 0 : J.allowance(race)); const w = x.allowance ? x.weight : x.weight - al; return al ? `${w}kg（${J.allowanceMark(al)}${al}kg減）` : `${w}kg`; })()}</div>
         ${UI.numStats(h, wIdx, { surface: race.surface })}
         ${UI.hasSkills(h) ? `<div class="skills">${UI.skillChips(h)}</div>` : ''}
@@ -242,7 +242,7 @@
         <td class="mk">${shopMark(it)}</td><td><div class="nm">${e(h.name)}</div><div class="sub">${e(h.coat || '')}${h.sire && h.sire !== '?' ? `・父 ${e(h.sire)}` : ''}</div></td>
         <td class="c w">${h.sex === '牝' ? '牝' : h.sex === 'セ' ? 'セ' : '牡'}${G.year - h.born}</td>
         <td class="c">${K.num(fh.turf, '総合力（芝）', false, 40, 85)}</td><td class="c">${K.num(fh.dirt, '総合力（ダート）', false, 40, 85)}</td>
-        <td class="c w small">${h.distMin}〜${h.distMax}</td><td class="c">${UI.kyakuArrows(h.style, h)}<div class="sub">${e(h.style)}</div></td>
+        <td class="c w small">${h.distMin}〜${h.distMax}</td><td class="c">${UI.kyakuArrows(h.style, h)}<div class="sub">${e(H.styleText(h))}</div></td>
         <td class="r">${K.price(it.price, money)}</td></tr>`;
     }).join('');
     const E = HS.Eraless;
@@ -266,7 +266,7 @@
       <div class="pv-row"><span>${T.FH_NAME}（完成）</span>${K.fh(x.fh.turf, x.fh.dirt)}</div>
       <div class="pv-grid">${['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'].map(k => `<div>${K.num(h.pot[k], H.STAT_LABEL[k])}${H.STAT_SHORT[k]}</div>`).join('')}<div>${K.num((h.kire || 4) * 12.5, '脚の切れ')}<span>切れ ${h.kire || 4}</span></div></div>
       <div class="pv-row"><span>距離</span><b>${h.distMin}〜${h.distMax}m</b></div>
-      <div class="pv-row"><span>脚質・成長</span><b>${e(h.style)}・${e(h.growth || '')}</b></div>
+      <div class="pv-row"><span>脚質・成長</span><b>${e(H.styleText(h))}・${e(h.growth || '')}</b></div>
       ${UI.hasSkills(h) ? `<div class="skills">${UI.skillChips(h)}</div>` : ''}
       <div class="pv-price">${K.price(x.it.price, money)}<span class="btns"><button class="btn sm" data-act="horse" data-id="${e(h.id)}">詳しく</button><button class="btn sm gold" data-act="buy" data-kind="${x.kind}" data-i="${x.i}" ${over || full ? 'disabled' : ''}>買う</button></span></div>
       ${over ? '<div class="small" style="color:var(--bad)">資金が足りない</div>' : full ? '<div class="small" style="color:var(--warn)">お手馬がいっぱい</div>' : ''}`;
@@ -577,7 +577,7 @@
       <text x="6" y="12" fill="#c8d3e2" font-size="9">${course.dir}回り${geo.loop && !tr.line ? `（${geo.loop}回り）` : ''}・直線 ${geo.straight}m・${prof ? `高低差 ${hd}m` : `坂 ${geo.slope}`}</text>${profSvg}</svg>`;
   };
   // 脚質の矢印（左から追込・差し・先行・逃げ。右が前。持ち主の指摘 2026-10-16）。光っているのがこの馬の脚質で、自由自在の馬は全部が光る
-  UI.kyakuArrows = (st, h) => { const all = h && H.has(h, 'jiyu'); return `<span class="ka" title="${e(st)}${all ? '・自由自在' : ''}">${['追込', '差し', '先行', '逃げ'].map(k => `<i class="${all || k === st ? 'on' : ''}"></i>`).join('')}</span>`; };
+  UI.kyakuArrows = (st, h) => { const all = h && H.has(h, 'jiyu'); return `<span class="ka" title="${e(st)}${all ? '・自在' : ''}">${['追込', '差し', '先行', '逃げ'].map(k => `<i class="${all || k === st ? 'on' : ''}"></i>`).join('')}</span>`; };
   UI.entryTable = function (card) {
     const { race, runners } = card;
     const G = race.free || !W.get() ? { year: race.year, month: race.month, week: race.week, seed: 0 } : W.get(); // フリーレースはセーブの年でなく、そのレースの年で
@@ -590,7 +590,7 @@
       <div class="tblwrap mt"><table class="t entry-t"><tr><th>枠</th><th>馬名</th><th>脚質</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th>騎手</th><th>人気</th><th>近走</th></tr>
       ${rows.map(x => { const me = x.rider === 'P' || x.mine; return `<tr class="${me ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td>
         <td class="nm">${e(x.horse.name)}${x.horse.legend ? ' <span class="chip legend">スペシャル</span>' : x.horse.hist ? ' <span class="chip hist">史</span>' : ''}</td>
-        <td>${UI.kyakuArrows(x.horse.style, x.horse)}<div class="small muted">${e(x.horse.style)}${H.has(x.horse, 'jiyu') ? '・自在' : ''}</div></td>
+        <td>${UI.kyakuArrows(x.horse.style, x.horse)}<div class="small muted">${e(H.styleText(x.horse))}</div></td>
         <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td>
         <td class="small">${x.allowance ? J.allowanceMark(x.allowance) : ''}${e(x.jockey ? x.jockey.name : '')}</td>
         <td class="num">${x.pop}<div class="small muted">${x.odds}</div></td><td class="recent">${recent(x.horse)}</td></tr>`; }).join('')}

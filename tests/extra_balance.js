@@ -27,7 +27,7 @@ module.exports = function (check, assert, HS) {
 
   check('balance: 競り合うと根性の高い馬は気合が上がり、低い馬はひるむ。気合は直線の伸びに効く', () => {
     // すぐ横に並んだ2頭（直線）で、気合の動きを見る
-    const mk = (guts, lane) => ({ guts, lane, x: 1700, v: 17, done: false, spurting: true, narabu: false, fight: 0, duel: null, fightPeak: 0 });
+    const mk = (guts, lane) => ({ guts, lane, x: 1700, v: 17, done: false, spurting: true, fight: 0, duel: null, fightPeak: 0 });
     const a = mk(95, 1), b = mk(55, 2), far = mk(80, 5);
     const sim = { st: [a, b, far], straight: 400, D: 2000 };
     far.x = 1650;

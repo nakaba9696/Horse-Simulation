@@ -27,7 +27,7 @@
   // 記録を振り返る小窓
   UI.hallModal = function (id) {
     const x = HS.Hall.byId(id); if (!x) return '';
-    const sk = (x.skills || []).map(s => { const k = H.SKILLS[s] || (HS.Skills && HS.Skills.BY && HS.Skills.BY[s]); return k ? `<span class="chip skill">${e(k.label)}</span>` : ''; }).join('');
+    const sk = (x.skills || []).filter(s => !(H.SKILLS[s] && H.SKILLS[s].style)).map(s => { const k = H.SKILLS[s] || (HS.Skills && HS.Skills.BY && HS.Skills.BY[s]); return k ? `<span class="chip skill">${e(k.label)}</span>` : ''; }).join('');
     const gw = (x.gradedWins || []).map(g => `<div>${e(W.yLabel(g.y))} ${UI.gradeTag ? UI.gradeTag({ grade: g.grade, region: g.region, year: g.y }) : e(g.grade)} ${e(g.race)}</div>`).join('');
     const rows = (x.results || []).map(r => `<tr class="${r.pos === 1 ? 'win' : ''}"><td>${e(W.yLabel(r.y))}${r.m}月</td><td>${e(r.race)}</td><td>${e(r.course || '')}${r.surface === 'ダ' ? 'ダ' : '芝'}${r.dist || ''}</td><td class="num"><b>${r.pos}</b>/${r.n || ''}</td><td class="num">${r.time ? U.time(r.time) : ''}</td><td>${e(r.jockey || '')}</td></tr>`).join('');
     return `<div class="hall-modal">

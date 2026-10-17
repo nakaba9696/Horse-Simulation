@@ -61,7 +61,7 @@ function trigTable() {
 // 持っている特性：効く場面で比べる
 const PASSIVE = {
   big: { grade: 'G1' }, fresh: { gap: 12 }, tataki: { gap: 4 }, left: {}, right: { course: '中山' }, small: { course: '中山' }, long: {},
-  summer: { month: 7 }, winter: { month: 12 }, hipace: {}, slowpace: {}, oonige: { style: '逃げ' }, longspurt: {}, narabu: {}, nino: { style: '逃げ' },
+  summer: { month: 7 }, winter: { month: 12 }, hipace: {}, slowpace: {}, oonige: { style: '逃げ' }, longspurt: {}, nino: { style: '逃げ' },
   inner: {}, travel: { region: '海外' }, homebody: { region: '海外' }, deokure: {}, kakari: {}, sora: {},
   jiyu: {}, sunaB: { surface: 'ダ', dist: 1800 }, leftB: {}, rightB: { course: '中山' },
 };

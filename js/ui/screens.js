@@ -203,7 +203,7 @@
         <div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div>
         <div>馬場<b>芝 ${UI.aptMark(h.apt.turf)}　ダート ${UI.aptMark(h.apt.dirt)}</b></div>
         <div>道悪<b>${h.apt.heavy >= 75 ? '得意' : h.apt.heavy >= 45 ? 'ふつう' : '苦手'}</b></div>
-        <div>脚質<b>${h.style}${known ? '・' + H.kireLabel(h.kire) : ''}</b></div>
+        <div>脚質<b>${H.styleText(h)}${known ? '・' + H.kireLabel(h.kire) : ''}</b></div>
         <div>成長型<b>${growthWord}（${peakNote}）</b></div>
         <div>健康<b>${(h.health ?? 70) >= 85 ? '丈夫' : (h.health ?? 70) >= 65 ? 'ふつう' : '弱い'}</b></div>
         ${h.loc === 'stable' ? `<div>状態<b>${h.injury ? '故障中' : UI.condTag(h)}</b></div>` : ''}
@@ -218,14 +218,14 @@
     const h = H.fromHistoric(d, 'x');
     return `<h3>${e(d.name)}</h3><div class="small muted">${d.born}年生 ${d.sex}・${e(d.coat || '')}${d.country && d.country !== '日' ? '・' + e(d.country) : ''}　父 ${e(d.sire || '?')}　母 ${e(d.dam || '?')}</div>
       <div class="mt">${UI.histInfo(d)}</div>
-      <div class="apt mt"><div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div><div>脚質<b>${h.style}・${H.kireLabel(h.kire)}</b></div><div>成長型<b>${h.growth}</b></div></div>
+      <div class="apt mt"><div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div><div>脚質<b>${H.styleText(h)}・${H.kireLabel(h.kire)}</b></div><div>成長型<b>${h.growth}</b></div></div>
       ${UI.hasSkills(h) ? `<div class="skills mt">${UI.skillChips(h)}</div>` : ''}
       <div class="btns mt"><button class="btn" data-act="close">閉じる</button></div>`;
   };
   // 特殊能力の札。手書きのもの（出るだけで効く）と、能力値から決まる発動型（⚡。得は水色・損は赤茶）
   UI.trigSkills = h => HS.Skills && !h.filler ? HS.Skills.of(h, W.wIdx ? W.wIdx() : null) : [];
-  UI.hasSkills = h => (h.skills || []).length > 0 || UI.trigSkills(h).length > 0;
-  UI.skillChips = h => (h.skills || []).filter(x => H.SKILLS[x]).map(x => `<span class="chip skill ${H.SKILLS[x].bad ? 'bad' : ''}" title="${e(H.SKILLS[x].note)}">${e(H.SKILLS[x].label)}</span>`).join('')
+  UI.hasSkills = h => H.shownSkills(h).length > 0 || UI.trigSkills(h).length > 0;
+  UI.skillChips = h => H.shownSkills(h).map(x => `<span class="chip skill ${H.SKILLS[x].bad ? 'bad' : ''}" title="${e(H.SKILLS[x].note)}">${e(H.SKILLS[x].label)}</span>`).join('')
     + UI.trigSkills(h).map(id => { const k = HS.Skills.BY[id]; return `<span class="chip skill trig ${k.bad ? 'bad' : ''}" title="${e(k.note)}">⚡${e(k.label)}</span>`; }).join('');
   // 史実の名馬の名鑑：年代・戦績・主な勝鞍・解説（data/profiles.js があればそちら。無ければ勝ち鞍から）
   UI.histData = name => W.histByName.get(name) || (HS.Special ? HS.Special.data(name) : null);
@@ -242,7 +242,7 @@
       ${d.text ? `<div class="panel mt horse-text">${e(d.text)}</div>` : ''}`;
   };
   // 特殊能力の一覧（札と、どんなときに効くか）。パドックで自分の馬に
-  UI.skillList = h => (h.skills || []).filter(x => H.SKILLS[x]).map(x => [H.SKILLS[x].label, H.SKILLS[x].note, H.SKILLS[x].bad, false])
+  UI.skillList = h => H.shownSkills(h).map(x => [H.SKILLS[x].label, H.SKILLS[x].note, H.SKILLS[x].bad, false])
     .concat(UI.trigSkills(h).map(id => { const k = HS.Skills.BY[id]; return [k.label, k.note, k.bad, true]; }))
     .map(([l, n, bad, trig]) => `<div class="sk-row"><span class="chip skill ${trig ? 'trig' : ''} ${bad ? 'bad' : ''}">${trig ? '⚡' : ''}${e(l)}</span><span class="small">${e(n || '')}</span></div>`).join('');
   function histNote(h) {
