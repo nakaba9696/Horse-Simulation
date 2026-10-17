@@ -103,7 +103,7 @@
   K.BY = {}; K.LIST.forEach(k => { K.BY[k.id] = k; });
   K.ORDER = ['爆発', '損', '速さ', '気性', '根性'];
 
-  // 名馬の固有の能力（data/uniques.js。伝説級の名馬に1頭1つ）。場面の型（when の名前 → 条件）。持てる数（K.cap）には数えない
+  // 名馬の固有の能力（data/uniques.js。持ち主が選んだ名馬に1頭1つ。持つかどうかは data/uniques.js に名前があるかで決まる）。場面の型（when の名前 → 条件）。持てる数（K.cap）には数えない
   K.UWHEN = {
     leadStraight: x => x.inStraight && x.straight - x.R < 30 && x.rank === 1,
     leadMid: x => !x.inStraight && x.s.x >= x.D / 2 && x.rank === 1,
@@ -118,12 +118,24 @@
     nearLead: x => x.R <= 400 && x.rank >= 2 && x.leader.x - x.s.x < LEN,
     start: x => x.t - x.s.delay < 0.6 && !x.s.late,
     sprint: x => x.D <= 1400 && x.inStraight && x.straight - x.R < 30 && x.rank <= 3,
+    // 2026-10-17 に足した型（持ち主が選んだ名馬の分。差し・追込の名馬と、マイル・逃げ切り・叩き合いの勝ち方）
+    mile: x => x.D >= 1400 && x.D <= 2000 && x.inStraight && x.R <= 400 && x.R > 100 && x.rank >= 2 && x.rank <= 6,
+    ledAll: x => x.R <= 400 && x.rank === 1 && x.sk.led600,
+    wideKick: x => x.inStraight && x.R > 100 && x.rank > x.n / 2 && x.s.lane >= 3,
+    chase: x => x.inStraight && x.R <= 400 && x.R > 100 && x.rank >= 2 && x.leader.x - x.s.x < 3 * LEN,
+    lateKick: x => x.inStraight && x.R <= 400 && x.R > 100 && x.rank > x.n / 2,
+    fromLast: x => x.inStraight && x.R > 100 && x.rank >= x.n - 2,
+    boxed: x => x.inStraight && x.R > 100 && x.sk.wallFor >= 0.6 && !x.wall,
+    top2: x => x.R <= 200 && x.rank >= 2 && x.rank <= 3,
+    breakAway: x => x.inStraight && x.R > 100 && x.R < 400 && x.close,
+    backRecover: x => !x.inStraight && x.R <= x.straight + 400 && x.rank > x.n / 2,
   };
   K.UNIQUES = (HS.DATA && HS.DATA.uniques || []).filter(u => K.UWHEN[u.when]).map(u => Object.assign({}, u, { unique: true, group: '固有', when: K.UWHEN[u.when], whenId: u.when }));
   K.UNIQUE_OF = {}; // 馬名 → 固有の能力
   K.UNIQUES.forEach(u => { K.BY[u.id] = u; K.UNIQUE_OF[u.horse] = u; });
   K.isUnique = id => !!(K.BY[id] && K.BY[id].unique);
-  K.uniqueOf = h => h && !h.original && K.UNIQUE_OF[h.name] ? K.UNIQUE_OF[h.name].id : null;
+  K.hasUnique = name => !!K.UNIQUE_OF[name]; // 固有の能力を持つ名馬か（data/uniques.js に名前があるか）
+  K.uniqueOf = h => h && !h.original && K.hasUnique(h.name) ? K.UNIQUE_OF[h.name].id : null;
 
   // 習得の材料（能力値）。芝・ダートは高いほう
   K.stats = function (h, wIdx) {
@@ -138,7 +150,7 @@
     if (!h) return [];
     if (h.trigFixed) return h.trigFixed.filter(id => K.BY[id]); // オリジナルホースは親から受け継いだもの（無くした特殊能力は外す）
     const p = K.stats(h, wIdx);
-    const u = K.uniqueOf(h); // 伝説級の名馬は、固有の能力を先頭に（持てる数とは別）
+    const u = K.uniqueOf(h); // data/uniques.js にある名馬は、固有の能力を先頭に（持てる数とは別）
     // 系統を1つずつ回して取る（爆発 → 損 → 速さ → 気性 → 根性 → 爆発…）。系統の中は表の順
     const ok = K.ORDER.map(g => K.LIST.filter(k => k.group === g && k.learn(p)));
     const cap = K.cap(p), out = [];

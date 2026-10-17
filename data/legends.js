@@ -222,5 +222,11 @@ HS.DATA.legendsExtra = [
  // uncertain：シドニーカップは data/races_world.js に無いので ja.wikipedia の記事名。母父 Knowsley のカナは推定。距離の幅（5ハロン〜AJCプレート18ハロン）と脚質は推定。
  // 出典：https://ja.wikipedia.org/wiki/カーバイン ・ https://en.wikipedia.org/wiki/Carbine_(horse)
  { name:'カーバイン', nameEn:'Carbine', country:'豪', born:1885, sex:'牡', coat:'鹿毛', sire:'マスケット', dam:'マーシー', damsire:'ノウズリー', rating:88, surface:'芝', distMin:1000, distMax:3600, style:'先行', growth:'普通', retire:1891, wins:['1889シドニーカップ','1890シドニーカップ','1890メルボルンカップ'], note:'43戦33勝。ニュージーランド生まれ。1887〜1888年はニュージーランド、その後は豪州で走った。1890年のメルボルンカップは65.8kgで勝つ', uncertain:true },
+ // 毛色は en.wikipedia の dark grey（年とともに白くなった）。ja.wikipedia は芦毛。母・母父のカナは data/stallions_old.js（ルストムマハル・ルストムパシャ）に合わせた。
+ // 1949〜1950年のキングズスタンドステークス・キングジョージステークス・2歳時のミドルパークステークスなどは data/races_world.js に無い（勝ちの数え方は note に書いた）。
+ // distMin は5ハロン（ナンソープステークス・キングジョージステークス）、distMax は2着の英2000ギニー（1マイル）から。style は推定（en.wikipedia の「先頭から」の記録と、ja.wikipedia の「前から進める競馬に専念した」から逃げ）
+ // 出典：https://ja.wikipedia.org/wiki/アバーナント
+ // 出典：https://en.wikipedia.org/wiki/Abernant_(horse)
+ { name:'アバーナント', nameEn:'Abernant', country:'英', born:1946, sex:'牡', coat:'芦毛', sire:'オーエンテューダー', dam:'ルストムマハル', damsire:'ルストムパシャ', rating:88, surface:'芝', distMin:1000, distMax:1600, style:'逃げ', growth:'早め', retire:1950, wins:['1949ジュライカップ','1949ナンソープステークス','1950ジュライカップ','1950ナンソープステークス'], note:'17戦14勝。2歳はミドルパークステークスなど5連勝、3歳の英2000ギニーはハナ差の2着。キングズスタンドステークス・キングジョージステークスも勝った短距離の名馬', uncertain:true },
 ];
 })();
