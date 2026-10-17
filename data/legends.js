@@ -228,5 +228,10 @@ HS.DATA.legendsExtra = [
  // 出典：https://ja.wikipedia.org/wiki/アバーナント
  // 出典：https://en.wikipedia.org/wiki/Abernant_(horse)
  { name:'アバーナント', nameEn:'Abernant', country:'英', born:1946, sex:'牡', coat:'芦毛', sire:'オーエンテューダー', dam:'ルストムマハル', damsire:'ルストムパシャ', rating:88, surface:'芝', distMin:1000, distMax:1600, style:'逃げ', growth:'早め', retire:1950, wins:['1949ジュライカップ','1949ナンソープステークス','1950ジュライカップ','1950ナンソープステークス'], note:'17戦14勝。2歳はミドルパークステークスなど5連勝、3歳の英2000ギニーはハナ差の2着。キングズスタンドステークス・キングジョージステークスも勝った短距離の名馬', uncertain:true },
+ // style は推定（英2000ギニーとニューマーケットSは中間で先頭、ランカシャープレートは逃げ、英ダービーは出遅れて後方から）。distMin はニューステークス（5ハロン）、distMax はアスコットゴールドカップ（2.5マイル）
+ // 母はデッドロック（en.wikipedia は Deadlock、表の中は Dead Lock）。相手の馬名のカナ（レイヴンズベリー・レイバーン・ラダス）は推定。獲得賞金は ja.wikipedia と en.wikipedia で数が食い違うので書かない
+ // 出典：https://ja.wikipedia.org/wiki/アイシングラス_(競走馬)
+ // 出典：https://en.wikipedia.org/wiki/Isinglass_(horse)
+ { name:'アイシングラス', nameEn:'Isinglass', country:'英', born:1890, sex:'牡', coat:'鹿毛', sire:'アイソノミー', dam:'デッドロック', damsire:'ウェンロック', rating:93, surface:'芝', distMin:1000, distMax:4000, style:'先行', growth:'普通', retire:1895, wins:['1893英2000ギニー','1893英ダービー','1893英セントレジャー','1894プリンセスオブウェールズステークス','1894エクリプスステークス','1894ジョッキークラブステークス','1895アスコットゴールドカップ'], note:'12戦11勝。英国で6頭目の三冠馬。唯一の負けは1893年ランカシャープレートの2着。獲得賞金は当時の世界記録', uncertain:true },
 ];
 })();
