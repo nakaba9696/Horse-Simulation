@@ -10,6 +10,9 @@ func run(t) -> void:
 	var era0 = HSU.ERA   # 世界の設定（年代なし）は、あとのテスト（模擬の一致）に残さない
 	UiFlow.save_path = "user://test_flow_save.json"
 	UiFlow.demo(0, 7.0)
+	UiFlow.replay_dir = "user://test_flow_replays"   # demo のあとで替える（demo は見本の置き場所にする）
+	for f in DirAccess.get_files_at(UiFlow.replay_dir) if DirAccess.dir_exists_absolute(UiFlow.replay_dir) else []:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(UiFlow.replay_dir.path_join(f)))
 	UiFlow.no_save = false
 	var rode := 0
 	var autos := 0
@@ -52,6 +55,13 @@ func run(t) -> void:
 		t.eq(HSData.digest_save(HSJson.parse(HSWorld.serialize())), s1, "flow: セーブの往復で同じ状態（%d週目）" % wk)
 		t.ok(not UiFlow.save_info().is_empty(), "flow: タイトルに出すセーブの要点")
 	t.ok(rode > 0 and autos > 0, "flow: 自分で乗った鞍とおまかせの鞍がある（%d・%d）" % [rode, autos])
+	# リプレイ：自分で乗ったレースが残り、記録の再生（ViewReplay）で読める
+	var rl := UiFlow.replay_list()
+	t.eq(rl.size(), rode, "flow: 自分で乗った鞍の数だけリプレイが残る")
+	if rl.size():
+		var rp := ViewReplay.new(UiFlow.replay_dir.path_join(String(rl[0].id) + ".json"))
+		t.ok(rp.n > 4 and rp.order.size() == rp.n and rp.end_t() > 30.0, "flow: リプレイを再生の入れ口で読める（%d頭・%.0f秒）" % [rp.n, rp.end_t()])
+		t.ok(UiFlow.replay_fav(String(rl[0].id)) and UiFlow.replay_list()[0].fav, "flow: リプレイをお気に入りにできる")
 	# 引退（牧場に残る）→ オリジナルホース（父と母から仔を作る）
 	var G = HSWorld.G
 	G.player.money = 1e9
@@ -100,6 +110,9 @@ func run(t) -> void:
 		sc.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(UiFlow.save_path))
 	UiFlow.save_path = "user://save.json"
+	for f in DirAccess.get_files_at(UiFlow.replay_dir):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(UiFlow.replay_dir.path_join(f)))
+	UiFlow.replay_dir = "user://replays"
 	HSU.ERA = era0
 	HSWorld.G = null
 	UiFlow._reset_week()
