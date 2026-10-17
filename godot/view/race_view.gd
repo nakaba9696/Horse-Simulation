@@ -26,6 +26,7 @@ const RACE_CARD := "res://scenes/race_card.tscn"
 var src   # ViewLive（模擬）か ViewReplay（記録の再生）
 var live := false
 var flow := false          # 週の流れの中（終わったら結果を UiFlow に渡して次の鞍か週の結果へ）
+var replay := false        # リプレイを見ている（終わったらデータへ）
 var race: Dictionary
 var tr: ViewTrack
 var course: ViewCourse
@@ -77,7 +78,17 @@ func _ready() -> void:
 	if live and UiFlow.current() == null and UiFlow.demo_arg() >= 0:
 		UiFlow.demo_ride(UiFlow.demo_arg())
 	flow = live and UiFlow.current() != null and UiFlow.desc is Dictionary
-	if flow:
+	if OS.get_cmdline_user_args().has("--setup=replay"):
+		# 撮影の見本：1週を乗って残したリプレイを開く
+		UiFlow.demo_week(1)
+		var rl := UiFlow.replay_list()
+		if rl.size(): UiFlow.replay_path = UiFlow.replay_dir.path_join(String(rl[0].id) + ".json")
+	replay = UiFlow.replay_path != "" and FileAccess.file_exists(UiFlow.replay_path)
+	if replay:
+		live = false
+		flow = false
+		src = ViewReplay.new(UiFlow.replay_path)   # データのリプレイ：残したコマを再生
+	elif flow:
 		src = ViewLive.new("", UiFlow.desc)     # 週の流れ：その週の本当のレース
 	else:
 		src = ViewLive.new() if live else ViewReplay.new()
@@ -308,7 +319,10 @@ func _do_ok() -> void:
 		phase = "result"
 		hud.show_board()
 	elif phase == "result" and not capturing:
-		if flow:
+		if replay:
+			UiFlow.replay_path = ""
+			UiFlow.go(get_tree(), "data")
+		elif flow:
 			src.finish_now()
 			UiFlow.go(get_tree(), UiFlow.ride_done(src.result))
 		else:

@@ -49,8 +49,8 @@ func build() -> void:
 	scroll = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
-	scroll.position = Vector2(PAD_X, 330)
-	scroll.size = Vector2(1600 - PAD_X * 2, 1000 - 330 - 56)
+	scroll.position = Vector2(PAD_X, 290)
+	scroll.size = Vector2(1600 - PAD_X * 2, 1000 - 290 - 52)
 	add_child(scroll)
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 2)
@@ -68,7 +68,13 @@ func _fill(refocus: bool) -> void:
 		return
 	var h: Dictionary = horses[cur]
 	var wi := HSWorld.w_idx()
-	top_box.add_child(UiTheme.tabs(horses.map(func(x): return x.name), cur, pad, func(k): cur = k; UiFlow.program_id = horses[k].id; _fill(true)))
+	# 1行目：馬のタブと絞り込み（同じ行に置いて、表を上へ広げる）
+	var row0 := HBoxContainer.new()
+	row0.add_theme_constant_override("separation", 16)
+	top_box.add_child(row0)
+	var tb := UiTheme.tabs(horses.map(func(x): return x.name), cur, pad, func(k): cur = k; UiFlow.program_id = horses[k].id; _fill(true))
+	tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row0.add_child(tb)
 	# 馬の要点と次走の札
 	var sh := HBoxContainer.new()
 	sh.add_theme_constant_override("separation", 12)
@@ -120,8 +126,9 @@ func _fill(refocus: bool) -> void:
 	(nb[1] as VBoxContainer).add_child(UiTheme.title(nt, 19, UiTheme.GOLD_BRIGHT if nx != null else UiTheme.FAINT))
 	# 絞り込み（選び肢の札。押すと切り替わる）
 	var fl := HBoxContainer.new()
-	fl.add_theme_constant_override("separation", 16)
-	top_box.add_child(fl)
+	fl.add_theme_constant_override("separation", 12)
+	fl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row0.add_child(fl)
 	fl.add_child(_seg("表示", "show", [["ok", "出られるレース"], ["all", "出られない重賞も"]]))
 	fl.add_child(_seg("種類", "kind", [["all", "重賞と条件戦"], ["graded", "重賞だけ"]]))
 	fl.add_child(_seg("馬場", "surf", [["", "すべて"], ["芝", "芝"], ["ダ", "ダート"]]))
@@ -144,10 +151,10 @@ func _fill(refocus: bool) -> void:
 	for r in rs:
 		if r.wk.m != last_m:
 			last_m = r.wk.m
-			var ml := UiTheme.title("%s月" % HSU.num(r.wk.m), 16, UiTheme.GOLD)
+			var ml := UiTheme.title("%s月" % HSU.num(r.wk.m), 15, UiTheme.GOLD)
 			var mc := MarginContainer.new()
 			mc.add_theme_constant_override("margin_left", 8)
-			mc.add_theme_constant_override("margin_top", 4)
+			mc.add_theme_constant_override("margin_top", 0)
 			mc.add_child(ml)
 			list.add_child(mc)
 		list.add_child(_row(h, r))
@@ -187,7 +194,7 @@ func _seg(label: String, key: String, opts: Array) -> HBoxContainer:
 func _row(h: Dictionary, r: Dictionary) -> Button:
 	var race: Dictionary = r.race
 	var mine: bool = r.state != null
-	var rb := UiScreen.row_button(32, mine)
+	var rb := UiScreen.row_button(28, mine)
 	var b: Button = rb[0]
 	var hb: HBoxContainer = rb[1]
 	var faded: bool = r.why != null and not mine
@@ -198,7 +205,7 @@ func _row(h: Dictionary, r: Dictionary) -> Button:
 	nm.add_theme_constant_override("separation", 8)
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nm.add_child(UiTheme.class_chip(UiFlow.class_label(race), race.get("graded") == true))
-	var nl := UiTheme.label(HSRaces.label(race), 16)
+	var nl := UiTheme.label(HSRaces.label(race), 15)
 	nm.add_child(nl)
 	nm.add_child(UiTheme.label(_cond(race), 12, UiTheme.FAINT))
 	if r.others.size():
