@@ -136,6 +136,8 @@ func fx(name: String) -> void:
 			get_tree().create_timer(0.17).timeout.connect(func(): play(160, 0.8, 1.0))
 		"bad": play(220, 0.7, 0.2)
 		"lane": play(45, 0.0, 0.35)
+		"push": play(35, 0.0, 0.3)      # 手綱をしごいた（音の代わりに軽く。効果音は音の係が入れる）
+		"pull": play(60, 0.25, 0.1)     # 引いた（低く重く）
 		"bump":
 			play(110, 1.0, 0.4)
 			get_tree().create_timer(0.13).timeout.connect(func(): play(80, 0.4, 0.2))

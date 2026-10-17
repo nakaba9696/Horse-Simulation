@@ -207,6 +207,7 @@ func _on_act(name: String, arg) -> void:
 			if live:
 				src.ctl("down")
 			hud.down_fx()
+			input.fx("pull")
 		"lane":
 			if fin != null:
 				return
@@ -262,6 +263,7 @@ func _do_up() -> void:
 	if not was:
 		_start_fx(b)
 	hud.up_fx()
+	input.fx("push")
 
 func _start_fx(b) -> void:
 	if b == "good":
