@@ -12,6 +12,8 @@
 | `assets/textures/leafy_grass_*_1k.jpg` | 芝の質感（色・法線） | Charlotte Baglioni | CC0 1.0 | Poly Haven https://polyhaven.com/a/leafy_grass |
 | `assets/textures/dirt_aerial_02_*_1k.jpg` | ダートの質感（色・法線） | Rob Tuytel | CC0 1.0 | Poly Haven https://polyhaven.com/a/dirt_aerial_02 |
 | `assets/textures/aerial_grass_rock_*_1k.jpg` | 内馬場・外の草地の質感（色・法線） | Rob Tuytel | CC0 1.0 | Poly Haven https://polyhaven.com/a/aerial_grass_rock |
+| `assets/ui/bg_title.jpg`・`bg_home.jpg`・`bg_shop.jpg`・`bg_paddock.jpg`・`bg_result.jpg` | 画面の背景（タイトル・ホームと番組表・馬の店・パドック・週の結果）。ブラウザ版の `../assets/ui_bg_*.js` から `tools/export_ui_assets.js` で取り出したもの | Poly Haven の各作者（Grasslands Sunset：Dimitrios Savva・Jarod Guest／Hayloft：Adrian Kubasa／Ladybrand Heritage House：Dario Barresi／Ballawley Park：Savva Zakharov）。結果の背景はこのゲームの3Dの競馬場の止め絵 | CC0 1.0 | 出典の一覧は `../assets/CREDITS.md` の「画面の背景」 |
+| `assets/owners/*.webp` | 馬主の顔（7人・表情4つ：base・smile・joy・sad）。ブラウザ版の `../assets/owners_*.js` から `tools/export_ui_assets.js` で取り出したもの | 持ち主 | 持ち主の作った絵（このゲームで使ってよい。持ち主の決定 2026-10-16） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits （`../assets/CREDITS.md`） |
 | `assets/fonts/NotoSansJP_700Bold.ttf`（と `OFL.txt`） | 画面の字（Noto Sans JP Bold） | Adobe（Source Han Sans）・Google | SIL Open Font License 1.1 | Google Fonts の Noto Sans JP。npm の `@expo-google-fonts/noto-sans-jp@0.4.4` に入っているものを使った |
 | `assets/fonts/NotoSerifJP_900Black_sub.ttf` | 見出しの明朝（Noto Serif JP Black）。ゲームで使う字だけに減らした（`tools/subset_font.py`） | Adobe（Source Han Serif）・Google | SIL Open Font License 1.1 | Google Fonts の Noto Serif JP。npm の `@expo-google-fonts/noto-serif-jp@0.4.4` に入っているものから作った（減らしたものも同じ OFL で配れる。`OFL.txt` を一緒に配る） |
 

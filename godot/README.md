@@ -4,11 +4,22 @@
 - 見た目と操作（この README の中身）：`project.godot`・`scenes/`・`view/`・`ui/`・`assets/`・`tools/`（枝 `claude/lucid-ptolemy-j204a3-gdview`）
 - 遊びの決まりと模擬（GDScript）：`core/`・`data/`・`tests/`（枝 `claude/lucid-ptolemy-j204a3-gdcore`。API は `docs/GODOT.md`）
 
-模擬が GDScript に移るまでは、JS の模擬で走らせた1レースの記録（`assets/replay_race.json`）を再生する。見た目は「レースの入れ口」（`view/race_source.gd` の `ViewReplay`）から各馬の状態を読むだけなので、模擬ができたら入れ口だけを差し替える。
+遊ぶ流れ（騎手のゲーム）：タイトル → ホーム → 番組表・馬の店 → 出走表 → 騎乗 → 週の結果 → 次の週。遊びの決まりは `core/`（HSWorld など）を呼ぶだけで、画面では作り直さない。
+レースは「レースの入れ口」（`view/race_live.gd` の `ViewLive`）がその週の出走表から C++ の模擬（`HSWorld.start_sim`）を回し、見た目はそこから各馬の状態を読む。タイトルの「1レースだけ走る」は前の見本（記録と同じ出走馬の東京 芝2400m）。
 
 ## 動かし方
 1. Godot 4.7 の標準版（.NET ではない方）を https://godotengine.org/download から取る（4.7.2 で作っている）。
-2. Godot でこのフォルダ（`godot/project.godot`）を開いて ▶（F5）。出走表 → GATE IN! → 騎乗。
+2. Godot でこのフォルダ（`godot/project.godot`）を開いて ▶（F5）。タイトル → はじめから（騎手の名前と所属）→ ホーム。
+3. 馬の店でデビュー前の史実馬を買い（2歳の4月に入厩）、番組表で出走・予約する。馬主の騎乗依頼を受けると、その週から乗れる。「レースへ」→ 出走表 → ゲートイン（おまかせでも乗れる）→ 週の結果 → 次の週。週を締めるたびに自動でセーブ（`user://save.json`）。
+
+### 画面の操作（docs/UI.md 4）
+| 行い | ゲームパッド | キーボード |
+|---|---|---|
+| 選ぶ | 十字キー・左スティック | 矢印 |
+| 決める | A | Enter |
+| もどる | B | Esc |
+| タブ（番組表の馬・店の牡馬と牝馬） | LB・RB | Q・E |
+| 並べ替え（店） | Y | R |
 
 ### 操作（ゲームパッド・キーボード。押したコマで動く。docs/FEEL.md）
 | 行い | ゲームパッド | キーボード |
@@ -31,7 +42,14 @@
 ## 中身
 | 場所 | 中身 |
 |---|---|
-| `scenes/race_card.tscn`・`ui/race_card.gd` | 出走表（全頭を1画面に。PADDOCK・GATE IN!）。後ろはパドック（`view/paddock.gd`） |
+| `ui/flow.gd`（`UiFlow`） | 週の流れ：セーブ（`user://save.json`）・今週の騎乗の列（`begin_week` → 出走表 → 騎乗 → `ride_done` → `close_week`）・出走表と騎乗が読む一式（`desc_of`）・撮影の見本（`demo`・`demo_ride`・`demo_week`） |
+| `ui/screen.gd`（`UiScreen`） | 騎乗の外の画面の土台：背景の写真と深緑の幕・見出しの帯・帯の数・節の見出し・表の行・トースト・操作の案内・Q/E・入りの動き・撮影（`--shot`・`--demo`） |
+| `scenes/title.tscn`・`ui/title.gd` | タイトル（はじめから・つづきから・1レースだけ走る・終わる） |
+| `scenes/home.tscn`・`ui/home.gd` | ホーム（今週すること・暦の札・コマンドの札・お手馬・予約・これからのG1・騎乗依頼・GF の招待・今週の騎乗・ニュース） |
+| `scenes/program.tscn`・`ui/program.gd` | 番組表（馬をタブで替え、今週は出走・先の週は予約。絞り込み） |
+| `scenes/shop.tscn`・`ui/shop.gd` | 馬の店（牡馬・牝馬のタブ・並べ替え・右の見本・買う） |
+| `scenes/week_result.tscn`・`ui/week_result.gd` | 週の結果（騎乗したレースの着順と進上金・着順の表・馬主のひと言・ご褒美・ニュース） |
+| `scenes/race_card.tscn`・`ui/race_card.gd` | 出走表（全頭を1画面に。パドック・ゲートイン・おまかせで乗る）。週の流れではその週の出走表。後ろはパドック（`view/paddock.gd`） |
 | `scenes/race.tscn`・`view/race_view.gd` | 3D のレース（騎乗）。ゲート → 走る → ゴールのあと流す → 着順 → 確定の表。カメラ・振動・撮影 |
 | `view/race_source.gd` | レースの入れ口（記録の再生 `ViewReplay`。模擬ができたら差し替える） |
 | `view/ride_input.gd` | 騎乗の操作（入力の割り当て・押し続け・振動） |
@@ -57,7 +75,11 @@ godot --headless --path godot -s res://tools/check_input.gd      # 十字キー�
 sh godot/tools/run_scene.sh res://scenes/race.tscn -- --out=DIR --shot=秒:behind|jockey|tv:名前 --video=始め:終わり:fps:カメラ:名前 --press=秒:ride_up|ride_right|ride_whip_r…
 sh godot/tools/run_scene.sh res://scenes/race_card.tscn -- --out=DIR --shot=秒:名前[:選ぶ馬[:paddock]] --video=始め:終わり:fps:名前
 sh godot/tools/run_scene.sh res://scenes/horse_lab.tscn -- --out=DIR --cam=side|close|front|back|head --seq=枚数
+sh godot/tools/run_scene.sh res://scenes/home.tscn -- --demo=1 --out=DIR --shot=0.8:名前   # title・home・program・shop・week_result も同じ。race_card・race も --demo=1 で週のレース
+godot --headless --path godot -s res://tools/check_scripts.gd   # 画面のスクリプトがすべて読めるか
+node godot/tools/export_ui_assets.js                          # 画面の背景と馬主の顔をブラウザ版の素材から取り出す
 ```
+- `--demo[=週]`：決まった種の新しいゲームで、店のいちばん安い馬を3頭買い、週を進めた見本から開く（セーブは書かない）。週の結果は1週を決まった乗り方で乗ってから開く。
 - container で動かすには `apt-get install mesa-vulkan-drivers` と Godot の本体（`GODOT=` で場所を渡す。既定は `/home/user/godot-bin/godot`）が要る。本体はリポジトリに入れない。
 - 撮るときは決まった刻み（1/30 秒か fps）で進めるので、同じ引数なら同じ絵になる。
 - 重さ：`godot --headless --path godot -s res://tools/bench_view.gd` で 1 コマの GDScript の重さ（馬の形・騎手の IK・模擬・表示）。この container の CPU で 3 ms ほど（60fps の 1 コマは 16.6 ms）。

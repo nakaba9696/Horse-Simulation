@@ -1,5 +1,6 @@
 # レースの入れ口（模擬）：gdcore の模擬（HSSim。JS と同じ結果になる）をその場で回し、ViewReplay と同じ形で各馬の状態を返す。
-# 出走馬・枠・コース・見た目（毛色・勝負服）は記録（replay_race.json）と同じものを使う（tools/export_race.js と同じ作り方・同じ種）。
+# 週の流れの中では、その週の出走表（UiFlow.desc_of が作る見た目の一式と card）から HSWorld.start_sim で模擬を作る（本当のレース・JS と同じ種）。
+# 一式が無いとき（出走表から1レースだけ走る）は、記録（replay_race.json）と同じ出走馬・枠・コース・見た目を使う（tools/export_race.js と同じ作り方・同じ種）。
 # プレイヤーの操作は HSSim.ctl_*（しごく・引く・ムチ・持ち替え・進路）で模擬へ渡す。0.1 秒の刻みのあいだは補間する。
 class_name ViewLive
 extends RefCounted
@@ -28,7 +29,10 @@ var _t_cur := 0.0
 var _after: Array = []           # 模擬が終わったあと（流して止まる）の各コマ
 var start_ret = null
 
-func _init(path := "res://assets/replay_race.json") -> void:
+func _init(path := "res://assets/replay_race.json", desc = null) -> void:
+	if desc is Dictionary:
+		_init_card(desc)
+		return
 	race = JSON.parse_string(FileAccess.get_file_as_string(path))
 	D = float(race.track.D)
 	me = int(race.me)
@@ -53,6 +57,19 @@ func _init(path := "res://assets/replay_race.json") -> void:
 		runners.append({"horse": h, "jockey": {"name": "—", "skill": 80.0}, "weight": float(info.weight), "num": float(info.num), "frame": float(info.frame),
 			"rider": "P" if bool(info.get("mine", i == me)) else null, "mine": bool(info.get("mine", i == me))})
 	sim = HSSim.create(r, runners, HSHorse.week_index(YEAR, 11, 4), rng, {"ride": true, "frames": true})
+	finish_t.resize(n)
+	finish_t.fill(-1.0)
+	_cur = _snap()
+	_prev = _cur.duplicate(true)
+
+# その週の出走表から（UiFlow.desc_of の一式。card は HSWorld.cards の1件）
+func _init_card(desc: Dictionary) -> void:
+	race = desc
+	D = float(race.track.D)
+	me = int(race.me)
+	n = race.horses.size()
+	race.frames = []
+	sim = HSWorld.start_sim(race.card, {"ride": true, "frames": true})
 	finish_t.resize(n)
 	finish_t.fill(-1.0)
 	_cur = _snap()
