@@ -471,6 +471,8 @@ check('skills: 発動する特殊能力は能力値から決まり、数に上�
   assert(total / n > 0.5, '特殊能力を持つ馬が少なすぎる');
   // 無くした特殊能力（馬群割り）を受け継いでいた前のセーブの馬は、それを外して走る
   assert(JSON.stringify(K.of({ trigFixed: ['bagun', 'oosoto'] })) === '["oosoto"]', '無くした特殊能力が残る');
+  // 最後方一気は直線の長さに関係なく、残りの距離（500m から）で発動する
+  assert(K.BY.saikoubi.when({ R: 450, rank: 14, n: 14, c: null, s: { spurting: true }, inStraight: false }) && !K.BY.saikoubi.when({ R: 600, rank: 14, n: 14, c: null, s: { spurting: true }, inStraight: false }), '最後方一気が残りの距離で決まらない');
   // 1つだけ持たせて、同じ相手と走らせる
   const setup0 = K.setup, out = [];
   const winWith = (id, N) => {
