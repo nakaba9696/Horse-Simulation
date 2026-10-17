@@ -469,6 +469,8 @@ check('skills: 発動する特殊能力は能力値から決まり、数に上�
     total += ids.length; n++;
   }
   assert(total / n > 0.5, '特殊能力を持つ馬が少なすぎる');
+  // 無くした特殊能力（馬群割り）を受け継いでいた前のセーブの馬は、それを外して走る
+  assert(JSON.stringify(K.of({ trigFixed: ['bagun', 'oosoto'] })) === '["oosoto"]', '無くした特殊能力が残る');
   // 1つだけ持たせて、同じ相手と走らせる
   const setup0 = K.setup, out = [];
   const winWith = (id, N) => {

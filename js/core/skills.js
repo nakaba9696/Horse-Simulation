@@ -14,23 +14,20 @@
   // 身につく条件は、史実馬のうち持つ馬が5〜25%（弱みは少なめ）になるように合わせた（tools/skills_bench.js count）
   K.LIST = [
     // 爆発
-    { id: 'saikoubi', at: 'st', label: '豪脚', group: '爆発', ikki: true, note: '直線で最後方近くからムチを入れると、大きく伸びる', fx: { spd: 0.07, sec: 4, free: true, top: 0.3 },
+    { id: 'saikoubi', at: 'st', label: '最後方一気', group: '爆発', ikki: true, note: '直線で最後方近くからムチを入れると、大きく伸びる', fx: { spd: 0.07, sec: 4, free: true, top: 0.3 },
       learn: p => p.style === '追込' && p.kire >= 6,
       when: x => x.inStraight && x.R > 100 && x.rank >= x.n - 2 && x.whipping },
     { id: 'chokusen', at: 'st', label: '末脚', group: '爆発', ikki: true, note: '直線で中団より後ろからムチを入れると伸びる', fx: { spd: 0.05, sec: 4, free: true, top: 0.2 },
       learn: p => SASHI.includes(p.style) && p.kire >= 6,
       when: x => x.inStraight && x.R > 100 && x.rank > x.n / 2 && x.whipping },
-    { id: 'oosoto', at: 'st', label: '外差し', group: '爆発', ikki: true, note: '直線で外に持ち出してムチを入れると伸びる', fx: { spd: 0.045, sec: 4, free: true, top: 0.2 },
+    { id: 'oosoto', at: 'st', label: '大外一気', group: '爆発', ikki: true, note: '直線で外に持ち出してムチを入れると伸びる', fx: { spd: 0.045, sec: 4, free: true, top: 0.2 },
       learn: p => SASHI.includes(p.style) && p.slope >= 82,
       when: x => x.inStraight && x.R > 100 && x.s.lane >= 5 && x.whipping },
-    { id: 'bagun', at: 'st', label: '馬群を割る', group: '爆発', note: '直線で馬と馬の間を、まわりより速く抜ける', fx: { spd: 0.05, sec: 3, free: true },
-      learn: p => p.style !== '逃げ' && p.guts >= 88,
-      when: x => x.inStraight && x.R > 60 && x.left && x.right && x.faster },
     // 損
     { id: 'sasari', at: 'any', label: 'ささり癖', group: '損', bad: true, note: '脚が無いときにムチを入れると、ささって伸びを欠く（進路は変わらない）', fx: { spd: -0.035, sec: 1.5 },
       learn: p => p.mind < 64 && p.guts < 76,
       when: x => x.c ? x.c.lastWhip && x.t - x.c.lastWhip.t < 0.15 && x.s.E < 0.12 : x.whipping && x.s.E < 0.15 },
-    { id: 'kongomi', at: 'any', label: '揉まれ弱い', group: '損', bad: true, note: '馬群に包まれたままだと、やる気をなくす', fx: { E: -0.03 },
+    { id: 'kongomi', at: 'any', label: '馬混み苦手', group: '損', bad: true, note: '馬群に包まれたままだと、やる気をなくす', fx: { E: -0.03 },
       learn: p => p.mind < 70 && (p.style === '逃げ' || p.style === '追込'),
       when: x => x.sk.boxedFor >= 3 },
     { id: 'sessenB', at: 'st', label: '叩き合い×', group: '損', bad: true, note: 'ゴール前で並ばれると、ひるむ', fx: { spd: -0.015, sec: 1.5 },
@@ -50,10 +47,10 @@
       learn: p => (p.style === '逃げ' || p.style === '先行') && p.sta >= 85,
       when: x => x.R <= 300 && x.sk.led600 && x.rank <= 3 && x.leader.x - x.s.x < LEN },
     // 気性
-    { id: 'tanki', at: 'mid', label: 'マイペース', group: '気性', note: '後ろを2馬身以上離して逃げると、気分よく走る', fx: { E: 0.06 },
+    { id: 'tanki', at: 'mid', label: '単騎逃げ', group: '気性', note: '後ろを2馬身以上離して逃げると、気分よく走る', fx: { E: 0.06 },
       learn: p => p.style === '逃げ' && p.mind >= 65,
       when: x => !x.inStraight && x.sk.soloFor >= 10 },
-    { id: 'yonkaku', at: 'st', label: '早め先頭', group: '気性', note: '先頭で直線に入ると、脚が戻る', fx: { E: 0.05 },
+    { id: 'yonkaku', at: 'st', label: '4角先頭', group: '気性', note: '先頭で直線に入ると、脚が戻る', fx: { E: 0.05 },
       learn: p => (p.style === '先行' || p.style === '差し') && p.spd >= 86 && p.kire <= 4,
       when: x => x.inStraight && x.straight - x.R < 30 && x.rank === 1 },
     { id: 'oriai', at: 'mid', label: '折り合い上手', group: '気性', note: '中間点まで一度も掛からなければ、脚が残る', fx: { E: 0.02 },
@@ -69,7 +66,7 @@
     { id: 'makuri', at: 'st', label: 'まくり', group: '根性', note: '3コーナーから順位を上げ、先頭の2馬身以内で直線に入ると、脚が戻る', fx: { E: 0.06 },
       learn: p => SASHI.includes(p.style) && p.kire <= 4 && p.sta >= 78,
       when: x => x.inStraight && x.straight - x.R < 30 && x.sk.rankMid != null && x.sk.rankMid - x.rank >= 4 && x.leader.x - x.s.x < 2 * LEN },
-    { id: 'dokonjo', at: 'any', label: '勝負根性', group: '根性', note: '追い出してから3秒叩き合うと、脚が戻る', fx: { E: 0.02 },
+    { id: 'dokonjo', at: 'any', label: 'ど根性', group: '根性', note: '追い出してから3秒叩き合うと、脚が戻る', fx: { E: 0.02 },
       learn: p => p.guts >= 88,
       when: x => x.sk.duelFor >= 3 },
     { id: 'sessen', at: 'st', label: '叩き合い', group: '根性', note: 'ゴール前で並ぶと、ひと伸び', fx: { spd: 0.03, sec: 2.5, free: true },
@@ -90,7 +87,7 @@
   // この馬の発動する特殊能力（id の並び）
   K.of = function (h, wIdx) {
     if (!h) return [];
-    if (h.trigFixed) return h.trigFixed.slice(); // オリジナルホースは親から受け継いだもの
+    if (h.trigFixed) return h.trigFixed.filter(id => K.BY[id]); // オリジナルホースは親から受け継いだもの（無くした特殊能力は外す）
     const p = K.stats(h, wIdx);
     // 系統を1つずつ回して取る（爆発 → 損 → 速さ → 気性 → 根性 → 爆発…）。系統の中は表の順
     const ok = K.ORDER.map(g => K.LIST.filter(k => k.group === g && k.learn(p)));
