@@ -80,6 +80,7 @@ data/*.js（正）→ index.html の並びで読む → fictional.js（騎手の
    `godot/tests/golden/math.json`：数学の関数（各 1500 件）・乱数の列・U.hash・並べ替え（TimSort。長さ 1〜1500・比べる関数が乱数を引くもの）の答え。
 3. `node tools/golden_world.js` → `godot/tests/golden/world.json`・`world_save.json`：決まった遊び方（店でいちばん安い馬を買う・馬主の最初の依頼を受ける・GF に出る・自分の馬の1レースを決まった乗り方で乗る）で週を進め、毎週のセーブ（G）の指紋・出走表の指紋・依頼・乗ったレースの着順を書く。
    - new：新しいゲームから 4 週。late：JS で 46 週遊んだセーブ（JS のセーブそのもの）を読んで、12月3週から 4 週（GF・年度表彰・年明けの史実馬のデビューをまたぐ）。
+   - gf：11月4週のセーブに手を加え（1頭を4歳・前の年の GF（中長距離）の勝ち馬に）、12月1週の招待から年明けまで 7 週。
    - craft：late の続きのセーブに手を加え（週の初めの操作に、重賞の勝ちを足す・馬主の好感度を足す、も使う）（1頭を5歳・能力120・G1を4勝・トロフィー2つ、もう1頭を牝馬に）、JS が読み直したものを Godot も読み、8週。週の初めの操作（予約・引退・オリジナルホースを作る）も同じ列で行う。フェブラリーSにスペシャルホース（G1を5勝した名馬・歴代の勝ち馬）が出て、引退で殿堂入り、オリジナルホースが生まれる。
    - 指紋は、辞書の項目を名前の順に並べ、null の項目を除き、-0 を 0 にした並べ方（JSON に書いて読み直したのと同じ）。
 4. `sh godot/tests/run.sh`（headless）が `godot/tests/test_*.gd` を回す。`node tests/run.js` は、Godot があればこれを呼ぶ（無ければ「飛ばした」と出す）。Godot の場所は `GODOT=`・PATH の `godot`・`/home/user/godot-bin/godot` の順に探す。
@@ -126,7 +127,8 @@ JS の模擬を直したら：`node tools/golden_race.js` で答えを作り直�
 | `js/core/racesim.js` | `hs_sim.gd` | ○ 48 本 |
 | `js/core/races.js`・`world.js`（騎手のゲームの道すじ）・`season.js`・`dream.js`・`eraless.js`・`special.js`・`owners.js`・`jockey.js`・`hall.js`・`trophy.js`・`pedigree.js`・`edits.js`（当てる所） | `hs_races.gd` ほか | ○ 新しいゲームから 4 週・JS のセーブから 4 週（GF・年明け） |
 | `original.js`（オリジナルホースを作る）・殿堂入り・予約・スペシャルホースが出てくるレース・トロフィー・冠・馬主の段階とご褒美（思い出の名馬） | 移した | ○ craft の 8 週（勝ち・好感度は週の初めの操作で足す） |
-| GF の伝説級（前の年の GF を勝った馬）・馬主の引退した馬のご褒美（年明け） | 移した | まだ（起きる場面を作っていない） |
+| 12月1週の GF の招待・GF の伝説級（前の年の GF を勝った馬が出ると、キンチェムなどが出てくる） | 移した | ○ gf の 7 週 |
+| 馬主の引退した馬のご褒美（年明け） | 移した | まだ（起きる場面を作っていない） |
 | `freerace.js`（フリーレース） | `hs_freerace.gd`（`HSFreeRace`） | ○ 6 本（出走表・着順・実況） |
 | セーブ（JSON） | `HSJson`・`HSWorld.serialize`・`load_save`・`migrate` | ○ JS のセーブを読んで続きが同じ |
 | `world.js` の馬主・生産者のゲームだけの所（種付け・売る・牧場の拡張・海外馬と繁殖牝馬の市場） | まだ | 新しく始められないので後回し |

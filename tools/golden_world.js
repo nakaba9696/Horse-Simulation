@@ -100,7 +100,24 @@ function build(log) {
   // late
   HS = load();
   HS.World.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '栗東' });
-  play(HS, LATE_SKIP, false);
+  play(HS, LATE_SKIP - 3, false);
+  // gf：11月4週のセーブに手を加え（1頭を4歳・前の年の GF（中長距離）の勝ち馬に）、12月1週の招待から年明けまで。
+  //   前の年の勝ち馬は確定で招待され、出ると「伝説級の名馬」が出てくる
+  let gfSave, gfStart, gfWeeks;
+  {
+    const HS2 = load(); HS2.World.load(HS.World.serialize());
+    const W = HS2.World, G = W.get(), T = HS2.Season;
+    const p1 = W.mine().filter(h => h.loc === 'stable' || h.loc === 'farm')[0];
+    Object.assign(p1, { born: G.year - 4, loc: 'stable', injury: null, fatigue: 0, wins: 6, starts: 10, distMin: 1800, distMax: 2800, apt: { turf: 100, dirt: 60, heavy: 70 } });
+    for (const k of Object.keys(p1.pot)) p1.pot[k] = 112;
+    p1.gradedWins = [{ y: G.year - 1, race: T.gfName('classic'), short: T.gfName('classic'), grade: 'GF', region: 'JRA' }];
+    W.dirty(); W._week = null;
+    gfSave = W.serialize();
+    const HS3 = load(); HS3.World.load(gfSave);
+    gfStart = digest(JSON.parse(HS3.World.serialize()));
+    gfWeeks = play(HS3, 7, log);
+  }
+  play(HS, 3, false);
   const save = HS.World.serialize();
   // セーブを読み直してから続ける（遊んでいる間の使い回し（馬主の own など）を、Godot がセーブを読んだときと同じ空の状態にする）
   HS = load();
@@ -128,7 +145,8 @@ function build(log) {
     var craftWeeks = play(HS, 8, log, ops);
   }
   return {
-    'world.json': JSON.stringify({ note: 'tools/golden_world.js が作る。手で直さない', new: { seed: 11, start: newStart, weeks: newWeeks }, late: { start: lateStart, weeks: lateWeeks }, craft: { start: craftStart, weeks: craftWeeks } }) + '\n',
+    'world.json': JSON.stringify({ note: 'tools/golden_world.js が作る。手で直さない', new: { seed: 11, start: newStart, weeks: newWeeks }, late: { start: lateStart, weeks: lateWeeks }, craft: { start: craftStart, weeks: craftWeeks }, gf: { start: gfStart, weeks: gfWeeks } }) + '\n',
+    'world_gf.json': gfSave + '\n',
     'world_save.json': save + '\n',
     'world_craft.json': craftSave + '\n',
   };

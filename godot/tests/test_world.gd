@@ -13,6 +13,10 @@ func run(t) -> void:
 	HSWorld.load_save(save)
 	t.eq(HSData.digest_save(HSJson.parse(HSWorld.serialize())), g.late.start, "world: JS のセーブを読んだ状態")
 	_play(t, "late", g.late.weeks)
+	# 前の年の GF の勝ち馬：12月1週の招待・GF に伝説級の名馬
+	HSWorld.load_save(FileAccess.get_file_as_string("res://tests/golden/world_gf.json"))
+	t.eq(HSData.digest_save(HSJson.parse(HSWorld.serialize())), g.gf.start, "world: GF の場面のセーブを読んだ状態")
+	_play(t, "gf", g.gf.weeks)
 	var t2 := Time.get_ticks_msec()
 	# 手を加えたセーブ：予約・スペシャルホースの出るレース・引退と殿堂入り・オリジナルホース
 	HSWorld.load_save(FileAccess.get_file_as_string("res://tests/golden/world_craft.json"))
