@@ -35,7 +35,7 @@ static const double SUNA = 1.08;
 static const double K_S0 = 0.03, K_S1 = 0.0035, K_R = 60.0, K_A0 = 0.85, K_A1 = 0.05, K_C0 = 0.95, K_C1 = 0.0, K_CS = 0.035, K_Z = 0.0015, K_TOP = 2.2;
 static const double O_RAMP = 2.5, O_CALMK = 5.0, O_OVER = 0.55, O_OVERHOT = 0.25, O_FIGHTAFTER = 1.2, O_FIGHTK = 14.0, O_SURGET = 6.0, O_MATCH = 0.35, O_MATCHLO = 0.12,
 	O_KEEN = 40.0, O_PASSED = 9.0, O_WALL = 4.0, O_SAND = 3.0, O_COVER = 4.0, O_SHRINKT = 4.0, O_SHRINKSPD = 0.012, O_PUSHSURGE = 10.0, O_SURGEMAX = 45.0;
-static const double F_FROM = 300.0, F_DX = 2.4, F_L0 = 0.45, F_L1 = 1.8, F_DV = 0.6, F_G0 = 72.0, F_UP = 10.0, F_LOW = -40.0, F_NARABU = 1.3, F_DECAY = 0.05, F_SPD = 0.012, F_COST = 0.12;
+static const double F_FROM = 300.0, F_DX = 2.4, F_L0 = 0.45, F_L1 = 1.8, F_DV = 0.6, F_G0 = 72.0, F_UP = 10.0, F_LOW = -40.0, F_DECAY = 0.05, F_SPD = 0.012, F_COST = 0.12;
 static const double OONIGE_EARLY = 1.02, OONIGE_MID = 1.02, OONIGE_KICK = 0.5, OONIGE_LEAD = 0.055;
 
 // Godot の値は Godot が読み込みを終えてから作る（大域の初期化で作ると落ちる）
@@ -156,7 +156,7 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 		s.acc = K_A0 + K_A1 * kire;
 		s.zubu = (8.0 - kire) * K_Z + (s.skills.has(longspurt) ? LONGSPURT_Z : 0.0);
 		s.spurtCost = K_C0 + K_C1 * (kire - 1.0) + K_CS * (kire - 4.5) * (330.0 - gstraight) / 200.0;
-		s.oonige = s.skills.has(SK("oonige")) && s.style == ST_NIGE; s.nino = s.skills.has(SK("nino")); s.narabu = s.skills.has(SK("narabu")); s.sora = s.skills.has(SK("sora"));
+		s.oonige = s.skills.has(SK("oonige")) && s.style == ST_NIGE; s.nino = s.skills.has(SK("nino")); s.sora = s.skills.has(SK("sora"));
 		s.sunaB = s.skills.has(SK("sunaB")) && is_str(race.get("surface", Variant()), "ダ"); s.jiyu = s.skills.has(SK("jiyu"));
 		s.gapAdj = s.nino ? -NINO_POS : 0.0;
 		s.lane = ((double)r["num"] - 1.0) * 0.5;
@@ -385,7 +385,7 @@ static void fight_step(Sim &sim, Runner &s, double R, double prog) {
 	}
 	s.duel = duel;
 	if (duel >= 0) {
-		s.fight = clamp(s.fight + (s.guts - F_G0) / (100.0 - F_G0) * F_UP * (s.narabu ? F_NARABU : 1.0) * DT, F_LOW, 100.0);
+		s.fight = clamp(s.fight + (s.guts - F_G0) / (100.0 - F_G0) * F_UP * DT, F_LOW, 100.0);
 		if (s.fight > s.fightPeak) s.fightPeak = s.fight;
 	} else if (s.fight != 0.0) {
 		s.fight *= 1.0 - F_DECAY * DT;
@@ -407,17 +407,13 @@ static Runner *ahead_of(Sim &sim, Runner &s, double dmax, double lmax) {
 	for (auto &o : sim.st) if (&o != &s && !o.done && o.x > s.x && o.x - s.x < dmax && std::fabs(o.lane - s.lane) < lmax) return &o;
 	return nullptr;
 }
-static bool near_x(Sim &sim, Runner &s, double dmax) {
-	for (auto &o : sim.st) if (&o != &s && !o.done && std::fabs(o.x - s.x) < dmax) return true;
-	return false;
-}
 
 static void commentary(Sim &sim);
 
 // 0.1 秒進める。終わったら true
 bool sim_step(Sim &sim) {
 	if (sim.over) return true;
-	static const int kakariId = SK("kakari"), longspurt = SK("longspurt"), narabuId = SK("narabu"), soraId = SK("sora"), oonigeId = SK("oonige"),
+	static const int kakariId = SK("kakari"), longspurt = SK("longspurt"), soraId = SK("sora"), oonigeId = SK("oonige"),
 		sunaBId = SK("sunaB"), ninoId = SK("nino"), jiyuId = SK("jiyu"), oosoto = SK("oosoto");
 	double D = sim.D, straight = sim.straight, pace = sim.pace;
 	auto &st = sim.st;
@@ -486,7 +482,6 @@ bool sim_step(Sim &sim) {
 				if (kakariNow) { target *= 1.012; costMul *= KAKARI_COST; }
 				else if (c->tension < 35 && !s.spurting) costMul *= CALM_SAVE;
 				else if (c->tension > 50 && !s.spurting) costMul *= 1.0 + (c->tension - 50.0) / 100.0 * TENSE_COST;
-				if (s.narabu && R < 250 && (g > 0.3 || s.spurting) && near_x(sim, s, 1.5)) { target *= 1.004; fire(sim, s, narabuId); }
 			}
 			if (c->lane > 0 && t - c->laneT > LANE_DRIFT && t - c->driftT > 1.2) {
 				bool blockedIn = false;
@@ -509,7 +504,6 @@ bool sim_step(Sim &sim) {
 				double ratioE = cbrt(maxf(0.0, s.E) * s.Ds / (0.9 * maxf(R, 30.0) * s.spurtCost));
 				target = s.vc * maxf(1.0 + s.kickS, minf(1.0 + s.kickS * (sim.top + s.topAdd), ratioE));
 				if (s.oonige) target = s.vc * (1.0 + s.kickS * OONIGE_KICK);
-				if (s.narabu && R < 350 && near_x(sim, s, 1.5)) { target *= 1.004; fire(sim, s, narabuId); }
 				if (s.sora && R < 200 && order[0] == s.i && order.size() > 1 && s.x - st[order[1]].x > 2) { target *= 0.985; fire(sim, s, soraId); }
 			} else if (prog < 0.22) {
 				target = pace * s.styleMult * (s.nino ? NINO_SPD : 1.0) * (s.oonige ? OONIGE_EARLY : 1.0);

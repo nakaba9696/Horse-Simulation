@@ -45,32 +45,38 @@ static func kire_label(k: Variant) -> String:
 
 # 特殊能力。bad＝弱み
 const SKILLS := {
-	big = { label = "大一番", note = "G1で力を出す" },
-	fresh = { label = "鉄砲駆け", note = "休み明けでも走る" },
+	big = { label = "大舞台", note = "G1で力を出す" },
+	fresh = { label = "鉄砲駆け", note = "長期休みでも気分が悪くならない（休み明けでも走る）" },
 	tataki = { label = "叩き良化", note = "休み明けは割り引き。使われて良くなる" },
-	left = { label = "左回り巧者", note = "左回りのコースで走る" },
-	right = { label = "右回り巧者", note = "右回りのコースで走る" },
-	small = { label = "小回り巧者", note = "直線の短いコースが得意" },
+	left = { label = "左回り○", note = "左回りのコースで走る" },
+	right = { label = "右回り○", note = "右回りのコースで走る" },
+	small = { label = "小回り○", note = "直線の短いコースが得意" },
 	long = { label = "直線巧者", note = "長い直線で伸びる" },
 	summer = { label = "夏馬", note = "6〜8月に調子を上げる" },
 	winter = { label = "冬馬", note = "12〜2月に調子を上げる" },
-	hipace = { label = "ハイペース巧者", note = "流れが速いほど良い" },
-	slowpace = { label = "スローペース巧者", note = "上がりの勝負に強い" },
+	hipace = { label = "ハイペース○", note = "流れが速いほど良い" },
+	slowpace = { label = "スローペース○", note = "上がりの勝負に強い" },
 	oonige = { label = "大逃げ", note = "後ろを大きく離して逃げる" },
 	longspurt = { label = "ロングスパート", note = "早めに動いて長く脚を使う" },
-	narabu = { label = "並ぶと強い", note = "競り合いで抜かせない" },
-	nino = { label = "二の脚", note = "スタート後の加速が速く、脚を使わずに前の位置を取る" },
-	jiyu = { label = "自由自在", note = "流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい" },
-	inner = { label = "内枠巧者", note = "内の枠で走る" },
-	travel = { label = "遠征巧者", note = "海外の大レースで力を出す" },
-	homebody = { label = "遠征下手", note = "海外では力を出しきれない", bad = true },
+	nino = { label = "テンが速い", note = "スタート後の加速が速く、脚を使わずに前の位置を取る" },
+	jiyu = { label = "脚質自在", style = true, note = "脚質の一つとして見せる（特殊能力の並びには出さない）。流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい" },
+	inner = { label = "内枠○", note = "内の枠で走る" },
+	travel = { label = "海外○", note = "海外の大レースで力を出す" },
+	homebody = { label = "海外×", note = "海外では力を出しきれない", bad = true },
 	deokure = { label = "出遅れ癖", note = "ゲートの出が悪い", bad = true },
 	kakari = { label = "掛かり癖", note = "折り合いを欠きやすい", bad = true },
-	sora = { label = "ソラを使う", note = "先頭に立つと気を抜く", bad = true },
+	sora = { label = "ソラ癖", note = "先頭に立つと気を抜く", bad = true },
 	sunaB = { label = "砂かぶり×", note = "ダートで前の馬の砂をかぶると嫌がり、脚を使う", bad = true },
 	leftB = { label = "左回り×", note = "左回りのコースでは力を出しきれない", bad = true },
 	rightB = { label = "右回り×", note = "右回りのコースでは力を出しきれない", bad = true },
 }
+# 脚質の見せ方：脚質自在の馬は「先行・自在」のように出す（持ち主の決定 2026-10-17）
+static func style_text(h: Variant) -> String:
+	if not h: return ""
+	return str(HSU.or_(h.get("style"), "")) + ("・自在" if has(h, "jiyu") else "")
+# 特殊能力の並びに出すもの（脚質自在は脚質の側で見せる）
+static func shown_skills(h: Dictionary) -> Array:
+	return HSU.or_(h.get("skills"), []).filter(func(x): return SKILLS.has(x) and not SKILLS[x].get("style"))
 static func has(h: Dictionary, id: String) -> bool:
 	var sk = h.get("skills")
 	return sk != null and sk.has(id)
@@ -301,8 +307,8 @@ static func hist_skills(d: Dictionary, rng: HSRng) -> Array:
 	if not HSData.is_foreign(d) and cnt.call(func(r): return r.get("region") == "海外") >= 1: sk.append("travel")
 	if sk.size() < 2 and rng.chance(0.25):
 		var pool: Array
-		if d.get("style") == "逃げ": pool = ["nino", "narabu", "hipace"]
-		elif d.get("style") == "先行": pool = ["nino", "narabu", "fresh", "tataki"]
+		if d.get("style") == "逃げ": pool = ["nino", "hipace"]
+		elif d.get("style") == "先行": pool = ["nino", "fresh", "tataki"]
 		else: pool = ["longspurt", "slowpace", "hipace", "tataki", "fresh"]
 		var x = rng.pick(pool)
 		if not sk.has(x): sk.append(x)

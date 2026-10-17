@@ -34,7 +34,6 @@ class Runner:
 	var spurtCost: float
 	var oonige := false
 	var nino := false
-	var narabu := false
 	var sora := false
 	var sunaB := false
 	var jiyu := false
@@ -188,7 +187,7 @@ static var SUNA := 1.08
 static var KIRE := { s0 = 0.03, s1 = 0.0035, r = 60.0, a0 = 0.85, a1 = 0.05, c0 = 0.95, c1 = 0.0, cS = 0.035, z = 0.0015, top = 2.2 }
 static var ORIAI := { ramp = 2.5, calmK = 5.0, over = 0.55, overHot = 0.25, fightAfter = 1.2, fightK = 14.0, surgeT = 6.0, match = 0.35, matchLo = 0.12,
 	keen = 40.0, passed = 9.0, wall = 4.0, sand = 3.0, cover = 4.0, shrinkT = 4.0, shrinkSpd = 0.012, pushSurge = 10.0, surgeMax = 45.0 }
-static var FIGHT := { from = 300.0, dx = 2.4, l0 = 0.45, l1 = 1.8, dv = 0.6, g0 = 72.0, up = 10.0, low = -40.0, narabu = 1.3, decay = 0.05, spd = 0.012, cost = 0.12 }
+static var FIGHT := { from = 300.0, dx = 2.4, l0 = 0.45, l1 = 1.8, dv = 0.6, g0 = 72.0, up = 10.0, low = -40.0, decay = 0.05, spd = 0.012, cost = 0.12 }
 # step の中で使う定数（上の辞書と同じ値。辞書を引くより速い）
 const _HILL_V := 0.4
 const _HILL_E := 100.0
@@ -431,7 +430,7 @@ static func _create_gd(race: Dictionary, runners: Array, w_idx: Variant, rng: HS
 		s.acc = K.a0 + K.a1 * kire
 		s.zubu = (8.0 - kire) * K.z + (LONGSPURT.z if _has(h, "longspurt") else 0.0)
 		s.spurtCost = K.c0 + K.c1 * (kire - 1.0) + K.cS * (kire - 4.5) * (330.0 - geo.straight) / 200.0
-		s.oonige = _has(h, "oonige") and h.style == "逃げ"; s.nino = _has(h, "nino"); s.narabu = _has(h, "narabu"); s.sora = _has(h, "sora")
+		s.oonige = _has(h, "oonige") and h.style == "逃げ"; s.nino = _has(h, "nino"); s.sora = _has(h, "sora")
 		s.sunaB = _has(h, "sunaB") and race.surface == "ダ"; s.jiyu = _has(h, "jiyu")
 		s.gapAdj = -NINO.pos if _has(h, "nino") else 0.0
 		s.lane = (r.num - 1.0) * 0.5
@@ -650,7 +649,7 @@ static func fight_step(sim: Sim, s: Runner, R: float, prog: float) -> void:
 				duel = o; break
 	s.duel = duel
 	if duel:
-		s.fight = HSU.clamp(s.fight + (s.guts - F.g0) / (100.0 - F.g0) * F.up * (F.narabu if s.narabu else 1.0) * DT, F.low, 100.0)
+		s.fight = HSU.clamp(s.fight + (s.guts - F.g0) / (100.0 - F.g0) * F.up * DT, F.low, 100.0)
 		if s.fight > s.fightPeak: s.fightPeak = s.fight
 	elif s.fight:
 		s.fight *= 1.0 - F.decay * DT
@@ -670,10 +669,6 @@ static func _ahead_of(st: Array, s: Runner, dmax: float, lmax: float) -> Variant
 	for o: Runner in st:
 		if o != s and not o.done and o.x > s.x and o.x - s.x < dmax and absf(o.lane - s.lane) < lmax: return o
 	return null
-static func _near_x(st: Array, s: Runner, dmax: float) -> bool:
-	for o: Runner in st:
-		if o != s and not o.done and absf(o.x - s.x) < dmax: return true
-	return false
 
 # 0.1 秒進める。終わったら true
 static func _step_gd(sim: Sim) -> bool:
@@ -745,8 +740,6 @@ static func _step_gd(sim: Sim) -> bool:
 					target *= 1.012; costMul *= KAKARI_COST
 				elif c.tension < 35 and not s.spurting: costMul *= CALM_SAVE
 				elif c.tension > 50 and not s.spurting: costMul *= 1.0 + (c.tension - 50.0) / 100.0 * TENSE_COST
-				if s.narabu and R < 250 and (g > 0.3 or s.spurting) and _near_x(st, s, 1.5):
-					target *= 1.004; fire(sim, s, "narabu")
 			if c.lane > 0 and t - c.laneT > LANE.drift and t - c.driftT > 1.2:
 				var blockedIn := false
 				for o: Runner in st:
@@ -769,8 +762,6 @@ static func _step_gd(sim: Sim) -> bool:
 				var ratioE := HSMath.cbrt(maxf(0.0, s.E) * s.Ds / (0.9 * maxf(R, 30.0) * s.spurtCost))
 				target = s.vc * maxf(1.0 + s.kickS, minf(1.0 + s.kickS * (sim.top + s.topAdd), ratioE))
 				if s.oonige: target = s.vc * (1.0 + s.kickS * _OONIGE_KICK)
-				if s.narabu and R < 350 and _near_x(st, s, 1.5):
-					target *= 1.004; fire(sim, s, "narabu")
 				if s.sora and R < 200 and order[0] == s and order.size() > 1 and s.x - order[1].x > 2:
 					target *= 0.985; fire(sim, s, "sora")
 			elif prog < 0.22:
