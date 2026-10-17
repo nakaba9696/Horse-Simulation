@@ -1,5 +1,5 @@
 # 騎乗の画面の上の表示（docs/FEEL.md 4・5）。ブラウザ版 js/ui/ride.js の hud() と同じ形を 960×600 の座標で描き、画面の大きさに合わせて広げる
-# 計器は4か所（左上＝順位と残り・上の真ん中＝ペース・右上＝時計・右＝馬群のレーダー）と左下の1つの塊（丸い計器・手綱の段・STAMINA・FIGHT・WHIP）
+# 計器は4か所（左上＝順位と残り・上の真ん中＝ペース（チェックポイントを過ぎたときだけ）・右上＝時計・右＝馬群のレーダー）と左下の1つの塊（丸い計器・手綱の段・STAMINA・FIGHT・WHIP）
 # 文字は短い英語の見出しと数だけ（日本語は馬名と特殊能力の名前だけ）。操作の結果は文字で出さず、光で返す
 # 画面の箱・計器は揺らさない（揺れは 3D のカメラだけ。view/race_view.gd の kick）
 # 字はにじまないように、座標だけを広げて、字の大きさは画面の大きさで作り直す
@@ -20,6 +20,8 @@ const CALM := Color("5fb4ff")
 const CYAN := Color("7fe6ff")
 const PALE := Color("ffe9a6")
 const STYLES := ["逃げ", "先行", "差し", "追込"]
+const PACE_SHOW := 4.5     # ペースはチェックポイント（sim.checkAt）を先頭が過ぎたときだけ、この秒だけ出す（持ち主の指摘「常にわかるとつまらない」）
+const PACE_FADE := 0.6
 const PACE_EN := {"スローペース": "SLOW", "平均ペース": "EVEN", "ハイペース": "HIGH"}
 
 var rv          # view/race_view.gd
@@ -54,7 +56,6 @@ var _pings: Array = []
 var _pace = null
 var _sta_prev := 8
 var _sta_lost = null
-var _guess := "平均ペース"
 
 func setup(view) -> void:
 	rv = view
@@ -76,12 +77,6 @@ func setup(view) -> void:
 	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	canvas.draw.connect(_draw_hud)
 	root.add_child(canvas)
-	# 逃げ馬の数からのペースの見込み（判定の前に白抜きで出す）
-	var nige := 0
-	for h in race.horses:
-		if String(h.get("style", "")) == "逃げ":
-			nige += 1
-	_guess = "ハイペース" if nige >= 2 else ("スローペース" if nige == 0 else "平均ペース")
 	# ゲートの中だけ：操作の案内（英語の短い合図）
 	gate_keys = UiTheme.keybar([["↑", "D-PAD ↑", "START"], ["← →", "D-PAD ← →", "LANE"], ["V", "BACK", "VIEW"], ["ESC", "START", "PAUSE"]], Input.get_connected_joypads().size() > 0)
 	root.add_child(gate_keys)
@@ -173,7 +168,7 @@ func _draw_hud() -> void:
 	var me: int = rv.me
 	var rank: int = order.find(me) + 1
 	if rv.live and src.sim.check != null and _pace == null:
-		_pace = {"verdict": String(src.sim.check.verdict), "t": now}
+		_pace = {"verdict": String(src.sim.check.verdict), "t": now, "at": int(src.sim.check.at), "time": float(src.sim.check.t)}
 	# 画面の効果（下から）：追い出した速さの筋・掛かりの赤い縁・競り合いの縁・ムチの光
 	if fin == null and T > 0.0:
 		_speed_lines(M)
@@ -304,6 +299,19 @@ func _glass(x: float, y: float, w: float, h: float, cut := 10.0) -> void:
 	canvas.draw_polyline_colors(PackedVector2Array([_p(x + 2, y + 1.5), _p(x + 2 + (w - cut - 2) * 0.3, y + 1.5), _p(x + w - cut, y + 1.5)]),
 		PackedColorArray([Color(1, 1, 1, 0), Color(1, 0.94, 0.78, 0.35), Color(1, 1, 1, 0)]), maxf(1.0, K), true)
 
+# 消えていく板（ペースの板）
+func _glass_a(x: float, y: float, w: float, h: float, cut: float, a: float) -> void:
+	var pts := [Vector2(x, y), Vector2(x + w - cut, y), Vector2(x + w, y + cut), Vector2(x + w, y + h), Vector2(x + cut, y + h), Vector2(x, y + h - cut)]
+	var cols: Array = []
+	for p in pts:
+		cols.append(_a(GLASS2.lerp(GLASS, (p.y - y) / h), a))
+	_poly(pts, cols)
+	var loop := PackedVector2Array()
+	for p in pts:
+		loop.append(p * K)
+	loop.append(pts[0] * K)
+	canvas.draw_polyline(loop, _a(LINE, a), maxf(1.0, K), true)
+
 # 斜めの升（計器の目盛り）。glow＝光をにじませる
 func _cell(x: float, y: float, w: float, h: float, col: Color, glow := 0.0) -> void:
 	var sk := h * 0.35
@@ -387,57 +395,50 @@ func _timer(M: Dictionary, T: float) -> void:
 	var rec = race.get("record")
 	_txt(UiRaceHud.fmt_time(float(rec)) if rec != null else "－", tx + tw - 12, ty + 39, 12, GOLD, "right")
 
-# ---- 上の真ん中：ペース。丸い計器と同じ作りの斜めの升（青→金→赤）。判定の前は白抜きの印と「SLOW?」、判定のあとは光る印 ----
+# ---- 上の真ん中：ペース。先頭がチェックポイント（sim.checkAt）を過ぎたときだけ 4.5 秒、通過の距離と時計・SLOW/EVEN/HIGH・斜めの升の目盛りを出して消す。見込みは出さない ----
 static func _pace_col(v: String) -> Color:
 	return Color("ff8a6a") if v == "ハイペース" else (Color("7fc8ff") if v == "スローペース" else PALE)
 
 func _draw_pace(M: Dictionary, T: float) -> void:
-	if T < 0.0 or bool(M.done):
+	if T < 0.0 or bool(M.done) or _pace == null:
 		return
+	var age: float = (T - float(_pace.time)) / rv.SPEED   # 実時間の秒（模擬が通過した時から。描いた時ではない）
+	if age < 0.0 or age > PACE_SHOW:
+		return
+	var alpha := minf(1.0, minf(age / 0.15, (PACE_SHOW - age) / PACE_FADE))
 	var bw := 260.0
 	var bx := VW / 2.0 - bw / 2.0
 	var by := 14.0
 	var h := 46.0
-	var fresh := maxf(0.0, 1.0 - (now - float(_pace.t)) / 0.9) if _pace != null else 0.0
-	_glass(bx, by, bw, h, 10)
-	_tag("PACE", bx + 12, by + 18)
-	var v: String = String(_pace.verdict) if _pace != null else _guess
+	var fresh := maxf(0.0, 1.0 - age / 0.9)
+	_glass_a(bx, by, bw, h, 10, alpha)
+	_tag("%dm" % int(_pace.at), bx + 12, by + 18, _a(LABEL, alpha))
+	_txt("%.1f" % float(_pace.time), bx + 12 + 50, by + 20, 15, Color(1, 1, 1, alpha), "left", f_num)
+	var v: String = String(_pace.verdict)
 	var word: String = PACE_EN.get(v, v)
-	var col := _pace_col(v) if _pace != null else Color(1, 1, 1, 0.55)
+	var col := _a(_pace_col(v), alpha)
 	if fresh > 0.0:
-		_outlined(word, bx + bw - 12, by + 20, 15 + 6 * fresh, col, "right", 3 + 6 * fresh, f_num, fresh)
+		_outlined(word, bx + bw - 12, by + 20, 15 + 6 * fresh, col, "right", 3 + 6 * fresh, f_num, fresh * alpha)
 	else:
-		_txt(word if _pace != null else word + "?", bx + bw - 12, by + 20, 15, col, "right", f_num)
-	# 目盛り：9 の升。印の所まで灯る
+		_txt(word, bx + bw - 12, by + 20, 15, col, "right", f_num)
+	# 目盛り：9 の升。判定の所が光る
 	var n := 9
 	var gx := bx + 14.0
 	var cw := (bw - 28.0 - (n - 1) * 3.0) / n
 	var gy := by + 28.0
-	var k: float
-	if _pace != null and rv.live:
+	var k := 0.5
+	if rv.live:
 		k = clampf((float(src.sim.paceF) - 0.982) / 0.036, 0.0, 1.0)
-	else:
-		k = 0.8 if v == "ハイペース" else (0.2 if v == "スローペース" else 0.5)
 	var lit := int(round(k * (n - 1)))
 	for i in n:
 		var q := float(i) / (n - 1)
 		var c := Color("7fc8ff").lerp(PALE, q * 2.0) if q < 0.5 else PALE.lerp(Color("ff8a6a"), (q - 0.5) * 2.0)
-		if _pace == null:
-			_cell(gx + i * (cw + 3), gy, cw, 9, _a(c, 0.32))
-		elif i == lit:
-			_cell(gx + i * (cw + 3), gy, cw, 9, c, 6.0 + 8.0 * fresh)
+		if i == lit:
+			_cell(gx + i * (cw + 3), gy, cw, 9, _a(c, alpha), 6.0 + 8.0 * fresh)
 		else:
-			_cell(gx + i * (cw + 3), gy, cw, 9, _a(c, 0.45 if i < lit else 0.18))
+			_cell(gx + i * (cw + 3), gy, cw, 9, _a(c, (0.45 if i < lit else 0.18) * alpha))
 	var kx := gx + lit * (cw + 3) + cw / 2.0 + 1.5
-	var tri := [Vector2(kx, gy - 1), Vector2(kx - 5, gy - 8), Vector2(kx + 5, gy - 8)]
-	if _pace != null:
-		_poly(tri, Color.WHITE)
-	else:
-		var pl := PackedVector2Array()
-		for p in tri:
-			pl.append(p * K)
-		pl.append(tri[0] * K)
-		canvas.draw_polyline(pl, Color.WHITE, 1.2 * K, true)
+	_poly([Vector2(kx, gy - 1), Vector2(kx - 5, gy - 8), Vector2(kx + 5, gy - 8)], Color(1, 1, 1, alpha))
 
 # ---- 追い出したら、画面の端に速さの筋（速いほど濃く） ----
 func _speed_lines(M: Dictionary) -> void:

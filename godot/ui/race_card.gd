@@ -1,7 +1,7 @@
 # 出走表（docs/UI.md「出走表（レースの前・パドック）」）：18頭が 1600×1000 の 1画面に収まる（持ち主「レース時の馬一覧もスクロールなしで全頭見れるようにしてね」）
 # 上の帯（1行）：レース番号・格・レース名（明朝）・競馬場・芝ダと距離・回り・天気・馬場・頭数
 # 表（1行 36px）：馬番（枠の色）・馬名・性齢・斤量・脚質の矢印（右ほど前。その馬の脚質が赤く光る）・騎手・人気（単勝）。自分の馬の行は左に金の線
-# 右：コース図と展開予想・選んだ馬の札・「パドック」「ゲートイン」（金）・操作の案内。後ろはパドックを歩く馬（3D。選んだ馬をカメラが追う）
+# 右：コース図（展開予想は出さない。持ち主の指摘 2026-10-17「プレイヤーに判断させたい」）・選んだ馬の札・「パドック」「ゲートイン」（金）・操作の案内。後ろはパドックを歩く馬（3D。選んだ馬をカメラが追う）
 # 操作：十字キー・矢印で選ぶ、A・Enter で決める、B・Esc で戻る（docs/UI.md 4）
 extends Node
 
@@ -288,7 +288,7 @@ func _build_table() -> void:
 		v.add_child(b)
 		rows.append(b)
 
-# 右：コース図と展開予想・選んだ馬の札・ボタン・操作の案内
+# 右：コース図・選んだ馬の札・ボタン・操作の案内
 func _build_right() -> void:
 	right = VBoxContainer.new()
 	right.add_theme_constant_override("separation", 12)
@@ -306,8 +306,6 @@ func _build_right() -> void:
 	mm.setup(ViewTrack.new(race.track), race)
 	mm.custom_minimum_size = Vector2(0, 116)
 	cv.add_child(mm)
-	cv.add_child(_section("展開予想"))
-	cv.add_child(_pace_line())
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right.add_child(sp)
@@ -373,26 +371,6 @@ func _section(text: String) -> Control:
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(bar)
 	h.add_child(UiTheme.title(text, 17, UiTheme.IVORY))
-	return h
-
-# 展開予想：逃げ・先行の数からペース（騎乗の画面の読みと同じ：逃げ2頭以上＝ハイ、0頭＝スロー）
-func _pace_line() -> Control:
-	var nige := 0
-	var senko := 0
-	for h in race.horses:
-		if String(h.style) == "逃げ":
-			nige += 1
-		elif String(h.style) == "先行":
-			senko += 1
-	var verdict := "ハイペース" if nige >= 2 else ("スローペース" if nige == 0 else "平均ペース")
-	var col := UiTheme.WARN if nige >= 2 else (UiTheme.COOL if nige == 0 else UiTheme.IVORY)
-	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 10)
-	h.add_child(UiTheme.label("逃げ %d頭・先行 %d頭" % [nige, senko], 14, UiTheme.MUTED))
-	var sp := Control.new()
-	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(sp)
-	h.add_child(UiTheme.label(verdict, 17, col))
 	return h
 
 func _select(i: int, animate: bool) -> void:
