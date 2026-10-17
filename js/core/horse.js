@@ -42,7 +42,7 @@
   H.kireLabel = k => '切れ' + U.clamp(Math.round(k || 4), 1, 8);
   // 特殊能力。bad＝弱み
   H.SKILLS = {
-    big: { label: '大舞台', note: 'G1で力を出す' },
+    big: { label: '大一番', note: 'G1で力を出す' },
     fresh: { label: '鉄砲駆け', note: '休み明けでも走る' },
     tataki: { label: '叩き良化', note: '休み明けは割り引き。使われて良くなる' },
     left: { label: '左回り巧者', note: '左回りのコースで走る' },
@@ -54,17 +54,17 @@
     hipace: { label: 'ハイペース巧者', note: '流れが速いほど良い' },
     slowpace: { label: 'スローペース巧者', note: '上がりの勝負に強い' },
     oonige: { label: '大逃げ', note: '後ろを大きく離して逃げる' },
-    longspurt: { label: 'ロングスパート', note: '早めに動いて長く脚を使う' },
-    narabu: { label: '並ぶと強い', note: '競り合いで抜かせない' },
+    longspurt: { label: '長く良い脚', note: '早めに動いて長く脚を使う' },
+    narabu: { label: 'しぶとい', note: '競り合いで抜かせない' },
     nino: { label: '二の脚', note: 'スタート後の加速が速く、脚を使わずに前の位置を取る' },
-    jiyu: { label: '自由自在', note: '流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい' },
+    jiyu: { label: '自在性', note: '流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい' },
     inner: { label: '内枠巧者', note: '内の枠で走る' },
     travel: { label: '遠征巧者', note: '海外の大レースで力を出す' },
     homebody: { label: '遠征下手', note: '海外では力を出しきれない', bad: true },
     deokure: { label: '出遅れ癖', note: 'ゲートの出が悪い', bad: true },
     kakari: { label: '掛かり癖', note: '折り合いを欠きやすい', bad: true },
     sora: { label: 'ソラを使う', note: '先頭に立つと気を抜く', bad: true },
-    sunaB: { label: '砂かぶり×', note: 'ダートで前の馬の砂をかぶると嫌がり、脚を使う', bad: true },
+    sunaB: { label: '砂を嫌う', note: 'ダートで前の馬の砂をかぶると嫌がり、脚を使う', bad: true },
     leftB: { label: '左回り×', note: '左回りのコースでは力を出しきれない', bad: true },
     rightB: { label: '右回り×', note: '右回りのコースでは力を出しきれない', bad: true },
   };
