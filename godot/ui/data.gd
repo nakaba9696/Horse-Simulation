@@ -3,7 +3,7 @@
 # 中身は G（HSWorld.G）の記録と HSJockey・HSSpecial・HSTrophy・HSHall を読むだけ
 extends UiScreen
 
-const TABS := [["me", "わたしの成績"], ["special", "スペシャルホース"], ["trophy", "トロフィー"], ["lead", "リーディング"], ["awards", "騎手の表彰"], ["hall", "殿堂"], ["course", "コースレコード"], ["mounts", "乗った馬"], ["hist", "騎乗の記録"], ["gf", "GF"]]
+const TABS := [["me", "わたしの成績"], ["special", "スペシャルホース"], ["trophy", "トロフィー"], ["lead", "リーディング"], ["awards", "騎手の表彰"], ["hall", "殿堂"], ["course", "コースレコード"], ["replay", "リプレイ"], ["mounts", "乗った馬"], ["hist", "騎乗の記録"], ["gf", "GF"]]
 
 var tab := 0
 var lead_y := -1.0
@@ -67,6 +67,7 @@ func _fill() -> void:
 		"course": _course()
 		"gf": _gf()
 		"mounts": _mounts()
+		"replay": _replay()
 		"hist": _hist()
 	if kb_hint: kb_hint.text = _note()
 	focus_first()
@@ -78,6 +79,7 @@ func _note() -> String:
 		"hall": return "トロフィーを2つ以上手にした自分の馬は、引退したときに殿堂入りする"
 		"lead": return "左右で年を替える"
 		"gf": return "行を押すとグランドフィナーレの画面へ（招待への返事もそこで）"
+		"replay": return "自分で乗ったレースを20本まで残す。決定で見直す・X でお気に入り（消さない）"
 	return ""
 
 # 表の行（押せる形にして、カーソルで送れるようにする）。cells：[[文字, 幅(0 は伸びる), 色, 寄せ]]
@@ -258,6 +260,28 @@ func _course() -> void:
 		var mine: bool = r.get("rode") == true or r.get("mine") == true
 		_row([["%s %s%sm" % [p[0], "ダート" if p[1] == "ダ" else "芝", p[2]], 260], [HSU.time(float(r.t)), 110, UiTheme.GOLD_BRIGHT, R], [String(r.name), 0, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY],
 			[String(HSU.or_(r.get("jockey"), "")), 180, UiTheme.MUTED], [String(HSU.or_(r.get("race"), "")), 260, UiTheme.MUTED], [yl(r.year), 100, UiTheme.MUTED, R]], mine)
+
+# リプレイ（自分で乗ったレース。新しい順）
+func _replay() -> void:
+	var items := UiFlow.replay_list()
+	list.add_child(UiScreen.section("リプレイ", "%d本" % items.size()))
+	if items.is_empty():
+		_empty("まだありません。自分で乗ったレースが残ります")
+		return
+	for x in items:
+		var pos := int(x.get("pos", 0))
+		var b := _row([["★" if x.get("fav") else "", 30, UiTheme.GOLD_BRIGHT, C], [String(x.date), 170, UiTheme.MUTED], [String(x.get("grade", "")), 50, UiTheme.GOLD_BRIGHT, C], [String(x.race), 0],
+			[String(x.course), 200, UiTheme.MUTED], [String(x.horse), 240], ["%d着" % pos if pos > 0 else "", 80, UiTheme.GOLD_BRIGHT if pos > 0 and pos <= 3 else UiTheme.IVORY, R]], pos == 1, 40)
+		var id := String(x.id)
+		b.pressed.connect(func():
+			UiFlow.replay_path = UiFlow.replay_dir.path_join(id + ".json")
+			go("race"))
+		b.gui_input.connect(func(ev):
+			if (ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_X) or (ev is InputEventJoypadButton and ev.pressed and ev.button_index == JOY_BUTTON_X):
+				var on := UiFlow.replay_fav(id)
+				toast("お気に入りに%s" % ("入れた" if on else "しない"), "good")
+				accept_event()
+				_fill())
 
 # これまでに乗った馬（勝ち数・最高の着順・騎乗数の順）
 func _mounts() -> void:

@@ -91,6 +91,7 @@ static func _reset_week() -> void:
 # weeks 週をおまかせで進める（毎週、馬主の最初の依頼を受ける）。セーブは書かない
 static func demo(weeks := 0, seed := 7.0) -> void:
 	no_save = true
+	replay_dir = "user://demo_replays"   # 見本のリプレイは遊ぶときのものと混ぜない
 	HSWorld.new_game({"mode": "jockey", "seed": seed, "jockeyName": "新人騎手", "region": "美浦"})
 	_reset_week()
 	buy_cheapest(3)
@@ -121,6 +122,7 @@ static func demo_week(weeks := 1) -> void:
 	demo_ride(weeks)
 	var nxt := "card" if in_week else close_week()
 	while nxt == "card":
+		desc = desc_of(current().card)
 		var sim = HSWorld.start_sim(current().card, {"ride": true})
 		nxt = ride_done(bot_ride(sim))
 
@@ -195,6 +197,8 @@ static func ride_done(res) -> String:
 		if res != null:
 			played[key] = res
 			ridden[key] = "ride"
+			if desc is Dictionary and String(desc.race.get("key", "")) == key:
+				save_replay(desc, res)
 		else:
 			ridden[key] = "auto"
 		ride_i += 1
@@ -252,6 +256,98 @@ static func close_week() -> String:
 
 static func go(tree: SceneTree, name: String) -> void:
 	tree.change_scene_to_file(SCENES[name])
+
+# ---------- リプレイ（js/core/replay.js と同じく、種からやり直さずに描画のコマを残す） ----------
+# 自分で乗ったレースを user://replays/<id>.json に残す（セーブとは別。20本まで、古いものから消す）。
+# 中身は記録の再生（ViewReplay）が読む形：出走表の一式（race・track・horses・me）と 0.2 秒ごとのコマ・着順・実況
+static var replay_dir := "user://replays"   # テストは別の場所に替える
+const REPLAY_MAX := 20
+const REPLAY_DT := 0.2
+static var replay_path := ""        # 見直すリプレイ（騎乗の画面が再生で開く）
+
+static func replay_list() -> Array:
+	var p := replay_dir.path_join("index.json")
+	if not FileAccess.file_exists(p):
+		return []
+	var v = JSON.parse_string(FileAccess.get_file_as_string(p))
+	return v if v is Array else []
+
+static func save_replay(d: Dictionary, res: Dictionary) -> void:
+	var fr = res.get("frames")
+	if not (fr is Array) or fr.size() < 2:
+		return
+	# 0.2 秒ごとにそろえる（模擬のコマは最後だけ間が違う）。0 秒は全馬スタートの位置
+	var n: int = d.horses.size()
+	var times: Array = fr.map(func(f): return float(f.t))
+	var t_end: float = times[times.size() - 1]
+	var frames: Array = []
+	var k := 0
+	var t := 0.0
+	while t <= t_end + 1e-6:
+		while k < times.size() - 2 and times[k + 1] < t:
+			k += 1
+		var a: Dictionary = fr[k]
+		var b: Dictionary = fr[mini(k + 1, fr.size() - 1)]
+		var u := clampf((t - float(a.t)) / maxf(1e-6, float(b.t) - float(a.t)), 0.0, 1.0)
+		if t < float(a.t): u = 0.0
+		var p: Array = []
+		for j in n:
+			var pa: Array = a.p[j]
+			var pb: Array = b.p[j]
+			var x := lerpf(float(pa[0]), float(pb[0]), u) if t >= float(a.t) else 0.0
+			p.append([snappedf(x, 0.01), snappedf(lerpf(float(pa[1]), float(pb[1]), u), 0.001), snappedf(lerpf(float(pa[2]), float(pb[2]), u), 0.01)])
+		frames.append({"t": snappedf(t, 0.1), "p": p})
+		t += REPLAY_DT
+	var results: Array = []
+	for r in res.results:
+		results.append({"pos": int(r.pos), "num": int(r.num), "name": String(r.horse.name), "time": float(r.time), "margin": String(r.margin)})
+	var events: Array = []
+	for e in res.events:
+		events.append({"t": float(e.t), "text": String(e.text), "kind": String(e.get("kind", ""))})
+	var horses: Array = []
+	for h in d.horses:
+		var hh: Dictionary = h.duplicate()
+		horses.append(hh)
+	var G = HSWorld.G
+	var me_pos := 0
+	for r in results:
+		if r.num == int(d.horses[d.me].num): me_pos = r.pos
+	var id := "%d" % Time.get_unix_time_from_system()
+	var rep := {"about": "ターフの系譜：リプレイ", "race": d.race, "track": d.track, "horses": horses, "me": d.me, "dt": REPLAY_DT,
+		"frames": frames, "results": results, "winnerTime": float(res.winnerTime), "events": events, "whips": [], "record": d.get("record")}
+	DirAccess.make_dir_recursive_absolute(replay_dir)
+	var f := FileAccess.open(replay_dir.path_join(id + ".json"), FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify(rep))
+	f.close()
+	var list := replay_list()
+	list.push_front({"id": id, "date": date_label(), "race": String(d.race.name), "grade": String(d.race.grade), "course": "%s %s%dm" % [d.race.course, d.race.surface, int(d.race.dist)],
+		"horse": String(d.horses[d.me].name), "pos": me_pos, "fav": false})
+	while list.size() > REPLAY_MAX:
+		var drop := -1
+		for i in range(list.size() - 1, -1, -1):
+			if not list[i].get("fav"): drop = i; break
+		if drop < 0: break
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(replay_dir.path_join(String(list[drop].id) + ".json")))
+		list.remove_at(drop)
+	_write_replay_index(list)
+
+static func _write_replay_index(list: Array) -> void:
+	DirAccess.make_dir_recursive_absolute(replay_dir)
+	var f := FileAccess.open(replay_dir.path_join("index.json"), FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(list))
+		f.close()
+
+static func replay_fav(id: String) -> bool:
+	var list := replay_list()
+	for x in list:
+		if String(x.id) == id:
+			x.fav = not x.get("fav")
+			_write_replay_index(list)
+			return x.fav
+	return false
 
 # ---------- レースの見た目の一式（出走表・騎乗の画面が読む形。tools/export_race.js の JSON と同じ項目） ----------
 static func desc_of(card: Dictionary) -> Dictionary:

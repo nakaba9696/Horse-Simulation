@@ -51,7 +51,9 @@
 | `scenes/week_result.tscn`・`ui/week_result.gd` | 週の結果（騎乗したレースの着順と進上金・着順の表・馬主のひと言・ご褒美・ニュース） |
 | `scenes/stable.tscn`・`ui/stable.gd` | 厩舎（お手馬と牧場の馬のタブ・右の見本・番組表・引退させる・放す。確かめは「やめる」から） |
 | `scenes/breed.tscn`・`ui/breed.gd` | 生産（牧場の牡馬と牝馬から父と母を選び、オリジナルホースを作る） |
-| `scenes/data.tscn`・`ui/data.gd` | データ（わたしの成績・スペシャルホース・トロフィー・リーディング・騎手の表彰・殿堂・コースレコード・GF） |
+| `scenes/data.tscn`・`ui/data.gd` | データ（わたしの成績・スペシャルホース・トロフィー・リーディング・騎手の表彰・殿堂・コースレコード・リプレイ・乗った馬・騎乗の記録・GF） |
+| リプレイ（`UiFlow.save_replay`） | 自分で乗ったレースの描画のコマを 0.2 秒ごとに `user://replays/<id>.json` へ（セーブとは別。20本まで・お気に入りは消さない）。騎乗の画面が記録の再生（`ViewReplay`）で開く |
+| `ui/horse_portrait.gd`（`UiHorsePortrait`） | 見本の馬の絵：3D の馬を小さな窓に立たせる（店・厩舎） |
 | `scenes/owners.tscn`・`ui/owners.gd` | 馬主（7人の好感度・間柄とご褒美・勝負服を着せる・思い出の名馬を受け取る） |
 | `scenes/gf.tscn`・`ui/gf.gd` | グランドフィナーレ（区分のタブ・招待と出す馬・ファンの票の順位） |
 | `ui/celebrate.gd` | 見せ場の後ろの絵（金の光の筋と紙吹雪）。`UiScreen.celebrate`・`owner_scene`（馬主のご褒美の場面）・`confirm`（確かめ）は `ui/screen.gd` |
@@ -85,7 +87,7 @@ sh godot/tools/run_scene.sh res://scenes/home.tscn -- --demo=1 --out=DIR --shot=
 godot --headless --path godot -s res://tools/check_scripts.gd   # 画面のスクリプトがすべて読めるか
 node godot/tools/export_ui_assets.js                          # 画面の背景と馬主の顔をブラウザ版の素材から取り出す
 ```
-- 撮影の見本の追加：`--setup=retire`（牡馬と牝馬を1頭ずつ引退させてから開く）・`--setup=celebrate`（見せ場）・`--setup=scene`（馬主のご褒美の場面）
+- 撮影の見本の追加：`--setup=retire`（牡馬と牝馬を1頭ずつ引退させてから開く）・`--setup=celebrate`（見せ場）・`--setup=scene`（馬主のご褒美の場面）・`--setup=replay`（騎乗の画面で、見本の週に残したリプレイを開く）
 - `--demo[=週]`：決まった種の新しいゲームで、店のいちばん安い馬を3頭買い、週を進めた見本から開く（セーブは書かない）。週の結果は1週を決まった乗り方で乗ってから開く。
 - container で動かすには `apt-get install mesa-vulkan-drivers` と Godot の本体（`GODOT=` で場所を渡す。既定は `/home/user/godot-bin/godot`）が要る。本体はリポジトリに入れない。
 - 撮るときは決まった刻み（1/30 秒か fps）で進めるので、同じ引数なら同じ絵になる。
