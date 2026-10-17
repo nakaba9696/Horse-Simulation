@@ -11,6 +11,7 @@ var tab := 0
 var list_v: VBoxContainer
 var top_box: VBoxContainer
 var pv: VBoxContainer
+var portrait: UiHorsePortrait
 var rows: Array[Button] = []
 var horses: Array = []
 var sel := 0
@@ -159,20 +160,23 @@ func _main(i: int) -> void:
 
 # ---- 右の見本 ----
 func _preview(i: int) -> void:
-	for c in pv.get_children(): c.queue_free()
+	for c in pv.get_children():
+		if c != portrait: c.queue_free()
 	if i < 0 or i >= horses.size():
 		pv.add_child(UiTheme.label("馬を選ぶと、ここに中身が出ます", 14, UiTheme.MUTED))
+		if portrait: portrait.visible = false
 		return
 	sel = i
 	var h: Dictionary = horses[i]
 	UiFlow.program_id = h.id
 	var G = HSWorld.G
 	var wi := HSWorld.w_idx()
-	var L := UiArt.coat_look(String(HSU.or_(h.get("coat"), "鹿毛")), G.year - float(h.born))
-	var sw := ColorRect.new()
-	sw.color = Color(String(L.body))
-	sw.custom_minimum_size = Vector2(0, 10)
-	pv.add_child(sw)
+	if portrait == null:
+		portrait = UiHorsePortrait.new()
+		portrait.custom_minimum_size = Vector2(0, 170)
+		pv.add_child(portrait)
+	portrait.visible = true
+	portrait.set_horse(String(h.name), String(HSU.or_(h.get("coat"), "鹿毛")), G.year - float(h.born))
 	var t := UiTheme.title(String(h.name), 22)
 	t.clip_text = true
 	pv.add_child(t)

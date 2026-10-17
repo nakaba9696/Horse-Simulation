@@ -54,8 +54,8 @@ func build() -> void:
 		main.add_child(p)
 	for r in mine_rides.slice(0, 3):
 		main.add_child(_ride_card(r))
-	if mine_rides.size() >= 1 and mine_rides.size() <= 2:
-		main.add_child(_board(mine_rides[0], 10 if mine_rides.size() == 1 else 5))
+	if mine_rides.size() >= 1:
+		main.add_child(_board(mine_rides[0], [10, 10, 5, 3][mini(mine_rides.size(), 3)]))
 	if mine_other.size():
 		main.add_child(UiScreen.section("自分の馬（ほかの騎手）"))
 		for r in mine_other.slice(0, 3):
