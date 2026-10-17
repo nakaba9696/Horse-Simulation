@@ -58,7 +58,6 @@ const SKILLS := {
 	slowpace = { label = "スローペース○", note = "上がりの勝負に強い" },
 	oonige = { label = "大逃げ", note = "後ろを大きく離して逃げる" },
 	longspurt = { label = "ロングスパート", note = "早めに動いて長く脚を使う" },
-	nino = { label = "テンが速い", note = "スタート後の加速が速く、脚を使わずに前の位置を取る" },
 	jiyu = { label = "脚質自在", style = true, note = "脚質の一つとして見せる（特殊能力の並びには出さない）。流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい" },
 	inner = { label = "内枠○", note = "内の枠で走る" },
 	travel = { label = "海外○", note = "海外の大レースで力を出す" },
@@ -307,8 +306,8 @@ static func hist_skills(d: Dictionary, rng: HSRng) -> Array:
 	if not HSData.is_foreign(d) and cnt.call(func(r): return r.get("region") == "海外") >= 1: sk.append("travel")
 	if sk.size() < 2 and rng.chance(0.25):
 		var pool: Array
-		if d.get("style") == "逃げ": pool = ["nino", "hipace"]
-		elif d.get("style") == "先行": pool = ["nino", "fresh", "tataki"]
+		if d.get("style") == "逃げ": pool = ["hipace"]
+		elif d.get("style") == "先行": pool = ["fresh", "tataki"]
 		else: pool = ["longspurt", "slowpace", "hipace", "tataki", "fresh"]
 		var x = rng.pick(pool)
 		if not sk.has(x): sk.append(x)

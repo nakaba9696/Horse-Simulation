@@ -33,7 +33,6 @@ class Runner:
 	var zubu: float
 	var spurtCost: float
 	var oonige := false
-	var nino := false
 	var sora := false
 	var sunaB := false
 	var jiyu := false
@@ -180,7 +179,6 @@ static var STYLE_MULT := { "逃げ": 1.03, "先行": 1.014, "差し": 0.995, "�
 static var STYLE_GAP := { "逃げ": 0.0, "先行": 6.0, "差し": 13.0, "追込": 21.0 }
 static var STYLE_SPURT := { "逃げ": 0.0, "先行": 60.0, "差し": 120.0, "追込": 170.0 }
 static var HILL := { v = 0.4, e = 100.0, dv = 0.25, de = 10.0, mid = 0.4 }
-static var NINO := { spd = 1.01, cost = 0.9, pos = 2.0 }
 static var LONGSPURT := { r = 50.0, z = 0.002 }
 static var JIYU := { slow = 0.994, hi = 1.006, k = 0.5, misfit = 0.35 }
 static var SUNA := 1.08
@@ -196,8 +194,6 @@ const _HILL_DE := 10.0
 const _HILL_MID := 0.4
 const _ON_HILL_V := { "急": 0.008, "中": 0.005, "小": 0.003 }
 const _ON_HILL_E := { "急": 2.2, "中": 1.4, "小": 0.8 }
-const _NINO_SPD := 1.01
-const _NINO_COST := 0.9
 const _OONIGE_EARLY := 1.02
 const _OONIGE_MID := 1.02
 const _OONIGE_KICK := 0.5
@@ -430,9 +426,9 @@ static func _create_gd(race: Dictionary, runners: Array, w_idx: Variant, rng: HS
 		s.acc = K.a0 + K.a1 * kire
 		s.zubu = (8.0 - kire) * K.z + (LONGSPURT.z if _has(h, "longspurt") else 0.0)
 		s.spurtCost = K.c0 + K.c1 * (kire - 1.0) + K.cS * (kire - 4.5) * (330.0 - geo.straight) / 200.0
-		s.oonige = _has(h, "oonige") and h.style == "逃げ"; s.nino = _has(h, "nino"); s.sora = _has(h, "sora")
+		s.oonige = _has(h, "oonige") and h.style == "逃げ"; s.sora = _has(h, "sora")
 		s.sunaB = _has(h, "sunaB") and race.surface == "ダ"; s.jiyu = _has(h, "jiyu")
-		s.gapAdj = -NINO.pos if _has(h, "nino") else 0.0
+		s.gapAdj = 0.0
 		s.lane = (r.num - 1.0) * 0.5
 		s.styleMult = rp.mult; s.gap = rp.gap; s.jiyuMove = rp.jiyu
 		st.append(s)
@@ -719,8 +715,7 @@ static func _step_gd(sim: Sim) -> bool:
 					var ratioE := HSMath.cbrt(HSU.mx(0.0, s.E) * s.Ds / (0.9 * HSU.mx(R, 30.0) * s.spurtCost))
 					target = s.vc * HSU.clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * HSU.clamp(g, PUSH.base, 1.0)))
 				elif prog < 0.22:
-					target = pace * s.styleMult * (NINO.spd if s.nino else 1.0)
-					if s.nino: costMul *= NINO.cost
+					target = pace * s.styleMult
 					if s.easyStart: costMul *= EASY_START
 					if g > 0:
 						target *= 1.0 + g * 0.03; costMul *= 1.0 + 0.6 * g
@@ -765,8 +760,7 @@ static func _step_gd(sim: Sim) -> bool:
 				if s.sora and R < 200 and order[0] == s and order.size() > 1 and s.x - order[1].x > 2:
 					target *= 0.985; fire(sim, s, "sora")
 			elif prog < 0.22:
-				target = pace * s.styleMult * (_NINO_SPD if s.nino else 1.0) * (_OONIGE_EARLY if s.oonige else 1.0)
-				if s.nino: costMul *= _NINO_COST
+				target = pace * s.styleMult * (_OONIGE_EARLY if s.oonige else 1.0)
 				if s.easyStart: costMul *= EASY_START
 			elif s.oonige:
 				target = pace * (_OONIGE_MID if s.x - leaderX < _OONIGE_LEAD * straight * 2000.0 / D else 1.0)
@@ -839,7 +833,6 @@ static func _step_gd(sim: Sim) -> bool:
 		if not s.passiveShown and D - s.x <= straight:
 			s.passiveShown = true
 			for id in s.passive: fire(sim, s, id)
-		if s.nino and t > 1.5 and t < 2: fire(sim, s, "nino")
 		if s.jiyuMove and t > 8 and t < 8.5: fire(sim, s, "jiyu")
 	if not sim.check and order.size() and order[0].x >= sim.checkAt:
 		var verdict := pace_verdict(sim.paceF)

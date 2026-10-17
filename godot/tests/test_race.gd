@@ -58,6 +58,15 @@ func _case(t, cs: Dictionary, kind: String = "gd") -> void:
 	var sim = HSSim.create(cs.race, runners, cs.wIdx, HSRng.new(cs.seed), cs.opts)
 	t.eq(HSSim.kind_of(sim), kind, "race %s: 模擬の種類" % name)
 	t.eq(H.hex(sim.paceF), cs.paceF, "race %s: ペース" % name)
+	# C++ の模擬の馬の値が、GDScript の Runner と同じ名前で読めるか（窓口の読み違いを見つける）
+	if kind == "native":
+		var gd = HSSim._create_gd(cs.race, runners, cs.wIdx, HSRng.new(cs.seed), cs.opts)
+		var bad_k := []
+		for k in ["x", "lane", "v", "E", "delay", "late", "kakariDay", "oonige", "sora", "sunaB", "jiyu", "gapAdj", "spurtR", "vc", "kickS", "styleMult", "gap", "jiyuMove", "kakari", "headUp", "ears", "trig", "passive", "spurting", "done"]:
+			for i in sim.st.size():
+				if not (k in sim.st[i]) or str(sim.st[i].get(k)) != str(gd.st[i].get(k)):
+					if not bad_k.has(k): bad_k.append(k)
+		t.eq(bad_k, [], "race %s: C++ の馬の値を GDScript と同じ名前で読める" % name)
 	var acts: Array = cs.actions
 	var ai := 0
 	var bad_act := 0

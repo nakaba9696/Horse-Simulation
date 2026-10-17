@@ -28,7 +28,6 @@ static const double STYLE_GAP[4] = { 0.0, 6.0, 13.0, 21.0 };
 static const double STYLE_SPURT[4] = { 0.0, 60.0, 120.0, 170.0 };
 static const double ZONE[4][2] = { { 0.0, 0.12 }, { 0.05, 0.4 }, { 0.3, 0.75 }, { 0.6, 1.0 } };
 static const double HILL_V = 0.4, HILL_E = 100.0, HILL_DV = 0.25, HILL_DE = 10.0, HILL_MID = 0.4;
-static const double NINO_SPD = 1.01, NINO_COST = 0.9, NINO_POS = 2.0;
 static const double LONGSPURT_R = 50.0, LONGSPURT_Z = 0.002;
 static const double JIYU_SLOW = 0.994, JIYU_HI = 1.006, JIYU_K = 0.5, JIYU_MISFIT = 0.35;
 static const double SUNA = 1.08;
@@ -156,9 +155,9 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 		s.acc = K_A0 + K_A1 * kire;
 		s.zubu = (8.0 - kire) * K_Z + (s.skills.has(longspurt) ? LONGSPURT_Z : 0.0);
 		s.spurtCost = K_C0 + K_C1 * (kire - 1.0) + K_CS * (kire - 4.5) * (330.0 - gstraight) / 200.0;
-		s.oonige = s.skills.has(SK("oonige")) && s.style == ST_NIGE; s.nino = s.skills.has(SK("nino")); s.sora = s.skills.has(SK("sora"));
+		s.oonige = s.skills.has(SK("oonige")) && s.style == ST_NIGE; s.sora = s.skills.has(SK("sora"));
 		s.sunaB = s.skills.has(SK("sunaB")) && is_str(race.get("surface", Variant()), "ダ"); s.jiyu = s.skills.has(SK("jiyu"));
-		s.gapAdj = s.nino ? -NINO_POS : 0.0;
+		s.gapAdj = 0.0;
 		s.lane = ((double)r["num"] - 1.0) * 0.5;
 		s.styleMult = rpMult; s.gap = rpGap; s.jiyuMove = rpJiyu;
 		s.name = h.get("name", Variant());
@@ -414,7 +413,7 @@ static void commentary(Sim &sim);
 bool sim_step(Sim &sim) {
 	if (sim.over) return true;
 	static const int kakariId = SK("kakari"), longspurt = SK("longspurt"), soraId = SK("sora"), oonigeId = SK("oonige"),
-		sunaBId = SK("sunaB"), ninoId = SK("nino"), jiyuId = SK("jiyu"), oosoto = SK("oosoto");
+		sunaBId = SK("sunaB"), jiyuId = SK("jiyu"), oosoto = SK("oosoto");
 	double D = sim.D, straight = sim.straight, pace = sim.pace;
 	auto &st = sim.st;
 	Rng &rng = sim.rng;
@@ -461,8 +460,7 @@ bool sim_step(Sim &sim) {
 					double ratioE = cbrt(mx(0.0, s.E) * s.Ds / (0.9 * mx(R, 30.0) * s.spurtCost));
 					target = s.vc * clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * clamp(g, PUSH_BASE, 1.0)));
 				} else if (prog < 0.22) {
-					target = pace * s.styleMult * (s.nino ? NINO_SPD : 1.0);
-					if (s.nino) costMul *= NINO_COST;
+					target = pace * s.styleMult;
 					if (s.easyStart) costMul *= EASY_START;
 					if (g > 0) { target *= 1.0 + g * 0.03; costMul *= 1.0 + 0.6 * g; }
 					else if (g < 0) target *= 1.0 + g * (prog < 0.15 ? 0.03 : 0.012);
@@ -506,8 +504,7 @@ bool sim_step(Sim &sim) {
 				if (s.oonige) target = s.vc * (1.0 + s.kickS * OONIGE_KICK);
 				if (s.sora && R < 200 && order[0] == s.i && order.size() > 1 && s.x - st[order[1]].x > 2) { target *= 0.985; fire(sim, s, soraId); }
 			} else if (prog < 0.22) {
-				target = pace * s.styleMult * (s.nino ? NINO_SPD : 1.0) * (s.oonige ? OONIGE_EARLY : 1.0);
-				if (s.nino) costMul *= NINO_COST;
+				target = pace * s.styleMult * (s.oonige ? OONIGE_EARLY : 1.0);
 				if (s.easyStart) costMul *= EASY_START;
 			} else if (s.oonige) {
 				target = pace * (s.x - leaderX < OONIGE_LEAD * straight * 2000.0 / D ? OONIGE_MID : 1.0);
@@ -591,7 +588,6 @@ bool sim_step(Sim &sim) {
 			s.passiveShown = true;
 			for (int id : s.passive) fire(sim, s, id);
 		}
-		if (s.nino && t > 1.5 && t < 2) fire(sim, s, ninoId);
 		if (s.jiyuMove && t > 8 && t < 8.5) fire(sim, s, jiyuId);
 	}
 	if (!sim.hasCheck && !order.empty() && st[order[0]].x >= sim.checkAt) {

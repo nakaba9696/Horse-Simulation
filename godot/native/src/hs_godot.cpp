@@ -157,7 +157,7 @@ bool HSNativeRunner::_get(const StringName &name, Variant &r) const {
 		case 6: r = s.kickS; break; case 7: r = s.spurtR; break; case 8: r = s.guts; break; case 9: r = s.mind; break; case 10: r = s.slopeP; break;
 		case 11: r = s.x; break; case 12: r = s.v; break; case 13: r = s.E; break; case 14: r = s.delay; break; case 15: r = s.late; break;
 		case 16: r = s.kakariDay; break; case 17: r = s.acc; break; case 18: r = s.zubu; break; case 19: r = s.spurtCost; break;
-		case 20: r = s.oonige; break; case 21: r = s.nino; break; case 22: r = false; break; // 並ぶと強いは無くした（前の名前のため false） case 23: r = s.sora; break; case 24: r = s.sunaB; break;
+		case 20: r = s.oonige; break; case 21: r = false; break; case 22: r = false; break; case 23: r = s.sora; break; case 24: r = s.sunaB; break; // nino・narabu は無くした（前の名前のため false）
 		case 25: r = s.jiyu; break; case 26: r = s.gapAdj; break; case 27: r = s.driftLane; break; case 28: r = s.me; break;
 		case 29: r = idset_dict(s.fired); break;
 		case 30: if (s.boost.on) { Dictionary b; b["mul"] = s.boost.mul; b["until"] = s.boost.until; b["id"] = s.boost.id >= 0 ? Variant(hs::skill_name(s.boost.id)) : Variant(); b["free"] = s.boost.free_; r = b; } else r = Variant(); break;

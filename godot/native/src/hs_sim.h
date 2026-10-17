@@ -38,7 +38,7 @@ struct Runner {
 	double x = 0, v = 0, E = 1, delay = 0;
 	bool late = false, kakariDay = false;
 	double acc = 0, zubu = 0, spurtCost = 0;
-	bool oonige = false, nino = false, sora = false, sunaB = false, jiyu = false;
+	bool oonige = false, sora = false, sunaB = false, jiyu = false;
 	double gapAdj = 0, driftLane = 0;
 	bool me = false;
 	IdSet fired;
