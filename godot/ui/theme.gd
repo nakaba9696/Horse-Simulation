@@ -145,6 +145,9 @@ static func get_theme() -> Theme:
 	t.set_stylebox("hover", "Button", hv)
 	t.set_stylebox("focus", "Button", fo)
 	t.set_stylebox("pressed", "Button", nb[1])
+	# 押せないボタンは押せる形をしていない（厚みなし・沈みの色・薄い字）
+	t.set_stylebox("disabled", "Button", box(Color(SUNK.r, SUNK.g, SUNK.b, 0.7), LINE, 1, R_BUTTON, Vector4(28, 9, 28, 11)))
+	t.set_color("font_disabled_color", "Button", FAINT)
 	t.set_stylebox("hover_pressed", "Button", nb[1])
 	t.set_color("font_color", "Button", IVORY)
 	t.set_color("font_hover_color", "Button", IVORY)
@@ -269,4 +272,46 @@ static func keybar(items: Array, pad := false) -> PanelContainer:
 		g.add_child(k)
 		g.add_child(label(String(it[2]), 12, MUTED))
 		h.add_child(g)
+	return p
+
+# タブ（docs/UI.md「タブ」）：沈みの溝に高さ 38px のタブ。選んだタブは金の面。両端に Q・E（パッドは LB・RB）。押すと on_pick(i)
+static func tabs(items: Array, cur: int, pad := false, on_pick = null) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", box(SUNK, LINE, 1, 999, Vector4(6, 5, 6, 5)))
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 4)
+	p.add_child(h)
+	h.add_child(chip("LB" if pad else "Q", SURFACE_3, MUTED, 11))
+	for i in items.size():
+		var b := Button.new()
+		b.text = String(items[i])
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(120, 38)
+		b.add_theme_font_size_override("font_size", 15)
+		if i == cur:
+			gold_button(b)
+		else:
+			b.add_theme_stylebox_override("normal", box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 999, Vector4(16, 6, 16, 6)))
+			b.add_theme_stylebox_override("hover", box(SURFACE_3, Color(0, 0, 0, 0), 0, 999, Vector4(16, 6, 16, 6)))
+			b.add_theme_color_override("font_color", MUTED)
+		if on_pick != null:
+			var k: int = i
+			b.pressed.connect(func(): on_pick.call(k))
+		h.add_child(b)
+	h.add_child(chip("RB" if pad else "E", SURFACE_3, MUTED, 11))
+	return p
+
+# 適性の印（◎ 良い・○ 字・△ 注意・× 悪い）
+static func mark(lv: int, size := 17) -> Label:
+	var t: String = ["×", "△", "○", "◎"][clampi(lv, 0, 3)]
+	var c: Color = [Color(BAD.r, BAD.g, BAD.b, 0.8), WARN, IVORY, GOOD][clampi(lv, 0, 3)]
+	return label(t, size, c, HORIZONTAL_ALIGNMENT_CENTER)
+
+# 格の札か条件戦の枠だけの札
+static func class_chip(text: String, graded: bool, size := 13) -> PanelContainer:
+	if graded:
+		return grade_chip(text, size)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", box(Color(0, 0, 0, 0), LINE_STRONG, 1, R_CHIP, Vector4(8, 1, 8, 2)))
+	p.add_child(label(text, size, MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 	return p

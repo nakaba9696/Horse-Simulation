@@ -25,6 +25,7 @@ const RACE_CARD := "res://scenes/race_card.tscn"
 
 var src   # ViewLive（模擬）か ViewReplay（記録の再生）
 var live := false
+var flow := false          # 週の流れの中（終わったら結果を UiFlow に渡して次の鞍か週の結果へ）
 var race: Dictionary
 var tr: ViewTrack
 var course: ViewCourse
@@ -73,7 +74,13 @@ func _ready() -> void:
 	ViewRideInput.ensure_actions()
 	font = UiTheme.font()
 	live = not OS.get_cmdline_user_args().has("--replay") and ResourceLoader.exists("res://core/hs_sim.gd")
-	src = ViewLive.new() if live else ViewReplay.new()
+	if live and UiFlow.current() == null and UiFlow.demo_arg() >= 0:
+		UiFlow.demo_ride(UiFlow.demo_arg())
+	flow = live and UiFlow.current() != null and UiFlow.desc is Dictionary
+	if flow:
+		src = ViewLive.new("", UiFlow.desc)     # 週の流れ：その週の本当のレース
+	else:
+		src = ViewLive.new() if live else ViewReplay.new()
 	race = src.race
 	D = src.D
 	me = src.me
@@ -301,7 +308,11 @@ func _do_ok() -> void:
 		phase = "result"
 		hud.show_board()
 	elif phase == "result" and not capturing:
-		get_tree().change_scene_to_file(RACE_CARD)
+		if flow:
+			src.finish_now()
+			UiFlow.go(get_tree(), UiFlow.ride_done(src.result))
+		else:
+			get_tree().change_scene_to_file(RACE_CARD)
 
 func _toggle_pause() -> void:
 	if fin != null:
