@@ -317,7 +317,8 @@ static func make_stats(rng: HSRng, mean: float, sd: float) -> Dictionary:
 	return pot
 
 # 名前を作る（重ならないように used を見る。used は {名前: true}）
-static func make_name(rng: HSRng, used: Variant, foreign: bool = false) -> String:
+# base：ほかに見る使われている名前の表（書き足さない）
+static func make_name(rng: HSRng, used: Variant, foreign: bool = false, base: Variant = null) -> String:
 	var P: Dictionary = HSData.d().nameParts
 	for i in 40:
 		var n: String
@@ -326,7 +327,7 @@ static func make_name(rng: HSRng, used: Variant, foreign: bool = false) -> Strin
 			var r := rng.next()
 			if r < 0.12: n = rng.pick(P.single)
 			else: n = rng.pick(P.head) + rng.pick(P.tail)
-		if n.length() <= 9 and not (used != null and used.has(n)):
+		if n.length() <= 9 and not (used != null and used.has(n)) and not (base != null and base.has(n)):
 			if used != null: used[n] = true
 			return n
 	return "名無しの" + str(rng.int_(1000, 9999))

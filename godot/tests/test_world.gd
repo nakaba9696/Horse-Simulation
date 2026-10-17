@@ -81,7 +81,7 @@ func _play(t, name: String, weeks: Array) -> void:
 		step.rides = rides.map(func(x): return x.card.race.key)
 		if rides.size():
 			var card: Dictionary = rides[0].card
-			var sim := HSWorld.start_sim(card, { ride = true })
+			var sim = HSWorld.start_sim(card, { ride = true })
 			var nxt := 0.0
 			while true:
 				var s = sim.st[sim.me]; var R: float = sim.D - s.x

@@ -1,6 +1,6 @@
 # レースの模擬（js/core/racesim.js の HS.Sim と同じ）。0.1秒刻みで全馬を動かし、着順・タイム・実況・描画用のコマを出す。
 # 同じ種・同じ操作なら JS 版と毎刻み同じ位置・同じ着順・同じタイムになる（tools/golden_race.js と godot/tests/test_race.gd で確かめる）。
-#   var sim := HSSim.create(race, runners, w_idx, HSRng.new(seed), { ride = true })
+#   var sim = HSSim.create(race, runners, w_idx, HSRng.new(seed), { ride = true })
 #   while not HSSim.step(sim): ...            # 0.1 秒ずつ（操作は HSSim.ctl_up(sim) など）
 #   var res := HSSim.finish(sim)              # { results, events, frames, D, straight, lap, winnerTime }
 # 式の並び（浮動小数の計算の順）は JS と同じにしてある。直すときは JS 版と一緒に直し、一致テストを回す
@@ -225,6 +225,9 @@ static func base_speed(dist: float, surface: Variant, ground: Variant, course_ad
 
 # 1頭の、このレースでの強さ（点）と内訳
 static func power(horse: Dictionary, race: Dictionary, w_idx: Variant, ctx: Variant) -> Dictionary:
+	if use_native(): return ClassDB.class_call_static(&"HSNativeSim", &"power", horse, race, w_idx, ctx if ctx else {})
+	return _power_gd(horse, race, w_idx, ctx)
+static func _power_gd(horse: Dictionary, race: Dictionary, w_idx: Variant, ctx: Variant) -> Dictionary:
 	var c0 := HSHorse.cur(horse, w_idx)
 	var dirt: bool = race.surface == "ダ"
 	var c := c0.duplicate(); c.merge(HSHorse.on_surface(c0, race.surface), true)
@@ -329,21 +332,67 @@ static func run_pos(h: Dictionary, paceF: float) -> Dictionary:
 
 static func dir_of(sim: Sim) -> String:
 	return HSData.d().courses.get(sim.race.course, {}).get("dir", "右")
-static func whip_eff(c: Ctl) -> float:
+static func whip_eff(c) -> float:
 	return HSU.mx(0.25, 1.0 - 0.07 * HSU.mx(0.0, c.whips - 1.0))
 # 気分（高いほど良い）
-static func mood(c: Ctl) -> float:
+static func mood(c) -> float:
 	return HSU.clamp(100.0 - c.tension, 0.0, 100.0) if c else 50.0
 
+# ---------- C++（GDExtension。godot/native/）への切り替え：ここ 1 か所 ----------
+# C++ の模擬（HSNativeSim）が読めればそれを、読めなければ下の GDScript の模擬を使う。どちらも JS と同じ結果（一致テスト）。
+# backend＝"gd" で GDScript に固定、"native" で C++ を求める（読めなければ GDScript）。テストが両方を回すのに使う
+static var backend := ""
+static var _native_ready := false
+static func native_ok() -> bool:
+	return ClassDB.class_exists(&"HSNativeSim")
+static func use_native() -> bool:
+	if backend == "gd" or not native_ok(): return false
+	if not _native_ready:
+		_native_ready = true
+		var labels := {}
+		for id in HSHorse.SKILLS: labels[id] = HSHorse.SKILLS[id].label
+		var d := HSData.d()
+		ClassDB.class_call_static(&"HSNativeSim", &"set_data", d.get("courses", {}), d.get("layouts", {}), labels)
+	return true
+# 模擬を作る。戻り値は Sim（GDScript）か HSNativeSim（C++）。どちらも同じ名前で値を読める（sim.t・sim.st[i].x・sim.ctl …）
+static func create(race: Dictionary, runners: Array, w_idx: Variant, rng: HSRng, opts: Dictionary = {}):
+	if use_native():
+		return ClassDB.class_call_static(&"HSNativeSim", &"create", race, runners, w_idx, rng.s, opts, HSU.era_speed(race.get("year")))
+	return _create_gd(race, runners, w_idx, rng, opts)
+static func step(sim) -> bool:
+	if sim is Sim: return _step_gd(sim)
+	return sim.advance()
+static func finish(sim) -> Dictionary:
+	if sim is Sim: return _finish_gd(sim)
+	return sim.finish()
+static func ctl_up(sim) -> Variant:
+	if sim is Sim: return _ctl_up_gd(sim)
+	return sim.ctl_up()
+static func ctl_down(sim) -> Variant:
+	if sim is Sim: return _ctl_down_gd(sim)
+	return sim.ctl_down()
+static func ctl_whip(sim, side: Variant = null) -> Variant:
+	if sim is Sim: return _ctl_whip_gd(sim, side)
+	return sim.ctl_whip(side)
+static func ctl_swap(sim) -> Variant:
+	if sim is Sim: return _ctl_swap_gd(sim)
+	return sim.ctl_swap()
+static func ctl_lane(sim, d: float) -> Variant:
+	if sim is Sim: return _ctl_lane_gd(sim, d)
+	return sim.ctl_lane(d)
+# どちらの模擬か（"native"＝C++・"gd"＝GDScript）
+static func kind_of(sim) -> String:
+	return "gd" if sim is Sim else "native"
+
 static func run(race: Dictionary, runners: Array, w_idx: Variant, rng: HSRng, opts: Dictionary = {}) -> Dictionary:
-	var sim := create(race, runners, w_idx, rng, opts)
+	var sim = create(race, runners, w_idx, rng, opts)
 	while not step(sim): pass
 	return finish(sim)
 
 static func _has(h: Dictionary, id: String) -> bool:
 	return HSHorse.has(h, id)
 
-static func create(race: Dictionary, runners: Array, w_idx: Variant, rng: HSRng, opts: Dictionary = {}) -> Sim:
+static func _create_gd(race: Dictionary, runners: Array, w_idx: Variant, rng: HSRng, opts: Dictionary = {}) -> Sim:
 	var cf := HSTrack.for_race(race)
 	var geo: Dictionary = cf.geo
 	var D: float = race.dist
@@ -442,7 +491,7 @@ static func _rate_of(c: Ctl, t: float) -> int:
 static func _gear_step(n: int) -> float:
 	return HSU.mn(0.25, 0.05 + 0.025 * mini(n, 8))
 # しごく。ゲートの中ならスタートの合図
-static func ctl_up(sim: Sim) -> Variant:
+static func _ctl_up_gd(sim: Sim) -> Variant:
 	var c := sim.ctl
 	if not c or sim.over: return null
 	var s: Runner = sim.st[sim.me]
@@ -463,7 +512,7 @@ static func ctl_up(sim: Sim) -> Variant:
 	c.pushes += 1; c.lastPush = sim.t
 	return "fast" if n >= 5 else "ok"
 # 引く
-static func ctl_down(sim: Sim) -> Variant:
+static func _ctl_down_gd(sim: Sim) -> Variant:
 	var c := sim.ctl
 	if not c or not c.started or sim.over: return null
 	var n := _rate_of(c, sim.t); var d := _gear_step(n)
@@ -472,7 +521,7 @@ static func ctl_down(sim: Sim) -> Variant:
 	c.lastPull = sim.t
 	return "fast" if n >= 5 else "ok"
 # ムチ（side＝"L" か "R"。持っていない手のムチは、まず持ち替える）。続けて打つと風車ムチ
-static func ctl_whip(sim: Sim, side: Variant = null) -> Variant:
+static func _ctl_whip_gd(sim: Sim, side: Variant = null) -> Variant:
 	var c := sim.ctl
 	if not c or not c.started or sim.over: return null
 	var s: Runner = sim.st[sim.me]
@@ -495,12 +544,12 @@ static func ctl_whip(sim: Sim, side: Variant = null) -> Variant:
 	if c.whips > 12: return "tired"
 	return "windmill" if c.windmill else "ok"
 # ムチの持ち替え（少しの間、打てない）
-static func ctl_swap(sim: Sim) -> Variant:
+static func _ctl_swap_gd(sim: Sim) -> Variant:
 	var c := sim.ctl
 	if not c or sim.over: return null
 	c.hand = "L" if c.hand == "R" else "R"; c.swapUntil = sim.t + 0.35
 	return "swap"
-static func ctl_lane(sim: Sim, d: float) -> Variant:
+static func _ctl_lane_gd(sim: Sim, d: float) -> Variant:
 	var c := sim.ctl
 	if not c: return null
 	var l0 := c.lane; c.lane = HSU.clamp(HSMath.round_js(c.lane + d), 0.0, 12.0); c.laneT = sim.t
@@ -508,9 +557,11 @@ static func ctl_lane(sim: Sim, d: float) -> Variant:
 	if c.started and c.lane != l0 and not s.spurting and s.x > sim.D * 0.05: c.tension = HSU.clamp(c.tension + TENSION.lane * (temperF(s) - 1.0 + 0.15), 0.0, 100.0)
 	return null
 # 前の形の呼び名（push＝しごく、hold＝押している間は引く）
-static func ctl_push(sim: Sim) -> Variant:
+static func ctl_push(sim) -> Variant:
 	return ctl_up(sim)
-static func ctl_hold(sim: Sim, on: bool) -> void:
+static func ctl_hold(sim, on: bool) -> void:
+	if not (sim is Sim):
+		sim.ctl_hold(on); return
 	if on and sim.ctl and sim.ctl.started and sim.ctl.gear > -1 and sim.t - sim.ctl.lastPull > 0.4: ctl_down(sim)
 
 # ---------- 折り合い（自分で乗る馬の気分）----------
@@ -627,7 +678,7 @@ static func _near_x(st: Array, s: Runner, dmax: float) -> bool:
 	return false
 
 # 0.1 秒進める。終わったら true
-static func step(sim: Sim) -> bool:
+static func _step_gd(sim: Sim) -> bool:
 	if sim.over: return true
 	var D := sim.D; var st := sim.st; var straight := sim.straight; var slope = sim.slope; var pace := sim.pace; var opts := sim.opts; var rng := sim.rng
 	sim.t += DT; sim.step += 1
@@ -888,7 +939,7 @@ static func commentary(sim: Sim) -> void:
 	k.lastLeader = lead if k.lastLeader else k.lastLeader
 
 # 結果をまとめる
-static func finish(sim: Sim) -> Dictionary:
+static func _finish_gd(sim: Sim) -> Dictionary:
 	var st := sim.st; var D := sim.D; var opts := sim.opts; var events := sim.events
 	var t := sim.t
 	for s: Runner in st:

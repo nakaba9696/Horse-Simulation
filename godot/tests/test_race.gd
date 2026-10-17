@@ -27,13 +27,22 @@ static func make_horse(spec: Dictionary, id: String) -> Dictionary:
 	if spec.get("set"): h.merge(spec.set.duplicate(true), true)
 	return h
 
+# C++（GDExtension）が読めれば C++ と GDScript の両方を、読めなければ GDScript だけを回す（C++ は「飛ばした」と出す）
 func run(t) -> void:
 	var g: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/golden/races.json"))
-	for cs in g.cases:
-		_case(t, cs)
+	var kinds := ["native", "gd"] if HSSim.native_ok() else ["gd"]
+	if not HSSim.native_ok(): print("    race: C++ の模擬が無いので飛ばした（godot/native で scons。GDScript だけ確かめる）")
+	var keep := HSSim.backend
+	for k in kinds:
+		HSSim.backend = k
+		var t0 := Time.get_ticks_msec()
+		for cs in g.cases:
+			_case(t, cs, k)
+		print("    race（%s）：%d 本 %.1f 秒" % ["C++" if k == "native" else "GDScript", g.cases.size(), (Time.get_ticks_msec() - t0) / 1000.0])
+	HSSim.backend = keep
 
-func _case(t, cs: Dictionary) -> void:
-	var name: String = cs.name
+func _case(t, cs: Dictionary, kind: String = "gd") -> void:
+	var name: String = "%s [%s]" % [cs.name, kind]
 	var runners: Array = []
 	var hd: Array = []
 	for x in cs.card:
@@ -46,7 +55,8 @@ func _case(t, cs: Dictionary) -> void:
 			bad_h += 1
 			if bad_h == 1: print("    馬が違う：", runners[i].horse.name, " ", JSON.stringify(runners[i].horse).left(600))
 	t.eq(bad_h, 0, "race %s: 出走馬の作り方" % name)
-	var sim := HSSim.create(cs.race, runners, cs.wIdx, HSRng.new(cs.seed), cs.opts)
+	var sim = HSSim.create(cs.race, runners, cs.wIdx, HSRng.new(cs.seed), cs.opts)
+	t.eq(HSSim.kind_of(sim), kind, "race %s: 模擬の種類" % name)
 	t.eq(H.hex(sim.paceF), cs.paceF, "race %s: ペース" % name)
 	var acts: Array = cs.actions
 	var ai := 0

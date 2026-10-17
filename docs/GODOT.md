@@ -2,7 +2,8 @@
 
 持ち主の決定（2026-10-16）「Godotで作り始めていい」・移り方は「並行で移す」。
 JS 版は遊べる見本として残し、遊びの決まり・データ・模擬を Godot 4 に移す。画面と 3D は Godot で作り直す（別の係。`godot/scenes/`・`godot/view/`）。
-この文書は中身（`godot/core/`・`godot/data/`・`godot/tests/`・`tools/`）の係が書く。
+この文書は中身（`godot/core/`・`godot/native/`・`godot/data/`・`godot/tests/`・`tools/`）の係が書く。
+レースの模擬は C++（GDExtension。`godot/native/`）で回す（持ち主の決定 2026-10-17「すぐ C++ に移す」）。GDScript の模擬は C++ が読めないときの代わりと、一致の確かめに残す。
 
 ## 構成
 | 場所 | 中身 |
@@ -14,7 +15,8 @@ JS 版は遊べる見本として残し、遊びの決まり・データ・模�
 | `godot/core/hs_track.gd`（`HSTrack`） | コースの形（`HS.Track`。forRace・fromLayout・make・at・h_at・g_at） |
 | `godot/core/hs_horse.gd`（`HSHorse`） | 馬（`HS.Horse`。史実馬から作る・頭数合わせの馬・成長・能力・調教・故障） |
 | `godot/core/hs_skills.gd`（`HSSkills`） | 発動する特殊能力（`HS.Skills`） |
-| `godot/core/hs_sim.gd`（`HSSim`） | レースの模擬（`HS.Sim`。create・step・finish・操作・折り合い・競り合いの気合・実況） |
+| `godot/core/hs_sim.gd`（`HSSim`） | レースの模擬（`HS.Sim`。create・step・finish・操作・折り合い・競り合いの気合・実況）。C++ が読めれば C++ に渡す窓口（切り替えはこのファイルの `use_native` の 1 か所） |
+| `godot/native/`（`HSNativeSim`） | C++ の模擬（GDExtension）。`src/hs_math.cpp`（fdlibm）・`hs_rng.h`・`hs_track.cpp`・`hs_horse.cpp`（能力・強さ）・`hs_skills.cpp`・`hs_sim.cpp`（create・step・finish・操作・実況）・`hs_godot.cpp`（Godot に見せる窓口）。下の「C++ の模擬」 |
 | `godot/core/hs_sort.gd`（`HSSort`） | JS（V8）の `Array.prototype.sort` と同じ並べ替え（TimSort）。比べる関数が乱数を引く所（出走の優先順）でも、比べる回数と順が JS と同じ |
 | `godot/core/hs_json.gd`（`HSJson`） | セーブの JSON の読み書き。長い桁の小数を正しく読む（JS の JSON.parse と同じ値）。JS 版のセーブを読める |
 | `godot/core/hs_world.gd`（`HSWorld`） | 世界（`HS.World`。新しいゲーム・週の流れ prepare_week → cards → finish_week・AI の出走・出走表・結果・調教・暦・市場・表彰・セーブ・古いセーブの直し） |
@@ -30,7 +32,7 @@ JS 版は遊べる見本として残し、遊びの決まり・データ・模�
 var race := { course = "東京", surface = "芝", dist = 2400.0, ground = "良", year = 2025.0, month = 11.0, week = 4.0, grade = "G1", region = "JRA", age = "3+", weight = "定量" }
 var h := HSHorse.from_historic(史実馬のデータ, "id")      # HSData.d().historic の 1 件から
 var runners := [{ horse = h, jockey = { name = "…", skill = 80.0 }, weight = 57.0, num = 1.0, frame = 1.0, rider = "P" }, …]
-var sim := HSSim.create(race, runners, HSHorse.week_index(2025, 11, 4), HSRng.new(種), { ride = true, frames = true, bond = 0 })
+var sim = HSSim.create(race, runners, HSHorse.week_index(2025, 11, 4), HSRng.new(種), { ride = true, frames = true, bond = 0 })  # 型は付けない（C++ か GDScript のどちらかが返る）
 # 0.1 秒ごとに
 HSSim.ctl_up(sim)        # しごく（ゲートの中ならスタート）。戻り値 "good"・"ok"・"late"・"fast"
 HSSim.ctl_down(sim)      # 引く
@@ -43,7 +45,9 @@ var res := HSSim.finish(sim)  # { results, events, frames, D, straight, lap, win
 - 引数・戻り値・項目の意味は JS の `js/core/racesim.js` と同じ。`rider == "P"` の馬が自分。`opts.ride` のときだけ操作を受け付ける（無ければ騎手の腕で自動に乗る）。`opts.frames` で実況と 0.2 秒ごとの記録（`frames`）を作る。
 - 描画で読む値：`sim.t`、`sim.st[i]`（`x`＝スタートからの距離・`lane`＝進路・`v`・`spurting`・`done`・`kakari`（掛かり・頭の上げ具合 0〜1。前の名前 `headUp` も読める）・`ears`・`fight`・`r.num`）、`sim.ctl`（`tension`・`gear`・`lane`・`hand`・`whipUntil`・`windmill`・`blockedNow`・`wide`・`kakariNow`・`reinFight`・`bumpT`（横に馬がいて止まった時刻。無ければ null）・`bumpSide`（押した向き ±1）・`lastEv`）、`sim.events`（実況）、`sim.skillFx`（特殊能力の発動）、`sim.track.at(残り)`・`h_at`・`g_at`、`sim.D`・`sim.straight`。
 - 3D は JS の race3d と同じく、0.1 秒の刻みのあいだを補間して描けばよい。模擬の結果は描画に左右されない。
-- 速さの目安：1 レースを回し切って 0.5 秒ほど（一致テストの 48 本が、指紋を取りながら 22 秒。この container の CPU）。騎乗中は 1 フレームに 0〜1 刻みなので軽い。
+- 戻り値は C++ の模擬（`HSNativeSim`）か GDScript の模擬（`HSSim.Sim`）。どちらも同じ名前で値を読めるので、`var sim = …` と型を付けずに持つ（`:=` は型が決まらず誤りになる）。`HSSim.kind_of(sim)` で "native"・"gd"。
+- C++ の模擬の馬・操作の値（`sim.st[i]`・`sim.ctl`）は読むだけ。模擬（`sim`）を持っている間だけ使う（模擬を捨てたあとに `sim.st[i]` だけを持ち続けない）。`sim.track` は `at`・`h_at`・`g_at`・`corner_at` と `L`・`straight`・`flat`・`line` などを読める（GDScript の HSTrack と同じ名前）。
+- 速さの目安：1 レースを回し切って C++ で 3ms ほど（GDScript は 0.4 秒）。騎乗中は 1 フレームに 0〜1 刻みなので、どちらでも軽い。
 
 ## 世界の呼び方（画面の係へ）
 ```gdscript
@@ -53,12 +57,12 @@ HSWorld.market_historic()               # 馬の店 → HSWorld.buy(item)
 HSOwners.offers() → HSOwners.accept(raceKey, horseId)   # 馬主の依頼
 HSSeason.dc_pending_list() → HSSeason.dc_choose(cat, id) / dc_decline(cat)   # 12月の GF
 for r in HSJockey.my_rides():           # 今週自分が乗るレース
-	var sim := HSWorld.start_sim(r.card, { ride = true })   # → HSSim.step … → HSSim.finish(sim)
+	var sim = HSWorld.start_sim(r.card, { ride = true })   # → HSSim.step … → HSSim.finish(sim)
 var report := HSWorld.finish_week({ r.card.race.key: 結果 })   # 乗らなかったレースはおまかせで走る
 var json := HSWorld.serialize()         # セーブ（JS 版でも読める）
 ```
 - 関数の名前は JS の `W.prepareWeek` → `HSWorld.prepare_week` のように小文字と `_` にした。引数と戻り値は JS と同じ。
-- 速さ：1 週を進めるのに、この container で 4〜5 秒（JS は 0.4 秒）。重いのは乗らなかったレースの模擬（1 週に 5〜13 本）。下の「速さ」を参照。
+- 速さ：1 週を進めるのに、C++ の模擬で 0.3〜0.45 秒（JS は 0.4〜0.7 秒）。下の「速さ」を参照。
 
 ## データの流れ
 ```
@@ -83,7 +87,7 @@ data/*.js（正）→ index.html の並びで読む → fictional.js（騎手の
    - gf：11月4週のセーブに手を加え（1頭を4歳・前の年の GF（中長距離）の勝ち馬に）、12月1週の招待から年明けまで 7 週。
    - craft（番組表の行の指紋と、条件戦の予約も通す）：late の続きのセーブに手を加え（週の初めの操作に、重賞の勝ちを足す・馬主の好感度を足す、も使う）（1頭を5歳・能力120・G1を4勝・トロフィー2つ、もう1頭を牝馬に）、JS が読み直したものを Godot も読み、8週。週の初めの操作（予約・引退・オリジナルホースを作る）も同じ列で行う。フェブラリーSにスペシャルホース（G1を5勝した名馬・歴代の勝ち馬）が出て、引退で殿堂入り、オリジナルホースが生まれる。
    - 指紋は、辞書の項目を名前の順に並べ、null の項目を除き、-0 を 0 にした並べ方（JSON に書いて読み直したのと同じ）。
-4. `sh godot/tests/run.sh`（headless）が `godot/tests/test_*.gd` を回す。`node tests/run.js` は、Godot があればこれを呼ぶ（無ければ「飛ばした」と出す）。Godot の場所は `GODOT=`・PATH の `godot`・`/home/user/godot-bin/godot` の順に探す。
+4. `sh godot/tests/run.sh`（headless）が `godot/tests/test_*.gd` を回す。C++ の模擬（`godot/native/bin`）があれば、模擬の 48 本と数学・乱数を C++ と GDScript の両方で比べ、世界の進行・フリーレース・並列は C++ で回す。無ければ「C++ の模擬が無いので飛ばした」と出して GDScript だけで比べる。`node tests/run.js` は、Godot があればこれを呼ぶ（無ければ「飛ばした」と出す）。Godot の場所は `GODOT=`・PATH の `godot`・`/home/user/godot-bin/godot` の順に探す。
 
 JS の模擬を直したら：`node tools/golden_race.js` で答えを作り直し、Godot の同じ所も直して `sh godot/tests/run.sh` を緑にする（`node tests/run.js` は、答えが今の JS と違えば落ちる）。
 
@@ -101,13 +105,44 @@ JS の模擬を直したら：`node tools/golden_race.js` で答えを作り直�
 - 静的な変数の初期化でデータを読まない（`HSData.d()` は使うときに。読み込みの途中で呼ぶと止まる）。
 
 ## 速さ
-- GDScript の模擬は JS（V8）の約 15 倍遅い：1 レース 250ms ほど（18 頭・2400m）、1 週 4〜5 秒。騎乗中（1 フレームに 1 刻み）は軽い。
-- 結果を変えない直し（定数の辞書を定数に・0 になりえない所の max/min を組み込みに）で 1 割縮めた。
-- 出走表づくり（prepare_week）は、騎手の腕前を出すたびに年の表を並べ替えていたのを一度だけにして 1.8 秒 → 0.6 秒。いま 1 週の内訳は、出走表 0.4〜0.6 秒・レース 1 本 0.3 秒ほど（1 週に 5〜13 本）。測り方は `godot --headless --path godot -s tests/bench_week.gd`。
-- 週のレースは互いに独立なので並列に回せる（模擬は数学の作業用の共有の入れ物を持たないようにした。`test_parallel.gd` で、同時に回しても JS と同じ結果を確かめている）。ただ、いまの Godot 4.7.2 の実行ファイルでは、GDScript をスレッドで並べても速くならない（4 スレッドで逆に遅い）。
-- 案：（1）週を進める間は進み具合の絵を出す（4〜5 秒）、（2）模擬だけを C++（GDExtension）か C# に移す（同じ一致テストで確かめられる。fdlibm は C のまま使える）。持ち主・配り役の判断待ち。
+この container の CPU（4 コア）で測った（2026-10-17）。測り方：Godot は `godot --headless --path godot -s tests/bench.gd`（レース）・`tests/bench_week.gd`（1 週）、JS は `node tools/bench_js.js`。
+
+| | JS（V8） | GDScript | C++（GDExtension） |
+|---|---|---|---|
+| 模擬の 1 刻み（0.1 秒・平均） | 32 µs | 297 µs | 2.6 µs |
+| レース 1 本：作る（create） | 3.6 ms | 48 ms | 1.4 ms |
+| レース 1 本：回す（step を最後まで） | 39 ms | 367 ms | 3.2 ms |
+| 1 週を進める（出走表＋週の締め。乗らなかったレース 6〜12 本を含む） | 0.39〜0.69 秒 | 3.3〜4.3 秒 | 0.28〜0.43 秒 |
+| 内訳：出走表（prepare_week） | 0.11〜0.21 秒 | 0.12〜0.26 秒 | 0.11〜0.34 秒 |
+
+- C++ の模擬は GDScript の約 110 倍、JS の約 12 倍速い。1 週は JS と同じくらいになった（目標の 1 秒未満）。
+- 出走表づくりは GDScript のまま。結果を変えない直しで 0.5〜0.7 秒 → 0.1〜0.3 秒にした：
+  - 年代なしの騎手の腕前（`HSWorld.jockey`）が、まだ現役の騎手（`to`＝9999）で 1990〜9999 年を 2 年ずつ回していた（1 人 30ms）。腕前の表の最後の年から先は同じ値なので、そこで止める（JS も同じ回り方をしている。JS は速いので目立たない）。名前・年ごとに結果も覚えておく。
+  - 騎手の腕前の年の表（`skill_at`）が、同じ名前・年・地域の別の騎手の辞書と交互に並べ直されていた → 鍵ごとに両方を持つ。
+  - 騎手の一覧（`jockeys_of`）を週ごとに作り直していた → データは変わらないので遊んでいる間は使い回す。
+  - 頭数合わせの馬の名前の表を、レースごとに丸ごと写していた（7000 件）→ 写さずに、そのレースで付けた名前と両方を見る。種牡馬を選ぶ重みも週の一覧ごとに一度だけ出す。
+- まだ速くしたいとき：出走表（`build_field`・AI の出走 `ai_choose`）を C++ に移すのが次の候補。ただ今は 1 週の半分ほどで、JS と同じくらいなので急がない。
+- 週のレースは互いに独立なので並列に回せる（`test_parallel.gd` で、C++ の模擬を同時に回しても JS と同じ結果を確かめている）。C++ なら 1 本 3ms なので、いまは並べなくてよい。
+
+## C++ の模擬（godot/native/）
+- 呼び方は GDScript の `HSSim` と同じ（`HSSim.create`・`step`・`finish`・`ctl_*`）。`HSSim.use_native()` が C++ が読めるか（`ClassDB.class_exists("HSNativeSim")`）を見て、読めれば C++ に、読めなければ GDScript に渡す。切り替えはこの 1 か所。`HSSim.backend = "gd"` で GDScript に固定できる（テストが両方を回すのに使う）。`HSSim.power` も C++ に渡す。
+- 中身は GDScript の `hs_sim.gd`・`hs_skills.gd`・`hs_track.gd` と式の並びまで同じに写した。模擬の中（step）は C++ の値だけで回し、Godot の値（Dictionary）は作るとき・実況・結果をまとめるときだけ触る。数学は fdlibm（`hs_math.cpp`）。`-ffp-contract=off`（掛け算と足し算を 1 つにまとめない）で作る。
+- データ（競馬場・回り・特殊能力の名前）は、最初に使うときに GDScript が `HSNativeSim.set_data` で渡す。年代なしの走りの速さ（`HSU.era_speed`）は作るたびに渡す。
+- JS・GDScript の模擬を直したら、C++ の同じ所も直す（`godot/native/src/hs_sim.cpp` ほか）。3 つが同じ答えになることを一致テストで確かめる。
+
+### 作り方
+```
+sh godot/native/build.sh      # godot-cpp（版を固定）を取り、Linux 向けと（mingw があれば）Windows 向けを作る
+```
+- 要るもの：python3・scons（`pip install scons`）・g++。godot-cpp は `get_godot_cpp.sh` が `godot/native/godot-cpp` に取る（10.0.0-stable・コミット 507ed9d。api_version 4.7）。リポジトリには入れない。
+- できるもの：`godot/native/bin/libhsnative.linux.template_debug.x86_64.so`・`libhsnative.windows.template_release.x86_64.dll`・`hs_native.gdextension`（作ったものだけを書く。無ければ Godot は GDScript の模擬を使う）。`bin/` はリポジトリに入れない。作ったあと Godot の `--import`（`run.sh` がやる）で読み込みの一覧に入る。
+- 初めは godot-cpp の作りで 10 分ほど（4 コア）、そのあと模擬だけなら 20 秒ほど。
+- **Windows（Steam の主な売り先）向け**：Linux で mingw のクロスで作る。`apt-get install g++-mingw-w64-x86-64-posix` のあと `scons platform=windows use_mingw=yes target=template_release`（`build.sh` がやる）。できた DLL は KERNEL32・msvcrt だけを使う（ほかの DLL は要らない）。Windows の機械では動かしていないので、Windows で初めて開いたときに `HSSim.kind_of` が "native" になるかと、一致テスト（`run.sh`）を確かめる。
+  - 手元で作れないときは GitHub Actions の Windows（windows-latest・MSVC）で `scons platform=windows target=template_release` でも作れる。Actions を足すときは、使う Actions をコミットの SHA で固定し、`pull_request_target` は使わない（CLAUDE.md）。MSVC は `/fp:precise /fp:contract-` で作る（SConstruct が付ける）。
+- 書き出し（配る版）は `target=template_release`。エディタで開くときは debug の版を読む（片方しか無ければ両方に同じものを書く）。
 
 ## JS 版で見つけたこと
+- 年代なしの騎手の腕前（`js/core/world.js` の `W.jockey`）は、まだ現役の騎手（データの `to`＝9999）で、腕前の最大を 1990〜9999 年まで 2 年ずつ（約 4000 回）見ている。値は表の最後の年から変わらないので結果は正しいが、回る数が多い（Godot では最後の年で止めた。同じ値）。
 - 馬主が誰か（`js/core/owners.js` の `O.ownerOf`）を馬の名前で覚えておく使い回し（`own`）が、その名前を最初に見たときの馬で決まっていた。いまは鍵を「名前|id」にして直った（JS・Godot とも）。一致テストは念のため JS もセーブを読み直してから続ける形のまま。Godot は新しいゲーム・セーブを読んだときにこの使い回しを空にする。
 - 古いセーブの直し（`W.migrate`）の `g.shopKeys || …` のように、JS では空の配列も「ある」扱い。GDScript の `not []` は真なので、JS の真偽は `HSU.truthy` で見る。
 
@@ -124,7 +159,7 @@ JS の模擬を直したら：`node tools/golden_race.js` で答えを作り直�
 | `js/core/track.js` | `hs_track.gd` | ○（レースの中で） |
 | `js/core/horse.js` | `hs_horse.gd` | ○ 史実馬・伝説級・頭数合わせの馬・エディットの馬（調教・故障・回復は移したが、まだ一致テストが無い） |
 | `js/core/skills.js` | `hs_skills.gd` | ○ |
-| `js/core/racesim.js` | `hs_sim.gd` | ○ 48 本 |
+| `js/core/racesim.js` | `hs_sim.gd`・`godot/native/src/hs_sim.cpp`（C++） | ○ 48 本（C++ と GDScript の両方） |
 | `js/core/races.js`・`world.js`（騎手のゲームの道すじ）・`season.js`・`dream.js`・`eraless.js`・`special.js`・`owners.js`・`jockey.js`・`hall.js`・`trophy.js`・`pedigree.js`・`edits.js`（当てる所） | `hs_races.gd` ほか | ○ 新しいゲームから 4 週・JS のセーブから 4 週（GF・年明け） |
 | `original.js`（オリジナルホースを作る）・殿堂入り・予約・スペシャルホースが出てくるレース・トロフィー・冠・馬主の段階とご褒美（思い出の名馬） | 移した | ○ craft の 8 週（勝ち・好感度は週の初めの操作で足す） |
 | 12月1週の GF の招待・GF の伝説級（前の年の GF を勝った馬が出ると、キンチェムなどが出てくる） | 移した | ○ gf の 7 週 |

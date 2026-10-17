@@ -2,7 +2,7 @@
 # 状態 G は JS の G と同じ形の Dictionary（セーブはその JSON）。乱数は世界の乱数（G.rngState から）と、レース・市場ごとの種から。
 #   HSWorld.new_game({ mode = "jockey", seed = 1, jockeyName = "…", region = "美浦" })
 #   var cards := HSWorld.cards()           # 今週の出走表（自分の馬に自分が乗る）
-#   var sim := HSWorld.start_sim(card, { ride = true })  → HSSim.step … → HSSim.finish(sim)
+#   var sim = HSWorld.start_sim(card, { ride = true })  → HSSim.step … → HSSim.finish(sim)
 #   HSWorld.finish_week({ card.race.key: HSSim.finish(sim) })  # 乗ったレースの結果を渡して週を進める
 # js/core/owners.js が包んでいた所（新しいゲーム・セーブの直し・週の終わり・年明け）は、ここで同じ順に呼ぶ
 class_name HSWorld
@@ -96,7 +96,7 @@ static func used_names() -> Dictionary:
 # JS 版はページを開いている間これらを持ち続けるので、セーブを読み直すと結果が変わることがある（馬主の own など。docs/GODOT.md）。
 # Godot は、ページを開き直してセーブを読んだときの JS と同じにする
 static func _reset_caches() -> void:
-	_wcache = null; _cache = null; _soon = null; _week = null
+	_wcache = null; _cache = null; _soon = null; _week = null; _jk = {}; _jkName = {}
 	HSOwners._own = null
 	HSEraless._mk = null
 
@@ -244,7 +244,17 @@ static func find_stallion(name: Variant) -> Variant:
 static func pick_sire(r: HSRng, year: float) -> Variant:
 	var list := stallions_of(year)
 	if not list.size(): return null
-	return r.weighted(list, func(s): return HSMath.pow_(HSU.mx(5.0, HSU.or_(s.get("rating"), 50.0)), 2.0))
+	# 重み（評価の2乗）はその週の一覧ごとに一度だけ出す（r.weighted と同じ足し方で、結果は同じ）
+	var c := wc()
+	if not c.has("stw"): c.stw = {}
+	var k := HSU.num(year)
+	if not c.stw.has(k):
+		var ws := PackedFloat64Array()
+		var total := 0.0
+		for s in list:
+			var w := maxf(0.0, HSMath.pow_(HSU.mx(5.0, HSU.or_(s.get("rating"), 50.0)), 2.0)); total += w; ws.append(w)
+		c.stw[k] = [ws, total]
+	return r.weighted_pre(list, c.stw[k][0], c.stw[k][1])
 
 # ---------- 週のレース ----------
 static var _cache: Variant = null
@@ -307,17 +317,27 @@ static func entry_of(horseId: String) -> Variant:
 
 # ---------- 騎手（年代ごと） ----------
 static var _skillPts := {} # 騎手（データの辞書） → 年の順に並べた [年, 腕前]（データは変わらないので一度だけ並べる）
+# 腕前の表の最後の年（数だけの騎手・表の無い騎手は -INF。どの年も同じ腕前）
+static func _skill_last(j: Dictionary) -> float:
+	var sk = j.get("skill")
+	if typeof(sk) != TYPE_DICTIONARY or not sk.size(): return -HSMath.INF
+	var m := -HSMath.INF
+	for y in sk: m = maxf(m, float(y))
+	return m
 static func skill_at(j: Dictionary, year: float) -> float:
 	if typeof(j.get("skill")) in [TYPE_FLOAT, TYPE_INT]: return j.skill
 	var key := "%s|%s|%s" % [j.get("name"), j.get("from"), j.get("region")]
-	var pts: Array
-	if _skillPts.has(key) and is_same(_skillPts[key][0], j): pts = _skillPts[key][1]
-	else:
+	var pts = null
+	# 同じ名前・年・地域の別の騎手の辞書もあるので、鍵ごとに [辞書, 表] を並べて持つ（前は 1 つだけで、交互に並べ直していた）
+	var lst: Array = _skillPts.get(key, [])
+	for e in lst:
+		if is_same(e[0], j): pts = e[1]; break
+	if pts == null:
 		pts = []
 		var sk = HSU.or_(j.get("skill"), {})
 		for y in sk: pts.append([float(y), sk[y]])
 		pts = HSU.sort_by(pts, func(p): return p[0])
-		_skillPts[key] = [j, pts]
+		lst.append([j, pts]); _skillPts[key] = lst
 	if not pts.size(): return 70.0
 	if year <= pts[0][0]: return pts[0][1]
 	if year >= pts[pts.size() - 1][0]: return pts[pts.size() - 1][1]
@@ -326,12 +346,12 @@ static func skill_at(j: Dictionary, year: float) -> float:
 		if year >= y1 and year <= y2: return v1 + (v2 - v1) * (year - y1) / (y2 - y1)
 	return 70.0
 # その年に乗っている騎手（写しを返す）
-static func jockeys_of(year: float, regions: Variant = null) -> Array:
-	var c := wc()
-	if not c.has("jk"): c.jk = {}
-	var key: String = HSU.num(year) + ":" + (",".join(regions) if regions else "*")
-	if not c.jk.has(key): c.jk[key] = _jockeys_of0(year, regions)
-	return c.jk[key].duplicate() # JS は1人ずつ写すが、騎手の辞書を書き換える所は無いので、並びだけ写す
+# 騎手のデータは遊んでいる間は変わらないので、年・地域・年代なしかで使い回す（新しいゲーム・セーブを読んだときに空にする）
+static var _jk := {}
+static func jockeys_of(year: float, regions: Variant = null, copy := true) -> Array:
+	var key: String = HSU.num(year) + ":" + (",".join(regions) if regions else "*") + (":E" if HSU.ERA else "")
+	if not _jk.has(key): _jk[key] = _jockeys_of0(year, regions)
+	return _jk[key].duplicate() if copy else _jk[key] # JS は1人ずつ写すが、騎手の辞書を書き換える所は無いので、並びだけ写す
 static func _jockeys_of0(year: float, regions: Variant) -> Array:
 	var out: Array = []
 	for j in HSData.d().get("jockeys", []):
@@ -361,8 +381,14 @@ static func best_free_jockey(raceKey: String, horseId: Variant) -> String:
 		var j = top[(start + i) % top.size()] if i < top.size() else list[i]
 		if not taken.has(j.name): return j.name
 	return list[0].name
+# 騎手（名前と年で決まる。データは遊んでいる間は変わらないので、名前・年・年代なしかで覚えておき、写しを返す）
+static var _jkName := {}
 static func jockey(name: Variant) -> Dictionary:
 	var yr: float = G.year if G else 2000.0
+	var ck := "%s|%s|%s" % [name, HSU.num(yr), "E" if HSU.ERA else ""]
+	if not _jkName.has(ck): _jkName[ck] = _jockey0(name, yr)
+	return _jkName[ck].duplicate()
+static func _jockey0(name: Variant, yr: float) -> Dictionary:
 	var all_j: Array = jockeysByName.get(name, [])
 	var j = null
 	for x in all_j:
@@ -371,8 +397,11 @@ static func jockey(name: Variant) -> Dictionary:
 	if j == null: return { name = HSU.or_(name, "騎手未定"), skill = 65.0, region = "" }
 	if HSU.ERA:
 		var s := 0.0; var y: float = j.from
+		var last := _skill_last(j)
 		while y <= float(HSU.or_(j.get("to"), 2026.0)):
 			s = HSU.mx(s, skill_at(j, y)); y += 2.0
+			# 表の最後の年から先は腕前が変わらないので、そこで止める（to＝9999 の騎手で 4000 回まわっていた。JS と同じ値）
+			if y - 2.0 >= last: break
 		return { name = j.name, region = j.region, skill = HSMath.round_js(HSU.or_(s, 70.0)) }
 	return { name = j.name, region = j.region, skill = HSMath.round_js(skill_at(j, yr)) }
 # 史実馬の主戦騎手（その年）
@@ -517,7 +546,8 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 	if race.get("invite"): want = maxi(entr.size(), HSSeason.DC_FIELD)
 	elif race.get("graded"): want = maxi(entr.size(), mini(mx, r.int_(mx - 4, mx)))
 	else: want = maxi(entr.size(), r.int_(mini(10, mx), mx))
-	var used := used_names().duplicate()
+	var used := {} # このレースで付けた名前（使われている名前の表は写さずに、両方を見る）
+	var usedAll := used_names()
 	var runners: Array = []
 	for e in entr:
 		runners.append({ horse = e.horse, jockey = jockey(e.jockeyName) if e.get("jockeyName") else null, mine = HSU.truthy(e.get("mine")), legend = HSU.truthy(e.get("legend")) })
@@ -529,7 +559,7 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 		if race.get("sex") == "牝": fo.sex = "牝"
 		fo.foreign = foreign; fo.sireName = null if foreign else (sire.name if sire else null)
 		var f := HSHorse.make_filler(r, fo)
-		f.name = HSHorse.make_name(r, used, foreign)
+		f.name = HSHorse.make_name(r, used, foreign, usedAll)
 		f.local = race.get("region") == "地方" and not foreign
 		runners.append({ horse = f, jockey = null })
 	var taken := {}
@@ -545,7 +575,7 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 				ok = true; break
 		if not ok: continue
 		x.jockey = jockey(nm); taken[nm] = true
-	var pools := { JRA = jockeys_of(year, JRA), foreign = jockeys_of(year, ["外国"]), local = jockeys_of(year, ["地方"]) }
+	var pools := { JRA = jockeys_of(year, JRA, false), foreign = jockeys_of(year, ["外国"], false), local = jockeys_of(year, ["地方"], false) } # すぐ下の filter で新しい並びになる
 	for k in pools: pools[k] = pools[k].filter(func(j): return not taken.has(j.name))
 	var take := func(pool: Array, strong: bool) -> Dictionary:
 		if not pool.size(): return { name = "騎手未定", skill = 60.0 }
@@ -597,7 +627,7 @@ static func card_of(key: String) -> Variant:
 static func bond_of(h: Variant) -> float:
 	if h and G and G.get("bond") and G.bond.get(h.id): return G.bond[h.id]
 	return 0.0
-static func start_sim(card: Dictionary, opts: Dictionary = {}) -> HSSim.Sim:
+static func start_sim(card: Dictionary, opts: Dictionary = {}):
 	var o := { frames = true }; o.merge(opts, true)
 	if o.get("ride") and o.get("bond") == null:
 		for r in card.runners:

@@ -1,7 +1,7 @@
 # フリーレース（js/core/freerace.js の HS.FreeRace と同じ）：番組と関係なく1レースだけ遊ぶ。競馬場・芝ダート・距離・馬場・天気と、出る馬（史実馬・スペシャルホース、18頭まで）を選ぶ。
 # 結果はセーブに一切影響しない（馬はすべて写し、乱数はこのレースだけの種から）
 #   var card := HSFreeRace.build({ course = "東京", surface = "芝", dist = 2400, ground = "良", entries = [{ kind = "hist", key = "ディープインパクト" }, …], ride = 0, seed = 1 }, null)
-#   var sim := HSFreeRace.sim(card, { ride = true })   # → HSSim.step … → HSSim.finish(sim)
+#   var sim = HSFreeRace.sim(card, { ride = true })   # → HSSim.step … → HSSim.finish(sim)
 class_name HSFreeRace
 
 const YEAR := 2025.0
@@ -147,7 +147,7 @@ static func build(o: Dictionary, snap: Variant = null) -> Variant:
 		x.num = float(i + 1); x.frame = HSWorld.frame_of(i + 1, n); x.weight = HSSim.weight_for(x.horse, rc, rc.year)
 	HSWorld.set_odds(runners, rc, wIdx, HSRng.new(float(int(HSU.or_(o.get("seed"), 1.0)) ^ 0x2545f491)))
 	return { race = rc, runners = runners, seed = float(r.int_(1, 2147483646)), ride = me != null, free = true, wIdx = wIdx }
-static func sim(card: Dictionary, opts: Dictionary = {}) -> HSSim.Sim:
+static func sim(card: Dictionary, opts: Dictionary = {}):
 	var o := { frames = true }; o.merge(opts, true)
 	return HSSim.create(card.race, card.runners, card.wIdx, HSRng.new(card.seed), o)
 static func run(card: Dictionary) -> Dictionary:

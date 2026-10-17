@@ -25,6 +25,27 @@ func run(t) -> void:
 			if not ok: n += 1
 		t.eq(n, 0, "math: %s が JS と違う数（%d 件のうち）" % [k, g[k].size()])
 	t.eq([M.hex(PI), M.hex(M.TWO_PI), M.hex(PI / 2.0)], g.consts, "math: π の値")
+	# C++（godot/native）の数学の関数と乱数も同じ答えか（C++ が無ければ飛ばす）
+	if HSSim.native_ok():
+		var C := func(f: String, a: Array): return ClassDB.class_call_static.callv([&"HSNativeSim", StringName(f)] + a)
+		for k in ["cos", "sin", "log", "exp", "cbrt", "pow", "hypot", "round", "fixed"]:
+			var n := 0
+			for e in g[k]:
+				var ok := true
+				match k:
+					"pow", "hypot": ok = M.hex(C.call("m_" + k, [h.call(e[0]), h.call(e[1])])) == e[2]
+					"fixed":
+						var v: float = h.call(e[0])
+						ok = C.call("m_fixed", [v, 0]) == e[1] and C.call("m_fixed", [v, 1]) == e[2] and C.call("m_fixed", [v, 2]) == e[3]
+					_: ok = M.hex(C.call("m_" + k, [h.call(e[0])])) == e[1]
+				if not ok: n += 1
+			t.eq(n, 0, "math（C++）: %s が JS と違う数（%d 件のうち）" % [k, g[k].size()])
+		for e in g.rng:
+			var seq: Array = []
+			for x in C.call("rng_seq", [HSRng.new(e[0]).s, 40]): seq.append(M.hex(x))
+			t.eq(seq, e[1].slice(0, 40), "rng（C++）: 種 %s の列" % e[0])
+	else:
+		print("    math: C++ の模擬が無いので、C++ の数学の関数は飛ばした")
 	for e in g.rng:
 		var r := HSRng.new(e[0])
 		var seq: Array = []

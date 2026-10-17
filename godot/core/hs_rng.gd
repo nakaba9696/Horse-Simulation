@@ -48,6 +48,15 @@ func weighted(items: Array, weight_fn: Callable) -> Variant:
 		if r <= 0.0: return items[i]
 	return items[items.size() - 1]
 
+# weighted と同じ選び方で、重み（0 以上にしたもの）と合計を先に出しておく形
+func weighted_pre(items: Array, ws: PackedFloat64Array, total: float) -> Variant:
+	if total <= 0.0: return items[int(floorf(next() * items.size()))]
+	var r := next() * total
+	for i in items.size():
+		r -= ws[i]
+		if r <= 0.0: return items[i]
+	return items[items.size() - 1]
+
 func shuffle(arr: Array) -> Array:
 	var i := arr.size() - 1
 	while i > 0:
