@@ -21,7 +21,7 @@ const b8 = Buffer.alloc(8);
 const hex = v => { b8.writeDoubleBE(v); return b8.toString('hex'); };
 const sha = s => crypto.createHash('sha256').update(s, 'utf8').digest('hex').slice(0, 16);
 // 1刻みの状態の指紋（Godot の test_race.gd の _state と同じ並べ方）
-const stateStr = sim => sim.st.map(s => hex(s.x) + hex(s.lane) + hex(s.v) + hex(s.E)).join('') + (sim.ctl ? hex(sim.ctl.tension) + hex(sim.ctl.gear) + hex(sim.ctl.lane) + hex(sim.ctl.surge) : '');
+const stateStr = sim => sim.st.map(s => hex(s.x) + hex(s.lane) + hex(s.v) + hex(s.E)).join('') + (sim.ctl ? hex(sim.ctl.tension) + hex(sim.ctl.gear) + hex(sim.ctl.lane) + hex(sim.ctl.surge) + hex(sim.ctl.bumpT == null ? -1 : sim.ctl.bumpT) + hex(sim.ctl.bumpSide) : '');
 
 // ---------- レースの条件 ----------
 const GROUNDS = ['良', '稍重', '重', '不良'];
@@ -137,12 +137,14 @@ function runCase(race, k) {
   const stop = recording(sim, actions);
   const tick = mode === 1 ? bot.make('fit') : mode === 4 ? bot.make('misfit') : mode === 2 ? chaos(new U.RNG(seed ^ 0x5bd1e995)) : null;
   const hashes = [], checkpoints = {};
+  let bumps = 0, lastBump = null; // 横に馬がいて止まった回数（S.LANE）
   try {
     for (;;) {
       if (tick) tick(sim);
       const done = S.step(sim);
+      if (sim.ctl && sim.ctl.bumpT !== lastBump) { bumps++; lastBump = sim.ctl.bumpT; }
       if (sim.step % 10 === 0) hashes.push(sha(stateStr(sim)));
-      if (sim.step % 100 === 0) checkpoints[sim.step] = sim.st.map(s => [hex(s.x), hex(s.lane), hex(s.v), hex(s.E), s.spurting, hex(s.fight), hex(s.headUp), hex(s.ears)]);
+      if (sim.step % 100 === 0) checkpoints[sim.step] = sim.st.map(s => [hex(s.x), hex(s.lane), hex(s.v), hex(s.E), s.spurting, hex(s.fight), hex(s.kakari), hex(s.ears)]);
       if (done) break;
     }
   } finally { stop(); }
@@ -150,7 +152,7 @@ function runCase(race, k) {
   return {
     name: `${race.course}${race.surface}${race.dist}m ${race.ground} ${race.year}年 ${runners.length}頭`,
     race, wIdx, seed, opts, card, horseDigest, actions,
-    paceF: hex(sim.paceF), steps: sim.step, final: sha(stateStr(sim)), hashes, checkpoints,
+    paceF: hex(sim.paceF), steps: sim.step, bumps, final: sha(stateStr(sim)), hashes, checkpoints,
     results: res.results.map(x => ({ pos: x.pos, num: x.num, time: hex(x.time), margin: x.margin, lengths: hex(x.lengths), last3f: x.last3f == null ? null : hex(x.last3f), endE: hex(x.endE), power: hex(x.power), late: x.late, blocked: x.blocked })),
     winnerTime: U.time(res.winnerTime),
     events: res.events.map(e => [hex(e.t), e.text, e.kind]),
@@ -240,7 +242,7 @@ if (require.main === module) {
     for (const [f, s] of Object.entries(files)) fs.writeFileSync(path.join(OUT, f), s);
     const c = JSON.parse(files['races.json']).cases;
     console.log(`godot/tests/golden：レース ${c.length} 本（${(files['races.json'].length / 1e6).toFixed(1)}MB）`);
-    for (const x of c) console.log(' ', x.name, '勝ち', x.winnerTime, '操作', x.actions.length);
+    for (const x of c) console.log(' ', x.name, '勝ち', x.winnerTime, '操作', x.actions.length, x.bumps ? 'ぶつかる ' + x.bumps : '');
   }
 }
 module.exports = { build };

@@ -18,7 +18,7 @@ JS 版は遊べる見本として残し、遊びの決まり・データ・模�
 | `godot/core/hs_sort.gd`（`HSSort`） | JS（V8）の `Array.prototype.sort` と同じ並べ替え（TimSort）。比べる関数が乱数を引く所（出走の優先順）でも、比べる回数と順が JS と同じ |
 | `godot/core/hs_json.gd`（`HSJson`） | セーブの JSON の読み書き。長い桁の小数を正しく読む（JS の JSON.parse と同じ値）。JS 版のセーブを読める |
 | `godot/core/hs_world.gd`（`HSWorld`） | 世界（`HS.World`。新しいゲーム・週の流れ prepare_week → cards → finish_week・AI の出走・出走表・結果・調教・暦・市場・表彰・セーブ・古いセーブの直し） |
-| `godot/core/hs_races.gd`・`hs_ped.gd` | 週のレース（`HS.Races`）・血統（`HS.Ped`） |
+| `godot/core/hs_races.gd`・`hs_ped.gd`・`hs_program.gd` | 週のレース（`HS.Races`）・血統（`HS.Ped`）・番組表（`HS.Program`。1年先までのレースと出られるか・条件戦の予約） |
 | `godot/core/hs_jockey.gd`・`hs_season.gd`・`hs_eraless.gd`・`hs_special.gd`・`hs_owners.gd`・`hs_trophy.gd`・`hs_hall.gd`・`hs_original.gd`・`hs_edits.gd`・`hs_datafix.gd` | 騎手のゲーム・シーズンと GF（season.js と dream.js）・年代なしと馬の店・スペシャルホース・馬主・トロフィー・殿堂・オリジナルホース・エディット |
 | `godot/data/*.json` | `node tools/export_godot.js` が書き出す（生成物。手で直さない） |
 | `godot/tests/` | 中身のテスト（`sh godot/tests/run.sh`）と、一致テストの答え（`golden/`） |
@@ -36,12 +36,12 @@ HSSim.ctl_up(sim)        # しごく（ゲートの中ならスタート）。�
 HSSim.ctl_down(sim)      # 引く
 HSSim.ctl_whip(sim, "R") # ムチ（持っていない手なら持ち替え）。"ok"・"windmill"・"yore"・"tired"・"swap"
 HSSim.ctl_swap(sim)      # ムチの持ち替え
-HSSim.ctl_lane(sim, 1)   # 進路を 1 つ外へ（-1 で内へ）
+HSSim.ctl_lane(sim, 1)   # 進路を 1 つ外へ（-1 で内へ）。毎秒 3 進路で動き、横に馬がいると止まる（sim.ctl.bumpT・bumpSide）
 var over := HSSim.step(sim)   # 0.1 秒進める。終われば true
 var res := HSSim.finish(sim)  # { results, events, frames, D, straight, lap, winnerTime }
 ```
 - 引数・戻り値・項目の意味は JS の `js/core/racesim.js` と同じ。`rider == "P"` の馬が自分。`opts.ride` のときだけ操作を受け付ける（無ければ騎手の腕で自動に乗る）。`opts.frames` で実況と 0.2 秒ごとの記録（`frames`）を作る。
-- 描画で読む値：`sim.t`、`sim.st[i]`（`x`＝スタートからの距離・`lane`＝進路・`v`・`spurting`・`done`・`headUp`・`ears`・`fight`・`r.num`）、`sim.ctl`（`tension`・`gear`・`lane`・`hand`・`whipUntil`・`windmill`・`blockedNow`・`wide`・`kakariNow`・`reinFight`・`lastEv`）、`sim.events`（実況）、`sim.skillFx`（特殊能力の発動）、`sim.track.at(残り)`・`h_at`・`g_at`、`sim.D`・`sim.straight`。
+- 描画で読む値：`sim.t`、`sim.st[i]`（`x`＝スタートからの距離・`lane`＝進路・`v`・`spurting`・`done`・`kakari`（掛かり・頭の上げ具合 0〜1。前の名前 `headUp` も読める）・`ears`・`fight`・`r.num`）、`sim.ctl`（`tension`・`gear`・`lane`・`hand`・`whipUntil`・`windmill`・`blockedNow`・`wide`・`kakariNow`・`reinFight`・`bumpT`（横に馬がいて止まった時刻。無ければ null）・`bumpSide`（押した向き ±1）・`lastEv`）、`sim.events`（実況）、`sim.skillFx`（特殊能力の発動）、`sim.track.at(残り)`・`h_at`・`g_at`、`sim.D`・`sim.straight`。
 - 3D は JS の race3d と同じく、0.1 秒の刻みのあいだを補間して描けばよい。模擬の結果は描画に左右されない。
 - 速さの目安：1 レースを回し切って 0.5 秒ほど（一致テストの 48 本が、指紋を取りながら 22 秒。この container の CPU）。騎乗中は 1 フレームに 0〜1 刻みなので軽い。
 
@@ -81,7 +81,7 @@ data/*.js（正）→ index.html の並びで読む → fictional.js（騎手の
 3. `node tools/golden_world.js` → `godot/tests/golden/world.json`・`world_save.json`：決まった遊び方（店でいちばん安い馬を買う・馬主の最初の依頼を受ける・GF に出る・自分の馬の1レースを決まった乗り方で乗る）で週を進め、毎週のセーブ（G）の指紋・出走表の指紋・依頼・乗ったレースの着順を書く。
    - new：新しいゲームから 4 週。late：JS で 46 週遊んだセーブ（JS のセーブそのもの）を読んで、12月3週から 4 週（GF・年度表彰・年明けの史実馬のデビューをまたぐ）。
    - gf：11月4週のセーブに手を加え（1頭を4歳・前の年の GF（中長距離）の勝ち馬に）、12月1週の招待から年明けまで 7 週。
-   - craft：late の続きのセーブに手を加え（週の初めの操作に、重賞の勝ちを足す・馬主の好感度を足す、も使う）（1頭を5歳・能力120・G1を4勝・トロフィー2つ、もう1頭を牝馬に）、JS が読み直したものを Godot も読み、8週。週の初めの操作（予約・引退・オリジナルホースを作る）も同じ列で行う。フェブラリーSにスペシャルホース（G1を5勝した名馬・歴代の勝ち馬）が出て、引退で殿堂入り、オリジナルホースが生まれる。
+   - craft（番組表の行の指紋と、条件戦の予約も通す）：late の続きのセーブに手を加え（週の初めの操作に、重賞の勝ちを足す・馬主の好感度を足す、も使う）（1頭を5歳・能力120・G1を4勝・トロフィー2つ、もう1頭を牝馬に）、JS が読み直したものを Godot も読み、8週。週の初めの操作（予約・引退・オリジナルホースを作る）も同じ列で行う。フェブラリーSにスペシャルホース（G1を5勝した名馬・歴代の勝ち馬）が出て、引退で殿堂入り、オリジナルホースが生まれる。
    - 指紋は、辞書の項目を名前の順に並べ、null の項目を除き、-0 を 0 にした並べ方（JSON に書いて読み直したのと同じ）。
 4. `sh godot/tests/run.sh`（headless）が `godot/tests/test_*.gd` を回す。`node tests/run.js` は、Godot があればこれを呼ぶ（無ければ「飛ばした」と出す）。Godot の場所は `GODOT=`・PATH の `godot`・`/home/user/godot-bin/godot` の順に探す。
 
@@ -108,7 +108,7 @@ JS の模擬を直したら：`node tools/golden_race.js` で答えを作り直�
 - 案：（1）週を進める間は進み具合の絵を出す（4〜5 秒）、（2）模擬だけを C++（GDExtension）か C# に移す（同じ一致テストで確かめられる。fdlibm は C のまま使える）。持ち主・配り役の判断待ち。
 
 ## JS 版で見つけたこと
-- 馬主が誰か（`js/core/owners.js` の `O.ownerOf`）を馬の名前で覚えておく使い回し（`own`）が、その名前を最初に見たときの馬で決まる。遊んでいる間に同じ名前の別の馬（引退した史実馬がまたデビューする・頭数合わせの馬など）を先に見ていると答えが変わるので、セーブを読み直すと、その週の依頼が変わることがある。一致テストは JS もセーブを読み直してから続ける形にした。Godot は新しいゲーム・セーブを読んだときにこの使い回しを空にする（ページを開き直してセーブを読んだ JS と同じ）。
+- 馬主が誰か（`js/core/owners.js` の `O.ownerOf`）を馬の名前で覚えておく使い回し（`own`）が、その名前を最初に見たときの馬で決まっていた。いまは鍵を「名前|id」にして直った（JS・Godot とも）。一致テストは念のため JS もセーブを読み直してから続ける形のまま。Godot は新しいゲーム・セーブを読んだときにこの使い回しを空にする。
 - 古いセーブの直し（`W.migrate`）の `g.shopKeys || …` のように、JS では空の配列も「ある」扱い。GDScript の `not []` は真なので、JS の真偽は `HSU.truthy` で見る。
 
 ## Godot の用意（画面の無い container）

@@ -28,7 +28,7 @@ class Runner:
 	var E := 1.0
 	var delay := 0.0
 	var late := false
-	var kakari := false
+	var kakariDay := false # この日は掛かりやすい（レースの初めのくじ）
 	var acc: float
 	var zubu: float
 	var spurtCost: float
@@ -61,7 +61,10 @@ class Runner:
 	var fight := 0.0
 	var duel: Variant = null
 	var fightPeak := 0.0
-	var headUp := 0.0
+	var kakari := 0.0 # 掛かり（ハミに逆らう強さ・頭の上げ具合 0〜1）
+	# 前の名前（画面の係のため。kakari と同じ）
+	var headUp: float:
+		get: return kakari
 	var ears := 0.4
 	var rk: Variant = null
 	var easyStart := false
@@ -90,6 +93,8 @@ class Ctl:
 	var shrink := 0.0
 	var pullT := 0.0
 	var reinFight := false
+	var bumpT: Variant = null
+	var bumpSide := 0.0
 	var bond: Variant = null
 	var bondF := 1.0
 	var spurtTension: Variant = null
@@ -155,6 +160,8 @@ static var START_SKILL_ACC := 1.35
 static var EASY_START := 0.95
 static var LATE_E := 0.15
 static var PUSH := { base = 0.25 }
+# 横の移動（自分で乗る馬）：毎秒 v 進路・前後 dx m 以内で、進路の差が gap より近い馬がいる向きへは動けない・何もしないまま drift 秒で内へ戻り始める
+static var LANE := { v = 3.0, dx = 2.0, gap = 0.8, drift = 10.0 }
 static var EARLY_PUSH := 500.0
 static var GEAR_GAP := 18.0
 static var GEAR_COST := 0.05
@@ -371,7 +378,7 @@ static func create(race: Dictionary, runners: Array, w_idx: Variant, rng: HSRng,
 		var s := Runner.new()
 		s.r = r; s.h = h; s.i = i; s.A = A; s.vc = vc; s.Ds = Ds; s.kickS = kickS; s.spurtR = spurtR; s.guts = guts; s.mind = mind; s.slopeP = slopeP
 		s.E = 1.0 - LATE_E if late else 1.0
-		s.delay = delay; s.late = late; s.kakari = kakari
+		s.delay = delay; s.late = late; s.kakariDay = kakari
 		s.acc = K.a0 + K.a1 * kire
 		s.zubu = (8.0 - kire) * K.z + (LONGSPURT.z if _has(h, "longspurt") else 0.0)
 		s.spurtCost = K.c0 + K.c1 * (kire - 1.0) + K.cS * (kire - 4.5) * (330.0 - geo.straight) / 200.0
@@ -406,7 +413,7 @@ static func create(race: Dictionary, runners: Array, w_idx: Variant, rng: HSRng,
 		var s: Runner = st[meIdx]; s.me = true
 		if opts.get("ride"):
 			var c := Ctl.new()
-			c.tension = HSU.clamp(30.0 + (75.0 - s.mind) * 0.4 * bondF(opts.get("bond")) + (15.0 if s.kakari else 0.0), 10.0, 70.0)
+			c.tension = HSU.clamp(30.0 + (75.0 - s.mind) * 0.4 * bondF(opts.get("bond")) + (15.0 if s.kakariDay else 0.0), 10.0, 70.0)
 			c.lane = HSU.mn(3.0, s.lane); c.bond = opts.get("bond"); c.bondF = bondF(opts.get("bond"))
 			sim.ctl = c
 			s.delay = 99.0; s.late = false
@@ -553,7 +560,7 @@ static func oriai_step(sim: Sim, s: Runner, c: Ctl, g: float, prog: float, ahead
 	c.reinFight = rein > 0 and not _has(s.h, "kakari")
 	c.surge *= HSMath.exp_(-DT / (O.surgeT * (O.match if gentle else 1.0) * (1.6 if g > 0.05 else 1.0)))
 	c.shrink *= HSMath.exp_(-DT / O.shrinkT)
-	var rest: float = T.base + HSU.mx(0.0, 70.0 - s.mind) * T.hot * bf + (T.kakari if s.kakari else 0.0) + c.surge
+	var rest: float = T.base + HSU.mx(0.0, 70.0 - s.mind) * T.hot * bf + (T.kakari if s.kakariDay else 0.0) + c.surge
 	var ner: float = (rest - c.tension) * T.settle + off * MISFIT * tf * tf * (JIYU.misfit if s.jiyu else 1.0) * (1.0 if prog < 0.65 else 0.5)
 	var sides := 0
 	for o: Runner in st:
@@ -562,7 +569,7 @@ static func oriai_step(sim: Sim, s: Runner, c: Ctl, g: float, prog: float, ahead
 	var calm: float = (T.calm if (ahead1 and s.h.style != "逃げ") else 0.0) / sqrt(tf)
 	c.tension = HSU.clamp(c.tension + (ner + boxed * tf + rein - calm) * DT, 0.0, 100.0)
 
-# 馬の頭の上げ具合（0〜1）と耳の向き（−1 伏せる〜1 前へ）。3D の馬の首と耳に使う（模擬の結果には効かない）
+# 掛かり（ハミに逆らう強さ・頭の上げ具合 0〜1。s.kakari）と耳の向き（−1 伏せる〜1 前へ。s.ears）。3D の馬の首と耳に使う（模擬の結果には効かない）
 static func mood_out(sim: Sim, s: Runner, c: Ctl) -> void:
 	var head := 0.0; var ears := 0.4
 	if c:
@@ -570,14 +577,14 @@ static func mood_out(sim: Sim, s: Runner, c: Ctl) -> void:
 		if c.kakariNow: ears = -0.3
 		elif c.tension < 35: ears = 0.6
 		if c.shrink > 0.2: ears = HSU.mn(ears, -c.shrink)
-	elif s.kakari and s.x < sim.D * 0.5:
+	elif s.kakariDay and s.x < sim.D * 0.5:
 		head = 0.7; ears = -0.3
 	if s.spurting:
 		head *= 0.3; ears = HSU.mn(ears, 0.2)
 	if s.fight > 30 and s.duel: ears = HSU.mn(ears, -0.7 * HSU.mn(1.0, s.fight / 80.0))
 	if s.done:
-		head = 0.2; ears = 0.5
-	s.headUp = HSMath.round_js(head * 100.0) / 100.0; s.ears = HSMath.round_js(ears * 100.0) / 100.0
+		head = 0.0; ears = 0.5
+	s.kakari = HSMath.round_js(head * 100.0) / 100.0; s.ears = HSMath.round_js(ears * 100.0) / 100.0
 
 # 競り合いの気合
 static func fight_step(sim: Sim, s: Runner, R: float, prog: float) -> void:
@@ -637,7 +644,7 @@ static func step(sim: Sim) -> bool:
 	var c := sim.ctl
 	for s: Runner in st:
 		if s.done:
-			s.v = maxf(6.0, s.v - 0.9 * DT); s.x += s.v * DT; s.headUp = 0.2; s.ears = 0.5; continue
+			s.v = maxf(6.0, s.v - 0.9 * DT); s.x += s.v * DT; s.kakari = 0.0; s.ears = 0.5; continue
 		if s.me and c and not c.started and t >= 0.9:
 			c.started = true; s.delay = 0.9; s.late = true; s.E -= LATE_E; say(sim, t, "%s、出遅れた！" % s.h.name, "trouble")
 		if t < s.delay: continue
@@ -691,7 +698,7 @@ static func step(sim: Sim) -> bool:
 				elif c.tension > 50 and not s.spurting: costMul *= 1.0 + (c.tension - 50.0) / 100.0 * TENSE_COST
 				if s.narabu and R < 250 and (g > 0.3 or s.spurting) and _near_x(st, s, 1.5):
 					target *= 1.004; fire(sim, s, "narabu")
-			if c.lane > 0 and t - c.laneT > 3 and t - c.driftT > 1.2:
+			if c.lane > 0 and t - c.laneT > LANE.drift and t - c.driftT > 1.2:
 				var blockedIn := false
 				for o: Runner in st:
 					if o != s and not o.done and absf(o.x - s.x) < 3.2 and o.lane < s.lane - 0.2 and o.lane > c.lane - 1.9: blockedIn = true; break
@@ -728,10 +735,10 @@ static func step(sim: Sim) -> bool:
 				var g0 := maxf(0.0, s.gap + s.gapAdj) # gap・gapAdj は -0 にならない
 				var err: float = 0.0 if pack == s else leaderX - s.x - g0
 				target = pace * (1.0 + maxf(-0.02, minf(0.02, err * 0.0012)))
-				if s.kakari and prog < 0.5:
+				if s.kakariDay and prog < 0.5:
 					target *= 1.012
 					if prog > 0.1 and _has(s.h, "kakari"): fire(sim, s, "kakari")
-			if s.kakari and prog < 0.5: costMul *= 1.3
+			if s.kakariDay and prog < 0.5: costMul *= 1.3
 		if s.spurting and R > straight and sim.paceF > 1: costMul *= 1.0 + (sim.paceF - 1.0) * PACE_EARLY
 		if not s.spurting and prog > 0.08 and not s.oonige:
 			var rk: float = 0.5 if s.rk == null else s.rk
@@ -802,7 +809,19 @@ static func step(sim: Sim) -> bool:
 	var live := by_x(sim)
 	var me: Runner = st[sim.me] if c else null
 	if me:
-		me.laneT = c.lane; me.lane += HSU.clamp(c.lane - me.lane, -1.0 * DT, 1.0 * DT)
+		# 押したらすぐ動き出し（毎秒 LANE.v 進路）、横に馬がいれば止まる（ぶつかった印 c.bumpT・c.bumpSide。振動と揺れに使う）
+		var want := HSU.clamp(c.lane - me.lane, -LANE.v * DT, LANE.v * DT)
+		if absf(want) > 1e-6:
+			var nl := me.lane + want; var dir := signf(want)
+			var hit := false
+			for o: Runner in st:
+				if o != me and not o.done and absf(o.x - me.x) < LANE.dx and dir * (o.lane - me.lane) > 0 and absf(o.lane - nl) < LANE.gap: hit = true; break
+			if hit:
+				if t - (-9.0 if c.bumpT == null else c.bumpT) > 0.4:
+					c.bumpT = t; c.bumpSide = dir
+				c.lane = HSU.clamp(HSMath.round_js(me.lane - dir * 0.49), 0.0, 12.0) # 押した向きの注文は取り消す（ぶつかった所で止まる）
+			else: me.lane = nl
+		me.laneT = c.lane
 	var near: Array = []
 	if sim.step % 2 == 0:
 		for k in live.size():

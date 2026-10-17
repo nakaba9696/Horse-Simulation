@@ -94,14 +94,18 @@ static func fit_race(o: Dictionary, r: Dictionary) -> float:
 
 # ---------- 馬主の馬（馬の名前と種から決まる） ----------
 static var _own: Variant = null
+static func _s(v: Variant) -> String:
+	return HSU.num(v) if (v is float or v is int) else str(v)
 static func owner_of(h: Variant) -> Variant:
 	if not h or h.get("owner") == "P" or h.get("legend") or not LIST().size(): return null
 	var g = HSWorld.G
 	if not g: return null
 	if _own == null or _own.seed != g.seed or _own.map.size() > 6000: _own = { seed = g.seed, map = {} }
-	var key: String = h.name if h.get("name") else str(h.id)
+	# 覚えておく鍵は名前と id の組（同じ名前の別の馬で、答えが入れ替わらないように。JS と同じ）
+	var name: String = h.name if h.get("name") else _s(h.id)
+	var key := "%s|%s" % [name, _s(h.id)]
 	if _own.map.has(key): return _own.map[key]
-	var r := HSU.hash_rng("owner:%s:%s" % [HSU.num(g.seed), key])
+	var r := HSU.hash_rng("owner:%s:%s" % [HSU.num(g.seed), name])
 	var res = null
 	if r.chance(OWNED_FILLER if h.get("filler") else OWNED):
 		var ok: Array = LIST().filter(func(o): return not o.get("only") or (_FIT_H.has(o.only) and _fit_h(o.only, h)))

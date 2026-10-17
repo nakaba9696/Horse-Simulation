@@ -42,6 +42,14 @@ func _ops(ops: Array) -> Array:
 				h.gradedWins.append({ y = G.year, race = race.name, short = race.short, grade = race.grade, region = race.region })
 				out.append(",".join(HSSeason.on_win(h, race, G.year)))
 			"pts": out.append(HSOwners.add_pts(op[1], op[2]))
+			"program":
+				var rows := HSProgram.rows(HSWorld.horse(op[1]), { show = "all" })
+				out.append(HSData.digest_save(rows.map(func(r): return [float(r.wk.i), r.race.key, HSU.or_(r.why, ""), float(r.fit), HSU.or_(r.state, ""), HSU.or_(r.can, ""), r.busy, ",".join(r.others)])))
+			"rsvp":
+				var found = null
+				for r in HSProgram.rows(HSWorld.horse(op[1])):
+					if r.can == "reserve" and not r.race.get("graded"): found = r; break
+				out.append("%s:%s" % [found.race.key, HSU.or_(HSProgram.reserve(op[1], found.race.key), "ok")] if found else "no race")
 			"make":
 				var r := HSOriginal.make(op[1], op[2], op[3])
 				out.append(r.err if r.has("err") else "%s:%s" % [r.horse.name, ",".join(r.skills)])

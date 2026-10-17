@@ -175,7 +175,7 @@ static func step(sim, order: Array, DT: float) -> void:
 		sk.duelFor = sk.duelFor + DT if ((s.spurting or (me and me.gear > 0.3)) and close) else 0.0
 		if rank == 1 and R <= 600 and R > 300: sk.led600 = true
 		if sk.rankMid == null and s.x >= D * 0.5: sk.rankMid = rank
-		if s.kakari and s.x < D * 0.5 and not me: sk.kakari = true
+		if s.kakariDay and s.x < D * 0.5 and not me: sk.kakari = true
 		x.sim = sim; x.s = s; x.c = me; x.t = t; x.D = D; x.R = R; x.straight = straight; x.inStraight = inStraight; x.rank = rank; x.n = n
 		x.whipping = whipping; x.left = left; x.right = right; x.faster = faster; x.close = close; x.leader = leader; x.second = second; x.sk = sk
 		for id in s.trig:

@@ -7,7 +7,7 @@ const H := preload("res://core/hs_math.gd")
 static func _state(sim) -> String:
 	var parts := PackedStringArray()
 	for s in sim.st: parts.append(H.hex(s.x) + H.hex(s.lane) + H.hex(s.v) + H.hex(s.E))
-	if sim.ctl: parts.append(H.hex(sim.ctl.tension) + H.hex(sim.ctl.gear) + H.hex(sim.ctl.lane) + H.hex(sim.ctl.surge))
+	if sim.ctl: parts.append(H.hex(sim.ctl.tension) + H.hex(sim.ctl.gear) + H.hex(sim.ctl.lane) + H.hex(sim.ctl.surge) + H.hex(-1.0 if sim.ctl.bumpT == null else float(sim.ctl.bumpT)) + H.hex(sim.ctl.bumpSide))
 	return "".join(parts)
 static func _sha(s: String) -> String:
 	return s.sha256_text().left(16)
@@ -53,6 +53,7 @@ func _case(t, cs: Dictionary) -> void:
 	var bad_act := 0
 	var hashes: Array = []
 	var first_bad := -1
+	var bumps := 0; var last_bump = null
 	while true:
 		while ai < acts.size() and int(acts[ai][0]) == sim.step:
 			var a: Array = acts[ai]
@@ -66,6 +67,8 @@ func _case(t, cs: Dictionary) -> void:
 			if ret != a[3]: bad_act += 1
 			ai += 1
 		var done := HSSim.step(sim)
+		if sim.ctl and sim.ctl.bumpT != last_bump:
+			bumps += 1; last_bump = sim.ctl.bumpT
 		if sim.step % 10 == 0:
 			var hh := _sha(_state(sim))
 			hashes.append(hh)
@@ -79,6 +82,7 @@ func _case(t, cs: Dictionary) -> void:
 		# ずれの手がかり：その前の 100 刻みの全馬の値
 		if cs.checkpoints.has(str(cp)): print("    ", cp, " 刻みの JS の値：", JSON.stringify(cs.checkpoints[str(cp)]).left(300))
 	t.eq(sim.step, int(cs.steps), "race %s: 刻みの数" % name)
+	t.eq(float(bumps), float(cs.bumps), "race %s: 横に馬がいて止まった回数" % name)
 	t.eq(first_bad, -1, "race %s: 毎刻みの位置・速さ・スタミナ" % name)
 	t.eq(_sha(_state(sim)), cs.final, "race %s: 最後の状態" % name)
 	var res := HSSim.finish(sim)

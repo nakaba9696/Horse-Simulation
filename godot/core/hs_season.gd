@@ -141,8 +141,11 @@ static func reserve(id: String, race: Dictionary) -> Variant:
 	var G = HSWorld.G
 	var h = HSWorld.horse(id)
 	if not h or h.get("owner") != "P": return "持ち馬ではない"
-	if not race.get("graded"): return "予約できるのは重賞だけ"
+	if not race.get("graded") and not (race.get("cls") and race.get("region") == "JRA"): return "予約できるのは重賞と条件戦だけ"
 	var why = static_ineligible(h, race, race.year)
+	if not why and not race.get("graded"): # 条件戦は勝ち星の条件もいまの成績で見る（番組表 hs_program.gd）
+		var h2: Dictionary = h.duplicate(); h2.injury = null
+		why = HSRaces.ineligible(h2, race, race.year)
 	if why: return why
 	if not G.get("reserve"): G.reserve = []
 	if G.reserve.any(func(x): return x.id == id and x.y == race.year and x.m == race.month and x.w == race.week): return "その週はもう予約している"
