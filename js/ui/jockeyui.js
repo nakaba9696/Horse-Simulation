@@ -53,7 +53,7 @@
 
   // ---------- 生産：オリジナルホース（引退させた牡馬と牝馬から） ----------
   const potStats = h => `<div class="nums">${['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'].map(k => `<span>${H.STAT_SHORT[k]} <b>${Math.round(h.pot[k])}</b></span>`).join('')}<span>切れ <b>${h.kire || 4}</b></span></div>`;
-  const skillChip = id => { const k = HS.Skills.BY[id]; return k ? `<span class="chip skill trig ${k.bad ? 'bad' : ''}" title="${e(k.note)}">⚡${e(k.label)}</span>` : H.SKILLS[id] ? `<span class="chip skill ${H.SKILLS[id].bad ? 'bad' : ''}" title="${e(H.SKILLS[id].note)}">${e(H.SKILLS[id].label)}</span>` : ''; };
+  const skillChip = id => { const k = HS.Skills.BY[id]; return k ? UI.trigChip(id) : H.SKILLS[id] ? `<span class="chip skill ${H.SKILLS[id].bad ? 'bad' : ''}" title="${e(H.SKILLS[id].note)}">${e(H.SKILLS[id].label)}</span>` : ''; };
   S.breed = function (st) {
     const O = HS.Original, G = W.get();
     if (!O || !O.on()) return '<div class="panel empty mt">この遊び方では使えません。</div>';

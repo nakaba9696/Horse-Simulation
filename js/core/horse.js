@@ -57,6 +57,8 @@
     longspurt: { label: 'ロングスパート', note: '早めに動いて長く脚を使う' },
     jiyu: { label: '脚質自在', style: true, note: '脚質の一つとして見せる（特殊能力の並びには出さない）。流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい' },
     inner: { label: '内枠○', note: '内の枠で走る' },
+    outer: { label: '外枠○', note: '外の枠（7・8枠）で走る' },
+    mud: { label: '道悪○', note: '重・不良の馬場で力を出す' },
     travel: { label: '海外○', note: '海外の大レースで力を出す' },
     homebody: { label: '海外×', note: '海外では力を出しきれない', bad: true },
     deokure: { label: '出遅れ癖', note: 'ゲートの出が悪い', bad: true },
@@ -237,6 +239,7 @@
     else H.splitSurface(h, rng);
     // 出遅れ癖・掛かり癖のある馬は気性が荒い（気性を個別に決めた馬は除く）
     if (!(custom && custom.mind != null) && (h.skills.includes('kakari') || h.skills.includes('deokure'))) pot.mind = U.clamp(pot.mind - 14, 20, 120);
+    if (!Array.isArray(d.skills)) H.histSkills2(d, h);
     return h;
   };
 
@@ -293,6 +296,14 @@
     // ダートで前に行く馬は、砂をかぶるのを嫌って前に行っている見立て（運で）
     if ((d.style === '逃げ' || d.style === '先行') && cnt(r => r.surface === 'ダ') >= 1 && rng.chance(0.2)) sk.push('sunaB');
     return sk;
+  };
+
+  // あとから足した特性（2026-10-17）。前の見立ての運（hist:名前）の並びを変えないよう、別の運（hist2:名前）を使う
+  H.MUD_HEAVY = 86; H.OUTER_P = 0.06;
+  H.histSkills2 = function (d, h) {
+    const rng = U.hashRng('hist2:' + d.name);
+    if ((h.apt.heavy || 0) >= H.MUD_HEAVY) h.skills.push('mud'); // 道悪○：道悪の適性がとくに高い馬
+    if (rng.chance(H.OUTER_P)) h.skills.push('outer'); // 外枠○：勝ち鞍からは見えない癖なので、運で少しだけ
   };
 
   // 架空の馬（モブ・生産馬）の素質を、総合の目安 mean から作る
