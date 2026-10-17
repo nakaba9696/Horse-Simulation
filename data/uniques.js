@@ -37,7 +37,7 @@ HS.DATA.uniques = [
   { horse:'カウントフリート', id:'u_countfleet', label:'二十五馬身', at:'st', when:'bigLead', fx:{ spd:0.07, sec:5, free:true },
     note:'直線で先頭に立ち、2番手を2馬身以上離していれば、さらに突き放す',
     why:'ベルモントステークスを25馬身差で勝った。のちに破られるまでレース史上最大の着差' },
-  { horse:'ザテトラーク', id:'u_tetrarch', label:'まだらの快速', at:'start', when:'start', fx:{ spd:0.07, sec:4, free:true, pos:3 },
+  { horse:'ザテトラーク', id:'u_tetrarch', label:'白斑の稲妻', at:'start', when:'start', fx:{ spd:0.07, sec:4, free:true, pos:3 },
     note:'ゲートを出ると、すぐに他馬を引き離す',
     why:'デビュー戦はスタートから他馬を引き離して勝ち、コヴェントリーステークスは10馬身差。白い斑点のまだら模様の芦毛' },
   { horse:'ドミノ', id:'u_domino', label:'黒い旋風', at:'st', when:'sprint', fx:{ spd:0.07, sec:4, free:true },
