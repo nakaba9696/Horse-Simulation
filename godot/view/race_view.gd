@@ -508,8 +508,11 @@ func place(H: Array, dt: float) -> void:
 		var lead_want := h.lead_want
 		if moving and absf(f.curv) > 0.002:
 			lead_want = 0.0 if tr.sign > 0.0 else 1.0
+		# ゴールを過ぎたら、流しながら体を起こす
+		var ft: float = src.finish_t[j] if j < src.finish_t.size() else -1.0
+		var ease := clampf((T - ft) / 1.6, 0.0, 1.0) if ft >= 0.0 and moving else 0.0
 		var g := {"ph": ph, "sp": sp, "push": push, "t": maxf(T, 0.0) + 3.0, "walk_ph": fposmod(x / ViewGait.WALK_STRIDE + h.num * 0.37, 1.0), "walk_w": ww,
-			"whip": whip, "pose": pose, "head_up": float(st[3]), "ears": float(st[4]), "lead_want": lead_want}
+			"whip": whip, "pose": pose, "head_up": float(st[3]), "ears": float(st[4]), "lead_want": lead_want, "ease": ease}
 		var cd := cam.global_position.distance_to(p)
 		g["cam_d"] = cd
 		kickups[j].run(v if moving else 0.0, cd < 45.0)

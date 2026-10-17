@@ -50,6 +50,7 @@ var cloth_mesh: ArrayMesh             # 鞍の下の布（体の面を浮かせ�
 var saddle_mesh: ArrayMesh            # 鞍
 const CLOTH := {"z0": -0.36, "z1": 0.2, "y0": 1.02}     # 布の範囲（素材の座標）
 const SADDLE := {"z0": -0.2, "z1": 0.08, "y0": 1.45}
+var seat: Array = []                  # 鞍の上面の点（騎手を乗せる所）：[頂点の位置（素材の座標）, 骨の番号, 重み] を前と後ろの2つ
 
 static func get_model() -> ViewHorseModel:
 	if _inst == null:
@@ -97,10 +98,27 @@ func _load() -> void:
 	body_mesh = _build(d.body, true)
 	cloth_mesh = _shell(d.body, CLOTH, 0.014)
 	saddle_mesh = _shell(d.body, SADDLE, 0.036)
+	_find_seat()
 	hair_mesh = _build(d.hair, false)
 	bridle_mesh = _build(d.bridle, false)
 	shade_tex = load(PATH + "shade.jpg")
 	hair_tex = load(PATH + "hair.png")
+
+# 鞍の上面の前と後ろに近い体の頂点を選ぶ（背の真ん中の線の上）
+func _find_seat() -> void:
+	var a := body_mesh.surface_get_arrays(0)
+	var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+	var BI: PackedInt32Array = a[Mesh.ARRAY_BONES]
+	var BW: PackedFloat32Array = a[Mesh.ARRAY_WEIGHTS]
+	for zc in [SADDLE.z0, SADDLE.z1]:
+		var best := 1e9
+		var bk := 0
+		for k in V.size():
+			var d := Vector3(V[k].x * 3.0, V[k].y - 1.6, V[k].z - zc).length()
+			if d < best:
+				best = d
+				bk = k
+		seat.append([V[bk], BI.slice(bk * 4, bk * 4 + 4), BW.slice(bk * 4, bk * 4 + 4)])
 
 func _build(g: Dictionary, is_body: bool) -> ArrayMesh:
 	var pos: Array = g.pos

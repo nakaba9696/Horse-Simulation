@@ -197,7 +197,7 @@ static func fade_setup(m: BaseMaterial3D) -> void:
 	m.distance_fade_max_distance = 4.9
 
 # ---- 1コマの形 ----
-# g＝{ph, sp, push, t, walk_ph, walk_w, whip, pose, head_up, ears, lead_want}
+# g＝{ph, sp, push, t, walk_ph, walk_w, whip, pose, head_up, ears, lead_want, ease}
 func animate(g: Dictionary, dt: float, near: bool) -> void:
 	lead_want = float(g.get("lead_want", lead_want))
 	if dt > 0.0:
@@ -207,7 +207,7 @@ func animate(g: Dictionary, dt: float, near: bool) -> void:
 	else:
 		head_up = float(g.get("head_up", 0.0))
 		ears = float(g.get("ears", 0.4))
-	ViewGait.pose(P, g.ph, g.sp, g.push, g.t, seed, lead, g.walk_ph, g.walk_w, g.whip, g.pose, head_up)
+	ViewGait.pose(P, g.ph, g.sp, g.push, g.t, seed, lead, g.walk_ph, g.walk_w, g.whip, g.pose, head_up, float(g.get("ease", 0.0)))
 	# 胴（手作りの骨 1）：高さ・前後の傾き・左右の揺れ
 	torso.position = Vector3(_j1.x, P[ViewGait.Y], _j1.z)
 	torso.basis = _rot(P[1 * 3], P[1 * 3 + 1], P[1 * 3 + 2])
@@ -216,10 +216,25 @@ func animate(g: Dictionary, dt: float, near: bool) -> void:
 	var walking: bool = g.walk_w >= 0.5
 	settle(g.walk_ph if walking else g.ph, 1.0 if walking else g.sp, walking)
 	if near:
+		jockey.position = seat_shift()
 		jockey.pose(P)
 	var cd: float = g.get("cam_d", 99.0)
 	for l in numbers:
 		l.visible = cd > 4.0
+
+# 鞍が胴（手作りの骨 1）からどれだけずれたか（胴の座標）。腰と背がしなると鞍も動くので、騎手と鐙をそこへ乗せる
+func seat_shift() -> Vector3:
+	var d := Vector3.ZERO
+	for sp in M.seat:
+		var v: Vector3 = sp[0]
+		var bi: PackedInt32Array = sp[1]
+		var bw: PackedFloat32Array = sp[2]
+		var acc := Vector3.ZERO
+		for q in 4:
+			if bw[q] > 0.0:
+				acc += (skel.get_bone_global_pose(bi[q]) * M.skin.get_bind_pose(bi[q]) * v) * bw[q]
+		d += model.transform * acc - model.transform * v
+	return d / maxf(1.0, float(M.seat.size()))
 
 # 手作りの角度（rz・ry・rx）→ Godot の回転（three.js の XYZ の順：Rx・Ry・Rz）
 static func _rot(rz: float, ry: float, rx: float) -> Basis:
