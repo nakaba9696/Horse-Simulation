@@ -28,7 +28,7 @@ HS.DATA.uniques = [
   { horse:'バーラム', id:'u_bahram', label:'九戦九勝', at:'st', when:'front3', fx:{ spd:0.05, sec:4, free:true },
     note:'残り400mで3番手以内にいると、そのまま抜け出す',
     why:'9戦すべてに勝った英国の三冠馬。調整の遅れた秋も、英セントレジャーを5馬身差で勝った' },
-  { horse:'ウォーアドミラル', id:'u_waradmiral', label:'提督の逃げ', at:'st', when:'holdLead', fx:{ spd:0.05, sec:3, free:true, E:0.03 },
+  { horse:'ウォーアドミラル', id:'u_waradmiral', label:'力強き原子', at:'st', when:'holdLead', fx:{ spd:0.05, sec:3, free:true, E:0.03 },
     note:'先頭でゴール前、2番手に1馬身以内まで詰め寄られても、抑えきる',
     why:'ケンタッキーダービーを逃げ切り、プリークネスステークスは内から迫った馬を頭差で抑えた' },
   { horse:'ネアルコ', id:'u_nearco', label:'好位から一閃', at:'st', when:'posBreak', fx:{ spd:0.05, sec:4, free:true },
