@@ -168,3 +168,13 @@ sh godot/native/build.sh      # godot-cpp（版を固定）を取り、Linux 向
 | セーブ（JSON） | `HSJson`・`HSWorld.serialize`・`load_save`・`migrate` | ○ JS のセーブを読んで続きが同じ |
 | `world.js` の馬主・生産者のゲームだけの所（種付け・売る・牧場の拡張・海外馬と繁殖牝馬の市場） | まだ | 新しく始められないので後回し |
 | `replay.js`（リプレイを縮めて残す）・`edits.js`（書き出し・読み込み） | まだ | 画面の係と相談して |
+
+## Windows で遊べる版（.exe）を書き出す
+```
+sh godot/native/build.sh             # C++ の模擬（Windows の DLL は mingw で作る）
+sh godot/tools/export_windows.sh     # build/windows/TurfLineage.exe ＋ libhsnative.windows.template_release.x86_64.dll
+```
+- 書き出しの設定は `godot/export_presets.cfg`（「Windows Desktop」。中身の pck は exe に埋める。tests・tools・C++ の元は入れない）。
+- 書き出し部品（export templates）は Godot 4.7.2 のものから `windows_release_x86_64.exe` だけを `~/.local/share/godot/export_templates/4.7.2.stable/` に置けばよい（全部で 1.3GB あるので、要るものだけ取り出す）。
+- 配るときは exe と DLL を同じフォルダに入れて zip にする。DLL が無くても動く（GDScript の模擬になり遅い）。`build/` はリポジトリに入れない。
+- いま遊べるのは、出走表 → 騎乗の1レース（東京 芝2400m の G1）。週の流れ・店・番組表はまだ Godot に無い。
