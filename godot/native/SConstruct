@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+# Godot 版の模擬（C++・GDExtension）を作る。godot-cpp は get_godot_cpp.sh で取ってくる（版は固定）
+#   scons                         # この機械（Linux）向け。bin/libhsnative.linux.template_debug.x86_64.so
+#   scons target=template_release # 書き出し（配る版）向け
+#   scons platform=windows        # Windows 向け（mingw のクロス。use_mingw=yes）
+import os
+
+env = SConscript("godot-cpp/SConstruct", {"api_version": "4.7"})
+env.Append(CPPPATH=["src/"])
+# 浮動小数の計算を JS（V8）と同じにする：掛け算と足し算を 1 つにまとめない（FMA）・式の並びを変えない
+if env.get("is_msvc", False):
+    env.Append(CCFLAGS=["/fp:precise", "/fp:contract-"])
+else:
+    env.Append(CCFLAGS=["-ffp-contract=off", "-fno-fast-math"])
+
+# 中間ファイルは機械・版ごとに分ける（Linux と Windows を同じ場所で作るため）
+env["SHOBJSUFFIX"] = "{}{}".format(env["suffix"], env["SHOBJSUFFIX"])
+env["OBJSUFFIX"] = "{}{}".format(env["suffix"], env["OBJSUFFIX"])
+sources = Glob("src/*.cpp")
+lib = env.SharedLibrary("bin/libhsnative{}{}".format(env["suffix"], env["SHLIBSUFFIX"]), source=sources)
+
+# Godot に読ませる .gdextension（作った版だけ書く。無ければ Godot は GDScript の模擬を使う）
+def write_ext(target, source, env):
+    libs = {}
+    for f in sorted(os.listdir("bin")):
+        if f.startswith("libhsnative.") and (f.endswith(".so") or f.endswith(".dll")):
+            parts = f.split(".")  # libhsnative.<platform>.<target>.<arch>.<ext>
+            plat, tgt, arch = parts[1], parts[2], parts[3]
+            libs["%s.%s.%s" % (plat, "debug" if tgt == "template_debug" else "release", arch)] = f
+    # 片方しか無ければ、もう片方にも同じものを使う
+    for k in list(libs):
+        other = k.replace(".debug.", ".release.") if ".debug." in k else k.replace(".release.", ".debug.")
+        libs.setdefault(other, libs[k])
+    with open(str(target[0]), "w") as fh:
+        fh.write("[configuration]\n\nentry_symbol = \"hsnative_init\"\ncompatibility_minimum = \"4.3\"\nreloadable = false\n\n[libraries]\n\n")
+        for k in sorted(libs):
+            fh.write("%s = \"res://native/bin/%s\"\n" % (k, libs[k]))
+    return None
+
+ext = env.Command("bin/hs_native.gdextension", lib, write_ext)
+env.AlwaysBuild(ext)
+Default([lib, ext])

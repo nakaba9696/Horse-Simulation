@@ -71,6 +71,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/ui/uikit.js`・`css/ui.css`・`docs/UI.md` | 画面の共通部品（見出しの帯・タブ・表の行・能力の数の札・値段・選び肢の札・操作の案内）と画面の決まり。騎乗の外の画面はこの部品で作る | U |
 | `js/core/listsort.js`・`js/core/program.js`・`js/ui/program.js` | 一覧の並べ替えと絞り込み（`HS.List`）／番組表（今週から1年先の重賞と条件戦・出られるか・適性・出走と予約）と厩舎の一覧 | U |
 | `tests/` | 検証 | T |
+| `godot/core/`・`godot/data/`・`godot/tests/`・`tools/export_godot.js`・`tools/golden_race.js` | Godot 版の中身：データの書き出し・模擬（JS と同じ種で同じ結果）・一致テスト。[docs/GODOT.md](docs/GODOT.md) | C |
 
 ## 決まり（どのゲームでも）
 - **設定・世界観・人物の性格をねじ曲げない。**
