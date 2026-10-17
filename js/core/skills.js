@@ -151,7 +151,7 @@
       sk.duelFor = (s.spurting || (me && me.gear > 0.3)) && close ? sk.duelFor + DT : 0;
       if (rank === 1 && R <= 600 && R > 300) sk.led600 = true;
       if (sk.rankMid == null && s.x >= D * 0.5) sk.rankMid = rank;
-      if (s.kakari && s.x < D * 0.5 && !me) sk.kakari = true;
+      if (s.kakariDay && s.x < D * 0.5 && !me) sk.kakari = true;
       const x = X; x.sim = sim; x.s = s; x.c = me; x.t = t; x.D = D; x.R = R; x.straight = straight; x.inStraight = inStraight; x.rank = rank; x.n = n;
       x.whipping = whipping; x.left = left; x.right = right; x.faster = faster; x.close = close; x.leader = leader; x.second = second; x.sk = sk;
       for (const id of s.trig) {

@@ -64,6 +64,69 @@
     return Object.values(snap.g.horses).filter(h => h.owner === 'P' && h.name && h.pot).sort((a, b) => H.overall(b.pot) - H.overall(a.pot));
   };
 
+  // ---------- 競馬場の札：中央・地方・海外にまとめる（海外は国ごとに並べる） ----------
+  FR.GROUPS = [{ id: 'jra', label: '中央' }, { id: 'local', label: '地方' }, { id: 'world', label: '海外' }];
+  FR.courseGroups = function () {
+    const out = FR.GROUPS.map(g => Object.assign({ courses: [] }, g));
+    const by = { JRA: out[0], '地方': out[1], '海外': out[2] };
+    for (const c of FR.courses()) {
+      const d = HS.DATA.courses[c.name];
+      (by[d.region] || out[2]).courses.push(Object.assign({}, c, { dir: d.dir || '右', area: d.area || '', country: d.country || (d.region === '海外' ? '外' : '日') }));
+    }
+    out[2].courses.sort((a, b) => a.country.localeCompare(b.country, 'ja')); // 国ごとに（国の中はレースの多い順のまま）
+    return out.filter(g => g.courses.length);
+  };
+  FR.groupOf = name => { const d = HS.DATA.courses[name]; return !d ? 'jra' : d.region === 'JRA' ? 'jra' : d.region === '地方' ? 'local' : 'world'; };
+
+  // ---------- 出る馬を選ぶ一覧：能力を列で並べ、見出しで並べ替え、名前・年代・国・脚質・芝ダで絞る ----------
+  // 1頭ぶんの行（能力は伸びきったときの値。自分の馬はいまの素質の値）
+  const rowCache = new Map();
+  const rowOf = (d, kind, key, h) => {
+    const T = HS.Season;
+    const pot = h.pot;
+    return {
+      kind, key, name: d.name, born: d.born, sex: d.sex === 'セ' || d.gelding ? 'セ' : d.sex, country: d.country && d.country !== '日' ? d.country : '日',
+      surface: d.surface || (h.apt && h.apt.dirt > h.apt.turf ? 'ダ' : '芝'), distMin: h.distMin, distMax: h.distMax, style: h.style, kire: h.kire || 4,
+      turf: T ? T.fhOf(pot, '芝') : 0, dirt: T ? T.fhOf(pot, 'ダ') : 0, pot: Object.assign({}, pot), skills: (h.skills || []).slice(),
+    };
+  };
+  FR.rowsOf = function (tab, snap) {
+    if (tab === 'mine') return FR.myHorses(snap).map(h => rowOf(Object.assign({}, h, { country: '日', surface: null }), 'mine', h.id, h));
+    const src = tab === 'special' ? FR.specials() : HS.DATA.historic;
+    const ck = tab + ':' + (HS.Edits ? HS.Edits.version : 0) + ':' + src.length;
+    if (!rowCache.has(ck)) rowCache.set(ck, src.map(d => rowOf(d, tab === 'special' ? 'special' : 'hist', d.name, H.fromHistoric(d, 'x'))));
+    return rowCache.get(ck);
+  };
+  FR.STAT_KEYS = ['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'];
+  const ORDER_STYLE = ['逃げ', '先行', '差し', '追込'];
+  FR.COLS = [
+    { k: 'name', label: '馬名', val: x => x.name, str: true, dir: 1 },
+    { k: 'born', label: '生年', val: x => x.born, dir: 1 },
+    { k: 'country', label: '国', val: x => x.country, str: true, dir: 1 },
+    { k: 'turf', label: '芝', title: '総合力（芝・伸びきったとき）', val: x => x.turf, dir: -1, fh: true },
+    { k: 'dirt', label: 'ダ', title: '総合力（ダート・伸びきったとき）', val: x => x.dirt, dir: -1, fh: true },
+    ...FR.STAT_KEYS.map(k => ({ k, label: H.STAT_SHORT[k], title: H.STAT_LABEL[k], val: x => Math.round(x.pot[k]), dir: -1, heat: true })),
+    { k: 'kire', label: '切れ', title: '脚の切れ（1＝ズブい〜8＝切れる）', val: x => x.kire, dir: -1 },
+    { k: 'dist', label: '距離', val: x => x.distMin * 10000 + x.distMax, dir: 1 },
+    { k: 'style', label: '脚質', val: x => { const i = ORDER_STYLE.indexOf(x.style); return i < 0 ? 9 : i; }, dir: 1 },
+  ];
+  // o：{ tab: 'hist'|'special'|'mine', q, decade（1990 など）, cty（'日'|'外'）, style, surf（'芝'|'ダ'）, sortKey, sortDir }
+  FR.table = function (o, snap) {
+    o = o || {};
+    const L = HS.List;
+    let rows = FR.rowsOf(o.tab || 'hist', snap).filter(x =>
+      L.match(o.q, x.name) &&
+      (!o.decade || Math.floor(x.born / 10) * 10 === +o.decade) &&
+      (!o.cty || (o.cty === '日' ? x.country === '日' : x.country !== '日')) &&
+      (!o.style || x.style === o.style) &&
+      (!o.surf || (o.surf === '芝' ? x.turf >= x.dirt : x.dirt > x.turf)));
+    const key = o.sortKey || (o.tab === 'mine' ? 'turf' : 'turf');
+    rows = L.sort(rows, FR.COLS, key, o.sortDir || (FR.COLS.find(c => c.k === key) || {}).dir);
+    return rows;
+  };
+  // 年代の選び肢（その一覧にいる馬の生まれた年代）
+  FR.decades = (tab, snap) => [...new Set(FR.rowsOf(tab || 'hist', snap).map(x => Math.floor(x.born / 10) * 10))].sort((a, b) => a - b);
+
   // ---------- 馬を写して、このレースの年に合わせる ----------
   const peakAge = h => { const p = H.PEAK[h.growth] || H.PEAK['普通']; return Math.round((p[0] + p[1]) / 2); };
   const fresh = (h, id) => {
