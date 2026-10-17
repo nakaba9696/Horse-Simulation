@@ -16,6 +16,14 @@ const SR = 44100, TAIL = 3, PREVIEW = 30;
 const SCENES = {
   title: ['01', 'タイトル'], home: ['02', 'ホーム'], paddock: ['03', 'パドック'], paddockGF: ['04', 'GFのパドック'], race: ['05', 'レース'],
   fanfare: ['06', 'ファンファーレ'], fanfareGF: ['07', 'GFのファンファーレ'], victory: ['08', '勝利'], lose: ['09', '負け'], glory: ['10', '栄光_成績と表彰'],
+  // 海外のレース（国・地域ごとのパドックとレース）
+  paddockUK: ['11', 'パドック_イギリス・アイルランド'], raceUK: ['12', 'レース_イギリス・アイルランド'],
+  paddockFR: ['13', 'パドック_フランス'], raceFR: ['14', 'レース_フランス'],
+  paddockUS: ['15', 'パドック_アメリカ・カナダ'], raceUS: ['16', 'レース_アメリカ・カナダ'],
+  paddockAU: ['17', 'パドック_オーストラリア'], raceAU: ['18', 'レース_オーストラリア'],
+  paddockHK: ['19', 'パドック_香港・シンガポール'], raceHK: ['20', 'レース_香港・シンガポール'],
+  paddockME: ['21', 'パドック_ドバイ・サウジ'], raceME: ['22', 'レース_ドバイ・サウジ'],
+  paddockDE: ['23', 'パドック_ドイツ'], raceDE: ['24', 'レース_ドイツ'],
 };
 // 曲の音に関わる範囲（音の部品〜効果音の前）の版。tests/extra_audio.js が書き出しの古さを見分けるのに使う
 function sourceHash() {
@@ -90,13 +98,13 @@ if (require.main === module) (async () => {
     const L = L0.subarray(0, end), R = R0.subarray(0, end);
     const w = path.join(tmp, name + '.wav');
     fs.writeFileSync(w, wav(L, R));
-    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', w, '-c:a', 'libvorbis', '-q:a', '4', path.join(OUT, name + '.ogg')]);
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', w, '-c:a', 'libvorbis', '-q:a', '3', path.join(OUT, name + '.ogg')]);
     // 聞き比べ用：頭30秒（くり返す曲は最後の2秒で消す）
     const [no, scene] = SCENES[name] || ['99', name];
     const mp3 = path.join(DOCS, `${no}_${scene}.mp3`);
     for (const f of fs.readdirSync(DOCS)) if (f.startsWith(no + '_') && f.endsWith('.mp3') && path.join(DOCS, f) !== mp3) fs.unlinkSync(path.join(DOCS, f));
     const pv = Math.min(PREVIEW, end / SR);
-    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', w, '-t', String(pv), ...(s.loop ? ['-af', `afade=t=out:st=${pv - 2}:d=2`] : []), '-c:a', 'libmp3lame', '-b:a', '160k', mp3]);
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', w, '-t', String(pv), ...(s.loop ? ['-af', `afade=t=out:st=${pv - 2}:d=2`] : []), '-c:a', 'libmp3lame', '-b:a', '112k', mp3]);
     meta.songs[name] = {
       file: name + '.ogg', scene, loop: s.loop, bpm: s.bpm, seconds: +(end / SR).toFixed(3),
       loop_offset: s.loop ? +(begin / SR).toFixed(6) : 0, loop_begin_sample: s.loop ? begin : 0, loop_end_sample: s.loop ? end : 0,

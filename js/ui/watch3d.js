@@ -53,8 +53,18 @@
       const evs = sim.events.slice();
       let telop = { text: `${race.short || race.name}、まもなく発走です。`, t: -9 };
       let T = -3, last = null, done = false, shownEnd = false;
+      // 記録の最後のコマより後も、馬は止めずに走り続ける（ゆっくり駈歩の速さまで落とす。持ち主の指摘 2026-10-17「ゴールしたあと止まらないで」）
+      const COAST_V = 8.5, COAST_DEC = 0.8;
+      const coastFrom = (p, dt) => {
+        const v0 = p[2], v1 = Math.max(Math.min(v0, COAST_V), v0 - COAST_DEC * dt);
+        const tDec = v0 > v1 ? (v0 - v1) / COAST_DEC : 0; // 落としきるまでの秒
+        const d = v0 > COAST_V ? (v0 + v1) / 2 * Math.min(dt, tDec) + v1 * Math.max(0, dt - tDec) : v0 * dt;
+        return [p[0] + d, p[1], v1];
+      };
       const posAt = t => {
         if (t <= 0) return runners.map((x, j) => [0, (x.num - 1) * 0.5, 0]);
+        const lastF = frames[frames.length - 1];
+        if (t > lastF.t) return lastF.p.map(p => coastFrom(p, t - lastF.t));
         let i = U.clamp(Math.floor(t / 0.2) - 1, 0, frames.length - 2);
         while (i < frames.length - 2 && frames[i + 1].t < t) i++;
         while (i > 0 && frames[i].t > t) i--;

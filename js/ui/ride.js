@@ -9,6 +9,8 @@
   const RD = HS.Ride = {};
   RD.speed = 1.35; // 進む速さの倍率（持ち主の指摘「ゲームスピード遅い」で実時間の1.35倍。走破タイムの表示は本当の秒のまま）
   RD.COOL = 2.4;   // ゴール板を過ぎてから着順を出すまでの秒（実時間。持ち主の指摘「ゴールしたら少し走ってから順位表示して」）。決めるボタンで飛ばせる
+  RD.COAST_V = 8.5;  // ゴールのあと流し続ける速さ（m/s。駈歩）。止めない（持ち主の指摘 2026-10-17「ゴールしたあと止まらないで」）
+  RD.COAST_DEC = 0.8; // そこまで落とす加減（m/s²。ゆっくり）
   const FC = () => HS.DATA.frameColors, FT = () => HS.DATA.frameText;
   const FONT = '"Noto Sans JP", sans-serif', NUM = '"Noto Sans JP", "Arial Narrow", sans-serif';
   const TAU = Math.PI * 2;
@@ -306,11 +308,10 @@
       let acc = 0, last = null, done = false, result = null;
       let prev = sim.st.map(s => [s.x, s.lane, s.v]);
       let fin = null; // ゴール板を過ぎた：{ at（実時間）, pos, shown（着順を出した実時間） }
-      let slowUntil = 0; // ゴール板の瞬間だけ、時の進みを落とす（見せ場の一瞬を止める）
       let lastBump = null, countShown = 0;
       // ゴールした馬（と、模擬が止まったあとの全部の馬）は、映像の側で流して減速させる
       const coast = sim.st.map(() => null);
-      if (AU) { AU.bgm('race'); }
+      if (AU) { AU.bgm('race', race); }
       const lerpView = k => sim.st.map((s, j) => {
         const x = coast[j] ? coast[j].x : prev[j][0] + (s.x - prev[j][0]) * k;
         return {
@@ -341,7 +342,7 @@
         if (last == null) last = ts;
         const realDt = Math.min(0.1, (ts - last) / 1000);
         const now = performance.now();
-        const dt = realDt * RD.speed * (now < slowUntil ? 0.15 : 1); last = ts;
+        const dt = realDt * RD.speed; last = ts;
         pollPad();
         laneHold(now);
         orbit.yaw -= (camRate.yaw || 0) * 2.2 * realDt;
@@ -367,20 +368,19 @@
           while (acc >= 0.1 && !sim.over && guard++ < 20) { prev = sim.st.map(s => [s.x, s.lane, s.v]); S.step(sim); acc -= 0.1; }
           clock = sim.t + acc;
           if (me.done && !fin) {
-            // ゴール板：着順はまだ出さない。白い光・音・振動と、ほんの一瞬の溜め
+            // ゴール板：着順はまだ出さない。白い光・音・振動（時は止めない。持ち主の指摘 2026-10-17「ゴールしたあと止まらないで」）
             fin = { at: now, pos: sim.st.filter(s => s.done && s.finishT <= me.finishT).length, shown: null };
-            slowUntil = now + 160;
             if (AU) AU.se('goal');
             if (RB) RB.fx('cross');
           }
           if (AU) { const lead = Math.max(...sim.st.map(s => s.x)); AU.raceUpdate(sim.D - lead, sim.D - lead < sim.straight, sim.st.filter(s => !s.done).length, sim.st.filter(s => s.done).length); }
         }
         const k = clock < 0 ? 0 : U.clamp(acc / 0.1, 0, 1);
-        // 流す：ゴールした馬・止まったあとの馬は、映像の側で少しずつ速さを落とす（駈歩から常歩へ）
+        // 流す：ゴールした馬・模擬が終わったあとの馬は、映像の側で走り続け、ゆっくり速さを落とす（止めない。駈歩の速さで流し続ける）
         for (let j = 0; j < sim.st.length && !paused; j++) {
           const s = sim.st[j];
           if (!coast[j] && (s.done || sim.over)) coast[j] = { x: viewX(j, k), v: s.v };
-          if (coast[j]) { const c = coast[j]; c.v = Math.max(3.2, c.v - (c.v > 9 ? 2.4 : 1.1) * dt); c.x += c.v * dt; }
+          if (coast[j]) { const c = coast[j]; c.v = Math.max(RD.COAST_V, c.v - RD.COAST_DEC * dt); c.x += c.v * dt; }
         }
         if (fin && !fin.shown && now - fin.at > RD.COOL * 1000) reveal();
         if (sim.over && !result) {
@@ -490,7 +490,7 @@
           if (f.i === sim.me) { skillTag = { text: label, bad, t: now }; if (AU) AU.se('skill'); if (RB) RB.fx(bad ? 'bad' : 'skill'); }
           else if (Math.abs(sim.st[f.i].x - me.x) < 60) pings.push({ i: f.i, t: now, col: bad ? '#ff9a7a' : HUD.cyan });
         }
-        if (sim.check && !paceShown) { paceShown = true; pace = { verdict: sim.check.verdict, t: now }; if (AU) AU.se('click'); }
+        if (sim.check && !paceShown) { paceShown = true; pace = { verdict: sim.check.verdict, t: now, at: sim.check.at, time: sim.check.t }; if (AU) AU.se('click'); }
         // 画面の効果（下から）：追い出した速さの筋・掛かりの赤い縁・競り合いの縁・ムチの光
         if (!fin && clock > 0) { speedLines(now); kakariEdge(now); }
         drawFight(now);
@@ -554,26 +554,32 @@
         tag('RECORD', tx + 12, ty + 38);
         txt(record ? U.time(record.t) : '－', tx + tw - 12, ty + 39, `700 12px ${NUM}`, HUD.gold, 'right');
       }
-      // 上の真ん中：ペースの目盛り。判定の前は白抜きの印（逃げ馬の数からの見込み）、判定のあとは光る印と短い英語
-      const nNige = sim.st.filter(s => s.h.style === '逃げ').length;
-      const guess = nNige >= 2 ? 'ハイペース' : nNige === 0 ? 'スローペース' : '平均ペース';
+      // 上の真ん中：ペースは、先頭がチェックポイント（sim.checkAt）を過ぎたときだけ数秒出す（通過の時計・短い英語・目盛り）。
+      // いつも出しておくとプレイヤーの読みが要らなくなるので出さない（持ち主の指摘 2026-10-17「ペースはチェックポイントで表示されるようにして。常にわかるとつまらない」）
+      const PACE_SHOW = 4500, PACE_FADE = 600;
       const paceCol = v => v === 'ハイペース' ? '#ff8a6a' : v === 'スローペース' ? '#7fc8ff' : '#ffe9a6';
       function drawPace(now) {
-        if (clock < 0 || me.done) return;
-        const bw = narrow ? 200 : 240, bx = VW / 2 - bw / 2, by = 14, h = 40;
-        const fresh = pace ? Math.max(0, 1 - (now - pace.t) / 900) : 0;
+        if (clock < 0 || me.done || !pace) return;
+        const age = now - pace.t;
+        if (age > PACE_SHOW) return;
+        const alpha = Math.min(1, age / 150, (PACE_SHOW - age) / PACE_FADE);
+        ctx.save(); ctx.globalAlpha = alpha;
+        const bw = narrow ? 220 : 260, bx = VW / 2 - bw / 2, by = 14, h = 40;
+        const fresh = Math.max(0, 1 - age / 900);
         glass(bx, by, bw, h, 8);
-        tag('PACE', bx + 12, by + 17);
-        const v = pace ? pace.verdict : guess;
+        tag(`${pace.at}m`, bx + 12, by + 17);
+        txt(pace.time.toFixed(1), bx + 12 + (narrow ? 44 : 50), by + 19, `800 15px ${NUM}`, '#fff');
+        const v = pace.verdict;
         ctx.save(); if (fresh > 0) { ctx.shadowColor = paceCol(v); ctx.shadowBlur = 16 * fresh; }
-        txt(pace ? PACE_EN[v] || v : `${PACE_EN[v] || v}?`, bx + bw - 12, by + 18, `900 italic ${14 + 6 * fresh}px ${NUM}`, pace ? paceCol(v) : 'rgba(255,255,255,0.55)', 'right');
+        txt(PACE_EN[v] || v, bx + bw - 12, by + 18, `900 italic ${14 + 6 * fresh}px ${NUM}`, paceCol(v), 'right');
         ctx.restore();
         const gx = bx + 14, gw = bw - 28, gy = by + 27;
         const grd = ctx.createLinearGradient(gx, 0, gx + gw, 0); grd.addColorStop(0, '#7fc8ff'); grd.addColorStop(0.5, '#ffe9a6'); grd.addColorStop(1, '#ff8a6a');
-        ctx.globalAlpha = pace ? 1 : 0.45; ctx.fillStyle = grd; ctx.fillRect(gx, gy, gw, 4); ctx.globalAlpha = 1;
-        const kx = gx + gw * (pace ? U.clamp((sim.paceF - 0.982) / 0.036, 0, 1) : v === 'ハイペース' ? 0.8 : v === 'スローペース' ? 0.2 : 0.5);
+        ctx.fillStyle = grd; ctx.fillRect(gx, gy, gw, 4);
+        const kx = gx + gw * U.clamp((sim.paceF - 0.982) / 0.036, 0, 1);
         ctx.beginPath(); ctx.moveTo(kx, gy - 1); ctx.lineTo(kx - 5, gy - 8); ctx.lineTo(kx + 5, gy - 8); ctx.closePath();
-        if (pace) { ctx.fillStyle = '#fff'; ctx.fill(); } else { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke(); }
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.restore();
       }
       // 追い出したら、画面の端に速さの筋（速いほど濃く）
       function speedLines(now) {

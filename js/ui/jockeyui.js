@@ -551,7 +551,7 @@
       bg.querySelector('[data-x=auto]').onclick = () => done('auto');
     });
   }
-  // ---------- レース前の画面：出走表（脚質・人気・近走）・展開予想・コース図 ----------
+  // ---------- レース前の画面：出走表（脚質・人気・近走）・コース図。展開予想は出さない（持ち主の指摘 2026-10-17「レース前の展開予想もいらない。プレイヤーに判断させたい」） ----------
   const STYLE_CLS = { '逃げ': 'nige', '先行': 'sen', '差し': 'sashi', '追込': 'oi' };
   UI.courseSvg = function (race) {
     const course = HS.DATA.courses[race.course] || HS.DATA.courses['東京'];
@@ -577,22 +577,16 @@
       <text x="6" y="12" fill="#c8d3e2" font-size="9">${course.dir}回り${geo.loop && !tr.line ? `（${geo.loop}回り）` : ''}・直線 ${geo.straight}m・${prof ? `高低差 ${hd}m` : `坂 ${geo.slope}`}</text>${profSvg}</svg>`;
   };
   // 脚質の矢印（左から追込・差し・先行・逃げ。右が前。持ち主の指摘 2026-10-16）。光っているのがこの馬の脚質で、自由自在の馬は全部が光る
-  UI.kyakuArrows = (st, h) => { const all = h && H.has(h, 'jiyu'); return `<span class="ka" title="${e(st)}${all ? '・自由自在' : ''}">${['追込', '差し', '先行', '逃げ'].map(k => `<i class="${all || k === st ? 'on' : ''}"></i>`).join('')}</span>`; };
+  UI.kyakuArrows = (st, h) => { const all = h && H.has(h, 'jiyu'); return `<span class="ka" title="${e(st)}${all ? '・自在性' : ''}">${['追込', '差し', '先行', '逃げ'].map(k => `<i class="${all || k === st ? 'on' : ''}"></i>`).join('')}</span>`; };
   UI.entryTable = function (card) {
     const { race, runners } = card;
     const G = race.free || !W.get() ? { year: race.year, month: race.month, week: race.week, seed: 0 } : W.get(); // フリーレースはセーブの年でなく、そのレースの年で
     const rows = runners.slice().sort((a, b) => a.num - b.num);
-    const cnt = { '逃げ': 0, '先行': 0, '差し': 0, '追込': 0 };
-    for (const x of runners) cnt[x.horse.style] = (cnt[x.horse.style] || 0) + 1;
-    const pace = cnt['逃げ'] >= 2 ? 'ハイペース' : cnt['逃げ'] === 0 ? 'スローペース' : '平均ペース';
-    const favor = pace === 'ハイペース' ? '差し・追込に向く。仕掛けは遅めに' : pace === 'スローペース' ? '逃げ・先行に向く。仕掛けは早めに' : '力どおりの流れ';
     const recent = h => (h.results || []).slice(-3).map(r => `<span class="${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos > 9 ? '×' : r.pos}</span>`).join('') || '<span class="muted">新</span>';
     return `<div class="entry">
       <div class="entry-head"><div>${UI.gradeTag(race)} <b class="serif" style="font-size:20px">${e(race.short || race.name)}</b></div>
         <div class="small">${race.free ? '' : `${W.yLabel(G.year)}${race.month}月 `}${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　${(w => `${T.weatherIcon(w)}${w}`)(race.weather || T.weather(G.seed, G.year, G.month, G.week, race.course, race.ground))}・${race.ground}　${runners.length}頭</div></div>
-      <div class="entry-top">${UI.courseSvg(race)}
-        <div class="tenkai"><div class="small muted">展開予想</div><div class="big">${pace}</div><div class="small">${favor}</div>
-          <div class="kyaku-cnt">${Object.entries(cnt).map(([k, v]) => `<span class="kyaku ${STYLE_CLS[k]}">${k[0]}</span>${v}`).join(' ')}</div></div></div>
+      <div class="entry-top">${UI.courseSvg(race)}</div>
       <div class="tblwrap mt"><table class="t entry-t"><tr><th>枠</th><th>馬名</th><th>脚質</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th>騎手</th><th>人気</th><th>近走</th></tr>
       ${rows.map(x => { const me = x.rider === 'P' || x.mine; return `<tr class="${me ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td>
         <td class="nm">${e(x.horse.name)}${x.horse.legend ? ' <span class="chip legend">スペシャル</span>' : x.horse.hist ? ' <span class="chip hist">史</span>' : ''}</td>

@@ -598,8 +598,14 @@ check('ride: しごく・引くの段は手を止めても保たれ、追い通�
   S.ctl.down(sim); assert(sim.ctl.gear < g, '引いても下がらない');
   assert(sim.ctl.hand === 'R' && S.ctl.whip(sim, 'L') === 'swap' && sim.ctl.hand === 'L', '反対の手のムチで持ち替えない');
   for (let i = 0; i < 5; i++) S.step(sim);
+  const lane0 = sim.ctl.lane;
   const w = S.ctl.whip(sim, 'L');
   assert(w && w !== 'swap' && sim.ctl.whips === 1, `ムチが入らない（${w}）`);
+  // ムチではよれない（持ち主の指摘 2026-10-17「どっちうってもよれないようにして」）
+  for (let i = 0; i < 4; i++) { S.step(sim); S.ctl.whip(sim, 'L'); }
+  S.ctl.swap(sim); for (let i = 0; i < 12; i++) S.step(sim);
+  for (let i = 0; i < 4; i++) { S.ctl.whip(sim, 'R'); S.step(sim); }
+  assert(sim.ctl.lane === lane0, `ムチで進路が変わった（${lane0}→${sim.ctl.lane}）`);
   return `平均着順 直線でしごく ${late.toFixed(1)}・追い通す ${all.toFixed(1)}・何もしない ${none.toFixed(1)}`;
 });
 
