@@ -76,7 +76,7 @@ data/*.js（正）→ index.html の並びで読む → fictional.js（騎手の
 
 ## 一致テストの仕組み
 同じ種・同じ操作で、JS と Godot が同じ結果になることを確かめる（着順・タイムは完全一致。浮動小数の計算の順も JS と同じにしてある）。
-1. `node tools/golden_race.js` が JS でレースを回し、答えを `godot/tests/golden/races.json` に書く（48 本：番組から 40・形の違うコース 8。芝・ダート・1000〜3200m・5〜18 頭・4 つの馬場・1965〜2026 年・直線・周回しない・楕円）。
+1. `node tools/golden_race.js` が JS でレースを回し、答えを `godot/tests/golden/races.json` に書く（54 本：番組から 40・形の違うコース 8・特殊能力を決めて持たせた 6（伝説級の名馬の固有の能力・幻惑逃げ・馬群さばき・追走○・外回し○を必ず通す）。芝・ダート・1000〜3200m・5〜18 頭・4 つの馬場・1965〜2026 年・直線・周回しない・楕円）。
    - 出走馬は作り方で持つ（史実馬の名前と上書きする値・エディットで能力を決めた馬・伝説級・頭数合わせの馬の種）。Godot も同じ作り方で作り、馬の中身の指紋を比べる。
    - 自分で乗る操作：決まった乗り方の打ち手（`tests/ridebot.js` の fit・misfit）と、でたらめに操作する打ち手。呼んだ操作を刻みの番号と一緒に書き留め、Godot は同じ刻みで同じ操作をする（戻り値も比べる）。
    - 比べるもの：10 刻みごとの状態の指紋（全馬の x・lane・v・E と操作の気分・段・進路・高ぶりのビット）、100 刻みごとの全馬の値（ずれたときの手がかり）、ペース、着順・タイム・着差・上がり・残りのスタミナ、勝ちタイムの書式、実況の文と時刻、特殊能力の発動、描画のコマ。
@@ -87,7 +87,7 @@ data/*.js（正）→ index.html の並びで読む → fictional.js（騎手の
    - gf：11月4週のセーブに手を加え（1頭を4歳・前の年の GF（中長距離）の勝ち馬に）、12月1週の招待から年明けまで 7 週。
    - craft（番組表の行の指紋と、条件戦の予約も通す）：late の続きのセーブに手を加え（週の初めの操作に、重賞の勝ちを足す・馬主の好感度を足す、も使う）（1頭を5歳・能力120・G1を4勝・トロフィー2つ、もう1頭を牝馬に）、JS が読み直したものを Godot も読み、8週。週の初めの操作（予約・引退・オリジナルホースを作る）も同じ列で行う。フェブラリーSにスペシャルホース（G1を5勝した名馬・歴代の勝ち馬）が出て、引退で殿堂入り、オリジナルホースが生まれる。
    - 指紋は、辞書の項目を名前の順に並べ、null の項目を除き、-0 を 0 にした並べ方（JSON に書いて読み直したのと同じ）。
-4. `sh godot/tests/run.sh`（headless）が `godot/tests/test_*.gd` を回す。C++ の模擬（`godot/native/bin`）があれば、模擬の 48 本と数学・乱数を C++ と GDScript の両方で比べ、世界の進行・フリーレース・並列は C++ で回す。無ければ「C++ の模擬が無いので飛ばした」と出して GDScript だけで比べる。`node tests/run.js` は、Godot があればこれを呼ぶ（無ければ「飛ばした」と出す）。Godot の場所は `GODOT=`・PATH の `godot`・`/home/user/godot-bin/godot` の順に探す。
+4. `sh godot/tests/run.sh`（headless）が `godot/tests/test_*.gd` を回す。C++ の模擬（`godot/native/bin`）があれば、模擬の 54 本と数学・乱数を C++ と GDScript の両方で比べ、世界の進行・フリーレース・並列は C++ で回す。無ければ「C++ の模擬が無いので飛ばした」と出して GDScript だけで比べる。`node tests/run.js` は、Godot があればこれを呼ぶ（無ければ「飛ばした」と出す）。Godot の場所は `GODOT=`・PATH の `godot`・`/home/user/godot-bin/godot` の順に探す。
 
 JS の模擬を直したら：`node tools/golden_race.js` で答えを作り直し、Godot の同じ所も直して `sh godot/tests/run.sh` を緑にする（`node tests/run.js` は、答えが今の JS と違えば落ちる）。
 
@@ -159,7 +159,7 @@ sh godot/native/build.sh      # godot-cpp（版を固定）を取り、Linux 向
 | `js/core/track.js` | `hs_track.gd` | ○（レースの中で） |
 | `js/core/horse.js` | `hs_horse.gd` | ○ 史実馬・伝説級・頭数合わせの馬・エディットの馬（調教・故障・回復は移したが、まだ一致テストが無い） |
 | `js/core/skills.js` | `hs_skills.gd` | ○ |
-| `js/core/racesim.js` | `hs_sim.gd`・`godot/native/src/hs_sim.cpp`（C++） | ○ 48 本（C++ と GDScript の両方） |
+| `js/core/racesim.js` | `hs_sim.gd`・`godot/native/src/hs_sim.cpp`（C++） | ○ 54 本（C++ と GDScript の両方） |
 | `js/core/races.js`・`world.js`（騎手のゲームの道すじ）・`season.js`・`dream.js`・`eraless.js`・`special.js`・`owners.js`・`jockey.js`・`hall.js`・`trophy.js`・`pedigree.js`・`edits.js`（当てる所） | `hs_races.gd` ほか | ○ 新しいゲームから 4 週・JS のセーブから 4 週（GF・年明け） |
 | `original.js`（オリジナルホースを作る）・殿堂入り・予約・スペシャルホースが出てくるレース・トロフィー・冠・馬主の段階とご褒美（思い出の名馬） | 移した | ○ craft の 8 週（勝ち・好感度は週の初めの操作で足す） |
 | 12月1週の GF の招待・GF の伝説級（前の年の GF を勝った馬が出ると、キンチェムなどが出てくる） | 移した | ○ gf の 7 週 |

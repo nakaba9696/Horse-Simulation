@@ -26,7 +26,7 @@ struct IdSet {
 };
 
 struct Boost { bool on = false; double mul = 1, until = 0; int id = -1; bool free_ = false; };
-struct SkState { double boxedFor = 0, soloFor = 0, duelFor = 0; bool led600 = false; int rankMid = -1; bool whipBefore = false, ikki = false, kakari = false; };
+struct SkState { double boxedFor = 0, soloFor = 0, duelFor = 0, banteFor = 0, wallFor = 0; bool led600 = false; int rankMid = -1; bool whipBefore = false, ikki = false, kakari = false; };
 
 // 脚質（-1＝そのほか）
 enum Style : int { ST_NIGE = 0, ST_SENKO = 1, ST_SASHI = 2, ST_OIKOMI = 3, ST_NONE = -1 };
@@ -39,6 +39,8 @@ struct Runner {
 	bool late = false, kakariDay = false;
 	double acc = 0, zubu = 0, spurtCost = 0;
 	bool oonige = false, sora = false, sunaB = false, jiyu = false;
+	bool tsuiso = false, sotoM = false, sabaki = false; // 追走○・外回し○・馬群さばき（skills_flags）
+	double weightV = 0; // 斤量（無ければ 0）
 	double gapAdj = 0, driftLane = 0;
 	bool me = false;
 	IdSet fired;
@@ -121,13 +123,13 @@ struct Sim {
 	Ctl ctl;
 	std::vector<int> byX;
 	double checkAt = 0;
-	bool hasCheck = false; double checkT = 0; godot::String checkVerdict;
+	bool hasCheck = false; double checkT = 0; godot::String checkVerdict; int checkLead = -1;
 	double top = 0;
 	~Sim() { if (ownTrack) delete track; }
 };
 
 // 呼び方は GDScript の HSSim と同じ（data は HSData.d() の courses・layouts と特殊能力の名前）
-struct SimData { godot::Dictionary courses, layouts, labels; };
+struct SimData { godot::Dictionary courses, layouts, labels; godot::Array uniques; };
 void set_data(const SimData &d);
 const SimData &data();
 void data_clear();
@@ -150,6 +152,9 @@ godot::Dictionary power(const godot::Dictionary &horse, const godot::Dictionary 
 // 特殊能力（hs_skills.cpp）
 std::vector<int> skills_of(const godot::Dictionary &h, const godot::Variant &w_idx);
 void skills_setup(Sim &sim);
+void skills_flags(Runner &s);
+void skills_init();
+void skills_clear();
 void skills_step(Sim &sim, const std::vector<int> &order, double DT);
 godot::String skill_label(int id);
 

@@ -19,9 +19,10 @@ static void init_ids() {
 		// 発動の特殊能力（LIST の順）
 		"saikoubi", "chokusen", "oosoto", "sasari", "kongomi", "sessenB", "isshun", "hanno", "startdash", "nebari", "tanki", "yonkaku", "oriai",
 		"nimai", "demuchi", "makuri", "dokonjo", "sessen",
+		"bante", "nidan", "sabaki", "genwaku", "ikiire", "kouhou", "tsuiso", "sotomawashi",
 		// 馬の特殊能力（HSHorse.SKILLS）
 		"big", "fresh", "tataki", "left", "right", "small", "long", "summer", "winter", "hipace", "slowpace", "oonige", "longspurt", "narabu", "nino", "jiyu",
-		"inner", "travel", "homebody", "deokure", "kakari", "sora", "sunaB", "leftB", "rightB" };
+		"inner", "outer", "mud", "travel", "homebody", "deokure", "kakari", "sora", "sunaB", "leftB", "rightB" };
 	for (const char *s : base) g_ids.push_back(String(s));
 }
 int skill_id(const String &s) {
@@ -39,20 +40,24 @@ void skill_ids_clear() { std::lock_guard<std::mutex> lk(g_ids_mu); g_ids.clear()
 struct P { double spd, sta, guts, mind, slope, kire; int style; };
 struct X {
 	Sim *sim; Runner *s; Ctl *c; double t, D, R, straight; bool inStraight; int rank, n;
-	bool whipping, left, right, faster, close; Runner *leader, *second; SkState *sk;
+	bool whipping, left, right, faster, close, wall; Runner *leader, *second; SkState *sk;
 };
 enum At { AT_START, AT_MID, AT_ST, AT_ANY };
-struct Fx { double spd = 0, sec = 0, E = 0, top = 0, drift = 0, pos = 0; bool free_ = false, hasSec = false; };
+struct Fx { double spd = 0, sec = 0, E = 0, top = 0, drift = 0, pos = 0, foeE = 0; bool free_ = false, hasSec = false, foeAny = true; int foeMask = 0; };
 struct Def {
 	const char *id; At at; const char *label; bool ikki, bad; Fx fx;
 	bool (*learn)(const P &);
 	bool (*when)(const X &);
+	bool cont = false; // 条件が続いている間ずっと効く（追走○・外回し○。hs_sim.cpp が見る）
+	bool unique = false; // 名馬の固有の能力
 };
 static inline bool sashi(int st) { return st == ST_SASHI || st == ST_OIKOMI; }
 static Fx fx(double spd, double sec, bool free_, double top = 0, double E = 0, double drift = 0, double pos = 0, bool hasSec = true) {
 	Fx f; f.spd = spd; f.sec = sec; f.free_ = free_; f.top = top; f.E = E; f.drift = drift; f.pos = pos; f.hasSec = hasSec; return f;
 }
 static Fx fxE(double E) { Fx f; f.E = E; return f; }
+static Fx fxFoe(double foeE) { Fx f; f.foeE = foeE; f.foeAny = false; f.foeMask = (1 << ST_SASHI) | (1 << ST_OIKOMI); return f; }
+static Fx fxNone() { return Fx(); }
 
 static const Def LIST[] = {
 	{ "saikoubi", AT_ANY, "豪脚", true, false, fx(0.07, 4.0, true, 0.3),
@@ -72,6 +77,9 @@ static const Def LIST[] = {
 	{ "kongomi", AT_ANY, "馬込み×", false, true, fxE(-0.03),
 		[](const P &p) { return p.mind < 70 && (p.style == ST_NIGE || p.style == ST_OIKOMI); },
 		[](const X &x) { return x.sk->boxedFor >= 3; } },
+	{ "bante", AT_MID, "番手×", false, true, fxE(-0.03),
+		[](const P &p) { return p.style == ST_NIGE && p.mind < 72; },
+		[](const X &x) { return x.sk->banteFor >= 10; } },
 	{ "sessenB", AT_ST, "叩き合い×", false, true, fx(-0.015, 1.5, false),
 		[](const P &p) { return p.guts < 70; },
 		[](const X &x) { return x.R < 100 && x.close; } },
@@ -87,9 +95,24 @@ static const Def LIST[] = {
 	{ "nebari", AT_ST, "二の脚", false, false, fx(0.05, 3.5, true),
 		[](const P &p) { return (p.style == ST_NIGE || p.style == ST_SENKO) && p.sta >= 85; },
 		[](const X &x) { return x.R <= 300 && x.sk->led600 && x.rank <= 3 && x.leader->x - x.s->x < LEN; } },
+	{ "nidan", AT_ST, "二段ロケット", false, false, fx(0.08, 4.0, true),
+		[](const P &p) { return p.style == ST_NIGE && p.spd >= 80; },
+		[](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.rank == 1 && x.second != nullptr && x.s->x - x.second->x >= LEN; } },
+	{ "sabaki", AT_ST, "馬群さばき", false, false, fx(0.03, 2.5, true),
+		[](const P &p) { return p.style == ST_OIKOMI && p.spd < 85 && p.mind >= 70; },
+		[](const X &x) { return x.inStraight && x.R > 100 && x.sk->wallFor >= 0.6 && !x.wall; } },
+	{ "genwaku", AT_ANY, "幻惑逃げ", false, false, fxFoe(-0.05),
+		[](const P &p) { return p.style == ST_NIGE && p.mind >= 84; },
+		[](const X &x) { return x.sim->hasCheck && x.sim->checkLead == x.s->i && x.sim->checkVerdict == U8("スローペース"); } },
+	{ "ikiire", AT_MID, "息入れ○", false, false, fxE(0.05),
+		[](const P &p) { return p.style == ST_NIGE && p.sta >= 84 && p.mind < 84; },
+		[](const X &x) { return !x.inStraight && x.R <= x.straight + 350 && x.rank == 1; } },
 	{ "tanki", AT_MID, "単騎逃げ", false, false, fxE(0.06),
 		[](const P &p) { return p.style == ST_NIGE && p.mind >= 65; },
 		[](const X &x) { return !x.inStraight && x.sk->soloFor >= 10; } },
+	{ "kouhou", AT_MID, "後方待機○", false, false, fxE(0.025),
+		[](const P &p) { return p.style == ST_OIKOMI && p.mind >= 76; },
+		[](const X &x) { return x.s->x >= x.D / 2.0 && x.sk->rankMid >= 0 && x.sk->rankMid >= x.n - 2 && !x.sk->kakari && !(x.c && x.c->everKakari); } },
 	{ "yonkaku", AT_ST, "四角先頭", false, false, fxE(0.05),
 		[](const P &p) { return (p.style == ST_SENKO || p.style == ST_SASHI) && p.spd >= 86 && p.kire <= 4; },
 		[](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.rank == 1; } },
@@ -105,6 +128,12 @@ static const Def LIST[] = {
 	{ "makuri", AT_ST, "大まくり", false, false, fx(0.04, 4.0, true, 0, 0.1),
 		[](const P &p) { return sashi(p.style) && p.kire <= 4 && p.sta >= 78; },
 		[](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.sk->rankMid >= 0 && x.sk->rankMid > x.n / 2.0 && x.sk->rankMid - x.rank >= 6 && x.leader->x - x.s->x < LEN; } },
+	{ "tsuiso", AT_ANY, "追走○", false, false, fxNone(),
+		[](const P &p) { return p.style == ST_OIKOMI && p.guts >= 82; },
+		[](const X &) { return false; }, true },
+	{ "sotomawashi", AT_ANY, "外回し○", false, false, fxNone(),
+		[](const P &p) { return p.style == ST_OIKOMI && p.sta >= 76 && p.guts < 82; },
+		[](const X &) { return false; }, true },
 	{ "dokonjo", AT_ANY, "ど根性", false, false, fxE(0.02),
 		[](const P &p) { return p.guts >= 88; },
 		[](const X &x) { return x.sk->duelFor >= 3; } },
@@ -113,10 +142,86 @@ static const Def LIST[] = {
 		[](const X &x) { return x.R < 100 && x.close; } },
 };
 static const int NLIST = sizeof(LIST) / sizeof(LIST[0]);
-static const char *GROUP_OF[NLIST] = { "爆発", "爆発", "爆発", "損", "損", "損", "速さ", "速さ", "速さ", "速さ", "気性", "気性", "気性", "根性", "根性", "根性", "根性", "根性" };
+static const char *GROUP_OF[NLIST] = { "爆発", "爆発", "爆発", "損", "損", "損", "損", "速さ", "速さ", "速さ", "速さ", "速さ", "速さ",
+	"気性", "気性", "気性", "気性", "気性", "気性", "根性", "根性", "根性", "根性", "根性", "根性", "根性" };
 static const char *ORDER[5] = { "爆発", "損", "速さ", "気性", "根性" };
-// 発動の特殊能力の番号（id の番号 1〜19）→ 表の位置
-static inline const Def *def_of(int id) { return (id >= 1 && id <= NLIST) ? &LIST[id - 1] : nullptr; }
+
+// ---------- 名馬の固有の能力（godot/data/uniques.json。伝説級の名馬に1頭1つ）。場面の型（when の名前 → 条件）。持てる数には数えない ----------
+struct UWhen { const char *name; bool (*fn)(const X &); };
+static const UWhen UWHEN[] = {
+	{ "leadStraight", [](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.rank == 1; } },
+	{ "leadMid", [](const X &x) { return !x.inStraight && x.s->x >= x.D / 2.0 && x.rank == 1; } },
+	{ "duelEnd", [](const X &x) { return x.R < 300 && x.close; } },
+	{ "neck", [](const X &x) { return x.R < 100 && x.close; } },
+	{ "longStraight", [](const X &x) { return x.D >= 2400 && x.inStraight && x.straight - x.R < 30; } },
+	{ "heavyOrLate", [](const X &x) { return !x.inStraight && x.R <= x.straight + 400 && (x.s->late || x.s->weightV >= 57); } },
+	{ "front3", [](const X &x) { return x.R <= 400 && x.rank <= 3; } },
+	{ "holdLead", [](const X &x) { return x.R < 300 && x.rank == 1 && x.second != nullptr && x.s->x - x.second->x < LEN; } },
+	{ "posBreak", [](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.rank >= 2 && x.rank <= 4; } },
+	{ "bigLead", [](const X &x) { return x.inStraight && x.rank == 1 && x.second != nullptr && x.s->x - x.second->x >= 2 * LEN; } },
+	{ "nearLead", [](const X &x) { return x.R <= 400 && x.rank >= 2 && x.leader->x - x.s->x < LEN; } },
+	{ "start", [](const X &x) { return x.t - x.s->delay < 0.6 && !x.s->late; } },
+	{ "sprint", [](const X &x) { return x.D <= 1400 && x.inStraight && x.straight - x.R < 30 && x.rank <= 3; } },
+};
+struct UDef { Def d; std::string id, label, horse; };
+static std::vector<UDef> *g_udefs = nullptr;
+static const Def *g_def[128]; // id の番号 → 表（発動の特殊能力と固有の能力）
+static bool g_built = false;
+static std::mutex g_def_mu;
+
+static int style_of(const Variant &v) {
+	if (is_str(v, "逃げ")) return ST_NIGE;
+	if (is_str(v, "先行")) return ST_SENKO;
+	if (is_str(v, "差し")) return ST_SASHI;
+	if (is_str(v, "追込")) return ST_OIKOMI;
+	return ST_NONE;
+}
+static At at_of(const Variant &v) {
+	if (is_str(v, "start")) return AT_START;
+	if (is_str(v, "mid")) return AT_MID;
+	if (is_str(v, "st")) return AT_ST;
+	return AT_ANY;
+}
+// 表を作り直す（データを渡したとき。模擬を作る前に、画面のスレッドで）
+void skills_init() {
+	std::lock_guard<std::mutex> lk(g_def_mu);
+	for (auto &p : g_def) p = nullptr;
+	for (int k = 0; k < NLIST; k++) { int id = skill_id(String(LIST[k].id)); if (id >= 0) g_def[id] = &LIST[k]; }
+	delete g_udefs; g_udefs = new std::vector<UDef>();
+	Array us = data().uniques;
+	g_udefs->reserve(us.size());
+	for (int i = 0; i < us.size(); i++) {
+		Dictionary u = us[i];
+		const UWhen *w = nullptr;
+		for (const UWhen &x : UWHEN) if (is_str(u.get("when", Variant()), x.name)) { w = &x; break; }
+		if (!w) continue;
+		UDef ud;
+		ud.id = String(u["id"]).utf8().get_data(); ud.label = String(u.get("label", "")).utf8().get_data(); ud.horse = String(u.get("horse", "")).utf8().get_data();
+		Dictionary f = u.get("fx", Dictionary());
+		Fx fx;
+		fx.spd = num_or(f.get("spd", Variant()), 0.0); fx.sec = num_or(f.get("sec", Variant()), 0.0); fx.free_ = truthy(f.get("free", Variant()));
+		fx.E = num_or(f.get("E", Variant()), 0.0); fx.top = num_or(f.get("top", Variant()), 0.0); fx.pos = num_or(f.get("pos", Variant()), 0.0);
+		fx.foeE = num_or(f.get("foeE", Variant()), 0.0);
+		Variant foe = f.get("foe", Variant());
+		if (truthy(foe)) { Array fa = foe; for (int k = 0; k < fa.size(); k++) { int st = style_of(fa[k]); if (st >= 0) fx.foeMask |= 1 << st; } fx.foeAny = false; }
+		ud.d = Def{ nullptr, at_of(u.get("at", Variant())), nullptr, false, false, fx, nullptr, w->fn };
+		ud.d.unique = true;
+		g_udefs->push_back(ud);
+	}
+	for (auto &ud : *g_udefs) { ud.d.id = ud.id.c_str(); ud.d.label = ud.label.c_str(); int id = skill_id(String::utf8(ud.id.c_str())); if (id >= 0) g_def[id] = &ud.d; }
+	g_built = true;
+}
+void skills_clear() { std::lock_guard<std::mutex> lk(g_def_mu); delete g_udefs; g_udefs = nullptr; g_built = false; for (auto &p : g_def) p = nullptr; }
+static inline const Def *def_of(int id) { return (id >= 0 && id < 128) ? g_def[id] : nullptr; }
+// 伝説級の名馬の固有の能力（オリジナルホースは名前が同じでも持たない）
+static int unique_of(const Dictionary &h) {
+	if (truthy(h.get("original", Variant())) || !g_udefs) return -1;
+	Variant nm = h.get("name", Variant());
+	if (nm.get_type() != Variant::STRING) return -1;
+	std::string n = String(nm).utf8().get_data();
+	for (auto &ud : *g_udefs) if (ud.horse == n) return skill_id(String::utf8(ud.id.c_str()));
+	return -1;
+}
 
 String skill_label(int id) {
 	const Def *d = def_of(id);
@@ -127,16 +232,9 @@ String skill_label(int id) {
 	return nm;
 }
 
-static int style_of(const Variant &v) {
-	if (is_str(v, "逃げ")) return ST_NIGE;
-	if (is_str(v, "先行")) return ST_SENKO;
-	if (is_str(v, "差し")) return ST_SASHI;
-	if (is_str(v, "追込")) return ST_OIKOMI;
-	return ST_NONE;
-}
-
 // この馬の発動する特殊能力
 std::vector<int> skills_of(const Dictionary &h, const Variant &w_idx) {
+	if (!g_built) skills_init();
 	std::vector<int> out;
 	Variant tf = h.get("trigFixed", Variant());
 	if (tf.booleanize()) {
@@ -157,12 +255,13 @@ std::vector<int> skills_of(const Dictionary &h, const Variant &w_idx) {
 		guts = num_or(c.get("guts", Variant()), 0.0); mind = num_or(c.get("mind", Variant()), 0.0); slope = num_or(c.get("slope", Variant()), 0.0);
 	}
 	P p{ spd, sta, guts, mind, slope, num_or(h.get("kire", Variant()), 4.0), style_of(h.get("style", Variant())) };
+	int u = unique_of(h); // 伝説級の名馬は、固有の能力を先頭に（持てる数とは別）
 	double a = (p.spd + p.sta + p.guts) / 3.0;
 	int cap = a < 65 ? 1 : (a < 78 ? 2 : (a < 90 ? 3 : 4));
 	std::vector<int> ok[5];
 	for (int g = 0; g < 5; g++)
 		for (int k = 0; k < NLIST; k++)
-			if (strcmp(GROUP_OF[k], ORDER[g]) == 0 && LIST[k].learn(p)) ok[g].push_back(k + 1);
+			if (strcmp(GROUP_OF[k], ORDER[g]) == 0 && LIST[k].learn(p)) ok[g].push_back(skill_id(String(LIST[k].id)));
 	int round_ = 0;
 	while ((int)out.size() < cap) {
 		bool any = false;
@@ -175,6 +274,7 @@ std::vector<int> skills_of(const Dictionary &h, const Variant &w_idx) {
 		if (!any) break;
 		round_++;
 	}
+	if (u >= 0) out.insert(out.begin(), u);
 	return out;
 }
 
@@ -184,18 +284,27 @@ void skills_setup(Sim &sim) {
 		s.sk = SkState();
 	}
 }
+// 続いている間ずっと効く能力と、横の動き・前が壁に効く能力の印（hs_sim.cpp が見る）
+void skills_flags(Runner &s) {
+	static const int tsuiso = skill_id("tsuiso"), soto = skill_id("sotomawashi"), sabaki = skill_id("sabaki");
+	s.tsuiso = s.trigHas(tsuiso); s.sotoM = s.trigHas(soto); s.sabaki = s.trigHas(sabaki);
+}
 
 // 一気系は、ためた脚（発動したときのスタミナ）で伸びが変わる
 static void apply(Sim &sim, Runner &s, const Def &k) {
 	const Fx &f = k.fx;
 	double amp = k.ikki ? clamp(0.4 + 2.0 * s.E, 0.6, 1.6) : 1.0;
-	if (f.spd != 0.0) { s.boost.on = true; s.boost.mul = 1.0 + f.spd * amp; s.boost.until = sim.t + num_or(f.sec, 1.5); s.boost.id = skill_id(String(k.id)); s.boost.free_ = f.free_; }
+	if (f.spd != 0.0) { s.boost.on = true; s.boost.mul = 1.0 + f.spd * amp; s.boost.until = sim.t + num_or(f.sec, 1.5); s.boost.id = -1; s.boost.free_ = f.free_; }
 	if (f.free_ && k.at == AT_START) s.easyStart = true;
 	if (f.top != 0.0) s.topAdd = s.topAdd + f.top;
 	if (f.E != 0.0) s.E = clamp(s.E + f.E, -0.2, 1.0);
 	if (f.drift != 0.0 && s.me && sim.hasCtl && sim.ctl.hasLastWhip) sim.ctl.lane = clamp(sim.ctl.lane + sim.ctl.lwAway * f.drift, 0.0, 12.0);
 	else if (f.drift != 0.0) s.driftLane = num_or(s.driftLane, 0.0) + f.drift * 1.5;
 	if (f.pos != 0.0) s.gapAdj = num_or(s.gapAdj, 0.0) - f.pos;
+	// ほかの馬に効く（幻惑逃げ・影もなし）：後ろの馬のスタミナを減らす（foe があればその脚質だけ）
+	if (f.foeE != 0.0)
+		for (auto &o : sim.st)
+			if (&o != &s && !o.done && o.x < s.x && (f.foeAny || (o.style >= 0 && (f.foeMask >> o.style) & 1))) o.E = clamp(o.E + f.foeE, -0.2, 1.0);
 }
 
 // 0.2 秒ごと。order＝まだ走っている馬の、前から順の並び
@@ -215,7 +324,7 @@ void skills_step(Sim &sim, const std::vector<int> &order, double DT) {
 		for (size_t q = 0; q < s.trig.size() && !need; q++) {
 			const Def *d = def_of(s.trig[q]);
 			if (!d) continue;
-			if (!s.fired.has(s.trig[q]) && (d->at == ph || d->at == AT_ANY)) need = true;
+			if (!s.fired.has(s.trig[q]) && !d->cont && (d->at == ph || d->at == AT_ANY)) need = true;
 		}
 		if (!need) continue;
 		Ctl *me = (s.me && sim.hasCtl) ? &sim.ctl : nullptr;
@@ -228,10 +337,11 @@ void skills_step(Sim &sim, const std::vector<int> &order, double DT) {
 		near.clear();
 		for (int q = (int)k - 1; q >= 0 && sim.st[order[q]].x - s.x < 5; q--) near.push_back(&sim.st[order[q]]);
 		for (size_t q = k + 1; q < order.size() && s.x - sim.st[order[q]].x < 3; q++) near.push_back(&sim.st[order[q]]);
-		bool left = false, right = false, front = false, close = false, faster = true;
+		bool left = false, right = false, front = false, close = false, faster = true, wall = false;
 		for (Runner *o : near) {
 			double dl = o->lane - s.lane, dx = o->x - s.x;
 			if (dx > 0 && std::fabs(dl) < 0.9) front = true;
+			if (dx > 0 && dx < 2.6 && std::fabs(dl) < 0.85) wall = true; // すぐ前が壁
 			if (dx >= 3) continue;
 			if (dl < -0.4 && dl > -1.6) left = true;
 			if (dl > 0.4 && dl < 1.6) right = true;
@@ -242,15 +352,17 @@ void skills_step(Sim &sim, const std::vector<int> &order, double DT) {
 		sk.soloFor = (rank == 1 && second != nullptr && s.x - second->x >= 2 * LEN) ? sk.soloFor + DT : 0.0;
 		sk.duelFor = ((s.spurting || (me && me->gear > 0.3)) && close) ? sk.duelFor + DT : 0.0;
 		if (rank == 1 && R <= 600 && R > 300) sk.led600 = true;
+		if (!inStraight && rank >= 3 && s.x > D * 0.2) sk.banteFor += DT; else if (rank <= 2) sk.banteFor = 0.0; // 番手×
+		if (inStraight && wall) sk.wallFor += DT;
 		if (sk.rankMid < 0 && s.x >= D * 0.5) sk.rankMid = rank;
 		if (s.kakariDay && s.x < D * 0.5 && !me) sk.kakari = true;
-		X x{ &sim, &s, me, t, D, R, straight, inStraight, rank, n, whipping, left, right, faster, close, leader, second, &sk };
+		X x{ &sim, &s, me, t, D, R, straight, inStraight, rank, n, whipping, left, right, faster, close, wall, leader, second, &sk };
 		for (size_t q = 0; q < s.trig.size(); q++) {
 			int id = s.trig[q];
 			if (s.fired.has(id)) continue;
 			const Def *def = def_of(id);
 			if (!def) continue;
-			if (def->at != ph && def->at != AT_ANY) continue;
+			if (def->cont || (def->at != ph && def->at != AT_ANY)) continue;
 			if (def->ikki && sk.ikki) continue;
 			if (!def->when(x)) continue;
 			if (def->ikki) sk.ikki = true;

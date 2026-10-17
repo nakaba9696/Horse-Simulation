@@ -64,6 +64,8 @@
       else if (id === 'summer' && race.month >= 6 && race.month <= 8) a += 1.8;
       else if (id === 'winter' && (race.month === 12 || race.month <= 2)) a += 1.8;
       else if (id === 'inner' && ctx && ctx.num && ctx.num <= 4) a += 1.2;
+      else if (id === 'outer' && ctx && ctx.frame >= 7) a += 1.2;
+      else if (id === 'mud' && (race.ground === '重' || race.ground === '不良')) a += 2;
       else if (id === 'travel' && race.region === '海外') a += 2;
       else if (id === 'homebody' && race.region === '海外') a -= 3;
       else if (id === 'leftB' && course.dir === '左') a -= 1.5;
@@ -131,6 +133,9 @@
   S.LONGSPURT = { r: 50, z: 0.002 }; // ロングスパート：仕掛けを早める（m）・バテたあとの粘り
   S.JIYU = { slow: 0.994, hi: 1.006, k: 0.5, misfit: 0.35 };
   S.SUNA = 1.08;
+  // 追走○：直線の前、すぐ前（4m 以内・同じ進路）に馬がいる間の脚の使い方の倍率。外回し○：3〜4コーナーで追い出している間の脚の使い方の倍率（自分で乗る馬は外を回った遠回りも無くなる）。
+  // 馬群さばき：自分で乗る馬の横の動きの速さの倍率・横の馬に止められる幅（進路の差 gap・前後 dx m）、AI の馬が前が壁になったときの長さの倍率
+  S.TSUISO = 0.95; S.SOTO = 0.96; S.SABAKI = { v: 1.6, gap: 0.55, dx: 1.4, block: 0.4 };
   // 道中の位置取り（出だしの速さの倍率・隊列での先頭からの差）。自由自在の馬は、スローならひとつ前の脚質（差し→先行）、ハイならひとつ後ろの脚質の位置へ
   // JIYU.k の割合だけ寄せて運ぶ（仕掛けの早さは本来の脚質のまま）。jiyu＝寄せた向き（-1 前・1 後ろ・0 そのまま）
   S.runPos = function (h, paceF) {
@@ -206,7 +211,7 @@
     };
     // 終いの伸びの上限はペースで変わる：スローは脚が余っても伸びきれない（早めに動いて余った脚を使う）。ハイは脚の残りで決まる
     sim.top = S.KIRE.top * U.clamp(1 + (paceF - 1) * S.PACE_TOP, 0.55, 1.6);
-    if (HS.Skills) HS.Skills.setup(sim);
+    if (HS.Skills) { HS.Skills.setup(sim); for (const s of st) HS.Skills.flags(s); }
     // このレースで効く特殊能力（直線で見せる）
     for (const s of st) {
       s.passive = (s.h.skills || []).filter(id => S.skillAdj(Object.assign({}, s.h, { skills: [id] }), race, wIdx, Object.assign({ paceF }, s.r)) > 0);
@@ -545,6 +550,10 @@
       if (!s.spurting && prog > 0.08 && !s.oonige) { const rk = s.rk == null ? 0.5 : s.rk; costMul *= Math.max(0.5, 1 + (sim.paceF - 1) * S.PACE_K * (1 - 2 * rk)) * (1 - S.DRAFT * rk); } // 大逃げは集団と離れて自分のペースで行く
       // 砂かぶり×：ダートで、すぐ前に馬がいると砂をかぶって嫌がり、脚を使う
       if (s.sunaB && !s.spurting && prog > 0.05 && st.some(o => o !== s && !o.done && o.x > s.x && o.x - s.x < 4 && Math.abs(o.lane - s.lane) < 0.8)) { costMul *= S.SUNA; s.sunaT = (s.sunaT || 0) + DT; if (s.sunaT > 3) S.fire(sim, s, 'sunaB'); }
+      // 追走○：直線の前、すぐ前に馬がいる間は、脚の減りが少ない
+      if (s.tsuiso && !s.spurting && prog > 0.08 && R > straight && st.some(o => o !== s && !o.done && o.x > s.x && o.x - s.x < 4 && Math.abs(o.lane - s.lane) < 0.8)) { costMul *= S.TSUISO; S.fire(sim, s, 'tsuiso'); }
+      // 外回し○：3〜4コーナーで追い出している間（外を回して進出する）は、脚の減りが少ない。自分で乗る馬は外（進路1.5より外）にいるときだけ
+      if (s.sotoM && s.spurting && R > straight && (sim.track ? HS.Track.cornerAt(sim.track, R) !== 0 && R < straight + 700 : R < straight + 350) && (!(s.me && c) || s.lane > 1.5)) { costMul *= S.SOTO; S.fire(sim, s, 'sotomawashi'); }
       // 競り合いの気合：追い出してから（とバテたあと）の伸びと粘りに効く。ひるんだ馬は少し遅くなる
       S.fightStep(sim, s, R, prog);
       const fk = s.fight / 100;
@@ -564,7 +573,8 @@
       if (!(s.me && c) && s.spurting && !s.blockedOnce && st.length >= 10 && (s.h.style === '差し' || s.h.style === '追込')) {
         s.blockedOnce = true;
         const jk = s.r.jockey ? s.r.jockey.skill : 70;
-        if (rng.chance(0.1 * (1 - s.mind / 160) * (1.2 - jk / 150))) { s.blocked = rng.float(1.0, 2.4); S.say(sim, t, `${s.h.name}、前が壁になった！`, 'trouble'); }
+        // 外回し○は外を回して壁を避け、馬群さばきはすぐに進路を見つける（くじは同じように引く）
+        if (rng.chance(0.1 * (1 - s.mind / 160) * (1.2 - jk / 150))) { s.blocked = rng.float(1.0, 2.4) * (s.sotoM ? 0 : s.sabaki ? S.SABAKI.block : 1); if (s.blocked > 0) S.say(sim, t, `${s.h.name}、前が壁になった！`, 'trouble'); }
       }
       if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
       // 加減速の上限
@@ -588,7 +598,7 @@
       const xPrev = s.x;
       let dx = (vPrev + s.v) / 2 * DT;
       // コーナーで外を回ると、そのぶん遠回りになる（プレイヤーの馬）
-      if (s.me && c && sim.track) { const corner = HS.Track.cornerAt(sim.track, R) !== 0; c.wide = corner && s.lane > 1.5; if (corner) dx *= 1 - 0.005 * Math.max(0, s.lane - 0.5); }
+      if (s.me && c && sim.track) { const corner = HS.Track.cornerAt(sim.track, R) !== 0; c.wide = corner && s.lane > 1.5; if (corner && !s.sotoM) dx *= 1 - 0.005 * Math.max(0, s.lane - 0.5); } // 外回し○は遠回りにならない
       s.x += dx;
       S.moodOut(sim, s, s.me ? c : null);
       if (s.t600 == null && s.x >= D - 600) s.t600 = t - DT + (D - 600 - xPrev) / Math.max(0.1, s.x - xPrev) * DT;
@@ -608,7 +618,7 @@
     // ペースの目安：先頭がチェックポイントを過ぎたとき
     if (!sim.check && order[0] && order[0].x >= sim.checkAt) {
       const verdict = S.paceVerdict(sim.paceF);
-      sim.check = { t, at: sim.checkAt, verdict };
+      sim.check = { t, at: sim.checkAt, verdict, lead: order[0].i }; // lead＝チェックポイントを先頭で通った馬（幻惑逃げ）
       if (opts.frames) S.say(sim, t, `${sim.checkAt}m通過は${t.toFixed(1)}秒。${verdict}です。`, 'pace');
     }
     // 進路：前から順に、近くの馬と重ならない一番内の位置（特殊能力の発動にも使うので、映像を出さないレースでも決める）
@@ -618,10 +628,12 @@
       const me = c ? st[sim.me] : null;
       if (me) {
         // 押したらすぐ動き出し（毎秒 S.LANE.v 進路）、横に馬がいれば止まる（ぶつかった印 c.bumpT・c.bumpSide。振動と揺れに使う）
-        const want = U.clamp(c.lane - me.lane, -S.LANE.v * DT, S.LANE.v * DT);
+        // 馬群さばき：横に動くのが速く、横の馬に止められにくい
+        const SB = me.sabaki ? S.SABAKI : null, lv = S.LANE.v * (SB ? SB.v : 1);
+        const want = U.clamp(c.lane - me.lane, -lv * DT, lv * DT);
         if (Math.abs(want) > 1e-6) {
           const nl = me.lane + want, dir = Math.sign(want);
-          const hit = st.find(o => o !== me && !o.done && Math.abs(o.x - me.x) < S.LANE.dx && dir * (o.lane - me.lane) > 0 && Math.abs(o.lane - nl) < S.LANE.gap);
+          const hit = st.find(o => o !== me && !o.done && Math.abs(o.x - me.x) < (SB ? SB.dx : S.LANE.dx) && dir * (o.lane - me.lane) > 0 && Math.abs(o.lane - nl) < (SB ? SB.gap : S.LANE.gap));
           if (hit) {
             if (t - (c.bumpT == null ? -9 : c.bumpT) > 0.4) { c.bumpT = t; c.bumpSide = dir; }
             c.lane = U.clamp(Math.round(me.lane - dir * 0.49), 0, 12); // 押した向きの注文は取り消す（ぶつかった所で止まる）

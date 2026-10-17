@@ -226,7 +226,9 @@
   UI.trigSkills = h => HS.Skills && !h.filler ? HS.Skills.of(h, W.wIdx ? W.wIdx() : null) : [];
   UI.hasSkills = h => H.shownSkills(h).length > 0 || UI.trigSkills(h).length > 0;
   UI.skillChips = h => H.shownSkills(h).map(x => `<span class="chip skill ${H.SKILLS[x].bad ? 'bad' : ''}" title="${e(H.SKILLS[x].note)}">${e(H.SKILLS[x].label)}</span>`).join('')
-    + UI.trigSkills(h).map(id => { const k = HS.Skills.BY[id]; return `<span class="chip skill trig ${k.bad ? 'bad' : ''}" title="${e(k.note)}">⚡${e(k.label)}</span>`; }).join('');
+    + UI.trigSkills(h).map(UI.trigChip).join('');
+  // 発動する特殊能力の札。名馬の固有の能力は金の札（★）
+  UI.trigChip = id => { const k = HS.Skills.BY[id]; return k ? `<span class="chip skill trig ${k.bad ? 'bad' : ''} ${k.unique ? 'unique' : ''}" title="${e(k.note)}">${k.unique ? '★' : '⚡'}${e(k.label)}</span>` : ''; };
   // 史実の名馬の名鑑：年代・戦績・主な勝鞍・解説（data/profiles.js があればそちら。無ければ勝ち鞍から）
   UI.histData = name => W.histByName.get(name) || (HS.Special ? HS.Special.data(name) : null);
   UI.histYears = d => d.years || (d.born && d.retire ? `${Math.floor((d.born + 2 + d.retire) / 2 / 10) * 10}年代` : '');
@@ -243,8 +245,8 @@
   };
   // 特殊能力の一覧（札と、どんなときに効くか）。パドックで自分の馬に
   UI.skillList = h => H.shownSkills(h).map(x => [H.SKILLS[x].label, H.SKILLS[x].note, H.SKILLS[x].bad, false])
-    .concat(UI.trigSkills(h).map(id => { const k = HS.Skills.BY[id]; return [k.label, k.note, k.bad, true]; }))
-    .map(([l, n, bad, trig]) => `<div class="sk-row"><span class="chip skill ${trig ? 'trig' : ''} ${bad ? 'bad' : ''}">${trig ? '⚡' : ''}${e(l)}</span><span class="small">${e(n || '')}</span></div>`).join('');
+    .concat(UI.trigSkills(h).map(id => { const k = HS.Skills.BY[id]; return [k.label, k.note, k.bad, true, k.unique]; }))
+    .map(([l, n, bad, trig, uq]) => `<div class="sk-row"><span class="chip skill ${trig ? 'trig' : ''} ${bad ? 'bad' : ''} ${uq ? 'unique' : ''}">${uq ? '★' : trig ? '⚡' : ''}${e(l)}</span><span class="small">${e(n || '')}</span></div>`).join('');
   function histNote(h) {
     const d = UI.histData(h.name);
     if (!d) return '';

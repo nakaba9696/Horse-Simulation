@@ -12,6 +12,8 @@
   // at：調べる区間（start＝スタートから4秒、mid＝直線の前、st＝直線、any＝いつも）。group：爆発・損・速さ・気性・根性（この順に1つずつ回して選ぶ）。
   // fx：spd＝速さの倍率と秒（free なら脚を使わず、出だしの消耗も軽い）、top＝終いの伸びの上限を上げる（ためた脚を使い切れる。脚が残っていないと効かない）、E＝スタミナの増減、drift＝よれる（進路を外へ）、pos＝隊列の位置の目標を前へ（m）。ikki＝一気系（1レースに1つだけ発動）
   // 身につく条件は、史実馬のうち持つ馬が5〜25%（弱みは少なめ）になるように合わせた（tools/skills_bench.js count）
+  // 番手×・二段ロケット・馬群さばき・幻惑逃げ・息入れ○・後方待機○・追走○・外回し○は、逃げと追込に足したもの（持ち主の決定 2026-10-17「逃げと追込は位置取りがピーキーなので、この2つに足す」。先行は増やさない）。
+  // 逃げ・追込の馬は持てる数がいっぱいになるので、系統の中の前のほうに置いて、その脚質の中で持つ馬の割合を合わせた
   K.LIST = [
     // 爆発
     { id: 'saikoubi', at: 'any', label: '豪脚', group: '爆発', ikki: true, note: '残り500mから、最後方近くでムチを入れると大きく伸びる（直線の長さに関係なく、残りの距離で決まる）', fx: { spd: 0.07, sec: 4, free: true, top: 0.3 },
@@ -30,6 +32,9 @@
     { id: 'kongomi', at: 'any', label: '馬込み×', group: '損', bad: true, note: '馬群に包まれたままだと、やる気をなくす', fx: { E: -0.03 },
       learn: p => p.mind < 70 && (p.style === '逃げ' || p.style === '追込'),
       when: x => x.sk.boxedFor >= 3 },
+    { id: 'bante', at: 'mid', label: '番手×', group: '損', bad: true, note: '逃げられず、2番手より後ろで道中を運ぶと、やる気をなくす', fx: { E: -0.03 },
+      learn: p => p.style === '逃げ' && p.mind < 72,
+      when: x => x.sk.banteFor >= 10 },
     { id: 'sessenB', at: 'st', label: '叩き合い×', group: '損', bad: true, note: 'ゴール前で並ばれると、ひるむ', fx: { spd: -0.015, sec: 1.5 },
       learn: p => p.guts < 70,
       when: x => x.R < 100 && x.close },
@@ -46,10 +51,25 @@
     { id: 'nebari', at: 'st', label: '二の脚', group: '速さ', note: '残り600mで先頭にいた馬が、残り300mからつかまりかけると、もうひと踏ん張り', fx: { spd: 0.05, sec: 3.5, free: true },
       learn: p => (p.style === '逃げ' || p.style === '先行') && p.sta >= 85,
       when: x => x.R <= 300 && x.sk.led600 && x.rank <= 3 && x.leader.x - x.s.x < LEN },
+    { id: 'nidan', at: 'st', label: '二段ロケット', group: '速さ', note: '先頭で直線に入り、2番手を1馬身以上離していれば、もうひと伸び', fx: { spd: 0.08, sec: 4, free: true },
+      learn: p => p.style === '逃げ' && p.spd >= 80,
+      when: x => x.inStraight && x.straight - x.R < 30 && x.rank === 1 && x.second && x.s.x - x.second.x >= LEN },
+    { id: 'sabaki', at: 'st', label: '馬群さばき', group: '速さ', note: '直線で前が壁になっても、すぐ進路を見つけて伸びる。横の馬に止められにくい', fx: { spd: 0.03, sec: 2.5, free: true },
+      learn: p => p.style === '追込' && p.spd < 85 && p.mind >= 70,
+      when: x => x.inStraight && x.R > 100 && x.sk.wallFor >= 0.6 && !x.wall },
     // 気性
+    { id: 'genwaku', at: 'any', label: '幻惑逃げ', group: '気性', note: 'ペースのチェックポイントを先頭で通り、スローなら、後ろの差し・追込の馬が脚を使わされる', fx: { foeE: -0.05, foe: SASHI },
+      learn: p => p.style === '逃げ' && p.mind >= 84,
+      when: x => !!x.sim.check && x.sim.check.lead === x.s.i && x.sim.check.verdict === 'スローペース' },
+    { id: 'ikiire', at: 'mid', label: '息入れ○', group: '気性', note: '3〜4コーナーを先頭で回ると、ひと息入って脚が戻る', fx: { E: 0.05 },
+      learn: p => p.style === '逃げ' && p.sta >= 84 && p.mind < 84,
+      when: x => !x.inStraight && x.R <= x.straight + 350 && x.rank === 1 },
     { id: 'tanki', at: 'mid', label: '単騎逃げ', group: '気性', note: '後ろを2馬身以上離して逃げると、気分よく走る', fx: { E: 0.06 },
       learn: p => p.style === '逃げ' && p.mind >= 65,
       when: x => !x.inStraight && x.sk.soloFor >= 10 },
+    { id: 'kouhou', at: 'mid', label: '後方待機○', group: '気性', note: '中間点まで後ろから3頭以内で、掛からずに運ぶと、脚が戻る', fx: { E: 0.025 },
+      learn: p => p.style === '追込' && p.mind >= 76,
+      when: x => x.s.x >= x.D / 2 && x.sk.rankMid != null && x.sk.rankMid >= x.n - 2 && !x.sk.kakari && !(x.c && x.c.everKakari) },
     { id: 'yonkaku', at: 'st', label: '四角先頭', group: '気性', note: '先頭で直線に入ると、脚が戻る', fx: { E: 0.05 },
       learn: p => (p.style === '先行' || p.style === '差し') && p.spd >= 86 && p.kire <= 4,
       when: x => x.inStraight && x.straight - x.R < 30 && x.rank === 1 },
@@ -66,6 +86,13 @@
     { id: 'makuri', at: 'st', label: '大まくり', group: '根性', note: '中間点で後ろ半分にいた馬が、6頭以上抜いて先頭から1馬身以内で直線に入ると、脚が戻ってひと伸び', fx: { E: 0.1, spd: 0.04, sec: 4, free: true },
       learn: p => SASHI.includes(p.style) && p.kire <= 4 && p.sta >= 78,
       when: x => x.inStraight && x.straight - x.R < 30 && x.sk.rankMid != null && x.sk.rankMid > x.n / 2 && x.sk.rankMid - x.rank >= 6 && x.leader.x - x.s.x < LEN },
+    // 追走○・外回し○は、条件が続いている間ずっと効く（racesim.js。cont）。発動の印は初めて効いたときに出す
+    { id: 'tsuiso', at: 'any', label: '追走○', group: '根性', cont: true, note: '直線の前、すぐ前に馬がいる間は、脚の減りが少ない', fx: {},
+      learn: p => p.style === '追込' && p.guts >= 82,
+      when: () => false },
+    { id: 'sotomawashi', at: 'any', label: '外回し○', group: '根性', cont: true, note: 'コーナーで外を回っても、余分に脚を使わない', fx: {},
+      learn: p => p.style === '追込' && p.sta >= 76 && p.guts < 82,
+      when: () => false },
     { id: 'dokonjo', at: 'any', label: 'ど根性', group: '根性', note: '追い出してから3秒叩き合うと、脚が戻る', fx: { E: 0.02 },
       learn: p => p.guts >= 88,
       when: x => x.sk.duelFor >= 3 },
@@ -75,6 +102,28 @@
   ];
   K.BY = {}; K.LIST.forEach(k => { K.BY[k.id] = k; });
   K.ORDER = ['爆発', '損', '速さ', '気性', '根性'];
+
+  // 名馬の固有の能力（data/uniques.js。伝説級の名馬に1頭1つ）。場面の型（when の名前 → 条件）。持てる数（K.cap）には数えない
+  K.UWHEN = {
+    leadStraight: x => x.inStraight && x.straight - x.R < 30 && x.rank === 1,
+    leadMid: x => !x.inStraight && x.s.x >= x.D / 2 && x.rank === 1,
+    duelEnd: x => x.R < 300 && x.close,
+    neck: x => x.R < 100 && x.close,
+    longStraight: x => x.D >= 2400 && x.inStraight && x.straight - x.R < 30,
+    heavyOrLate: x => !x.inStraight && x.R <= x.straight + 400 && (x.s.late || (x.s.r.weight || 0) >= 57),
+    front3: x => x.R <= 400 && x.rank <= 3,
+    holdLead: x => x.R < 300 && x.rank === 1 && x.second && x.s.x - x.second.x < LEN,
+    posBreak: x => x.inStraight && x.straight - x.R < 30 && x.rank >= 2 && x.rank <= 4,
+    bigLead: x => x.inStraight && x.rank === 1 && x.second && x.s.x - x.second.x >= 2 * LEN,
+    nearLead: x => x.R <= 400 && x.rank >= 2 && x.leader.x - x.s.x < LEN,
+    start: x => x.t - x.s.delay < 0.6 && !x.s.late,
+    sprint: x => x.D <= 1400 && x.inStraight && x.straight - x.R < 30 && x.rank <= 3,
+  };
+  K.UNIQUES = (HS.DATA && HS.DATA.uniques || []).filter(u => K.UWHEN[u.when]).map(u => Object.assign({}, u, { unique: true, group: '固有', when: K.UWHEN[u.when], whenId: u.when }));
+  K.UNIQUE_OF = {}; // 馬名 → 固有の能力
+  K.UNIQUES.forEach(u => { K.BY[u.id] = u; K.UNIQUE_OF[u.horse] = u; });
+  K.isUnique = id => !!(K.BY[id] && K.BY[id].unique);
+  K.uniqueOf = h => h && !h.original && K.UNIQUE_OF[h.name] ? K.UNIQUE_OF[h.name].id : null;
 
   // 習得の材料（能力値）。芝・ダートは高いほう
   K.stats = function (h, wIdx) {
@@ -89,6 +138,7 @@
     if (!h) return [];
     if (h.trigFixed) return h.trigFixed.filter(id => K.BY[id]); // オリジナルホースは親から受け継いだもの（無くした特殊能力は外す）
     const p = K.stats(h, wIdx);
+    const u = K.uniqueOf(h); // 伝説級の名馬は、固有の能力を先頭に（持てる数とは別）
     // 系統を1つずつ回して取る（爆発 → 損 → 速さ → 気性 → 根性 → 爆発…）。系統の中は表の順
     const ok = K.ORDER.map(g => K.LIST.filter(k => k.group === g && k.learn(p)));
     const cap = K.cap(p), out = [];
@@ -97,7 +147,7 @@
       for (const g of ok) { if (g[round]) { any = true; if (out.length < cap) out.push(g[round].id); } }
       if (!any) break;
     }
-    return out;
+    return u ? [u].concat(out) : out;
   };
   K.label = id => (K.BY[id] || H.SKILLS[id] || { label: id }).label;
   K.isBad = id => !!(K.BY[id] || H.SKILLS[id] || {}).bad;
@@ -105,10 +155,15 @@
 
   // レースの初めに、各馬の発動の特殊能力を決める
   K.setup = function (sim) {
-    for (const s of sim.st) { s.trig = K.of(s.h, sim.wIdx); s.sk = { boxedFor: 0, soloFor: 0, duelFor: 0, led600: false, rankMid: null, whipBefore: false, ikki: false }; }
+    for (const s of sim.st) {
+      s.trig = K.of(s.h, sim.wIdx);
+      s.sk = { boxedFor: 0, soloFor: 0, duelFor: 0, banteFor: 0, wallFor: 0, led600: false, rankMid: null, whipBefore: false, ikki: false };
+    }
   };
+  // 続いている間ずっと効く能力と、横の動き・前が壁に効く能力の印（racesim.js が見る）。S.create が K.setup のあとに呼ぶ
+  K.flags = s => { const t = s.trig || []; s.tsuiso = t.includes('tsuiso'); s.sotoM = t.includes('sotomawashi'); s.sabaki = t.includes('sabaki'); };
 
-  const X = { sim: null, s: null, c: null, t: 0, D: 0, R: 0, straight: 0, inStraight: false, rank: 0, n: 0, whipping: false, left: false, right: false, faster: false, close: false, leader: null, second: null, sk: null };
+  const X = { sim: null, s: null, c: null, t: 0, D: 0, R: 0, straight: 0, inStraight: false, rank: 0, n: 0, whipping: false, left: false, right: false, faster: false, close: false, wall: false, leader: null, second: null, sk: null };
   // 0.1 秒ごと。order＝まだ走っている馬の、前から順の並び
   K.step = function (sim, order, DT) {
     const { D, straight, st, t } = sim;
@@ -120,7 +175,7 @@
       if (s.done || !s.trig || !s.trig.length || t < s.delay) continue;
       const R0 = D - s.x, ph = R0 <= straight + 30 ? 'st' : t - s.delay < 4 ? 'start' : 'mid';
       let need = k < 2 || (s.x >= D * 0.5 && s.sk.rankMid == null);
-      for (let q = 0; q < s.trig.length && !need; q++) { const id = s.trig[q], a = K.BY[id].at; if (!s.fired[id] && (a === ph || a === 'any')) need = true; }
+      for (let q = 0; q < s.trig.length && !need; q++) { const id = s.trig[q], d = K.BY[id], a = d.at; if (!s.fired[id] && !d.cont && (a === ph || a === 'any')) need = true; }
       if (!need) continue;
       const me = s.me && sim.ctl ? sim.ctl : null;
       const R = D - s.x, inStraight = R <= straight && R > 0;
@@ -132,10 +187,11 @@
       near.length = 0;
       for (let q = k - 1; q >= 0 && order[q].x - s.x < 5; q--) near.push(order[q]);
       for (let q = k + 1; q < order.length && s.x - order[q].x < 3; q++) near.push(order[q]);
-      let left = false, right = false, front = false, close = false, faster = true;
+      let left = false, right = false, front = false, close = false, faster = true, wall = false;
       for (const o of near) {
         const dl = o.lane - s.lane, dx = o.x - s.x;
         if (dx > 0 && Math.abs(dl) < 0.9) front = true;
+        if (dx > 0 && dx < 2.6 && Math.abs(dl) < 0.85) wall = true; // すぐ前が壁
         if (dx >= 3) continue;
         if (dl < -0.4 && dl > -1.6) left = true;
         if (dl > 0.4 && dl < 1.6) right = true;
@@ -147,14 +203,16 @@
       sk.soloFor = rank === 1 && second && s.x - second.x >= 2 * LEN ? sk.soloFor + DT : 0;
       sk.duelFor = (s.spurting || (me && me.gear > 0.3)) && close ? sk.duelFor + DT : 0;
       if (rank === 1 && R <= 600 && R > 300) sk.led600 = true;
+      if (!inStraight && rank >= 3 && s.x > D * 0.2) sk.banteFor += DT; else if (rank <= 2) sk.banteFor = 0; // 番手×：ハナに立てず3番手より後ろ（2番手以内に上がると数え直し）
+      if (inStraight && wall) sk.wallFor += DT;
       if (sk.rankMid == null && s.x >= D * 0.5) sk.rankMid = rank;
       if (s.kakariDay && s.x < D * 0.5 && !me) sk.kakari = true;
       const x = X; x.sim = sim; x.s = s; x.c = me; x.t = t; x.D = D; x.R = R; x.straight = straight; x.inStraight = inStraight; x.rank = rank; x.n = n;
-      x.whipping = whipping; x.left = left; x.right = right; x.faster = faster; x.close = close; x.leader = leader; x.second = second; x.sk = sk;
+      x.whipping = whipping; x.left = left; x.right = right; x.faster = faster; x.close = close; x.wall = wall; x.leader = leader; x.second = second; x.sk = sk;
       for (const id of s.trig) {
         if (s.fired[id]) continue;
         const def = K.BY[id];
-        if (def.at !== ph && def.at !== 'any') continue;
+        if (def.cont || (def.at !== ph && def.at !== 'any')) continue;
         if (def.ikki && sk.ikki) continue; // 一気系は1レースに1つだけ
         if (!def.when(x)) continue;
         if (def.ikki) sk.ikki = true;
@@ -175,5 +233,7 @@
     if (f.drift && s.me && sim.ctl && sim.ctl.lastWhip) sim.ctl.lane = U.clamp(sim.ctl.lane + sim.ctl.lastWhip.away * f.drift, 0, 12);
     else if (f.drift) s.driftLane = (s.driftLane || 0) + f.drift * 1.5; // AI の馬は外へよれる（進路の目標が外へずれる）
     if (f.pos) s.gapAdj = (s.gapAdj || 0) - f.pos; // 隊列で、先頭からの差の目標を前へ
+    // ほかの馬に効く（幻惑逃げ・影もなし）：後ろの馬のスタミナを減らす（foe があればその脚質だけ）
+    if (f.foeE) for (const o of sim.st) if (o !== s && !o.done && o.x < s.x && (!f.foe || f.foe.includes(o.h.style))) o.E = U.clamp(o.E + f.foeE, -0.2, 1);
   };
 })();

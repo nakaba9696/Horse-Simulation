@@ -1,6 +1,6 @@
 // オリジナルホース（騎手のゲーム・年代なし。持ち主の決定 2026-10-16）
 // 自分の馬を引退させると、牧場に残る（牡・牝それぞれ5頭まで）。引退した牡馬と牝馬を組み合わせて、オリジナルホース（仔）を作る。
-// 能力は両親の値をもとにばらつき、特殊能力は両親のもの（それぞれ最大4つ、合わせて最大8つ）から4つまで受け継ぐ。
+// 能力は両親の値をもとにばらつき、特殊能力は両親のもの（それぞれ最大4つ、合わせて最大8つ）から4つまで受け継ぐ（伝説級の名馬の固有の能力も）。
 // トロフィーを手にした馬・グランドフィナーレを勝った馬を親にすると、仔の能力にボーナスが付く
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
@@ -46,11 +46,14 @@
     return null;
   };
 
-  // その馬の特殊能力（手書きのものと、発動するもの）。最大4つ
+  // その馬の特殊能力（手書きのものと、発動するもの）。最大4つ。
+  // 伝説級の名馬の固有の能力（data/uniques.js）は先頭に置き、必ず候補に入る（持ち主の決定 2026-10-17「親にすればオリジナルホースに引き継ぎ可能です」）
   O.skillsOf = function (h) {
+    const K = HS.Skills;
     const hand = (h.skills || []).filter(id => H.SKILLS[id]);
-    const trig = HS.Skills ? HS.Skills.of(h, W.wIdx()) : [];
-    return hand.concat(trig.filter(id => !hand.includes(id))).slice(0, O.MAX_SKILLS);
+    const trig = K ? K.of(h, W.wIdx()) : [];
+    const uniq = K ? trig.filter(id => K.isUnique(id)) : [];
+    return uniq.concat(hand, trig.filter(id => !hand.includes(id) && !uniq.includes(id))).slice(0, O.MAX_SKILLS);
   };
   // 受け継ぐ候補（両親のものを合わせて最大8つ）
   O.candidates = (s, m) => { const out = []; for (const id of O.skillsOf(s).concat(O.skillsOf(m))) if (!out.includes(id)) out.push(id); return out; };
