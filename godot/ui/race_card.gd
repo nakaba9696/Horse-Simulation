@@ -23,6 +23,7 @@ var card: PanelContainer
 var card_name: Label
 var card_sub: Label
 var card_arrows: UiStyleArrows
+var card_stats: HFlowContainer   # 自分の馬の総合力と能力（段の色の札。docs/UI.md「能力の段」）
 var btn_paddock: Button
 var btn_gate: Button
 var keybar: PanelContainer
@@ -269,8 +270,8 @@ func _build_table() -> void:
 		var nh := HBoxContainer.new()
 		nh.add_theme_constant_override("separation", 6)
 		nh.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nh.clip_contents = true   # 長い名前は列の端で切る（名前の札に clip_text を付けると幅が 0 になって名前が消えていた）
 		var nl := UiTheme.label(String(hinfo.name), 17, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY)
-		nl.clip_text = true
 		nh.add_child(nl)
 		# 史実・スペシャルの小さな印（docs/UI.md「出走表」2）
 		if hinfo.get("legend"):
@@ -350,6 +351,10 @@ func _build_right() -> void:
 	top.add_child(card_arrows)
 	card_sub = UiTheme.label("", 14, UiTheme.MUTED)
 	v.add_child(card_sub)
+	card_stats = HFlowContainer.new()
+	card_stats.add_theme_constant_override("h_separation", 10)
+	card_stats.add_theme_constant_override("v_separation", 6)
+	v.add_child(card_stats)
 	var bh := HBoxContainer.new()
 	bh.add_theme_constant_override("separation", 14)
 	bh.alignment = BoxContainer.ALIGNMENT_END
@@ -418,9 +423,39 @@ func _select(i: int, animate: bool) -> void:
 	card_arrows.style = String(h.style)
 	card_arrows.queue_redraw()
 	card_sub.text = "%d番  %s%d  %s  %s  斤量%.1f  %s" % [int(h.num), h.sex, int(h.get("age", 4)), h.coat, h.style, float(h.weight), info[i].jockey]
+	_fill_stats(i)
 	if animate:
 		card.modulate.a = 0.5
 		create_tween().tween_property(card, "modulate:a", 1.0, 0.18)
+
+# 自分の馬なら、このレースの馬場の総合力（いま）と能力を段の色の札で出す（JS 版のパドックの「数の並び」と同じ中身）
+func _fill_stats(i: int) -> void:
+	for c in card_stats.get_children():
+		c.queue_free()
+	var h: Dictionary = race.horses[i]
+	card_stats.visible = flow and bool(h.get("mine", false)) and race.has("card")
+	if not card_stats.visible:
+		return
+	var hh: Dictionary = race.card.runners[i].horse
+	var wi = HSWorld.w_idx()
+	var sf := String(race.race.surface)
+	var fg := HBoxContainer.new()
+	fg.add_theme_constant_override("separation", 6)
+	fg.add_child(UiTheme.label("総合力（%s）" % ("ダ" if sf == "ダ" else "芝"), 13, UiTheme.MUTED))
+	fg.add_child(UiTheme.stat_chip(HSSeason.fh(hh, wi, "ダ" if sf == "ダ" else "芝"), "fh", true))
+	card_stats.add_child(fg)
+	var c := HSHorse.cur(hh, wi)
+	var ks := ["dspd", "dsta"] if sf == "ダ" else ["spd", "sta"]
+	for k in ks + ["guts", "mind", "slope"]:
+		card_stats.add_child(_stat_cell(String(HSHorse.STAT_SHORT[k]), float(c[k]), "stat"))
+	card_stats.add_child(_stat_cell("切れ", float(HSU.or_(hh.get("kire"), 4.0)), "kire"))
+
+func _stat_cell(name: String, v: float, kind: String) -> HBoxContainer:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 4)
+	hb.add_child(UiTheme.stat_chip(v, kind))
+	hb.add_child(UiTheme.label(name, 12, UiTheme.MUTED))
+	return hb
 
 func _open_paddock() -> void:
 	if mode == "paddock":

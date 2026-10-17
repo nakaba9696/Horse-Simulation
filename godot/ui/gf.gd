@@ -127,7 +127,7 @@ func _fill() -> void:
 			hb.add_child(l)
 		var cw := CenterContainer.new()
 		cw.custom_minimum_size.x = 50
-		cw.add_child(UiScreen.num_chip(float(x.fh)))
+		cw.add_child(UiTheme.stat_chip(float(x.fh)))
 		hb.add_child(cw)
 		UiScreen.pass_mouse(hb)
 		list.add_child(b)

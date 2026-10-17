@@ -30,12 +30,21 @@
       ${items.length > 1 ? `<span class="u-lr" data-lr-hint>${K.key('E', 'RB')}</span>` : ''}</nav>`;
   };
 
-  // ---------- 能力の数値の札：大きさで色が変わる（50 から上が暖かい色に）。数は等幅 ----------
-  // lo〜hi の間で青 → 緑 → 金 → 赤に（能力は 50〜110、総合力は 40〜85）
-  K.heat = (v, lo, hi) => { lo = lo == null ? 50 : lo; hi = hi == null ? 110 : hi; const t = Math.max(0, Math.min(1, (v - lo) / (hi - lo))); return `--h:${Math.round(205 - t * 170)};--a:${(0.16 + t * 0.55).toFixed(2)}`; };
-  K.num = (v, title, big, lo, hi) => `<span class="u-num ${big ? 'big' : ''}" style="${K.heat(v, lo, hi)}"${title ? ` title="${e(title)}"` : ''}>${v == null ? '－' : Math.round(v)}</span>`;
-  // 総合力（芝・ダート）の札：良いほうを明るく
-  K.fh = (turf, dirt) => `<span class="u-fh"><span class="t ${turf >= dirt ? 'hi' : ''}"><small>芝</small>${turf}</span><span class="d ${dirt > turf ? 'hi' : ''}"><small>ダ</small>${dirt}</span></span>`;
+  // ---------- 能力の段（docs/UI.md「能力の段」。持ち主の指摘 2026-10-17「ステータスの数値によって色つけてください　数字だけだとわかりにくいので」） ----------
+  // 段：0 低い（暗い青）・1 ふつう（灰）・2 良い（緑）・3 とても良い（金）・4 飛び抜けている（紅。光る）。色は css/ui.css の .u-num.t0〜t4
+  // 境目は「この値から上がその段」。Godot 版（godot/ui/theme.gd の TIER_*）と同じ値（tests/extra_ui.js が比べる）
+  K.TIER_NAMES = ['低い', 'ふつう', '良い', 'とても良い', '飛び抜けている'];
+  K.TIER = { fh: [45, 55, 65, 75], stat: [60, 75, 85, 95], kire: [3, 5, 7, 8] };
+  // kind：'fh'（総合力 1〜99）・'stat'（能力 20〜120）・'kire'（脚の切れ 1〜8）
+  K.tier = (v, kind) => { const cut = K.TIER[kind] || K.TIER.stat; const r = Math.round(v); return cut.filter(c => r >= c).length; };
+  // 能力の数値の札：段の色の地・字・縁。数は等幅。4つ目の引数に前の呼び方の lo（数）が来たら、40 台なら総合力の段
+  K.num = (v, title, big, kind) => {
+    if (typeof kind === 'number') kind = kind < 50 ? 'fh' : 'stat';
+    const t = v == null ? 1 : K.tier(v, kind || 'stat');
+    return `<span class="u-num t${t} ${big ? 'big' : ''}" title="${e((title ? title + '・' : '') + K.TIER_NAMES[t])}">${v == null ? '－' : Math.round(v)}</span>`;
+  };
+  // 総合力（芝・ダート）の札：それぞれの段の色で
+  K.fh = (turf, dirt) => `<span class="u-fh"><span class="u-num t${K.tier(turf, 'fh')}" title="総合力（芝）・${K.TIER_NAMES[K.tier(turf, 'fh')]}"><small>芝</small>${turf}</span><span class="u-num t${K.tier(dirt, 'fh')}" title="総合力（ダート）・${K.TIER_NAMES[K.tier(dirt, 'fh')]}"><small>ダ</small>${dirt}</span></span>`;
   // 値段：資金が足りなければ赤
   K.price = (v, money) => `<span class="u-price ${money != null && v > money ? 'over' : ''}"${money != null && v > money ? ' title="資金が足りない"' : ''}>${U.money(v)}</span>`;
   // 適性の印（◎○△×）

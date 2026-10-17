@@ -241,11 +241,9 @@ static func compact(b: Button, padx := 8.0) -> void:
 		sb.content_margin_right = padx
 		b.add_theme_stylebox_override(st, sb)
 
-# 能力の数の札（docs/UI.md「能力の数の札」：低い 205 青 → 高い 35 金赤）
-static func num_chip(v: float, lo := 40.0, hi := 85.0, big := false) -> PanelContainer:
-	var u := clampf((v - lo) / (hi - lo), 0.0, 1.0)
-	var c := Color.from_hsv(lerpf(205.0, 35.0, u) / 360.0, 0.55, lerpf(0.42, 0.62, u))
-	return UiTheme.chip(str(int(round(v))), c, Color.WHITE, 17 if big else 14, 48.0 if big else 34.0)
+# 総合力の数の札（docs/UI.md「能力の段」。中身は UiTheme.stat_chip）。lo・hi は前の呼び方の名残：lo が 50 以上なら能力の段で塗る
+static func num_chip(v: float, lo := 40.0, _hi := 85.0, big := false) -> PanelContainer:
+	return UiTheme.stat_chip(v, "stat" if lo >= 50.0 else "fh", big)
 
 static func spacer() -> Control:
 	var s := Control.new()

@@ -43,13 +43,17 @@ body[data-input="pad"] .u-key .p { display: inline-block; }
 .u-tab.on small { background: rgba(0, 0, 0, .15); }
 
 /* ---------- 能力の数値の札・総合力・値段・適性の印 ---------- */
-.u-num { display: inline-block; min-width: 34px; padding: 1px 6px; border-radius: 6px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; background: hsla(var(--h, 205), 72%, 46%, var(--a, .2)); box-shadow: 0 0 0 1px rgba(255, 255, 255, .07) inset; }
+/* 能力の数の札は段の色（docs/UI.md「能力の段」。K.tier）。上の段ほど縁が太く字も太い（色だけに頼らない）。飛び抜けている段は紅く光る */
+.u-num { display: inline-block; min-width: 34px; padding: 1px 6px; border-radius: 6px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--tier1-fg); background: var(--tier1); box-shadow: 0 0 0 1px var(--line-2) inset; }
+.u-num.t0 { color: var(--tier0-fg); background: var(--tier0); box-shadow: none; font-weight: 500; }
+.u-num.t2 { color: var(--tier2-fg); background: var(--tier2); box-shadow: 0 0 0 1px var(--tier2-line) inset; }
+.u-num.t3 { color: var(--tier3-fg); background: var(--tier3); box-shadow: 0 0 0 2px var(--tier3-line) inset; font-weight: 900; }
+.u-num.t4 { color: var(--tier4-fg); background: var(--tier4); box-shadow: 0 0 0 2px var(--tier4-line) inset, 0 0 8px rgba(255, 84, 102, .55); font-weight: 900; }
 .u-num.big { min-width: 48px; padding: 3px 8px; font-size: var(--fs-md); }
 .u-fh { display: inline-flex; gap: 4px; }
-.u-fh > span { display: inline-flex; align-items: baseline; gap: 3px; min-width: 46px; justify-content: center; padding: 1px 7px; border-radius: 6px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-2); background: rgba(255, 255, 255, .05); }
+.u-fh > .u-num { display: inline-flex; align-items: baseline; gap: 3px; min-width: 46px; justify-content: center; padding: 1px 7px; }
 .u-fh small { font-size: var(--fs-xs); font-weight: 700; opacity: .8; }
-.u-fh .t.hi { color: #eaffea; background: color-mix(in srgb, var(--turf) 70%, transparent); }
-.u-fh .d.hi { color: #fff1e0; background: color-mix(in srgb, var(--dirt) 75%, transparent); }
+.nums .u-num { margin-left: 2px; }
 .u-price { font-weight: 900; font-variant-numeric: tabular-nums; color: var(--accent-hi); white-space: nowrap; }
 .u-price.over { color: var(--bad); }
 .u-mark { display: inline-block; width: 1.5em; text-align: center; font-weight: 900; }

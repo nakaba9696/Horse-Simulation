@@ -31,6 +31,9 @@
   --gold: var(--accent); --gold2: var(--accent-hi); --muted: var(--text-2);
   --g1: #2457c4; --g2: #c3313a; --g3: #23904a; --jpn: #6d45ba; --turf: #3a8a4a; --dirt: #a8794a;
   --male: #234b63; --female: #5e2b45;
+  /* 能力の段（docs/UI.md「能力の段」。0 低い・1 ふつう・2 良い・3 とても良い・4 飛び抜けている。Godot の UiTheme.TIER_* と同じ色） */
+  --tier0: #15283a; --tier0-fg: #8fb0c8; --tier1: #26362e; --tier1-fg: #edf3ee; --tier2: #1d6a42; --tier2-fg: #ffffff; --tier2-line: rgba(99, 210, 147, .85);
+  --tier3: #7d5c14; --tier3-fg: #ffe8a6; --tier3-line: #f2d98e; --tier4: #a5233c; --tier4-fg: #ffffff; --tier4-line: #ffb3a6;
   /* 段 */
   --fs-xs: 11px; --fs-sm: 12.5px; --fs-base: 15px; --fs-md: 17px; --fs-lg: 20px; --fs-xl: 26px; --fs-2xl: 34px;
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
