@@ -54,8 +54,8 @@ func build() -> void:
 		main.add_child(p)
 	for r in mine_rides.slice(0, 3):
 		main.add_child(_ride_card(r))
-	if mine_rides.size() == 1:
-		main.add_child(_board(mine_rides[0]))
+	if mine_rides.size() >= 1 and mine_rides.size() <= 2:
+		main.add_child(_board(mine_rides[0], 10 if mine_rides.size() == 1 else 5))
 	if mine_other.size():
 		main.add_child(UiScreen.section("自分の馬（ほかの騎手）"))
 		for r in mine_other.slice(0, 3):
@@ -167,14 +167,14 @@ func _gift_card(q: Dictionary) -> PanelContainer:
 		v.add_child(UiTheme.label("ご褒美：%s" % q.reward, 14, UiTheme.GOLD_BRIGHT))
 	return pb[0]
 
-# 自分が乗ったレースの着順（上から10頭）
-func _board(r: Dictionary) -> PanelContainer:
+# 自分が乗ったレースの着順（上から n 頭。1鞍なら10頭・2鞍なら最初のレースの5頭）
+func _board(r: Dictionary, n := 10) -> PanelContainer:
 	var pb := UiScreen.panel_box(false, 3)
 	var v: VBoxContainer = pb[1]
 	var pops := {}
 	for x in r.runners:
 		pops[x.horse] = x.get("pop")
-	for x in r.sim.results.slice(0, 10):
+	for x in r.sim.results.slice(0, n):
 		var mine: bool = x.get("rider") == "P"
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)

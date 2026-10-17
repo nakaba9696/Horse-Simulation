@@ -171,7 +171,9 @@ func _seg(label: String, key: String, opts: Array) -> HBoxContainer:
 		b.custom_minimum_size = Vector2(0, 30)
 		b.add_theme_font_size_override("font_size", 13)
 		if String(opt[key]) == String(o[0]):
-			UiTheme.gold_button(b)
+			# 選んだ札は金の縁と金の字だけ（主な操作の金と見分ける）
+			b.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.SURFACE_3, UiTheme.GOLD, 1, 999, Vector4(12, 4, 12, 4)))
+			b.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT)
 		else:
 			b.add_theme_stylebox_override("normal", UiTheme.box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 999, Vector4(12, 4, 12, 4)))
 			b.add_theme_color_override("font_color", UiTheme.MUTED)

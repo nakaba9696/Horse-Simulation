@@ -46,7 +46,7 @@ func build() -> void:
 		b_cont.focus_mode = Control.FOCUS_NONE
 	menu.add_child(b_cont)
 	if not info.is_empty():
-		var il := UiTheme.label("%s　%s　資金 %s" % [info.name, info.label, HSU.money(info.money)], 14, UiTheme.MUTED)
+		var il := UiTheme.label("%s　%s　資金 %s" % [info.name, info.label, HSU.money(info.money)], 17, UiTheme.GOLD_BRIGHT)
 		il.custom_minimum_size.x = 460
 		menu.add_child(il)
 	b_new = UiScreen.button("はじめから", info.is_empty(), 460, 64, 24)
