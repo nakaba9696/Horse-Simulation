@@ -84,7 +84,12 @@ func me_at(t: float) -> Dictionary:
 	var q := _fi(maxf(0.0, t))
 	var f: Dictionary = frames[q[0]]
 	var m: Array = f.get("me", [0, 30, 1, 1, 0, 0])
-	return {"gear": float(m[0]), "tension": float(m[1]), "E": float(m[2]), "hand": int(m[3]), "kakari": int(m[4]) == 1, "blocked": int(m[5]) == 1}
+	var o := {"gear": float(m[0]), "tension": float(m[1]), "E": float(m[2]), "hand": int(m[3]), "kakari": int(m[4]) == 1, "blocked": int(m[5]) == 1}
+	# リプレイ（godot/ui/flow.gd の save_replay）は気合・競り合いも残す。無い記録は前の形のまま
+	if m.size() > 7:
+		o.fight = float(m[6])
+		o.duel = int(m[7]) == 1
+	return o
 
 # t までに入った自分の馬のムチの、最後のもの（無ければ null）
 func last_whip(t: float):

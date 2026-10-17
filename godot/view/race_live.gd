@@ -28,6 +28,7 @@ var _cur: Array = []
 var _t_cur := 0.0
 var _after: Array = []           # 模擬が終わったあと（流して止まる）の各コマ
 var start_ret = null
+var me_rows: Array = []          # 自分の馬の値（リプレイの計器用）[t, 手綱の段, 気分, 脚の残り, ムチの手（1＝右）, 掛かり, 詰まり, 気合, 競り合い, 巡航の速さ]
 
 func _init(path := "res://assets/replay_race.json", desc = null) -> void:
 	if desc is Dictionary:
@@ -121,6 +122,7 @@ func advance_to(t: float) -> void:
 			HSSim.step(sim)
 			_cur = _snap()
 			_t_cur = sim.t
+			_rec_me()
 			for j in n:
 				var s = sim.st[j]
 				if finish_t[j] < 0.0 and s.done and s.finishT != null:
@@ -136,6 +138,13 @@ func advance_to(t: float) -> void:
 				nx.append([a[0] + v * DT, a[1], v, 0.2, 0.5])
 			_cur = nx
 			_t_cur += DT
+
+func _rec_me() -> void:
+	var c = sim.ctl
+	if c == null: return
+	var s = sim.st[me]
+	me_rows.append([snappedf(sim.t, 0.1), snappedf(float(c.gear), 0.01), snappedf(float(c.tension), 0.1), snappedf(float(s.E), 0.001), 1 if c.hand == "R" else 0,
+		1 if c.kakariNow else 0, 1 if c.blockedNow else 0, snappedf(float(s.fight), 0.1), 1 if s.duel != null else 0, snappedf(float(s.vc), 0.01)])
 
 # 着順を出すとき：模擬を最後まで進めて結果を作る（ゴールのあと流している間に、まだの馬も決まる）
 func finish_now() -> void:

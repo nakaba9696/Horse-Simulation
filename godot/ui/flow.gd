@@ -281,6 +281,8 @@ static func save_replay(d: Dictionary, res: Dictionary) -> void:
 	var times: Array = fr.map(func(f): return float(f.t))
 	var t_end: float = times[times.size() - 1]
 	var frames: Array = []
+	var me_rows: Array = res.get("meRows", [])
+	var mi := 0
 	var k := 0
 	var t := 0.0
 	while t <= t_end + 1e-6:
@@ -296,7 +298,14 @@ static func save_replay(d: Dictionary, res: Dictionary) -> void:
 			var pb: Array = b.p[j]
 			var x := lerpf(float(pa[0]), float(pb[0]), u) if t >= float(a.t) else 0.0
 			p.append([snappedf(x, 0.01), snappedf(lerpf(float(pa[1]), float(pb[1]), u), 0.001), snappedf(lerpf(float(pa[2]), float(pb[2]), u), 0.01)])
-		frames.append({"t": snappedf(t, 0.1), "p": p})
+		var fr_d := {"t": snappedf(t, 0.1), "p": p}
+		if me_rows.size():
+			# 自分の馬の値：t より前でいちばん近いもの [手綱の段, 気分, 脚の残り, ムチの手, 掛かり, 詰まり, 気合, 競り合い]
+			while mi < me_rows.size() - 1 and float(me_rows[mi + 1][0]) <= t + 1e-6:
+				mi += 1
+			var mr: Array = me_rows[mi]
+			fr_d.me = [mr[1], mr[2], mr[3], mr[4], mr[5], mr[6], mr[7], mr[8]]
+		frames.append(fr_d)
 		t += REPLAY_DT
 	var results: Array = []
 	for r in res.results:
@@ -314,7 +323,7 @@ static func save_replay(d: Dictionary, res: Dictionary) -> void:
 		if r.num == int(d.horses[d.me].num): me_pos = r.pos
 	var id := "%d" % Time.get_unix_time_from_system()
 	var rep := {"about": "ターフの系譜：リプレイ", "race": d.race, "track": d.track, "horses": horses, "me": d.me, "dt": REPLAY_DT,
-		"frames": frames, "results": results, "winnerTime": float(res.winnerTime), "events": events, "whips": [], "record": d.get("record")}
+		"frames": frames, "results": results, "winnerTime": float(res.winnerTime), "events": events, "whips": res.get("whips", []), "record": d.get("record")}
 	DirAccess.make_dir_recursive_absolute(replay_dir)
 	var f := FileAccess.open(replay_dir.path_join(id + ".json"), FileAccess.WRITE)
 	if f == null:

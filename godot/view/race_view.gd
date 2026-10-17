@@ -324,6 +324,8 @@ func _do_ok() -> void:
 			UiFlow.go(get_tree(), "data")
 		elif flow:
 			src.finish_now()
+			src.result.meRows = src.me_rows   # リプレイの計器用（自分の馬の値とムチ）
+			src.result.whips = src.whips
 			UiFlow.go(get_tree(), UiFlow.ride_done(src.result))
 		else:
 			get_tree().change_scene_to_file(RACE_CARD)

@@ -61,6 +61,10 @@ func run(t) -> void:
 	if rl.size():
 		var rp := ViewReplay.new(UiFlow.replay_dir.path_join(String(rl[0].id) + ".json"))
 		t.ok(rp.n > 4 and rp.order.size() == rp.n and rp.end_t() > 30.0, "flow: リプレイを再生の入れ口で読める（%d頭・%.0f秒）" % [rp.n, rp.end_t()])
+		var m0 := rp.me_at(5.0)
+		var m1 := rp.me_at(rp.end_t() - 10.0)
+		t.ok(m0.has("fight") and float(m1.E) < float(m0.E), "flow: リプレイに自分の馬の値が残る（脚の残り %.2f → %.2f）" % [m0.E, m1.E])
+		t.ok(rp.whips.size() > 0, "flow: リプレイにムチが残る（%d回）" % rp.whips.size())
 		t.ok(UiFlow.replay_fav(String(rl[0].id)) and UiFlow.replay_list()[0].fav, "flow: リプレイをお気に入りにできる")
 	# 引退（牧場に残る）→ オリジナルホース（父と母から仔を作る）
 	var G = HSWorld.G
@@ -138,4 +142,6 @@ func _ride(L: ViewLive) -> Dictionary:
 				L.ctl("lane", 1)
 		L.advance_to(t)
 	L.finish_now()
+	L.result.meRows = L.me_rows
+	L.result.whips = L.whips
 	return L.result
