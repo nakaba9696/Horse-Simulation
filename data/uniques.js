@@ -74,7 +74,7 @@ HS.DATA.uniques = [
   { horse:'ゴルディコヴァ', id:'u_goldikova', label:'欧州マイルの女王', at:'st', when:'mile', fx:{ spd:0.05, sec:4, free:true },
     note:'1400〜2000mのレースで、残り400mから2〜6番手にいると、マイルの脚で抜け出す',
     why:'ブリーダーズカップマイルを初めて3連覇した。ジャックルマロワ賞は6馬身差のレースレコード。G1は14勝' },
-  { horse:'シンザン', id:'u_shinzan', label:'神馬', at:'st', when:'top2', fx:{ spd:0.05, sec:3, free:true },
+  { horse:'シンザン', id:'u_shinzan', label:'ナタの切れ味', at:'st', when:'top2', fx:{ spd:0.05, sec:3, free:true },
     note:'残り200mで2〜3番手にいると、もうひと伸びする',
     why:'19戦すべてで連対を外さず、八大競走を5つ勝って「五冠馬」と呼ばれた' },
   { horse:'シンボリルドルフ', id:'u_rudolf', label:'皇帝', at:'st', when:'front3', fx:{ spd:0.04, sec:4, free:true, E:0.03 },
