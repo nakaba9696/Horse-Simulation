@@ -8,9 +8,9 @@ const SASHI := ["差し", "追込"]
 # at：調べる区間（start＝スタートから4秒、mid＝直線の前、st＝直線、any＝いつも）。fx：効き目。learn：身につく条件。when：発動の条件
 static var LIST: Array = [
 	# 爆発
-	{ id = "saikoubi", at = "st", label = "最後方一気", group = "爆発", ikki = true, note = "直線で最後方近くからムチを入れると、大きく伸びる", fx = { spd = 0.07, sec = 4.0, free = true, top = 0.3 },
+	{ id = "saikoubi", at = "any", label = "最後方一気", group = "爆発", ikki = true, note = "残り500mから、最後方近くでムチを入れると大きく伸びる（直線の長さに関係なく、残りの距離で決まる）", fx = { spd = 0.07, sec = 4.0, free = true, top = 0.3 },
 		learn = func(p): return p.style == "追込" and p.kire >= 6,
-		when = func(x): return x.inStraight and x.R > 100 and x.rank >= x.n - 2 and x.whipping },
+		when = func(x): return x.R <= 500 and x.R > 100 and x.rank >= x.n - 2 and (x.whipping if x.c else x.s.spurting) }, # AI は直線の外でも追い出していれば
 	{ id = "chokusen", at = "st", label = "末脚", group = "爆発", ikki = true, note = "直線で中団より後ろからムチを入れると伸びる", fx = { spd = 0.05, sec = 4.0, free = true, top = 0.2 },
 		learn = func(p): return SASHI.has(p.style) and p.kire >= 6,
 		when = func(x): return x.inStraight and x.R > 100 and x.rank > x.n / 2.0 and x.whipping },
@@ -23,7 +23,7 @@ static var LIST: Array = [
 		when = func(x):
 			if x.c: return x.c.lastWhip != null and x.t - x.c.lastWhip.t < 0.15 and x.s.E < 0.12
 			return x.whipping and x.s.E < 0.15 },
-	{ id = "kongomi", at = "any", label = "馬混み苦手", group = "損", bad = true, note = "馬群に包まれたままだと、やる気をなくす", fx = { E = -0.03 },
+	{ id = "kongomi", at = "any", label = "馬込み×", group = "損", bad = true, note = "馬群に包まれたままだと、やる気をなくす", fx = { E = -0.03 },
 		learn = func(p): return p.mind < 70 and (p.style == "逃げ" or p.style == "追込"),
 		when = func(x): return x.sk.boxedFor >= 3 },
 	{ id = "sessenB", at = "st", label = "叩き合い×", group = "損", bad = true, note = "ゴール前で並ばれると、ひるむ", fx = { spd = -0.015, sec = 1.5 },
@@ -33,7 +33,7 @@ static var LIST: Array = [
 	{ id = "isshun", at = "st", label = "切れ味", group = "速さ", note = "残り150mで2番手以下なら、ひと伸び", fx = { spd = 0.06, sec = 2.5, free = true },
 		learn = func(p): return p.style != "逃げ" and p.kire >= 6 and p.spd >= 85,
 		when = func(x): return x.R <= 150 and x.rank >= 2 and (x.whipping or x.s.spurting) },
-	{ id = "hanno", at = "st", label = "鋭い反応", group = "速さ", note = "直線までムチを使わず、直線に入ってすぐムチを入れると一気に伸びる", fx = { spd = 0.045, sec = 3.0, free = true },
+	{ id = "hanno", at = "st", label = "抜群の反応", group = "速さ", note = "直線までムチを使わず、直線に入ってすぐムチを入れると一気に伸びる", fx = { spd = 0.045, sec = 3.0, free = true },
 		learn = func(p): return p.kire >= 7 or (p.kire >= 6 and p.mind >= 82),
 		when = func(x): return x.inStraight and x.straight - x.R < 100 and x.whipping and not x.sk.whipBefore },
 	{ id = "startdash", at = "start", label = "好発", group = "速さ", note = "うまく出ると、すっと前へ行く", fx = { spd = 0.06, sec = 3.0, pos = 2.0, free = true },
@@ -56,12 +56,12 @@ static var LIST: Array = [
 	{ id = "nimai", at = "st", label = "差し返し", group = "根性", note = "先頭でゴール前、2番手に詰め寄られると、もう一度伸びる", fx = { E = 0.05, spd = 0.025, sec = 2.0, free = true },
 		learn = func(p): return p.style == "逃げ" and p.guts >= 82,
 		when = func(x): return x.R < 300 and x.rank == 1 and x.second != null and x.s.x - x.second.x < LEN },
-	{ id = "demuchi", at = "start", label = "行き脚", group = "根性", note = "スタート直後にムチを入れると、前へ行ける", fx = { spd = 0.05, sec = 2.5, pos = 1.5, free = true },
+	{ id = "demuchi", at = "start", label = "出ムチ", group = "根性", note = "スタート直後にムチを入れると、前へ行ける", fx = { spd = 0.05, sec = 2.5, pos = 1.5, free = true },
 		learn = func(p): return (p.style == "逃げ" or p.style == "先行") and p.guts >= 86,
 		when = func(x): return x.t - x.s.delay < 3 and (x.c.whips > 0 if x.c else true) },
-	{ id = "makuri", at = "st", label = "まくり", group = "根性", note = "3コーナーから順位を上げ、先頭の2馬身以内で直線に入ると、脚が戻る", fx = { E = 0.06 },
+	{ id = "makuri", at = "st", label = "大まくり", group = "根性", note = "中間点で後ろ半分にいた馬が、6頭以上抜いて先頭から1馬身以内で直線に入ると、脚が戻ってひと伸び", fx = { E = 0.1, spd = 0.04, sec = 4.0, free = true },
 		learn = func(p): return SASHI.has(p.style) and p.kire <= 4 and p.sta >= 78,
-		when = func(x): return x.inStraight and x.straight - x.R < 30 and x.sk.rankMid != null and x.sk.rankMid - x.rank >= 4 and x.leader.x - x.s.x < 2 * LEN },
+		when = func(x): return x.inStraight and x.straight - x.R < 30 and x.sk.rankMid != null and x.sk.rankMid > x.n / 2.0 and x.sk.rankMid - x.rank >= 6 and x.leader.x - x.s.x < LEN },
 	{ id = "dokonjo", at = "any", label = "ど根性", group = "根性", note = "追い出してから3秒叩き合うと、脚が戻る", fx = { E = 0.02 },
 		learn = func(p): return p.guts >= 88,
 		when = func(x): return x.sk.duelFor >= 3 },

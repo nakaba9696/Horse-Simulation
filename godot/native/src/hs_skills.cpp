@@ -55,9 +55,9 @@ static Fx fx(double spd, double sec, bool free_, double top = 0, double E = 0, d
 static Fx fxE(double E) { Fx f; f.E = E; return f; }
 
 static const Def LIST[] = {
-	{ "saikoubi", AT_ST, "最後方一気", true, false, fx(0.07, 4.0, true, 0.3),
+	{ "saikoubi", AT_ANY, "最後方一気", true, false, fx(0.07, 4.0, true, 0.3),
 		[](const P &p) { return p.style == ST_OIKOMI && p.kire >= 6; },
-		[](const X &x) { return x.inStraight && x.R > 100 && x.rank >= x.n - 2 && x.whipping; } },
+		[](const X &x) { return x.R <= 500 && x.R > 100 && x.rank >= x.n - 2 && (x.c ? x.whipping : x.s->spurting); } }, // AI は直線の外でも追い出していれば
 	{ "chokusen", AT_ST, "末脚", true, false, fx(0.05, 4.0, true, 0.2),
 		[](const P &p) { return sashi(p.style) && p.kire >= 6; },
 		[](const X &x) { return x.inStraight && x.R > 100 && x.rank > x.n / 2.0 && x.whipping; } },
@@ -69,7 +69,7 @@ static const Def LIST[] = {
 		[](const X &x) {
 			if (x.c) return x.c->hasLastWhip && x.t - x.c->lwT < 0.15 && x.s->E < 0.12;
 			return x.whipping && x.s->E < 0.15; } },
-	{ "kongomi", AT_ANY, "馬混み苦手", false, true, fxE(-0.03),
+	{ "kongomi", AT_ANY, "馬込み×", false, true, fxE(-0.03),
 		[](const P &p) { return p.mind < 70 && (p.style == ST_NIGE || p.style == ST_OIKOMI); },
 		[](const X &x) { return x.sk->boxedFor >= 3; } },
 	{ "sessenB", AT_ST, "叩き合い×", false, true, fx(-0.015, 1.5, false),
@@ -78,7 +78,7 @@ static const Def LIST[] = {
 	{ "isshun", AT_ST, "切れ味", false, false, fx(0.06, 2.5, true),
 		[](const P &p) { return p.style != ST_NIGE && p.kire >= 6 && p.spd >= 85; },
 		[](const X &x) { return x.R <= 150 && x.rank >= 2 && (x.whipping || x.s->spurting); } },
-	{ "hanno", AT_ST, "鋭い反応", false, false, fx(0.045, 3.0, true),
+	{ "hanno", AT_ST, "抜群の反応", false, false, fx(0.045, 3.0, true),
 		[](const P &p) { return p.kire >= 7 || (p.kire >= 6 && p.mind >= 82); },
 		[](const X &x) { return x.inStraight && x.straight - x.R < 100 && x.whipping && !x.sk->whipBefore; } },
 	{ "startdash", AT_START, "好発", false, false, fx(0.06, 3.0, true, 0, 0, 0, 2.0),
@@ -99,12 +99,12 @@ static const Def LIST[] = {
 	{ "nimai", AT_ST, "差し返し", false, false, fx(0.025, 2.0, true, 0, 0.05),
 		[](const P &p) { return p.style == ST_NIGE && p.guts >= 82; },
 		[](const X &x) { return x.R < 300 && x.rank == 1 && x.second != nullptr && x.s->x - x.second->x < LEN; } },
-	{ "demuchi", AT_START, "行き脚", false, false, fx(0.05, 2.5, true, 0, 0, 0, 1.5),
+	{ "demuchi", AT_START, "出ムチ", false, false, fx(0.05, 2.5, true, 0, 0, 0, 1.5),
 		[](const P &p) { return (p.style == ST_NIGE || p.style == ST_SENKO) && p.guts >= 86; },
 		[](const X &x) { return x.t - x.s->delay < 3 && (x.c ? x.c->whips > 0 : true); } },
-	{ "makuri", AT_ST, "まくり", false, false, fxE(0.06),
+	{ "makuri", AT_ST, "大まくり", false, false, fx(0.04, 4.0, true, 0, 0.1),
 		[](const P &p) { return sashi(p.style) && p.kire <= 4 && p.sta >= 78; },
-		[](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.sk->rankMid >= 0 && x.sk->rankMid - x.rank >= 4 && x.leader->x - x.s->x < 2 * LEN; } },
+		[](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.sk->rankMid >= 0 && x.sk->rankMid > x.n / 2.0 && x.sk->rankMid - x.rank >= 6 && x.leader->x - x.s->x < LEN; } },
 	{ "dokonjo", AT_ANY, "ど根性", false, false, fxE(0.02),
 		[](const P &p) { return p.guts >= 88; },
 		[](const X &x) { return x.sk->duelFor >= 3; } },
