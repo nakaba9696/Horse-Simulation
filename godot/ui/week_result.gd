@@ -297,3 +297,37 @@ func _small_card(r: Dictionary, mine: bool) -> PanelContainer:
 func focus_first() -> void:
 	if b_next:
 		b_next.grab_focus()
+	_show_moments.call_deferred()
+
+# 週の見せ場：G1 を自分で勝った・トロフィー・スペシャルホースを破った → 馬主のご褒美の場面（js/ui/jockeyui.js の週の流れと同じ順）
+var _moments_done := false
+func _show_moments() -> void:
+	if _moments_done or shots.size() > 0:
+		return
+	_moments_done = true
+	var q: Array = []
+	if UiFlow.report:
+		for r in UiFlow.report.races:
+			if not r.get("ride"): continue
+			var me = _me_of(r)
+			if me and int(me.pos) == 1 and r.race.get("graded") and r.race.get("grade") in ["G1", "GF"]:
+				q.append(["celebrate", "%sを勝った" % ("グランドフィナーレ" if r.race.get("grade") == "GF" else "G1"), HSRaces.label(r.race), "%s・%s" % [me.horse.name, HSU.time(float(me.time))]])
+	for t in UiFlow.week_trophies():
+		q.append(["celebrate", "トロフィーを手にした", t.label, "%s%s" % [t.horse, "・ボーナス賞金 %s" % HSU.money(t.bonus) if t.bonus > 0 else ""]])
+	var beat := UiFlow.week_beaten()
+	if beat.size():
+		q.append(["celebrate", "スペシャルホースを破った", "・".join(beat), "馬の店に並ぶようになった"])
+	if HSOwners.on():
+		for x in HSOwners.state().queue:
+			q.append(["owner", x])
+	_next_moment(q)
+
+func _next_moment(q: Array) -> void:
+	if q.is_empty():
+		if b_next: b_next.grab_focus()
+		return
+	var m: Array = q.pop_front()
+	if m[0] == "celebrate":
+		celebrate(m[1], m[2], m[3], func(): _next_moment(q))
+	else:
+		owner_scene(m[1], func(): _next_moment(q))

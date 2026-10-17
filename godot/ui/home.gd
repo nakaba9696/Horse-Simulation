@@ -11,7 +11,7 @@ var right: VBoxContainer
 var left: VBoxContainer
 
 func hint() -> String:
-	return "決定で今週のレースへ。お手馬の行で番組表"
+	return "決定で今週のレースへ。お手馬の行で厩舎（番組表・引退）"
 
 func on_back() -> void:
 	pass   # ホームがいちばん上（タイトルへはコマンドの札から）
@@ -94,8 +94,9 @@ func _build_hero() -> void:
 	var ch := HBoxContainer.new()
 	ch.add_theme_constant_override("separation", 12)
 	v.add_child(ch)
-	for c in [["番組表", "program"], ["馬の店", "shop"], ["セーブ", "save"], ["タイトルへ", "title"]]:
-		var b := UiScreen.button(c[0], false, 0, 52, 18)
+	for c in [["番組表", "program"], ["厩舎", "stable"], ["馬の店", "shop"], ["生産", "breed"], ["データ", "data"], ["馬主", "owners"], ["セーブ", "save"], ["タイトルへ", "title"]]:
+		var b := UiScreen.button(c[0], false, 0, 52, 17)
+		UiScreen.compact(b)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var key: String = c[1]
 		b.pressed.connect(func(): _cmd(key))
@@ -124,8 +125,8 @@ func _cmd(key: String) -> void:
 			if UiFlow.program_id == "" or HSWorld.horse(UiFlow.program_id) == null:
 				UiFlow.program_id = st[0].id
 			go("program")
-		"shop":
-			go("shop")
+		"shop", "stable", "breed", "data", "owners":
+			go(key)
 		"save":
 			UiFlow.save()
 			toast("セーブした（%s）" % UiFlow.date_label(), "good")
@@ -213,7 +214,7 @@ func _build_stable() -> void:
 		hb.add_child(xl)
 		UiScreen.pass_mouse(hb)
 		var id: String = h.id
-		b.pressed.connect(func(): UiFlow.program_id = id; go("program"))
+		b.pressed.connect(func(): UiFlow.program_id = id; go("stable"))
 		left.add_child(b)
 	_build_lower()
 
@@ -276,8 +277,11 @@ func _build_right() -> void:
 	for o in offers.slice(0, 3):
 		var c = _offer_card(o)
 		if c: right.add_child(c)
-	for cat in HSSeason.dc_pending_list():
-		right.add_child(_gf_card(cat))
+	var pend := HSSeason.dc_pending_list()
+	if pend.size():
+		right.add_child(_gf_card(pend))
+	var rc = _reach_card()
+	if rc: right.add_child(rc)
 	var rides := HSJockey.my_rides()
 	right.add_child(UiScreen.section("今週の騎乗", "%d鞍" % rides.size()))
 	if rides.is_empty():
@@ -412,27 +416,40 @@ func _offer_card(o: Dictionary) -> Variant:
 		bh.add_child(bd)
 	return p
 
-# 12月1週：グランドフィナーレの招待（出すなら1頭）
-func _gf_card(cat: String) -> PanelContainer:
+# 12月1週：グランドフィナーレの招待（GF の画面で出す馬を選ぶ）
+func _gf_card(cats: Array) -> PanelContainer:
 	var pb := UiScreen.panel_box(true, 6)
 	var v: VBoxContainer = pb[1]
-	v.add_child(UiTheme.title("招待：%s" % HSSeason.gf_name(cat), 17, UiTheme.GOLD_BRIGHT))
-	var bh := HBoxContainer.new()
-	bh.add_theme_constant_override("separation", 8)
-	for e in HSSeason.dc_eligible(cat).slice(0, 2):
-		var id: String = e.h.id
-		var nm: String = e.h.name
-		var b := UiScreen.button("出す：%s" % nm, false, 0, 36, 14)
-		b.pressed.connect(func():
-			var err = HSSeason.dc_choose(cat, id)
-			if err: toast(String(err), "bad")
-			else: UiFlow.save(); _rebuild("%sを出す" % nm))
-		bh.add_child(b)
-	var bd := UiScreen.button("辞退", false, 90, 36, 14)
-	bd.pressed.connect(func(): HSSeason.dc_decline(cat); UiFlow.save(); _rebuild())
-	bh.add_child(bd)
-	v.add_child(bh)
+	v.add_child(UiTheme.title("%sの招待が届いた" % HSSeason.DC_NAME, 18, UiTheme.GOLD_BRIGHT))
+	v.add_child(UiTheme.label("・".join(cats.map(func(c): return HSSeason.GF_BY[c].label)), 14, UiTheme.MUTED))
+	var b := UiScreen.button("出る馬を決める", false, 220, 40, 16)
+	b.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT)
+	b.pressed.connect(func(): go("gf"))
+	v.add_child(b)
 	return pb[0]
+
+# スペシャルホースのリーチ：自分の馬が、次の勝ちでグループの条件がそろう
+func _reach_card() -> Variant:
+	var lines: Array = []
+	for h in HSWorld.mine("stable"):
+		for r in HSSpecial.reach_info(h):
+			lines.append("%s → %s（%s）" % [h.name, r.need, r.group.label])
+	if lines.is_empty():
+		return null
+	var p := PanelContainer.new()
+	var sb := UiTheme.box(UiTheme.SURFACE, UiTheme.LINE_GOLD, 1, 10, Vector4(14, 7, 14, 7))
+	sb.border_width_left = 3
+	sb.border_color = UiTheme.WARN
+	p.add_theme_stylebox_override("panel", sb)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 1)
+	p.add_child(v)
+	v.add_child(UiTheme.label("★ スペシャルホースのリーチ（勝てば最後のレースに名馬が出てくる）", 13, UiTheme.WARN))
+	for l in lines.slice(0, 3):
+		var ll := UiTheme.label(String(l), 14)
+		ll.clip_text = true
+		v.add_child(ll)
+	return p
 
 # 依頼を受けた・断ったあとは画面を組み直す（今週の騎乗と主な操作の札が変わる）
 func _rebuild(msg := "") -> void:
