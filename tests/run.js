@@ -1302,6 +1302,7 @@ require('./extra_audio.js')(check, assert, HS); // BGM の曲の書式と長さ
 require('./extra_rumble.js')(check, assert, HS); // コントローラーの振動
 require('./extra_balance.js')(check, assert, HS); // 立ち回りの噛み合い・競り合いの気合
 require('./extra_ui.js')(check, assert, HS); // 画面の仕組み：並べ替え・絞り込み・番組表と予約
+require('./extra_feel.js')(check, assert, HS); // 騎乗の手ざわり（パッドの向き・状態の文字を出さない）
 
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);

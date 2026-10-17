@@ -2437,10 +2437,10 @@
     const vtmp = new THREE.Vector3();
     let hfovMin = 66;
 
-    function setFov(base) {
+    function setFov(base, extra) {
       const asp = VW / VH;
       const need = 2 * Math.atan(Math.tan(hfovMin * Math.PI / 360) / asp) * 180 / Math.PI;
-      const f = Math.max(base, Math.min(need, 80));
+      const f = Math.max(base, Math.min(need, 80)) + (extra || 0);
       if (Math.abs(camera.fov - f) > 0.01) { camera.fov = f; camera.updateProjectionMatrix(); }
     }
 
@@ -2594,7 +2594,8 @@
         const w = clamp(Math.abs(orbit.yaw || 0) / 0.7 + Math.abs(orbit.pitch || 0) / 0.8, 0, 1);
         lk = lk.clone().lerp(piv, w);
       }
-      setFov(base);
+      const sk = orbit && orbit.shake; // 手ごたえの揺れ（js/ui/ride.js が作る。小さく、なめらかに減る）
+      setFov(base, sk && sk.fov);
       if (!mem.cam || camMode === 'ride') {
         mem.cam = { p: cp.clone(), l: lk.clone() };
       } else {
@@ -2603,6 +2604,15 @@
       }
       camera.position.copy(mem.cam.p);
       camera.lookAt(mem.cam.l);
+      // 騎乗のカメラ：進路を変えている間は、動く向きへ少し傾ける（遅れてついてくるカメラとの差から）
+      if (camMode === 'ride' && !gateNow) {
+        const fq = frame(D - (me.x - BODY)), off = W3(fq, me.u, 0).sub(W3(fq, mem.camU, 0));
+        vtmp.set(1, 0, 0).applyQuaternion(camera.quaternion);
+        const side = off.dot(vtmp);
+        mem.roll = (mem.roll || 0) + (clamp(-side * 0.03, -0.035, 0.035) - (mem.roll || 0)) * (dt > 0 ? Math.min(1, dt * 6) : 1);
+        camera.rotateZ(mem.roll);
+      }
+      if (sk) { camera.translateX(sk.x || 0); camera.translateY(sk.y || 0); if (sk.roll) camera.rotateZ(sk.roll); }
       sky.position.copy(camera.position);
       // 太陽の影：見ている所（騎乗は自分の馬、中継は見ている中心）のまわりだけ。影の升目にそろえて、動いてもちらつかないように
       if (shadowOn) {

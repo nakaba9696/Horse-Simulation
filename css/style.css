@@ -374,10 +374,6 @@ input[type=range] { accent-color: var(--accent); min-width: 0; min-height: 28px;
 .ride { display: flex; flex-direction: column; gap: var(--sp-2); user-select: none; -webkit-user-select: none; touch-action: none; }
 .ride-stage { position: relative; }
 .ride-canvas { width: 100%; display: block; border-radius: var(--r-lg); background: var(--sunk); }
-.ride-msg { position: absolute; left: 0; right: 0; top: 30%; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; pointer-events: none; padding: 0 var(--sp-3); }
-.ride-msg span { background: rgba(6, 14, 10, .78); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); color: #fff; padding: 4px var(--sp-3); border-radius: var(--r-pill); font-size: 13px; font-weight: 700; border: 1px solid rgba(255, 255, 255, .12); }
-.ride-msg span.bad { color: #ffa48a; border-color: rgba(255, 125, 112, .4); } .ride-msg span.good { color: #a6f2c2; border-color: rgba(99, 210, 147, .4); }
-.ride-msg span.skill { color: #d4f6ff; background: rgba(20, 100, 140, .85); border-color: rgba(130, 220, 255, .5); }
 .ride-pad { display: grid; grid-template-columns: 1.5fr 0.6fr 1.3fr; gap: var(--sp-2); align-items: stretch; }
 .pad-l { display: grid; grid-template-rows: 1.2fr 1fr; gap: var(--sp-2); }
 .pad-row { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: var(--sp-2); }
@@ -411,6 +407,12 @@ input[type=range] { accent-color: var(--accent); min-width: 0; min-height: 28px;
 }
 .ride-stage { touch-action: none; }
 .ride-pad .ride-close:only-child { grid-column: 1 / -1; }
+/* PC（マウスのある端末）：騎乗の画面を画面の高さいっぱいに広げ、タッチのボタンは隠す（ゴールのあとの「結果を見る」だけ出す） */
+.modal.ride-modal { max-width: min(98vw, calc((100vh - 150px) * 16 / 9)); }
+.ride-help b { color: var(--text-2); font-weight: 700; margin-right: 4px; }
+@media (hover: hover) and (pointer: fine) {
+  .ride-pad:not(.done) { display: none; }
+}
 
 /* ---------- 騎手の画面 ---------- */
 .jcard { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-1) var(--sp-3); }
