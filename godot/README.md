@@ -85,6 +85,7 @@ sh godot/tools/run_scene.sh res://scenes/race_card.tscn -- --out=DIR --shot=秒:
 sh godot/tools/run_scene.sh res://scenes/horse_lab.tscn -- --out=DIR --cam=side|close|front|back|head --seq=枚数
 sh godot/tools/run_scene.sh res://scenes/home.tscn -- --demo=1 --out=DIR --shot=0.8:名前   # title・home・program・shop・week_result も同じ。race_card・race も --demo=1 で週のレース
 godot --headless --path godot -s res://tools/check_scripts.gd   # 画面のスクリプトがすべて読めるか
+godot --headless --path godot -s res://tools/autoplay.gd -- --weeks=52 --seed=1   # 本物の画面で1年を自動で遊ぶ（止まる所・実行時の誤りを探す。node tests/run.js は10週）
 node godot/tools/export_ui_assets.js                          # 画面の背景と馬主の顔をブラウザ版の素材から取り出す
 ```
 - 撮影の見本の追加：`--setup=retire`（牡馬と牝馬を1頭ずつ引退させてから開く）・`--setup=celebrate`（見せ場）・`--setup=scene`（馬主のご褒美の場面）・`--setup=replay`（騎乗の画面で、見本の週に残したリプレイを開く）

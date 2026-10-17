@@ -1316,6 +1316,7 @@ require('./extra_feel.js')(check, assert, HS); // 騎乗の手ざわり（パッ
 require('./extra_skills2.js')(check, assert, HS); // 逃げ・追込の能力・道悪○・外枠○・伝説級の固有の能力
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
 require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
+require('./extra_gdgame.js')(check, assert); // Godot 版の週の流れを本物の画面で自動で遊ぶ
 
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
