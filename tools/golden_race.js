@@ -47,10 +47,10 @@ function raceList() {
   add(Object.assign({}, base, { name: '長距離', course: '京都', surface: '芝', dist: 3200, grade: 'G1', month: 4 }), 2005, '良');
   add(Object.assign({}, base, { name: '短距離', course: '中京', surface: 'ダ', dist: 1200, month: 12 }), 2025, '稍重');
   add(Object.assign({}, base, { name: '少頭数', course: '函館', surface: '芝', dist: 2000, month: 7 }), 1995, '良');
-  // 特殊能力を決めて持たせる（ふだんの組み合わせでは出にくい能力を必ず通す）：名馬の固有の能力（skillsCase＝uniq、uniqOff＝どれから配るか）・
+  // 特殊能力を決めて持たせる（ふだんの組み合わせでは出にくい能力を必ず通す）：名馬の固有の能力（skillsCase＝uniq、uniqOff＝どれから配るか、uniqAll＝全部の型を持たせる）・
   // 幻惑逃げ（ほかの馬の脚を減らす）と、馬群さばき・追走○・外回し○（skillsCase＝genwaku。逃げの馬をなくしてスローにする）
   add(Object.assign({}, base, { name: '固有1', course: '東京', surface: '芝', dist: 2400, grade: 'G1', skillsCase: 'uniq', uniqOff: 0 }), 2010, '良');
-  add(Object.assign({}, base, { name: '固有2', course: '中山', surface: 'ダ', dist: 1200, skillsCase: 'uniq', uniqOff: 4 }), 2020, '重');
+  add(Object.assign({}, base, { name: '固有2', course: '中山', surface: 'ダ', dist: 1200, skillsCase: 'uniq', uniqOff: 4, uniqAll: true }), 2020, '重');
   add(Object.assign({}, base, { name: '固有3', course: '京都', surface: '芝', dist: 3000, skillsCase: 'uniq', uniqOff: 8 }), 2000, '不良');
   add(Object.assign({}, base, { name: '幻惑1', course: '阪神', surface: '芝', dist: 2000, skillsCase: 'genwaku' }), 2015, '良');
   add(Object.assign({}, base, { name: '幻惑2', course: '中京', surface: '芝', dist: 1600, skillsCase: 'genwaku' }), 2025, '稍重');
@@ -87,8 +87,10 @@ function fieldOf(race, k, m) {
     }
   }
   if (race.skillsCase === 'uniq') {
-    const U_IDS = (D.uniques || []).map(u => u.id);
-    specs.forEach((sp, i) => { sp.set = Object.assign(sp.set || {}, { trigFixed: [U_IDS[(i + race.uniqOff) % U_IDS.length]].concat(i % 3 === 0 ? ['dokonjo'] : []) }); });
+    // 場面の型（when）ごとに1つずつ選び、1頭に型を5つ配る（固有の能力の数が増えても、どの型も通るように）
+    const U_IDS = []; const seenW = new Set();
+    for (const u of D.uniques || []) if (!seenW.has(u.when)) { seenW.add(u.when); U_IDS.push(u.id); }
+    specs.forEach((sp, i) => { sp.set = Object.assign(sp.set || {}, { trigFixed: (race.uniqAll ? U_IDS.slice() : [0, 5, 10, 15, 20].map(d => U_IDS[(i + race.uniqOff + d) % U_IDS.length])).concat(i % 3 === 0 ? ['dokonjo'] : []) }); });
   } else if (race.skillsCase === 'genwaku') {
     specs.forEach(sp => { sp.set = Object.assign(sp.set || {}, { style: sp.kind === 'filler' ? '差し' : '先行', trigFixed: ['genwaku', 'sabaki', 'tsuiso', 'sotomawashi'] }); });
   }

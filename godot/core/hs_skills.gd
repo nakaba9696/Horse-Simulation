@@ -116,6 +116,17 @@ static var UWHEN := {
 	nearLead = func(x): return x.R <= 400 and x.rank >= 2 and x.leader.x - x.s.x < LEN,
 	start = func(x): return x.t - x.s.delay < 0.6 and not x.s.late,
 	sprint = func(x): return x.D <= 1400 and x.inStraight and x.straight - x.R < 30 and x.rank <= 3,
+	# 2026-10-17 に足した型（持ち主が選んだ名馬の分。差し・追込の名馬と、マイル・逃げ切り・叩き合いの勝ち方）
+	mile = func(x): return x.D >= 1400 and x.D <= 2000 and x.inStraight and x.R <= 400 and x.R > 100 and x.rank >= 2 and x.rank <= 6,
+	ledAll = func(x): return x.R <= 400 and x.rank == 1 and x.sk.led600,
+	wideKick = func(x): return x.inStraight and x.R > 100 and x.rank > x.n / 2.0 and x.s.lane >= 3,
+	chase = func(x): return x.inStraight and x.R <= 400 and x.R > 100 and x.rank >= 2 and x.leader.x - x.s.x < 3 * LEN,
+	lateKick = func(x): return x.inStraight and x.R <= 400 and x.R > 100 and x.rank > x.n / 2.0,
+	fromLast = func(x): return x.inStraight and x.R > 100 and x.rank >= x.n - 2,
+	boxed = func(x): return x.inStraight and x.R > 100 and x.sk.wallFor >= 0.6 and not x.wall,
+	top2 = func(x): return x.R <= 200 and x.rank >= 2 and x.rank <= 3,
+	breakAway = func(x): return x.inStraight and x.R > 100 and x.R < 400 and x.close,
+	backRecover = func(x): return not x.inStraight and x.R <= x.straight + 400 and x.rank > x.n / 2.0,
 }
 static var _uniqueOf = null # 馬名 → 固有の能力（データを読んでから作る）
 static func _uniques() -> Dictionary:
@@ -129,6 +140,9 @@ static func _uniques() -> Dictionary:
 static func is_unique(id: Variant) -> bool:
 	_uniques()
 	return BY.has(id) and HSU.truthy(BY[id].get("unique"))
+# 固有の能力を持つ名馬か（godot/data/uniques.json に名前があるか）
+static func has_unique(name: Variant) -> bool:
+	return _uniques().has(name)
 static func unique_of(h: Variant) -> Variant:
 	if not h or HSU.truthy(h.get("original")): return null
 	var u = _uniques().get(h.get("name"))
