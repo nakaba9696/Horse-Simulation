@@ -162,6 +162,17 @@ static const UWhen UWHEN[] = {
 	{ "nearLead", [](const X &x) { return x.R <= 400 && x.rank >= 2 && x.leader->x - x.s->x < LEN; } },
 	{ "start", [](const X &x) { return x.t - x.s->delay < 0.6 && !x.s->late; } },
 	{ "sprint", [](const X &x) { return x.D <= 1400 && x.inStraight && x.straight - x.R < 30 && x.rank <= 3; } },
+	// 2026-10-17 に足した型（差し・追込の名馬と、マイル・逃げ切り・叩き合いの勝ち方）
+	{ "mile", [](const X &x) { return x.D >= 1400 && x.D <= 2000 && x.inStraight && x.R <= 400 && x.R > 100 && x.rank >= 2 && x.rank <= 6; } },
+	{ "ledAll", [](const X &x) { return x.R <= 400 && x.rank == 1 && x.sk->led600; } },
+	{ "wideKick", [](const X &x) { return x.inStraight && x.R > 100 && x.rank > x.n / 2.0 && x.s->lane >= 3; } },
+	{ "chase", [](const X &x) { return x.inStraight && x.R <= 400 && x.R > 100 && x.rank >= 2 && x.leader->x - x.s->x < 3 * LEN; } },
+	{ "lateKick", [](const X &x) { return x.inStraight && x.R <= 400 && x.R > 100 && x.rank > x.n / 2.0; } },
+	{ "fromLast", [](const X &x) { return x.inStraight && x.R > 100 && x.rank >= x.n - 2; } },
+	{ "boxed", [](const X &x) { return x.inStraight && x.R > 100 && x.sk->wallFor >= 0.6 && !x.wall; } },
+	{ "top2", [](const X &x) { return x.R <= 200 && x.rank >= 2 && x.rank <= 3; } },
+	{ "breakAway", [](const X &x) { return x.inStraight && x.R > 100 && x.R < 400 && x.close; } },
+	{ "backRecover", [](const X &x) { return !x.inStraight && x.R <= x.straight + 400 && x.rank > x.n / 2.0; } },
 };
 struct UDef { Def d; std::string id, label, horse; };
 static std::vector<UDef> *g_udefs = nullptr;

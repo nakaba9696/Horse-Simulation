@@ -1,4 +1,4 @@
-// 確かめ：逃げ・追込に足した特殊能力・道悪○・外枠○・伝説級の名馬の固有の能力（持ち主の決定 2026-10-17）
+// 確かめ：逃げ・追込に足した特殊能力・道悪○・外枠○・持ち主が選んだ名馬の固有の能力（持ち主の決定 2026-10-17）
 // run.js から module.exports(check, assert, HS) で呼ぶ
 module.exports = function (check, assert, HS) {
   const U = HS.U, H = HS.Horse, S = HS.Sim, K = HS.Skills, W = HS.World, D = HS.DATA;
@@ -129,27 +129,61 @@ module.exports = function (check, assert, HS) {
     return H.STYLES.map(st => `${st} 強み${g(st).toFixed(2)}・弱み${bd(st).toFixed(2)}`).join('／');
   });
 
-  check('skills2: 伝説級の名馬の固有の能力（1頭1つ・発動する・オリジナルホースに受け継げる・セーブの往復）', () => {
+  // 持ち主が選んだ名馬（2026-10-17・選ぶページと、そのあと足した16頭）
+  const CHOSEN = ['オーモンド', 'キンチェム', 'エクリプス', 'ザテトラーク', 'ブリガディアジェラード', 'ミルリーフ', 'ドミノ', 'フランケル', 'ダンシングブレーヴ', 'アーモンドアイ', 'バーラム', 'イクイノックス', 'ウィンクス', 'エネイブル', 'オルフェーヴル', 'ゴールデンシックスティ', 'ゴルディコヴァ', 'セントサイモン', 'シンザン', 'シンボリルドルフ', 'ディープインパクト', 'テイエムオペラオー', 'トレヴ', 'ネアルコ', 'ニジンスキー', 'ミエスク', 'ウォーアドミラル', 'ファーラップ', 'カウントフリート', 'シーバード', 'マンノウォー', 'スペクタキュラービッド', 'セクレタリアト', 'プリティーポリー', 'テューダーミンストレル', 'ラフィアン', 'アバーナント',
+    // 2026-10-17 にさらに足した名馬（サイテーションは付ける側に戻った）
+    'マニカト', 'ケルソ', 'ドクターフェイガー', 'ネイティヴダンサー', 'フォアゴー', 'トキノミノル', 'クリフジ', 'サイテーション', 'アレッジド', 'シャーガー', 'フライトライン', 'シーザスターズ', 'リボー', 'ナリタブライアン', 'ブラックキャビア', 'オグリキャップ'];
+
+  check('skills2: 名馬の固有の能力（選んだ名馬に1頭1つ・発動する・オリジナルホースに受け継げる・セーブの往復）', () => {
     const SP = HS.Special, O = HS.Original;
-    const tops = SP.pool().filter(d => SP.isTop(d));
-    assert(tops.length >= 10, `伝説級が少ない ${tops.length}`);
+    HS.U.ERA = HS.Eraless.ERA;
+    assert(CHOSEN.length === 53 && new Set(CHOSEN).size === 53, '選んだ名馬の数');
+    // data/uniques.js の名馬は、選んだ名馬とちょうど同じ。場面の型はどれも K.UWHEN にある
+    const names = (D.uniques || []).map(u => u.horse);
+    assert(names.length === K.UNIQUES.length, `場面の型が無い固有の能力 ${(D.uniques || []).filter(u => !K.UWHEN[u.when]).map(u => u.horse + ':' + u.when).join(',')}`);
+    assert(JSON.stringify([...names].sort()) === JSON.stringify([...CHOSEN].sort()), `選んだ名馬と違う：多い ${names.filter(n => !CHOSEN.includes(n)).join(',')}・足りない ${CHOSEN.filter(n => !names.includes(n)).join(',')}`);
     const ids = new Set();
-    for (const d of tops) {
-      const u = K.UNIQUE_OF[d.name];
-      assert(u && u.label && u.note && u.why && typeof u.when === 'function', `${d.name}に固有の能力が無い`);
+    const tops = [];
+    for (const name of CHOSEN) {
+      const u = K.UNIQUE_OF[name];
+      assert(u && u.label && u.note && u.why && typeof u.when === 'function', `${name}に固有の能力が無い`);
       assert(!ids.has(u.id), `${u.id} が重なる`); ids.add(u.id);
-      const h = SP.horse(d, { age: '3+', year: 2030 });
+      assert(!/[A-Za-z]\.[A-Za-z]|騎手|調教師|馬主/.test(u.why + u.note), `${name}の文に人の名前`);
+      // 馬のデータ（史実馬か data/legends.js）と名鑑がある。1989年より前の馬はスペシャルホースのどれかのグループに入る
+      const d = SP.data(name) || D.historic.find(x => x.name === name);
+      assert(d, `${name}が馬のデータにいない`);
+      assert((D.profiles || []).some(p => HS.normName(p.name) === HS.normName(name)), `${name}の名鑑が無い`);
+      const special = HS.Eraless.isLegend(d);
+      if (special) assert(SP.byName(name), `${name}がスペシャルホースのグループに入らない`);
+      const h = special ? SP.horse(d, { age: '3+', year: 2030 }) : H.fromHistoric(d, 'uq:' + name);
       const of = K.of(h);
-      assert(of[0] === u.id && of.filter(K.isUnique).length === 1, `${d.name}の能力 ${of.join(',')}`);
+      assert(of[0] === u.id && of.filter(K.isUnique).length === 1, `${name}の能力 ${of.join(',')}`);
       assert(of.length - 1 <= K.cap(K.stats(h)), '固有の能力が持てる数を押し出す');
+      if (special) tops.push(d);
     }
-    // 伝説級でない馬は持たない。データの馬名はみな伝説級
-    assert(K.UNIQUES.every(u => tops.some(d => d.name === u.horse)), '伝説級でない馬に固有の能力がある');
-    assert(D.historic.slice(0, 2000).every((d, i) => !K.of(H.fromHistoric(d, 'u' + i)).some(K.isUnique)), '史実馬に固有の能力が付く');
+    // 伝説級でない名馬も持つ（リボー＝凱旋門賞の連覇のグループ・オグリキャップ＝1989年からの史実馬）。伝説級のサイテーションも持つ
+    assert(K.hasUnique('リボー') && !SP.isTop(SP.data('リボー')) && K.hasUnique('オグリキャップ') && SP.isTop(SP.data('サイテーション')), '伝説級かどうかで決まっている');
+    // マニカトは名鑑を足したので、スペシャルホースに入る
+    assert(SP.byName('マニカト'), 'マニカトがスペシャルホースにいない');
+    // 選んでいない史実馬は持たない
+    assert(D.historic.slice(0, 2000).every((d, i) => K.hasUnique(d.name) || !K.of(H.fromHistoric(d, 'u' + i)).some(K.isUnique)), '選んでいない史実馬に固有の能力が付く');
+    // アバーナント：データの整合（英国の芦毛の短距離馬・1946年生まれ。父オーエンテューダー）
+    const ab = SP.data('アバーナント');
+    assert(ab && ab.born === 1946 && ab.coat === '芦毛' && ab.sex === '牡' && ab.sire === 'オーエンテューダー' && ab.dam === 'ルストムマハル' && ab.country === '英', 'アバーナントのデータ');
+    assert(ab.distMax <= 1600 && ab.retire === 1950 && !ab.tier, 'アバーナントの距離・引退・伝説級でない');
+    // 血統表（data/stallions_old.js）の父・母とつながる（母はルストムパシャの仔）
+    assert(D.pedigree['オーエンテューダー'] && (D.pedigree['ルストムマハル'] || [])[0] === ab.damsire, 'アバーナントの血統表がつながらない');
+    const abP = (D.profiles || []).find(p => p.name === 'アバーナント');
+    assert(abP && abP.record === '17戦14勝' && abP.years === '1948〜1950年', 'アバーナントの名鑑');
     // レースで発動する（その馬の場面で）
     const tet = withTrig(['u_tetrarch'], 30, '逃げ', 4, { dist: 1200, course: '中山' });
     assert((tet.fired.u_tetrarch || 0) > 20, `まだらの快速が発動しない ${tet.fired.u_tetrarch || 0}/30`);
-    // オリジナルホースへ：伝説級の名馬を親にすると、固有の能力が候補に入り、受け継いだ仔は発動し、さらに次の代へも渡せる
+    // 2026-10-17 に足した場面の型：差し・追込の名馬の型も発動する
+    for (const [id, style, o] of [['u_deepimpact', '追込', {}], ['u_almondeye', '差し', {}], ['u_frankel', '逃げ', { solo: true }], ['u_goldikova', '差し', { dist: 1600 }]]) {
+      const r = withTrig([id], 30, style, 5, o);
+      assert((r.fired[id] || 0) >= 3, `${K.label(id)}が発動しない ${r.fired[id] || 0}/30`);
+    }
+    // オリジナルホースへ：固有の能力を持つ名馬を親にすると、固有の能力が候補に入り、受け継いだ仔は発動し、さらに次の代へも渡せる
     W.newGame({ seed: 45, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
     const G = W.get();
     const sd = tops.find(d => d.sex === '牡');
@@ -173,6 +207,6 @@ module.exports = function (check, assert, HS) {
     assert(back && K.of(back).includes(uid), 'セーブの往復で固有の能力が消える');
     const g = JSON.parse(W.serialize()); g.horses[foal.id].trigFixed = ['nonexistent', uid, 'isshun']; W.load(g);
     assert(JSON.stringify(K.of(W.horse(foal.id))) === JSON.stringify([uid, 'isshun']), '古いセーブの仔の能力が読めない');
-    return `伝説級 ${tops.length}頭・${K.UNIQUES.map(u => `${u.horse}「${u.label}」`).join('・')}`;
+    return `${K.UNIQUES.length}頭（スペシャルホース ${tops.length}頭）・${K.UNIQUES.map(u => `${u.horse}「${u.label}」`).join('・')}`;
   });
 };
