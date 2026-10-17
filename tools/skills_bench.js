@@ -41,7 +41,7 @@ function bench(o) {
 
 // 発動する特殊能力：その能力を持てる脚質で比べる
 const TRIG_STYLE = {
-  saikoubi: '追込', chokusen: '差し', oosoto: '差し', bagun: '差し', sasari: '先行', kongomi: '追込', sessenB: '先行',
+  saikoubi: '追込', chokusen: '差し', oosoto: '差し', sasari: '先行', kongomi: '追込', sessenB: '先行',
   isshun: '差し', hanno: '差し', startdash: '逃げ', nebari: '逃げ', tanki: '逃げ', yonkaku: '先行', oriai: '先行',
   demuchi: '逃げ', nimai: '逃げ', makuri: '差し', dokonjo: '先行', sessen: '先行',
 };
