@@ -1,7 +1,8 @@
 # 馬の走りの形（js/ui/race3d.js の poseHorse・walkPose を GDScript に）。乱数は使わない
 # 手作りの骨（0 根元・1 胴・2/3 首・4 頭・5〜7 尾・8〜23 脚・24〜31 騎手）の角度を出す。素材の骨へは ViewHorse が写す
 #   角度の向き（手作りの馬の座標：x 前・y 上・z 右）：rz＝横の軸のまわり（＋で骨の先が前・上へ）、ry＝縦の軸、rx＝前の軸
-# 出力 P（PackedFloat32Array）：P[i*3]＝rz・P[i*3+1]＝ry・P[i*3+2]＝rx（i＝0〜35）、P[Y]＝胴の高さ、P[JX]・P[JY]＝騎手の腰のずれ
+# 出力 P（PackedFloat32Array）：P[i*3]＝rz・P[i*3+1]＝ry・P[i*3+2]＝rx（i＝0〜35）、P[Y]＝胴の高さ、P[JX]・P[JY]＝騎手の腰のずれ、
+#   P[JU]＝騎手の体の起こし（0＝鐙に立って前傾・1＝鞍に座って体を起こす。パドック・常歩は 1、ゲートは 0.45、ゴール後の流しで 0.8 まで）
 class_name ViewGait
 extends RefCounted
 
@@ -9,7 +10,8 @@ const N := 36
 const Y := 108
 const JX := 109
 const JY := 110
-const SIZE := 111
+const JU := 111
+const SIZE := 112
 
 const F_DUTY := 0.25
 const H_DUTY := 0.27
@@ -102,12 +104,13 @@ static func walk_pose(P: PackedFloat32Array, phW: float, t: float, seed: float) 
 	P[6 * 3 + 2] = 0.06 * sin((phW - 0.35) * TAU)
 	P[7 * 3] = 0.15
 	P[7 * 3 + 2] = 0.05 * sin((phW - 0.45) * TAU)
+	P[JU] = 1.0
 
 # 馬の形。ph＝襲歩の位相、sp＝走りの大きさ（0＝立つ）、push＝騎手の追い 0〜1、lead＝左手前の重み（1＝左・0＝右。間は混ぜる）
 # walk_ph・walk_w＝常歩の位相と重み、whip＝ムチを入れてからの秒（<0 で無し）、pose＝ゴールのあとのガッツポーズの秒（<0 で無し）
-# head_up＝掛かり 0〜1（模擬の kakari。前の名前は headUp）
+# head_up＝掛かり 0〜1（模擬の kakari。前の名前は headUp）、ease＝ゴールを過ぎてからの流し 0〜1（騎手が体を起こす）
 static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: float, seed: float, lead: float,
-		walk_ph: float, walk_w: float, whip: float, pose_t: float, head_up: float) -> void:
+		walk_ph: float, walk_w: float, whip: float, pose_t: float, head_up: float, ease := 0.0) -> void:
 	P.fill(0.0)
 	var wk := clampf(walk_w, 0.0, 1.0)
 	if wk >= 1.0 or (wk > 0.0 and sp <= 0.0):
@@ -154,18 +157,19 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 		P[5 * 3 + 2] = 0.06 * sin(ph * TAU + seed * 3.0)
 		P[6 * 3 + 2] = 0.05 * sin(ph * TAU + seed * 3.0 - 0.8)
 		P[7 * 3 + 2] = 0.05 * sin(ph * TAU + seed * 3.0 - 1.6)
-		# 騎手：鐙の上で腰を浮かせ、馬の上下を脚で吸う。追うときは首の動きに合わせて上体と腕を前へ送る
+		# 騎手：鐙の上で腰を浮かせ、馬の上下を脚で吸う。追うときは首の動きに合わせて体を前後に大きく送り、腕で首を押す
 		var pk := clampf(push, 0.0, 1.0)
 		P[JY] = -bob * 0.75
 		P[24 * 3] = -pitch * 0.8
 		var pump := -cyc(NOD, ph + 0.04)
-		P[JX] = pk * 0.06 * pump
-		P[JY] -= pk * 0.03 * (1.0 + pump) * 0.5
-		P[25 * 3] = -0.04 - pk * (0.05 + 0.06 * pump)
-		P[26 * 3] = 0.04 + pk * (0.05 + 0.06 * pump) + pitch * 0.8
+		P[JX] = pk * 0.09 * pump
+		P[JY] -= pk * 0.025 * (1.0 + pump) * 0.5
+		P[25 * 3] = -0.04 - pk * (0.04 + 0.05 * pump)
+		P[26 * 3] = 0.04 + pk * (0.06 + 0.08 * pump) + pitch * 0.8
 		for ua in [27, 29]:
-			P[ua * 3] = pk * (0.12 + 0.3 * pump)
-			P[(ua + 1) * 3] = pk * (0.05 + 0.25 * pump)
+			P[ua * 3] = pk * (0.12 + 0.34 * pump)
+			P[(ua + 1) * 3] = pk * (0.05 + 0.28 * pump)
+		P[JU] = 0.8 * smooth(ease)
 	_kakari(P, head_up, sp, t, seed)
 	# 襲歩と常歩のあいだ：両方の形を混ぜる
 	if wk > 0.0 and sp > 0.0:
@@ -180,6 +184,7 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 				P[i * 3 + c] = R[i * 3 + c]
 		P[JX] = R[JX]
 		P[JY] = R[JY]
+		P[JU] = lerpf(R[JU], 1.0, wk)
 	# ムチ：入れてから 0.5 秒。右腕を振り上げ、尻へ振り下ろして戻す
 	if whip >= 0.0 and whip < 0.5:
 		var u := whip / 0.5
@@ -195,6 +200,7 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 		P[25 * 3] = P[25 * 3] * (1.0 - w) + 0.45 * w
 		P[26 * 3] = P[26 * 3] * (1.0 - w) - 0.3 * w
 		P[JX] *= 1.0 - w
+		P[JU] *= 1.0 - w
 		P[29 * 3] = P[29 * 3] * (1.0 - w) + 2.5 * w + 0.12 * w * sin(pose_t * 9.0)
 		P[30 * 3] = P[30 * 3] * (1.0 - w) + 0.4 * w
 		P[29 * 3 + 2] = -0.3 * w
@@ -239,6 +245,7 @@ static func _stand(P: PackedFloat32Array, t: float, seed: float) -> void:
 	P[6 * 3 + 2] = 0.3 * swish * sin(t * 5.5 - 0.7)
 	P[7 * 3 + 2] = 0.35 * swish * sin(t * 5.5 - 1.4)
 	P[JY] = -0.03
+	P[JU] = 0.45
 	P[25 * 3] = 0.08 + 0.03 * sin(t * 0.8 + seed * 2.0)
 	P[26 * 3] = -0.08
 	P[27 * 3] = -0.15

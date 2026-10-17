@@ -1,12 +1,26 @@
 # 騎手：手作りの骨（js/ui/race3d.js の 24 腰・25 上体・26 頭・27/28 左腕・29/30 右腕・31 ムチ）と同じ並びの節を ViewGait の角度で動かし、
 # 素材の体（assets/jockey/jockey.glb。Quaternius・CC0）の骨を、その節の位置へ毎コマ IK で合わせる（js/ui/race3d.js の poseJockey と同じ合わせ方）。
-# 素材が読めないときは、節に丸い棒の形を付けた騎手で描く。この Node3D は馬の胴（手作りの骨 1）の子
+# 素材が読めないときは、節に丸い棒の形を付けた騎手で描く。この Node3D は馬の胴（手作りの骨 1）の子で、鞍のずれ（ViewHorse.seat_shift）だけ動かして置く
 class_name ViewJockey
 extends Node3D
 
-# 手作りの骨の付け根（体の比を直したあとの座標。x 前・y 上・z 右）
-const J := {24: [0.084, 1.87, 0.0], 25: [0.204, 1.9, 0.0], 26: [0.624, 2.07, 0.0],
-	27: [0.514, 2.0, -0.15], 28: [0.664, 1.86, -0.2], 29: [0.514, 2.0, 0.15], 30: [0.664, 1.86, 0.2], 31: [0.924, 1.81, 0.1]}
+# 手作りの骨の付け根（体の比を直したあとの馬の座標。x 前・y 上・z 右。胴が立ち姿の高さのとき）
+# 競馬の乗り方：鐙はとても短く、腰は鞍（上面 1.63）から浮かせ、背は馬の背とほぼ平行。膝はき甲（x 0.5）の横、手は首の付け根の低い所
+const J := {24: [0.07, 1.8, 0.0], 25: [0.12, 1.82, 0.0], 26: [0.56, 1.95, 0.0],
+	27: [0.5, 1.92, -0.15], 28: [0.64, 1.8, -0.17], 29: [0.5, 1.92, 0.15], 30: [0.64, 1.8, 0.17], 31: [0.8, 1.81, 0.09]}
+# 鐙（足首）・膝の向き・手：馬の胴の中の点（x 前・y 上・z 右）
+const STIR := [0.08, 1.47, 0.215]       # 足首。すねは膝から斜め後ろ下へ寝る
+const KNEE_POLE := [1.0, 0.1, 0.04]    # 膝は前へ、わずかに外へ（き甲の横に付ける）
+const HAND := [0.77, 1.81, 0.08]       # 手綱を持つ手（首の付け根のすぐ上）
+const HAND_UP := [0.5, 1.8, 0.1]       # 体を起こしたときの手（き甲の前の低い所。馬の胴の中）
+# 体の起こし（P[JU]＝1）：腰を鞍へ下ろし、上体を起こし、頭と腕は前へ残す
+const UP_HIP := [-0.05, -0.08]         # 腰の動き（前・上）
+const UP_TORSO := 0.95                 # 上体の起こし（rad）
+const UP_HEAD := -0.6
+const UP_ARM := -0.8
+const UP_FORE := 0.15
+# 素材の体を細くする（Superhero の体は幅が広い。小柄な騎手の 50kg ほどに）：骨ごとに、骨の軸からの横の離れを掛ける
+const THIN := {"thigh": 0.82, "calf": 0.84, "upperarm": 0.78, "lowerarm": 0.82, "pelvis": 0.86, "spine_01": 0.86, "spine_02": 0.86, "spine_03": 0.86, "clavicle": 0.88}
 const PARENT := {25: 24, 26: 25, 27: 25, 28: 27, 29: 25, 30: 29, 31: 30}
 const THIGH := 0.46
 const SHIN := 0.5
@@ -19,8 +33,8 @@ var whip_mi: MeshInstance3D
 var mats: Array[BaseMaterial3D] = []
 var head_parts: Array[Node3D] = []
 # 素材の体
-const JK_SCALE := 0.86
-const JSH := 0.084            # 騎手の骨の前後のずれ（race3d.js の JSH）
+const JK_SCALE := 0.86        # 背の高さ 1.58m（馬の背 1.59m）
+var _up := 0.0                # 体の起こし（P[JU]）
 var body: Node3D              # 素材の体の根（馬の根の子）
 var skel: Skeleton3D
 var bmat: ShaderMaterial
@@ -108,7 +122,7 @@ func setup(info: Dictionary, torso_origin: Vector3) -> void:
 	var hips := ball(n24, Vector3(0, -0.01, -0.02), 0.12, breeches, 0.85)
 	hips.scale = Vector3(1.05, 1, 1.1)
 	# 上体：腰から肩へ（前かがみ）。勝負服
-	var sh := Vector3(0, 2.02, 0.5)
+	var sh := Vector3(0, 1.93, 0.56)
 	var torso := capsule(n25, Vector3(0, 0.0, -0.08), sh - o25, 0.14, silk, 1.2, 0.8)
 	head_parts.append(torso)
 	torso.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -142,7 +156,7 @@ func setup(info: Dictionary, torso_origin: Vector3) -> void:
 		var fa: Node3D = nodes[side[1]]
 		var elbow := hmv(J[side[1]]) - hmv(J[side[0]])
 		capsule(ua, Vector3.ZERO, elbow, 0.055, silk)
-		var hand := Vector3(-0.09 * side[2], 1.78, 0.86) - hmv(J[side[1]])
+		var hand := Vector3(-HAND[2] * side[2], HAND[1], HAND[0]) - hmv(J[side[1]])
 		capsule(fa, Vector3.ZERO, hand, 0.045, silk)
 		ball(fa, hand, 0.045, breeches)
 	# 脚：腰の左右 → 鐙（胴の横）
@@ -150,18 +164,20 @@ func setup(info: Dictionary, torso_origin: Vector3) -> void:
 		var thigh := capsule(self, Vector3.ZERO, Vector3(0, THIGH, 0), 0.066, breeches)
 		var shin := capsule(self, Vector3.ZERO, Vector3(0, SHIN, 0), 0.046, boots)
 		var hip := Vector3(0.1 * sd * -1.0, -0.05, 0.02)
-		var stir := hmv([0.18, 1.24, 0.31 * sd]) - j1
+		var stir := hmv([STIR[0], STIR[1], STIR[2] * sd]) - j1
 		legs.append([thigh, shin, hip, stir])
 	pose(ViewGait.make())
 
 # 手作りの角度で節を回し、脚を IK で合わせる
 func pose(P: PackedFloat32Array) -> void:
+	_up = P[ViewGait.JU]
+	var add := {25: UP_TORSO, 26: UP_HEAD, 27: UP_ARM, 29: UP_ARM, 28: UP_FORE, 30: UP_FORE}
 	for i in nodes:
 		var n: Node3D = nodes[i]
 		var base: Vector3 = n.get_meta("base")
 		if i == 24:
-			n.position = base + Vector3(0, P[ViewGait.JY], P[ViewGait.JX])
-		n.basis = ViewHorse._rot(P[i * 3], P[i * 3 + 1], P[i * 3 + 2])
+			n.position = base + Vector3(0, P[ViewGait.JY] + UP_HIP[1] * _up, P[ViewGait.JX] + UP_HIP[0] * _up)
+		n.basis = ViewHorse._rot(P[i * 3] + float(add.get(i, 0.0)) * _up, P[i * 3 + 1], P[i * 3 + 2])
 	if skel != null:
 		_ik()
 		return
@@ -207,7 +223,7 @@ func _make_body(info: Dictionary) -> bool:
 	if hi == null:
 		return false
 	if _mesh_cache == null:
-		_mesh_cache = _with_rest(hi.mesh)
+		_mesh_cache = _with_rest(hi.mesh, hi.skin)
 	hi.mesh = _mesh_cache
 	hi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	var sk: Dictionary = info.get("silks", {"base": "#1f4fbf", "sub": "#ffd23f", "pattern": "plain"})
@@ -231,17 +247,58 @@ func _make_body(info: Dictionary) -> bool:
 	head_parts.append(body)
 	return true
 
-# 頂点に、写す前の位置と部位の番号（頂点色の R×8）を CUSTOM0 で持たせる
-static func _with_rest(src: Mesh) -> ArrayMesh:
+# 頂点に、写す前の位置と部位の番号（頂点色の R×8）を CUSTOM0 で持たせる。体は骨ごとに細くする（THIN）
+static func _with_rest(src: Mesh, skin: Skin) -> ArrayMesh:
+	# 骨（bind の番号）ごとの軸：付け根 → 子の付け根（素材の座標）
+	var org := {}
+	var bnames := {}
+	if skin != null:
+		for i in skin.get_bind_count():
+			org[String(skin.get_bind_name(i))] = skin.get_bind_pose(i).affine_inverse().origin
+			bnames[i] = String(skin.get_bind_name(i))
+	var child := {"thigh": "calf", "calf": "foot", "upperarm": "lowerarm", "lowerarm": "hand"}
 	var out := ArrayMesh.new()
 	for si in src.get_surface_count():
 		var a := src.surface_get_arrays(si)
 		var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		var V0 := V.duplicate()
 		var C: PackedColorArray = a[Mesh.ARRAY_COLOR]
+		var BI: PackedInt32Array = a[Mesh.ARRAY_BONES] if a[Mesh.ARRAY_BONES] != null else PackedInt32Array()
+		var BW: PackedFloat32Array = a[Mesh.ARRAY_WEIGHTS] if a[Mesh.ARRAY_WEIGHTS] != null else PackedFloat32Array()
+		var nb := BI.size() / maxi(1, V.size())
+		for k in V.size():
+			var v := V[k]
+			var acc := Vector3.ZERO
+			for q in nb:
+				var w := BW[k * nb + q]
+				if w <= 0.0:
+					continue
+				var bn: String = bnames.get(BI[k * nb + q], "")
+				var key := bn.trim_suffix("_l").trim_suffix("_r")
+				var f: float = THIN.get(key, 1.0)
+				var moved := v
+				if f < 1.0 and org.has(bn):
+					var o: Vector3 = org[bn]
+					if child.has(key):
+						# 手足：骨の軸のまわりに細く
+						var e: Vector3 = org.get(child[key] + bn.substr(bn.length() - 2), o + Vector3.DOWN)
+						var ax := (e - o).normalized()
+						var c := o + ax * (v - o).dot(ax)
+						moved = c + (v - c) * f
+					else:
+						# 胴：横（x）を真ん中へ、前後（z）を骨の付け根へ少し
+						moved = Vector3(v.x * f, v.y, o.z + (v.z - o.z) * lerpf(1.0, f, 0.6))
+				acc += moved * w
+			var ws := 0.0
+			for q in nb:
+				ws += BW[k * nb + q]
+			if ws > 0.0:
+				V[k] = acc / ws
+		a[Mesh.ARRAY_VERTEX] = V
 		var C0 := PackedFloat32Array()
 		C0.resize(V.size() * 4)
 		for k in V.size():
-			C0[k * 4] = V[k].x; C0[k * 4 + 1] = V[k].y; C0[k * 4 + 2] = V[k].z
+			C0[k * 4] = V0[k].x; C0[k * 4 + 1] = V0[k].y; C0[k * 4 + 2] = V0[k].z
 			C0[k * 4 + 3] = roundf(C[k].r * 8.0) if C.size() > k else 1.0
 		a[Mesh.ARRAY_CUSTOM0] = C0
 		var flags: int = src.surface_get_format(si) & Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS
@@ -251,10 +308,10 @@ static func _with_rest(src: Mesh) -> ArrayMesh:
 
 # 手作りの骨 i の中の点（race3d.js の atBone：馬の形の座標で書いた点 → 体の比を直す → 骨の付け根からの差）→ 骨格の座標
 func _at(i: int, x: float, y: float, z: float) -> Vector3:
-	var m := Vector3(x + JSH, y, z) if i >= 24 else Vector3(_tx(x), y, z)
+	var m := Vector3(x, y, z) if i >= 24 else Vector3(_tx(x), y, z)
 	var jj: Array = J[i] if i >= 24 else [0.099, 1.25, 0.0]
 	var local := hmv([m.x - jj[0], m.y - jj[1], m.z - jj[2]])
-	var n: Node3D = nodes[i] if i >= 24 else get_parent()
+	var n: Node3D = nodes[i] if i >= 24 else self
 	return _to_skel(n.global_transform * local)
 
 func _dir(i: int, x: float, y: float, z: float) -> Vector3:
@@ -307,17 +364,17 @@ func _ik() -> void:
 	skel.reset_bone_poses()
 	for s in ["l", "r"]:
 		skel.set_bone_pose_scale(B["upperarm_" + s], Vector3.ONE * 1.08)
-	# 腰：手作りの腰の骨（24）の位置へ。少し前へ傾ける
+	# 腰：手作りの腰の骨（24）の位置へ。前へ傾ける（座ると立つ）
 	var pel: int = B.pelvis
-	var hip := _at(24, -0.04, 1.9, 0.0)
+	var hip := _at(24, 0.07, 1.8, 0.0)
 	var gp := skel.get_bone_global_pose(pel)
 	skel.set_bone_global_pose(pel, Transform3D(gp.basis, hip))
-	_aim(pel, _gp(B.spine_01), hip + _dir(24, 0.9, 0.42, 0.0))
+	_aim(pel, _gp(B.spine_01), hip + _dir(24, lerpf(0.9, 0.35, _up), lerpf(0.42, 0.94, _up), 0.0))
 	# 背骨：肩の真ん中へ
-	var sh := _at(25, 0.46, 2.01, 0.0)
+	var sh := _at(25, 0.56, 1.93, 0.0)
 	_aim(B.spine_01, _gp(B.neck_01), sh)
 	_aim(B.spine_03, _gp(B.neck_01), sh)
-	# 首と頭：前を見る
+	# 首と頭：頭を上げて前を見る
 	var np := _gp(B.neck_01)
 	_aim(B.neck_01, _gp(B.Head), np + _dir(26, 0.78, 0.62, 0.0))
 	var hg := skel.get_bone_global_pose(B.Head)
@@ -325,13 +382,21 @@ func _ik() -> void:
 	# 腕：手綱を持つ手へ。肘は外・上へ
 	for arm in [["l", 28, -1.0], ["r", 30, 1.0]]:
 		var s: String = arm[0]
-		var hand := _at(arm[1], 0.66, 1.79, arm[2] * 0.1)
+		var hand := _at(arm[1], HAND[0], HAND[1], arm[2] * HAND[2])
+		if _up > 0.0:
+			hand = hand.lerp(_at(1, HAND_UP[0], HAND_UP[1], arm[2] * HAND_UP[2]), _up)
 		_two(B["upperarm_" + s], B["lowerarm_" + s], B["hand_" + s], hand, _dir(1, -0.5, 0.35, arm[2]))
-	# 脚：鐙へ。膝は前・外へ。つま先は前へ
+	# 脚：短い鐙へ。膝はき甲の横（前・少し外）、つま先は前へ
 	for leg in [["l", -1.0], ["r", 1.0]]:
 		var s2: String = leg[0]
 		var sd: float = leg[1]
-		var ank := _at(1, 0.235, 1.37, sd * 0.29)
-		_two(B["thigh_" + s2], B["calf_" + s2], B["foot_" + s2], ank, _dir(1, 1.0, 0.15, sd * 0.45))
+		var ank := _at(1, STIR[0], STIR[1], sd * STIR[2])
+		_two(B["thigh_" + s2], B["calf_" + s2], B["foot_" + s2], ank, _dir(1, KNEE_POLE[0], KNEE_POLE[1], sd * KNEE_POLE[2]))
 		var fp := _gp(B["foot_" + s2])
-		_aim(B["foot_" + s2], _gp(B["ball_" + s2]), fp + _dir(1, 0.95, -0.12, sd * 0.25))
+		_aim(B["foot_" + s2], _gp(B["ball_" + s2]), fp + _dir(1, 0.95, -0.2, sd * 0.1))
+	# ムチ：右手の中へ。体を起こした分だけ戻して、後ろへ寝かせたまま持つ
+	var w31: Node3D = nodes[31]
+	var hr := _gp(B.hand_r)
+	var palm := hr + (hr - _gp(B.lowerarm_r)).normalized() * 0.06
+	var axis := (global_transform.basis * Vector3(-1, 0, 0)).normalized()
+	w31.global_transform = Transform3D(Basis(axis, -(UP_TORSO + UP_ARM + UP_FORE) * _up) * w31.global_basis, skel.global_transform * palm)

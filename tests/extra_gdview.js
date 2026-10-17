@@ -1,5 +1,5 @@
 // Godot 版の見た目と操作（godot/view・godot/ui）：Godot があれば、画面なしで確かめる
-//   操作の割り当て（十字キー・スティック・キーボード。押したコマで動く・押し続け）・模擬の入れ口が JS と同じレースになるか・絵の決まり（毛色・白徴・勝負服）が JS と同じか
+//   操作の割り当て（十字キー・スティック・キーボード。押したコマで動く・押し続け）・模擬の入れ口が JS と同じレースになるか・絵の決まり（毛色・白徴・勝負服）が JS と同じか・騎手の乗り姿
 // Godot は GODOT＝実行ファイル、PATH の godot、/home/user/godot-bin/godot の順に探す。無ければ飛ばしたと表示する
 const { spawnSync } = require('child_process');
 const fs = require('fs');
@@ -23,6 +23,12 @@ module.exports = function (check, assert) {
     const r = run('res://tools/check_art.gd');
     assert(r.ok, r.out.slice(-10).join('\n'));
     return r.out.filter(l => /art:/.test(l)).join('');
+  });
+  check('gdview: 騎手の乗り姿（短い鐙・腰を浮かせた前傾・膝はき甲の横・手は首の付け根・脚を開かない・鞍とずれない・パドックと流しで体を起こす）', () => {
+    if (!godot) return 'Godot が無いので飛ばした';
+    const r = run('res://tools/check_jockey.gd');
+    assert(r.ok, r.out.slice(-8).join('\n'));
+    return (r.out.find(l => /^jockey:/.test(l)) || '').trim();
   });
   check('gdview: 模擬の入れ口（ViewLive）が、記録と同じ出走馬・種で JS と同じ着順とタイムになる', () => {
     if (!godot) return 'Godot が無いので飛ばした';
