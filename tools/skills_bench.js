@@ -1,6 +1,6 @@
 // 特殊能力の効き目を測る（docs/SKILLS.md の表の数）。
 // 東京・芝2000・14頭（全頭 level 82 の頭数合わせの馬）を N 回走らせ、1頭目にだけ1つ持たせて、持たない場合と比べる。
-// 使い方：node tools/skills_bench.js [trig|passive|count|style|perstyle|unique|all] [N]
+// 使い方：node tools/skills_bench.js [trig|passive|count|style|perstyle|unique|all] [N] [名馬の名前（unique のとき）]
 const { load } = require('../tests/load.js');
 const HS = globalThis.HS && globalThis.HS.Sim ? globalThis.HS : load();
 const U = HS.U, H = HS.Horse, S = HS.Sim, K = HS.Skills, D = HS.DATA;
@@ -108,8 +108,10 @@ function perStyleTable() {
 // 名馬の固有の能力：その名馬の脚質の頭数合わせの馬に1つだけ持たせて、持たない場合と比べる（場面は名馬の距離に合わせる）
 function uniqueTable() {
   const rows = [];
+  const only = process.argv[4]; // 名馬の名前で絞る（例：node tools/skills_bench.js unique 300 フランケル）
   for (const u of K.UNIQUES) {
-    const d = (HS.DATA.legendsExtra || []).find(x => x.name === u.horse) || {};
+    if (only && u.horse !== only) continue;
+    const d = (HS.DATA.legendsExtra || []).concat(HS.DATA.historic || []).find(x => x.name === u.horse) || {};
     const dist = U.clamp(Math.round(((d.distMin || 1600) + (d.distMax || 2400)) / 2 / 400) * 400, 1200, 3200);
     const o = { style: d.style || '先行', dist, surface: d.surface === 'ダ' ? 'ダ' : '芝', N: Math.min(N, 300) };
     const b = bench(o), r = bench(Object.assign({}, o, { trig: u.id }));

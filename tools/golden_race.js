@@ -47,7 +47,7 @@ function raceList() {
   add(Object.assign({}, base, { name: '長距離', course: '京都', surface: '芝', dist: 3200, grade: 'G1', month: 4 }), 2005, '良');
   add(Object.assign({}, base, { name: '短距離', course: '中京', surface: 'ダ', dist: 1200, month: 12 }), 2025, '稍重');
   add(Object.assign({}, base, { name: '少頭数', course: '函館', surface: '芝', dist: 2000, month: 7 }), 1995, '良');
-  // 特殊能力を決めて持たせる（ふだんの組み合わせでは出にくい能力を必ず通す）：伝説級の名馬の固有の能力（skillsCase＝uniq、uniqOff＝どれから配るか）・
+  // 特殊能力を決めて持たせる（ふだんの組み合わせでは出にくい能力を必ず通す）：名馬の固有の能力（skillsCase＝uniq、uniqOff＝どれから配るか）・
   // 幻惑逃げ（ほかの馬の脚を減らす）と、馬群さばき・追走○・外回し○（skillsCase＝genwaku。逃げの馬をなくしてスローにする）
   add(Object.assign({}, base, { name: '固有1', course: '東京', surface: '芝', dist: 2400, grade: 'G1', skillsCase: 'uniq', uniqOff: 0 }), 2010, '良');
   add(Object.assign({}, base, { name: '固有2', course: '中山', surface: 'ダ', dist: 1200, skillsCase: 'uniq', uniqOff: 4 }), 2020, '重');
@@ -55,6 +55,9 @@ function raceList() {
   add(Object.assign({}, base, { name: '幻惑1', course: '阪神', surface: '芝', dist: 2000, skillsCase: 'genwaku' }), 2015, '良');
   add(Object.assign({}, base, { name: '幻惑2', course: '中京', surface: '芝', dist: 1600, skillsCase: 'genwaku' }), 2025, '稍重');
   add(Object.assign({}, base, { name: '固有4', course: '札幌', surface: '芝', dist: 1800, skillsCase: 'uniq', uniqOff: 11 }), 2005, '良');
+  // 2026-10-17 に足した名馬の固有の能力（マイル・逃げ切り・大外一気・後方一気などの新しい場面の型）も通す
+  add(Object.assign({}, base, { name: '固有5', course: '阪神', surface: '芝', dist: 1600, skillsCase: 'uniq', uniqOff: 12 }), 2015, '良');
+  add(Object.assign({}, base, { name: '固有6', course: '東京', surface: '芝', dist: 2000, skillsCase: 'uniq', uniqOff: 24 }), 2020, '稍重');
   return out;
 }
 
