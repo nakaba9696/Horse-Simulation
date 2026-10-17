@@ -76,6 +76,7 @@ class Runner:
 class Ctl:
 	var tension: float
 	var started := false
+	var fumble := false
 	var gear := 0.0
 	var hand := "R"
 	var swapUntil := -1.0
@@ -146,6 +147,7 @@ class Sim:
 	var check: Variant = null
 	var skillFx: Array = []
 	var top: float
+	var gateWait := 0.0
 
 # ---------- 調整の値（JS の S.〜 と同じ） ----------
 static var OONIGE := { early = 1.02, mid = 1.02, kick = 0.5, lead = 0.055 }
@@ -160,6 +162,13 @@ static var START_ACC := 7.5
 static var START_SKILL_ACC := 1.35
 static var EASY_START := 0.95
 static var LATE_E := 0.15
+# ゲート（JS の S.GATE。持ち主の指摘 2026-10-17「スタートのカウントダウンいらない　目押しで」）。秒はレースの秒
+# wait＋spread×くじ＝ゲートで待つ秒（レースの種から）・tell＝前触れ（灯）から開くまで・buf と good＝GOOD の幅（開く前と後）・fumble＝早押しのあとの出の遅れ・fret＝早押しで上がる気分
+static var GATE := { wait = 2.2, spread = 1.6, tell = 0.8, buf = 0.12, good = 0.1, fumble = 0.35, fret = 4.0 }
+# ゲートで待つ秒（JS の S.gateWaitOf。種の乱数は進めない）
+static func gate_wait_of(rng: HSRng) -> float:
+	var g := HSRng.new(float((rng.s ^ 0x9E3779B9) & 0xFFFFFFFF))
+	return float(GATE.wait) + float(GATE.spread) * g.next()
 static var PUSH := { base = 0.25 }
 # 横の移動（自分で乗る馬）：毎秒 v 進路・前後 dx m 以内で、進路の差が gap より近い馬がいる向きへは動けない・何もしないまま drift 秒で内へ戻り始める
 static var LANE := { v = 3.0, dx = 2.0, gap = 0.8, drift = 10.0 }
@@ -369,9 +378,10 @@ static func step(sim) -> bool:
 static func finish(sim) -> Dictionary:
 	if sim is Sim: return _finish_gd(sim)
 	return sim.finish()
-static func ctl_up(sim) -> Variant:
-	if sim is Sim: return _ctl_up_gd(sim)
-	return sim.ctl_up()
+# at＝押した時刻（レースの秒。負はゲートの中。null なら sim.t）。JS の S.ctl.up(sim, at)
+static func ctl_up(sim, at: Variant = null) -> Variant:
+	if sim is Sim: return _ctl_up_gd(sim, at)
+	return sim.ctl_up(at)
 static func ctl_down(sim) -> Variant:
 	if sim is Sim: return _ctl_down_gd(sim)
 	return sim.ctl_down()
@@ -471,6 +481,7 @@ static func _create_gd(race: Dictionary, runners: Array, w_idx: Variant, rng: HS
 			c.lane = HSU.mn(3.0, s.lane); c.bond = opts.get("bond"); c.bondF = bondF(opts.get("bond"))
 			sim.ctl = c
 			s.delay = 99.0; s.late = false
+	sim.gateWait = gate_wait_of(rng)
 	say(sim, 0.0, "スタートしました！", "start")
 	for s: Runner in st:
 		if s.late: say(sim, 0.6, "%s、出遅れた！" % s.h.name, "trouble")
@@ -496,19 +507,23 @@ static func _rate_of(c: Ctl, t: float) -> int:
 static func _gear_step(n: int) -> float:
 	return HSU.mn(0.25, 0.05 + 0.025 * mini(n, 8))
 # しごく。ゲートの中ならスタートの合図
-static func _ctl_up_gd(sim: Sim) -> Variant:
+static func _ctl_up_gd(sim: Sim, at: Variant = null) -> Variant:
 	var c := sim.ctl
 	if not c or sim.over: return null
 	var s: Runner = sim.st[sim.me]
 	if not c.started:
+		var t: float = sim.t if at == null else (float(at) if float(at) < 0.0 else HSU.mx(float(at), sim.t))
+		if t < -float(GATE.buf):
+			c.fumble = true; c.tension = HSU.clamp(c.tension + float(GATE.fret) * temperF(s), 0.0, 100.0); return "fumble"
+		if t < 0.0: t = 0.0 # 開く直前の押しは、開いた瞬間に受け付ける
 		c.started = true
-		if sim.t < 0.05:
+		if t < float(GATE.good) and not c.fumble:
 			s.delay = 0.05; c.startGood = true; return "good"
-		s.delay = sim.t
-		if sim.t > 0.5:
+		c.startGood = false
+		s.delay = HSU.mx(t, float(GATE.fumble)) if c.fumble else t
+		if s.delay > 0.5:
 			s.late = true; s.E -= LATE_E; say(sim, sim.t, "%s、出遅れた！" % s.h.name, "trouble"); return "late"
-		c.startGood = sim.t < 0.25
-		return "good" if c.startGood else "ok"
+		return "ok"
 	var n := _rate_of(c, sim.t); var d := _gear_step(n)
 	var g0 := c.gear; c.gear = HSU.mn(1.0, c.gear + d)
 	if not s.spurting:

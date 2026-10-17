@@ -95,8 +95,10 @@ func ctl(name: String, arg = null):
 		return null
 	match name:
 		"up":
-			var ret = HSSim.ctl_up(sim)
-			if not sim.ctl.started or start_ret == null:
+			# arg＝押した時刻（レースの秒。負はゲートの中。null なら模擬の時刻）
+			var was: bool = started()
+			var ret = HSSim.ctl_up(sim, arg)
+			if not was and started():
 				start_ret = ret
 			return ret
 		"down": return HSSim.ctl_down(sim)

@@ -1429,8 +1429,7 @@
     else if (name === 'whip') { noise(bus, t, 0.05, 'highpass', 3000, 0.5); noise(bus, t + 0.01, 0.08, 'bandpass', 1800, 0.35, 2); }
     else if (name === 'skill') { ['E6', 'B6', 'E7'].forEach((n, i) => V.bell(bus, [freq(n)], t + i * 0.05, 0.18, 1.7)); }
     else if (name === 'fight') { blip(220, 660, 0.22, 'sawtooth', 0.07); blip(330, 990, 0.22, 'square', 0.04); noise(bus, t, 0.18, 'bandpass', 1200, 0.25, 1.2); } // 競り合いで気合が乗った：駆け上がる音と、どよめき
-    // 騎乗の手ごたえ（js/ui/ride.js）：数え・進路・ぶつかり・ゴール板・着順の表示
-    else if (name === 'count') blip(880, null, 0.07, 'square', 0.05);
+    // 騎乗の手ごたえ（js/ui/ride.js）：進路・ぶつかり・ゴール板・着順の表示（スタートの数えの音はやめた。持ち主の指摘 2026-10-17「目押しで」）
     else if (name === 'lane') noise(bus, t, 0.09, 'bandpass', 700, 0.18, 1.4);
     else if (name === 'bump') { noise(bus, t, 0.12, 'lowpass', 220, 0.6, 1); blip(110, 60, 0.12, 'sine', 0.12); }
     else if (name === 'goal') { V.bell(bus, [freq('A6')], t, 0.08, 1.6); noise(bus, t, 0.5, 'bandpass', 1100, 0.3, 0.8); }

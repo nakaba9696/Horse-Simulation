@@ -1128,6 +1128,8 @@
       if (h.pot) for (const k of H.STATS) if (h.pot[k] == null) h.pot[k] = h.pot.spd || 60;
       if (h.kire == null) h.kire = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[h.style] || 4;
       h.skills = h.skills || [];
+      // 騎手のゲームに放牧は無い（持ち主の指摘 2026-10-17「放牧いらない」）：前のセーブで放牧に出した馬は、次の週の頭に自動で入厩に戻す
+      if (g.mode === 'jockey' && h.parked) delete h.parked;
     }
     // コースレコードの「自分で乗って作ったか」（前の版のセーブには無い。騎手のゲームでは自分の馬＝自分が乗った馬）
     for (const rc of Object.values(g.records.course || {})) if (rc.rode == null) rc.rode = !!rc.mine && g.mode === 'jockey';

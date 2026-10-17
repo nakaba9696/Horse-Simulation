@@ -728,7 +728,8 @@
       const qB = -1.7, qF = 1.4, fB = frame(tr, D - qB), fF = frame(tr, D - qF), eB = elev(D - qB), eF = elev(D - qF);
       const uD = j => LANE0 + (j - 0.5) * GATE_P;
       const half = GATE_P / 2;
-      const open = clamp(t / 0.35, 0, 1) * 1.35;
+      const tl = view.tell; // 前触れ：灯がついてから 0.3 秒、扉が小さく鳴る
+      const open = t > 0 ? clamp(t / 0.35, 0, 1) * 1.35 : tl != null && tl >= 0 && tl < 0.3 ? 0.035 * Math.sin(tl * 70) * (1 - tl / 0.3) : 0;
       const green = '#2f7d50', greenD = '#245f3d', white = '#e9ece8';
       for (let j = 0; j <= n; j++) {
         const u = uD(j);
@@ -770,6 +771,15 @@
               ctx.fillStyle = '#111'; ctx.font = `bold ${Math.round(fs)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
               ctx.fillText(String(j + 1), (sxOf(a) + sxOf(b)) / 2, (syOf(a) + syOf(d)) / 2);
             }
+          }
+          // 前触れの灯（梁の上。開く少し前につく。race3d と同じ）
+          const lit = view.tell != null && view.tell >= 0 && t < 0.4;
+          for (let j = 0; j < n; j++) {
+            const uc = LANE0 + j * GATE_P;
+            const a = cam(wpt(fr, uc - 0.2, sign), e + 2.9), b = cam(wpt(fr, uc + 0.2, sign), e + 2.9);
+            const c = cam(wpt(fr, uc + 0.2, sign), e + 3.12), d = cam(wpt(fr, uc - 0.2, sign), e + 3.12);
+            if (a.Z < NEAR) continue;
+            poly(ctx, [a, b, c, d], lit ? '#ff5a2a' : '#3a2420');
           }
         });
       }

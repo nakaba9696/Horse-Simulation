@@ -175,9 +175,7 @@ func _draw_hud() -> void:
 		_kakari_edge(M)
 	_draw_fight(M)
 	_draw_whip()
-	if T < 0.0:
-		_countdown(T)
-	elif fin == null:
+	if T >= 0.0 and fin == null:   # ゲートの中は数を出さない（目押し。持ち主の指摘 2026-10-17）
 		_top_left(rank, M)
 	if fin == null or float(fin.shown) < 0.0:
 		_draw_pace(M, T)
@@ -337,16 +335,6 @@ static func _ease(u: float) -> float:
 	u = clampf(u, 0.0, 1.0)
 	return 1.0 - pow(1.0 - u, 3.0)
 
-# ---- ゲートの中：3・2・1 を真ん中に（毎秒ふくらんで縮む） ----
-func _countdown(T: float) -> void:
-	var n := int(ceil(-T))
-	var u := n + T
-	if n > 3 or n < 1:
-		return
-	var pop := 1.0 + 0.35 * maxf(0.0, (u - 0.8) / 0.2)
-	var a := minf(1.0, u * 3.0)
-	_outlined(str(n), VW / 2.0, VH * 0.36, 64.0 * pop, _a(Color.WHITE, a), "center", 8.0, f_num, a)
-
 # ---- 左上：順位と頭数、残りの帯（ハロンごとの目盛り） ----
 func _top_left(rank: int, M: Dictionary) -> void:
 	var x := 16.0
@@ -354,7 +342,8 @@ func _top_left(rank: int, M: Dictionary) -> void:
 	var w := 232.0
 	var D: float = rv.D
 	var meX: float = float(H[rv.me][0])
-	_glass(x, y, w, 70, 12)
+	_glass(x, y, w, 100, 12)
+	_style_row(x + 12, y + 72, w - 24, M, rank, meX / D)
 	var rc := WARN if rank == 1 else Color.WHITE
 	_outlined(str(rank), x + 14, y + 52, 50, rc, "left", 5)
 	var rw := _width(str(rank), 50, f_num)
@@ -379,6 +368,46 @@ func _top_left(rank: int, M: Dictionary) -> void:
 		m += 200.0
 	_glow_circle(bx + bw * pr, by + 2.5, 4, Color("bfffd6"), 6)
 	_circle(bx + bw * pr, by + 2.5, 4, Color.WHITE)
+
+# ---- 左上の板の下の段：脚質の矢印4つ（出走表・馬の店の UiStyleArrows と同じ形。左から 追込・差し・先行・逃げ。自分の脚質が赤く光る）----
+# 持ち主の指摘 2026-10-17「レース中　自分の馬の脚質見えるUIにして△4つならべるやつ」。文字は出さない。
+# 矢印の下の細い帯：その脚質の得意な位置（HSSim.ZONE。右ほど前）を金で、いまの位置（隊列の前から何割か）を点で。
+# 点は隊列が決まるまで（距離の HSSim.MISFIT_FROM まで）は白、そのあとは得意な位置の中なら緑、外れていれば金（外れていると折り合いを欠く）
+func _style_row(x: float, y: float, w: float, M: Dictionary, rank: int, prog: float) -> void:
+	var style := String(M.style)
+	var on := UiStyleArrows.ORDER.find(style)
+	var aw4 := w / 4.0
+	var h := 15.0
+	var cy := y + 6.0
+	for i in 4:
+		var ax := x + i * aw4 + aw4 * 0.16
+		var aw := aw4 * 0.68
+		var pts := PackedVector2Array([_p(ax, cy - h * 0.32), _p(ax + aw * 0.55, cy - h * 0.32), _p(ax + aw * 0.55, cy - h * 0.5),
+			_p(ax + aw, cy), _p(ax + aw * 0.55, cy + h * 0.5), _p(ax + aw * 0.55, cy + h * 0.32), _p(ax, cy + h * 0.32)])
+		var ol := pts.duplicate()
+		ol.append(pts[0])
+		if i == on:
+			_glow_circle(ax + aw * 0.5, cy, h * 0.6, _a(UiTheme.RED, 0.5), 8)
+			canvas.draw_colored_polygon(pts, UiTheme.RED.lerp(Color(1, 0.55, 0.45), 0.15))
+			canvas.draw_polyline(ol, Color(1, 0.8, 0.7, 0.9), 1.5 * K, true)
+		else:
+			canvas.draw_colored_polygon(pts, _a(UiTheme.GREEN_DEEP, 0.6))
+			canvas.draw_polyline(ol, _a(UiTheme.GOLD_DIM, 0.9), 1.2 * K, true)
+	# 得意な位置の帯といまの位置の点（右ほど前）
+	var by := y + 19.0
+	_rect(x, by, w, 3, OFF)
+	var zone: Array = HSSim.ZONE.get(style, HSSim.ZONE["先行"])
+	var za := 1.0 - float(zone[1])
+	var zb := 1.0 - float(zone[0])
+	_rect(x + w * za, by, w * (zb - za), 3, _a(GOLD, 0.75))
+	var n: int = order.size()
+	if n > 1 and rank > 0:
+		var rk := float(rank - 1) / float(n - 1)
+		var off := maxf(0.0, maxf(float(zone[0]) - rk, rk - float(zone[1])))
+		var col := Color.WHITE if prog <= HSSim.MISFIT_FROM else (GOOD if off <= 0.05 else WARN)
+		var px := x + w * (1.0 - rk)
+		_glow_circle(px, by + 1.5, 3.5, col, 5)
+		_circle(px, by + 1.5, 3.5, col)
 
 # ---- 右上：時計とレコード ----
 func _timer(M: Dictionary, T: float) -> void:

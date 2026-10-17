@@ -162,13 +162,26 @@
 
       // ---------- 操作 ----------
       let whipAt = -9, poseAt = null, whipFx = null, upFx = 0, downFx = 0, laneFx = null;
-      let buffered = false; // ゲートが開く直前（0.15 秒前から）に押した ↑ は、開いた瞬間に受け付ける（先に押しても取りこぼさない）
-      const doUp = () => {
-        if (fin) return;
-        if (clock < 0) { if (clock > -0.15) buffered = true; return; }
-        const b = S.ctl.up(sim);
+      // スタートは目押し（持ち主の指摘 2026-10-17「スタートのカウントダウンいらない　目押しで」）。数は出さず、ゲートの上の灯（前触れ）を見て、開く瞬間に合わせて押す。
+      // 押した時刻を模擬に渡す（S.ctl.up(sim, clock)）。開く直前（S.GATE.buf）の押しは開いた瞬間に受け付け、それより前の押しは馬が煽る（GOOD にならない）
+      let startRet = null; // ゲートの中で受け付けたスタート（合図は開いた瞬間に出す）
+      const startFx = b => {
         if (b === 'good' && sim.ctl.pushes === 0) { say('GOOD START', 'good'); kick({ dur: 420, hz: 6, ay: 0.05, fov: 3 }); }
         else if (b === 'late') say('LATE START', 'bad');
+      };
+      const doUp = () => {
+        if (fin || !sim.ctl) return;
+        if (clock < 0) {
+          if (sim.ctl.started) return;
+          const b = S.ctl.up(sim, clock);
+          // 早すぎた：馬がゲートの中で煽る（文字は出さず、鼻息・揺れ・振動で返す）
+          if (b === 'fumble') { fretAt = performance.now(); kick({ dur: 320, hz: 9, ax: 0.02, ay: 0.015 }); if (AU) AU.se('snort'); if (RB) RB.fx('bad'); }
+          else if (b) startRet = b;
+          return;
+        }
+        const was = sim.ctl.started;
+        const b = S.ctl.up(sim, clock);
+        if (!was) startFx(b);
         upFx = performance.now();
         if (AU) AU.se('click');
       };
@@ -299,16 +312,17 @@
         if (RB) RB.stop();
         keyHeld.left = keyHeld.right = false;
       };
-      const onBlur = () => { if (!paused && !fin && !done && clock > -COUNT) togglePause(); };
+      const onBlur = () => { if (!paused && !fin && !done && clock > -WAIT) togglePause(); };
       window.addEventListener('blur', onBlur);
 
       // ---------- 進める ----------
-      const COUNT = 3; // 発走前の秒
-      let clock = -COUNT; // 発走からの秒（負はゲートの中）
+      // ゲートで待つ秒（レースの秒。レースの種で決まり、毎回少し違う）と、開く何秒前に前触れ（ゲートの上の灯）を見せるか
+      const WAIT = sim.gateWait || 3, TELL = S.GATE ? S.GATE.tell : 0.8;
+      let clock = -WAIT; // 発走からの秒（負はゲートの中）
       let acc = 0, last = null, done = false, result = null;
       let prev = sim.st.map(s => [s.x, s.lane, s.v]);
       let fin = null; // ゴール板を過ぎた：{ at（実時間）, pos, shown（着順を出した実時間） }
-      let lastBump = null, countShown = 0;
+      let lastBump = null, fretAt = -1e9;
       // ゴールした馬（と、模擬が止まったあとの全部の馬）は、映像の側で流して減速させる
       const coast = sim.st.map(() => null);
       if (AU) { AU.bgm('race', race); }
@@ -354,13 +368,11 @@
           if (AU && clock >= 0 && !sim.over) AU.raceUpdate(999, false, 0, 0);
         } else if (clock < 0) {
           const before = clock; clock += dt;
-          // 数え（3・2・1）。音で拍子を刻み、開く瞬間に合わせられるように
-          const n = Math.ceil(-clock);
-          if (clock < 0 && n !== countShown && n <= 3) { countShown = n; if (AU) AU.se('count'); }
+          // 数えは出さない・鳴らさない。開く TELL 秒前にゲートの上の灯がつく（race3d・ridecam が view.tell から描く）
           if (before < 0 && clock >= 0) {
             if (AU) { AU.se('gate'); AU.raceStart(); } if (RB) RB.fx('gate'); say('START', 'go');
             kick({ dur: 450, hz: 6, ay: 0.04, fov: 2 });
-            if (buffered) { buffered = false; doUp(); }
+            if (startRet) { startFx(startRet); startRet = null; upFx = performance.now(); if (AU) AU.se('click'); }
           }
         } else if (!sim.over) {
           acc += dt;
@@ -413,7 +425,10 @@
           t: clock, D: sim.D, surface: race.surface, ground: race.ground,
           course: { name: race.course, dir: course.dir, lap: sim.geo.lap, straight: sim.geo.straight, slope: sim.geo.slope },
           track: sim.track, me: sim.me, horses: lerpView(k), phase: clock < 0 ? 'gate' : me.done ? 'finish' : 'race',
+          tell: clock + TELL, // 前触れからの秒（負はまだ）。ゲートの上の灯と扉の小さな揺れ
         };
+        // 早押しで煽った馬は、ゲートの中で頭を上げる（0.5 秒）
+        if (clock < 0 && now - fretAt < 500) { const h = view.horses[sim.me]; h.kakari = Math.max(h.kakari || 0, 1 - (now - fretAt) / 500); }
         ctx.clearRect(0, 0, VW, VH);
         const camMode = clock < 0 ? 'gate' : VIEWS[viewI][1];
         if (r3) {
@@ -496,8 +511,7 @@
         drawFight(now);
         oriaiFeel(c, now);
         drawWhip(now);
-        if (clock < 0) countdown(now);
-        else if (!fin) topLeft(rank, meX); // ゴールのあとは着順の表示まで順位を伏せる
+        if (clock >= 0 && !fin) topLeft(rank, meX); // ゲートの中は数を出さない（目押し）。ゴールのあとは着順の表示まで順位を伏せる
         if (!fin || !fin.shown) { drawPace(now); timer(); radar(view, order, now); meters(c, now); }
         if (skillTag) drawSkill(skillTag, now);
         if (fin) finishFx(now);
@@ -510,19 +524,11 @@
           ctx.restore();
         }
       }
-      // ゲートの中：3・2・1 を真ん中に（毎秒ふくらんで縮む）
-      function countdown(now) {
-        const n = Math.ceil(-clock), u = n + clock; // u：その数字の残り（1→0）
-        if (n > 3) return;
-        const pop = 1 + 0.35 * Math.max(0, (u - 0.8) / 0.2);
-        ctx.save(); ctx.globalAlpha = Math.min(1, u * 3); ctx.translate(VW / 2, VH * 0.36); ctx.scale(pop, pop);
-        outlined(String(n), 0, 0, `900 italic 64px ${NUM}`, '#fff', 'center', 8);
-        ctx.restore();
-      }
       // 左上：順位と頭数、残りの帯（ハロンごとの目盛り）
       function topLeft(rank, meX) {
         const x = 16, y = 14, w = 232;
-        glass(x, y, w, 70, 12);
+        glass(x, y, w, 100, 12);
+        styleRow(x + 12, y + 72, w - 24, rank, meX / sim.D);
         outlined(String(rank), x + 14, y + 52, `900 italic 50px ${NUM}`, rank === 1 ? '#ffd34d' : '#fff', 'left', 5);
         ctx.font = `900 italic 50px ${NUM}`;
         const rw = ctx.measureText(String(rank)).width;
@@ -543,6 +549,33 @@
         ctx.fillStyle = 'rgba(0,0,0,0.55)';
         for (let m = 200; m < sim.D; m += 200) { const tx = bx + bw * (1 - m / sim.D); ctx.fillRect(tx, by, 1, 5); }
         ctx.save(); ctx.shadowColor = '#bfffd6'; ctx.shadowBlur = 8; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(bx + bw * pr, by + 2.5, 4, 0, TAU); ctx.fill(); ctx.restore();
+      }
+      // 左上の板の下の段：脚質の矢印4つ（出走表・馬の店の脚質の印と同じ形。左から 追込・差し・先行・逃げ。自分の脚質が赤く光る）
+      // 持ち主の指摘 2026-10-17「レース中　自分の馬の脚質見えるUIにして△4つならべるやつ」。文字は出さない。
+      // 矢印の下の細い帯：その脚質の得意な位置（S.ZONE。右ほど前）を金で、いまの位置（隊列の前から何割か）を点で。
+      // 点は隊列が決まるまで（距離の S.MISFIT_FROM まで）は白、そのあとは得意な位置の中なら緑、外れていれば金（外れていると折り合いを欠く）
+      const STYLE_ORDER = ['追込', '差し', '先行', '逃げ'];
+      function styleRow(x, y, w, rank, prog) {
+        const style = me.h.style, on = STYLE_ORDER.indexOf(style), aw4 = w / 4, h = 15, cy = y + 6;
+        for (let i = 0; i < 4; i++) {
+          const ax = x + i * aw4 + aw4 * 0.16, aw = aw4 * 0.68;
+          ctx.beginPath();
+          ctx.moveTo(ax, cy - h * 0.32); ctx.lineTo(ax + aw * 0.55, cy - h * 0.32); ctx.lineTo(ax + aw * 0.55, cy - h * 0.5); ctx.lineTo(ax + aw, cy);
+          ctx.lineTo(ax + aw * 0.55, cy + h * 0.5); ctx.lineTo(ax + aw * 0.55, cy + h * 0.32); ctx.lineTo(ax, cy + h * 0.32); ctx.closePath();
+          ctx.save();
+          if (i === on) { ctx.shadowColor = '#ff7d70'; ctx.shadowBlur = 12; ctx.fillStyle = '#ff8a7c'; ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,204,179,0.9)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+          else { ctx.fillStyle = 'rgba(9,26,17,0.6)'; ctx.fill(); ctx.strokeStyle = 'rgba(163,122,38,0.9)'; ctx.lineWidth = 1.2; ctx.stroke(); }
+          ctx.restore();
+        }
+        const by = y + 19, zone = S.ZONE[style] || S.ZONE['先行'];
+        ctx.fillStyle = HUD.off; ctx.fillRect(x, by, w, 3);
+        ctx.fillStyle = 'rgba(242,217,142,0.75)'; ctx.fillRect(x + w * (1 - zone[1]), by, w * (zone[1] - zone[0]), 3);
+        const n = sim.st.length;
+        if (n > 1 && rank > 0) {
+          const rk = (rank - 1) / (n - 1), off = Math.max(0, zone[0] - rk, rk - zone[1]);
+          const col = prog <= S.MISFIT_FROM ? '#fff' : off <= 0.05 ? HUD.good : HUD.warn;
+          ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x + w * (1 - rk), by + 1.5, 3.5, 0, TAU); ctx.fill(); ctx.restore();
+        }
       }
       // 右上：時計とレコード
       function timer() {

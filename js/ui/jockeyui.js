@@ -301,7 +301,8 @@
   };
   App.act.unreserve = d => { T.unreserve(d.id, d.key); App.save(); App.render(); };
   const toFarm0 = App.act['to-farm'], toStable0 = App.act['to-stable'];
-  App.act['to-farm'] = d => { const h = W.horse(d.id); if (isJ() && h) h.parked = true; toFarm0(d); };
+  // 騎手のゲームでは放牧に出さない（持ち主の指摘 2026-10-17「放牧いらない」。ボタンも出さない）。前のセーブで放牧に出していた馬は World.migrate が次の週に入厩へ戻す
+  App.act['to-farm'] = d => { if (isJ()) return; toFarm0(d); };
   App.act['to-stable'] = d => { const h = W.horse(d.id); if (isJ() && h) h.parked = false; toStable0(d); };
 
   // ---------- 騎乗依頼（使っていない） ----------

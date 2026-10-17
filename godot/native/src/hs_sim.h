@@ -71,7 +71,7 @@ struct Runner {
 
 struct Ctl {
 	double tension = 0;
-	bool started = false;
+	bool started = false, fumble = false;
 	double gear = 0;
 	bool handR = true;
 	double swapUntil = -1, lastPush = -9, lastPull = -9;
@@ -125,6 +125,7 @@ struct Sim {
 	double checkAt = 0;
 	bool hasCheck = false; double checkT = 0; godot::String checkVerdict; int checkLead = -1;
 	double top = 0;
+	double gateWait = 0; // ゲートで待つ秒（レースの種から）
 	~Sim() { if (ownTrack) delete track; }
 };
 
@@ -138,7 +139,7 @@ void skill_ids_clear();
 Sim *sim_create(const godot::Dictionary &race, const godot::Array &runners, const godot::Variant &w_idx, uint32_t rng_state, const godot::Dictionary &opts, double era_speed);
 bool sim_step(Sim &sim);
 godot::Dictionary sim_finish(Sim &sim);
-godot::Variant ctl_up(Sim &sim);
+godot::Variant ctl_up(Sim &sim, const godot::Variant &at = godot::Variant());
 godot::Variant ctl_down(Sim &sim);
 godot::Variant ctl_whip(Sim &sim, const godot::Variant &side);
 godot::Variant ctl_swap(Sim &sim);
