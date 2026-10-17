@@ -128,7 +128,6 @@
   // 勾配（比。0.02＝2%）の効き：上りの速さ・上りの消耗・下りの速さ・下りの楽さ
   S.HILL = { v: 0.4, e: 100, dv: 0.25, de: 10, mid: 0.4 };
   // 二の脚：出だし（距離の22%まで）の速さと消耗の倍率・隊列で前に取る位置（m）。自由自在：ペースを見て位置を変える（スロー・ハイの境目と、そこで取る差 m）・騎乗中の折り合いの崩れにくさ。砂かぶり×：脚の使い方の倍率
-  S.NINO = { spd: 1.01, cost: 0.9, pos: 2 };
   S.LONGSPURT = { r: 50, z: 0.002 }; // ロングスパート：仕掛けを早める（m）・バテたあとの粘り
   S.JIYU = { slow: 0.994, hi: 1.006, k: 0.5, misfit: 0.35 };
   S.SUNA = 1.08;
@@ -188,8 +187,8 @@
       return {
         r, h, i, A, vc, Ds, kickS, spurtR, guts, mind, slopeP, x: 0, v: 0, E: late ? 1 - S.LATE_E : 1, delay, late, kakariDay: kakari, // kakariDay＝この日は掛かりやすい（レースの初めのくじ）
         acc: K.a0 + K.a1 * kire, zubu: (8 - kire) * K.z + (has('longspurt') ? S.LONGSPURT.z : 0), spurtCost: K.c0 + K.c1 * (kire - 1) + K.cS * (kire - 4.5) * (330 - geo.straight) / 200, // 直線が長いほど切れる馬が、短いほどズブい馬が脚を効率よく使える
-        oonige: has('oonige') && h.style === '逃げ', nino: has('nino'), sora: has('sora'), sunaB: has('sunaB') && race.surface === 'ダ', jiyu: has('jiyu'),
-        gapAdj: has('nino') ? -S.NINO.pos : 0, driftLane: 0,
+        oonige: has('oonige') && h.style === '逃げ', sora: has('sora'), sunaB: has('sunaB') && race.surface === 'ダ', jiyu: has('jiyu'),
+        gapAdj: 0, driftLane: 0,
         me: false, fired: {}, boost: null, trig: [], sk: null, passive: [], passiveShown: false,
         lane: (r.num - 1) * 0.5, laneT: 0, spurting: false, done: false, finishT: null, t600: null, blocked: 0, blockedOnce: false,
         styleMult: rp.mult, gap: rp.gap, jiyuMove: rp.jiyu,
@@ -470,7 +469,7 @@
             target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * (1 + (sim.top + (s.topAdd || 0) - 1) * U.clamp(g, S.PUSH.base, 1)));
           } else if (prog < 0.22) {
             // 出だし：段の高さだけ速く（前へ）、深さだけ遅く（後ろへ）。出だしで押すと脚を使う
-            target = pace * s.styleMult * (s.nino ? S.NINO.spd : 1); if (s.nino) costMul *= S.NINO.cost; if (s.easyStart) costMul *= S.EASY_START;
+            target = pace * s.styleMult; if (s.easyStart) costMul *= S.EASY_START;
             if (g > 0) { target *= 1 + g * 0.03; costMul *= 1 + 0.6 * g; } else if (g < 0) target *= 1 + g * (prog < 0.15 ? 0.03 : 0.012);
           } else {
             // 道中：手綱の段で隊列の位置を決める（しごけば前へ・引けば後ろへ、段 1 で S.GEAR_GAP m）。段を戻さなければ、その位置を保つ。
@@ -524,8 +523,7 @@
           // ソラを使う：抜け出すと気を抜く
           if (s.sora && R < 200 && order[0] === s && order[1] && s.x - order[1].x > 2) { target *= 0.985; S.fire(sim, s, 'sora'); }
         } else if (prog < 0.22) {
-          target = pace * s.styleMult * (s.nino ? S.NINO.spd : 1) * (s.oonige ? S.OONIGE.early : 1);
-          if (s.nino) costMul *= S.NINO.cost;
+          target = pace * s.styleMult * (s.oonige ? S.OONIGE.early : 1);
           if (s.easyStart) costMul *= S.EASY_START;
         } else if (s.oonige) {
           target = pace * (s.x - leaderX < S.OONIGE.lead * straight * 2000 / D ? S.OONIGE.mid : 1);
@@ -605,7 +603,6 @@
     for (const s of st) {
       if (s.done || !s.passive) continue;
       if (!s.passiveShown && D - s.x <= straight) { s.passiveShown = true; for (const id of s.passive) S.fire(sim, s, id); }
-      if (s.nino && t > 1.5 && t < 2) S.fire(sim, s, 'nino');
       if (s.jiyuMove && t > 8 && t < 8.5) S.fire(sim, s, 'jiyu');
     }
     // ペースの目安：先頭がチェックポイントを過ぎたとき
