@@ -23,6 +23,10 @@ func _initialize() -> void:
 		[26, _key(KEY_Z), true], [27, _key(KEY_Z), false],
 		# 押し続け：十字キー右を 1 秒（60 コマ）→ 進路が 3 回以上
 		[30, _joy(JOY_BUTTON_DPAD_RIGHT), true], [90, _joy(JOY_BUTTON_DPAD_RIGHT), false],
+		[93, _joy(JOY_BUTTON_START), true], [94, _joy(JOY_BUTTON_START), false],
+		[96, _joy(JOY_BUTTON_A), true], [97, _joy(JOY_BUTTON_A), false],
+		[99, _joy(JOY_BUTTON_LEFT_SHOULDER), true], [100, _joy(JOY_BUTTON_LEFT_SHOULDER), false],
+		[102, _key(KEY_P), true], [103, _key(KEY_P), false],
 	]
 
 func _joy(b: int) -> InputEventJoypadButton:
@@ -51,7 +55,7 @@ func _process(_delta: float) -> bool:
 				ev.pressed = s[2]
 			Input.parse_input_event(ev)
 			Input.flush_buffered_events()
-	if frame < 100:
+	if frame < 106:
 		return false
 	_expect("十字キー右で進路+1", func(g): return g[1] == "lane" and g[2] == 1 and g[0] <= 3)
 	_expect("十字キー左で進路-1", func(g): return g[1] == "lane" and g[2] == -1 and g[0] >= 6 and g[0] <= 7)
@@ -60,8 +64,13 @@ func _process(_delta: float) -> bool:
 	_expect("← キーで進路-1", func(g): return g[1] == "lane" and g[2] == -1 and g[0] >= 18 and g[0] <= 19)
 	_expect("B で右ムチ", func(g): return g[1] == "whip" and g[2] == "R" and g[0] >= 22 and g[0] <= 23)
 	_expect("Z キーで左ムチ", func(g): return g[1] == "whip" and g[2] == "L" and g[0] >= 26 and g[0] <= 27)
+	_expect("Start で一時停止", func(g): return g[1] == "pause" and g[0] >= 93 and g[0] <= 94)
+	_expect("A で持ち替え（ゴールのあとは次へ）", func(g): return g[1] == "swap_or_ok" and g[0] >= 96 and g[0] <= 97)
+	_expect("LB で照準を前へ", func(g): return g[1] == "target" and g[2] == -1 and g[0] >= 99 and g[0] <= 100)
+	_expect("P キーで一時停止", func(g): return g[1] == "pause" and g[0] >= 102 and g[0] <= 103)
 	var held := got.filter(func(g): return g[1] == "lane" and g[2] == 1 and g[0] >= 30 and g[0] <= 91).size()
-	if held >= 3:
+	# すぐ1つ・0.28 秒でもう1つ・あとは 0.2 秒ごと（1 秒で 5 つ）
+	if held >= 4 and held <= 6:
 		print("  ok   押し続けで進路が続けて動く（%d 回）" % held)
 	else:
 		print("  FAIL 押し続けで進路が続けて動く（%d 回）" % held)

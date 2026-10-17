@@ -120,6 +120,19 @@ func advance_to(t: float) -> void:
 			_cur = nx
 			_t_cur += DT
 
+# 着順を出すとき：模擬を最後まで進めて結果を作る（ゴールのあと流している間に、まだの馬も決まる）
+func finish_now() -> void:
+	var guard := 0
+	while not sim.over and guard < 20000:
+		guard += 1
+		HSSim.step(sim)
+		for j in n:
+			var s = sim.st[j]
+			if finish_t[j] < 0.0 and s.done and s.finishT != null:
+				finish_t[j] = float(s.finishT)
+	if sim.over and order.size() == 0:
+		_finish()
+
 func _finish() -> void:
 	result = HSSim.finish(sim)
 	win_t = float(result.winnerTime)
