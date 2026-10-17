@@ -9,6 +9,8 @@
   const RD = HS.Ride = {};
   RD.speed = 1.35; // 進む速さの倍率（持ち主の指摘「ゲームスピード遅い」で実時間の1.35倍。走破タイムの表示は本当の秒のまま）
   RD.COOL = 2.4;   // ゴール板を過ぎてから着順を出すまでの秒（実時間。持ち主の指摘「ゴールしたら少し走ってから順位表示して」）。決めるボタンで飛ばせる
+  RD.COAST_V = 8.5;  // ゴールのあと流し続ける速さ（m/s。駈歩）。止めない（持ち主の指摘 2026-10-17「ゴールしたあと止まらないで」）
+  RD.COAST_DEC = 0.8; // そこまで落とす加減（m/s²。ゆっくり）
   const FC = () => HS.DATA.frameColors, FT = () => HS.DATA.frameText;
   const FONT = '"Noto Sans JP", sans-serif', NUM = '"Noto Sans JP", "Arial Narrow", sans-serif';
   const TAU = Math.PI * 2;
@@ -306,7 +308,6 @@
       let acc = 0, last = null, done = false, result = null;
       let prev = sim.st.map(s => [s.x, s.lane, s.v]);
       let fin = null; // ゴール板を過ぎた：{ at（実時間）, pos, shown（着順を出した実時間） }
-      let slowUntil = 0; // ゴール板の瞬間だけ、時の進みを落とす（見せ場の一瞬を止める）
       let lastBump = null, countShown = 0;
       // ゴールした馬（と、模擬が止まったあとの全部の馬）は、映像の側で流して減速させる
       const coast = sim.st.map(() => null);
@@ -341,7 +342,7 @@
         if (last == null) last = ts;
         const realDt = Math.min(0.1, (ts - last) / 1000);
         const now = performance.now();
-        const dt = realDt * RD.speed * (now < slowUntil ? 0.15 : 1); last = ts;
+        const dt = realDt * RD.speed; last = ts;
         pollPad();
         laneHold(now);
         orbit.yaw -= (camRate.yaw || 0) * 2.2 * realDt;
@@ -367,20 +368,19 @@
           while (acc >= 0.1 && !sim.over && guard++ < 20) { prev = sim.st.map(s => [s.x, s.lane, s.v]); S.step(sim); acc -= 0.1; }
           clock = sim.t + acc;
           if (me.done && !fin) {
-            // ゴール板：着順はまだ出さない。白い光・音・振動と、ほんの一瞬の溜め
+            // ゴール板：着順はまだ出さない。白い光・音・振動（時は止めない。持ち主の指摘 2026-10-17「ゴールしたあと止まらないで」）
             fin = { at: now, pos: sim.st.filter(s => s.done && s.finishT <= me.finishT).length, shown: null };
-            slowUntil = now + 160;
             if (AU) AU.se('goal');
             if (RB) RB.fx('cross');
           }
           if (AU) { const lead = Math.max(...sim.st.map(s => s.x)); AU.raceUpdate(sim.D - lead, sim.D - lead < sim.straight, sim.st.filter(s => !s.done).length, sim.st.filter(s => s.done).length); }
         }
         const k = clock < 0 ? 0 : U.clamp(acc / 0.1, 0, 1);
-        // 流す：ゴールした馬・止まったあとの馬は、映像の側で少しずつ速さを落とす（駈歩から常歩へ）
+        // 流す：ゴールした馬・模擬が終わったあとの馬は、映像の側で走り続け、ゆっくり速さを落とす（止めない。駈歩の速さで流し続ける）
         for (let j = 0; j < sim.st.length && !paused; j++) {
           const s = sim.st[j];
           if (!coast[j] && (s.done || sim.over)) coast[j] = { x: viewX(j, k), v: s.v };
-          if (coast[j]) { const c = coast[j]; c.v = Math.max(3.2, c.v - (c.v > 9 ? 2.4 : 1.1) * dt); c.x += c.v * dt; }
+          if (coast[j]) { const c = coast[j]; c.v = Math.max(RD.COAST_V, c.v - RD.COAST_DEC * dt); c.x += c.v * dt; }
         }
         if (fin && !fin.shown && now - fin.at > RD.COOL * 1000) reveal();
         if (sim.over && !result) {
