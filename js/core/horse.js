@@ -55,7 +55,6 @@
     slowpace: { label: 'スローペース○', note: '上がりの勝負に強い' },
     oonige: { label: '大逃げ', note: '後ろを大きく離して逃げる' },
     longspurt: { label: 'ロングスパート', note: '早めに動いて長く脚を使う' },
-    nino: { label: 'テンが速い', note: 'スタート後の加速が速く、脚を使わずに前の位置を取る' },
     jiyu: { label: '脚質自在', style: true, note: '脚質の一つとして見せる（特殊能力の並びには出さない）。流れを見て位置を変えられる。スローなら前、ハイなら後ろで運び、本来と違う位置でも折り合いを欠きにくい' },
     inner: { label: '内枠○', note: '内の枠で走る' },
     travel: { label: '海外○', note: '海外の大レースで力を出す' },
@@ -287,7 +286,7 @@
     if (HS.DATA.isForeign && !HS.DATA.isForeign(d) && cnt(r => r.region === '海外') >= 1) sk.push('travel');
     // 勝ち鞍から見えない癖は、名前ごとに決まった運で少しだけ
     if (sk.length < 2 && rng.chance(0.25)) {
-      const pool = d.style === '逃げ' ? ['nino', 'hipace'] : d.style === '先行' ? ['nino', 'fresh', 'tataki'] : ['longspurt', 'slowpace', 'hipace', 'tataki', 'fresh'];
+      const pool = d.style === '逃げ' ? ['hipace'] : d.style === '先行' ? ['fresh', 'tataki'] : ['longspurt', 'slowpace', 'hipace', 'tataki', 'fresh'];
       const x = rng.pick(pool); if (!sk.includes(x)) sk.push(x);
     }
     if (rng.chance(0.06)) sk.push(rng.pick(['deokure', 'kakari', 'sora']));

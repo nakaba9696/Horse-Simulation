@@ -443,7 +443,7 @@ check('sim: 脚の切れはコースで向き不向きがある', () => {
 });
 check('sim: 特殊能力の効き目が極端でない', () => {
   const out = [];
-  for (const sk of ['oonige', 'longspurt', 'big', 'nino']) {
+  for (const sk of ['oonige', 'longspurt', 'big', 'hipace']) {
     const r = fieldTest('東京', 2000, h => { h.skills = [sk]; if (sk === 'oonige') h.style = '逃げ'; }, 120);
     assert(r.win < 0.5, `${sk} の勝率 ${r.win}`);
     out.push(`${H.SKILLS[sk].label}${Math.round(r.win * 100)}%`);
@@ -999,7 +999,7 @@ check('original: 引退させた牡馬と牝馬からオリジナルホース。
   assert(s.parentBonus === 2 * O.BONUS_PER, `ボーナス ${s.parentBonus}`);
   // 特殊能力：両親で8つあれば4つ
   s.skills = ['big', 'longspurt']; s.trigFixed = ['isshun', 'chokusen'];
-  const m = mares[0]; m.skills = ['slowpace', 'nino']; m.trigFixed = ['oosoto', 'startdash'];
+  const m = mares[0]; m.skills = ['slowpace', 'tataki']; m.trigFixed = ['oosoto', 'startdash'];
   assert(O.candidates(s, m).length === 8, '候補が8つにならない');
   const n0 = W.mine().length;
   const r = O.make(s.id, m.id, 'テストオリジナル');
