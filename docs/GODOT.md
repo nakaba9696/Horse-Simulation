@@ -34,7 +34,7 @@ var h := HSHorse.from_historic(史実馬のデータ, "id")      # HSData.d().hi
 var runners := [{ horse = h, jockey = { name = "…", skill = 80.0 }, weight = 57.0, num = 1.0, frame = 1.0, rider = "P" }, …]
 var sim = HSSim.create(race, runners, HSHorse.week_index(2025, 11, 4), HSRng.new(種), { ride = true, frames = true, bond = 0 })  # 型は付けない（C++ か GDScript のどちらかが返る）
 # 0.1 秒ごとに
-HSSim.ctl_up(sim)        # しごく（ゲートの中ならスタート）。戻り値 "good"・"ok"・"late"・"fast"
+HSSim.ctl_up(sim, at)    # しごく（ゲートの中ならスタート）。at＝押した時刻（レースの秒。負はゲートの中。省くと sim.t）。戻り値 "good"・"ok"・"late"・"fumble"（早押しで馬が煽った。まだ出ていない）・"fast"
 HSSim.ctl_down(sim)      # 引く
 HSSim.ctl_whip(sim, "R") # ムチ（持っていない手なら持ち替え）。"ok"・"windmill"・"yore"・"tired"・"swap"
 HSSim.ctl_swap(sim)      # ムチの持ち替え
@@ -43,7 +43,7 @@ var over := HSSim.step(sim)   # 0.1 秒進める。終われば true
 var res := HSSim.finish(sim)  # { results, events, frames, D, straight, lap, winnerTime }
 ```
 - 引数・戻り値・項目の意味は JS の `js/core/racesim.js` と同じ。`rider == "P"` の馬が自分。`opts.ride` のときだけ操作を受け付ける（無ければ騎手の腕で自動に乗る）。`opts.frames` で実況と 0.2 秒ごとの記録（`frames`）を作る。
-- 描画で読む値：`sim.t`、`sim.st[i]`（`x`＝スタートからの距離・`lane`＝進路・`v`・`spurting`・`done`・`kakari`（掛かり・頭の上げ具合 0〜1。前の名前 `headUp` も読める）・`ears`・`fight`・`r.num`）、`sim.ctl`（`tension`・`gear`・`lane`・`hand`・`whipUntil`・`windmill`・`blockedNow`・`wide`・`kakariNow`・`reinFight`・`bumpT`（横に馬がいて止まった時刻。無ければ null）・`bumpSide`（押した向き ±1）・`lastEv`）、`sim.events`（実況）、`sim.skillFx`（特殊能力の発動）、`sim.track.at(残り)`・`h_at`・`g_at`、`sim.D`・`sim.straight`。
+- 描画で読む値：`sim.t`、`sim.gateWait`（ゲートで待つ秒。レースの種で決まる。開く `HSSim.GATE.tell` 秒前に前触れの灯をつける）、`sim.st[i]`（`x`＝スタートからの距離・`lane`＝進路・`v`・`spurting`・`done`・`kakari`（掛かり・頭の上げ具合 0〜1。前の名前 `headUp` も読める）・`ears`・`fight`・`r.num`）、`sim.ctl`（`tension`・`gear`・`lane`・`hand`・`whipUntil`・`windmill`・`blockedNow`・`wide`・`kakariNow`・`reinFight`・`bumpT`（横に馬がいて止まった時刻。無ければ null）・`bumpSide`（押した向き ±1）・`lastEv`）、`sim.events`（実況）、`sim.skillFx`（特殊能力の発動）、`sim.track.at(残り)`・`h_at`・`g_at`、`sim.D`・`sim.straight`。
 - 3D は JS の race3d と同じく、0.1 秒の刻みのあいだを補間して描けばよい。模擬の結果は描画に左右されない。
 - 戻り値は C++ の模擬（`HSNativeSim`）か GDScript の模擬（`HSSim.Sim`）。どちらも同じ名前で値を読めるので、`var sim = …` と型を付けずに持つ（`:=` は型が決まらず誤りになる）。`HSSim.kind_of(sim)` で "native"・"gd"。
 - C++ の模擬の馬・操作の値（`sim.st[i]`・`sim.ctl`）は読むだけ。模擬（`sim`）を持っている間だけ使う（模擬を捨てたあとに `sim.st[i]` だけを持ち続けない）。`sim.track` は `at`・`h_at`・`g_at`・`corner_at` と `L`・`straight`・`flat`・`line` などを読める（GDScript の HSTrack と同じ名前）。

@@ -17,6 +17,7 @@ var home1 := 0.0
 var rng := RandomNumberGenerator.new()
 var gate: Node3D
 var gate_doors: Array = []
+var gate_lamp: StandardMaterial3D
 var board_labels: Array = []
 
 func _init(track: ViewTrack, parent: Node3D, f: Font) -> void:
@@ -687,6 +688,24 @@ func build_gate(n := 16, D := 2400.0) -> void:
 		lab.rotation = Vector3(0, PI, 0)
 		lab.modulate = Color(1, 1, 1)
 		gate.add_child(lab)
+	# 前触れの灯（前の梁の上に枠ごとに1つ）：開く少し前（HSSim.GATE.tell 秒前）につく。目押しの合図（数・文字は出さない）
+	gate_lamp = StandardMaterial3D.new()
+	gate_lamp.albedo_color = Color(0.23, 0.14, 0.13)
+	gate_lamp.roughness = 0.4
+	gate_lamp.emission_enabled = true
+	gate_lamp.emission = Color(1.0, 0.36, 0.16)
+	gate_lamp.emission_energy_multiplier = 0.0
+	var lamp := BoxMesh.new()
+	lamp.size = Vector3(0.46, 0.24, 0.3)
+	for i in n:
+		_gate_mesh(lamp, gate_lamp, Vector3(i * GATE_P + GATE_P / 2, 3.68, -1.0))
+
+# 前触れの灯をつける・消す
+func set_lamps(on: bool) -> void:
+	if gate_lamp == null:
+		return
+	gate_lamp.albedo_color = Color(1.0, 0.42, 0.2) if on else Color(0.23, 0.14, 0.13)
+	gate_lamp.emission_energy_multiplier = 4.0 if on else 0.0
 
 func _gate_mesh(m: Mesh, mat: Material, p: Vector3) -> void:
 	var mi := MeshInstance3D.new()

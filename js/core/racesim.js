@@ -106,6 +106,12 @@
   S.temperF = s => 1 + Math.max(0, 70 - s.mind) / 25;
   S.START_ACC = 7.5; S.START_SKILL_ACC = 1.35; S.EASY_START = 0.95; // スタートの特殊能力が出たときの、出だしの加速の倍率と、距離の22%までの消耗の倍率
   S.LATE_E = 0.15; // 出遅れた馬は、位置を取り戻すのに脚を使う（スタミナの減り）
+  // ゲート（自分で乗る馬。持ち主の指摘 2026-10-17「スタートのカウントダウンいらない　目押しで」）。秒はレースの秒（画面は実時間の 1.35 倍で進む）
+  // wait＋spread×くじ＝ゲートに入ってから開くまで（レースの種で決まる。毎回少し違うので、覚えて押せない）。開く tell 秒前に前触れ（ゲートの上の灯がつき、扉が小さく鳴る）を見せる
+  // 開く buf 秒前から開いて good 秒までに押すと GOOD（buf の中は開いた瞬間に受け付ける）。それより前に押すと馬が煽って（気分 +fret×気性の荒さ）、そのスタートは GOOD にならず、fumble 秒より早くは出られない
+  S.GATE = { wait: 2.2, spread: 1.6, tell: 0.8, buf: 0.12, good: 0.1, fumble: 0.35, fret: 4 };
+  // ゲートで待つ秒（レースの種から。種の乱数は進めないので、ほかの結果は変わらない）
+  S.gateWaitOf = rng => S.GATE.wait + S.GATE.spread * new U.RNG((rng.s ^ 0x9E3779B9) >>> 0).next();
   S.PUSH = { base: 0.25 }; // 追い出したあと、しごかずに馬なりで行くときの伸び（段に置き換えた値）
   // 自分で乗る馬：しごいて巡航より速く走ると脚を大きく使う境目（直線の手前 m）。道中は手綱の段が隊列の位置の注文（段 1 で GEAR_GAP m 前・しごいている間の脚の使い方 GEAR_COST）。
   // 注文の位置へ寄せる強さ（差 1m あたりの速さの割合 POS_K と上限 POS_MAX）
@@ -208,6 +214,7 @@
       track: cf ? cf.track : null,
       me: -1, ctl: null, _byX: null,
       checkAt: D >= 2400 ? 1200 : D >= 1600 ? 1000 : 600, check: null, skillFx: [],
+      gateWait: 0,
     };
     // 終いの伸びの上限はペースで変わる：スローは脚が余っても伸びきれない（早めに動いて余った脚を使う）。ハイは脚の残りで決まる
     sim.top = S.KIRE.top * U.clamp(1 + (paceF - 1) * S.PACE_TOP, 0.55, 1.6);
@@ -223,13 +230,14 @@
       sim.me = meIdx;
       const s = st[meIdx]; s.me = true;
       if (opts.ride) {
-        sim.ctl = { tension: U.clamp(30 + (75 - st[meIdx].mind) * 0.4 * S.bondF(opts.bond) + (st[meIdx].kakariDay ? 15 : 0), 10, 70), started: false, gear: 0, hand: 'R', swapUntil: -1, lastPush: -9, lastPull: -9, pushes: 0, whips: 0, whipUntil: -1, windmill: false, lane: Math.min(3, s.lane), blockedNow: false, wide: false, kakariNow: false, behind: false,
+        sim.ctl = { tension: U.clamp(30 + (75 - st[meIdx].mind) * 0.4 * S.bondF(opts.bond) + (st[meIdx].kakariDay ? 15 : 0), 10, 70), started: false, fumble: false, gear: 0, hand: 'R', swapUntil: -1, lastPush: -9, lastPull: -9, pushes: 0, whips: 0, whipUntil: -1, windmill: false, lane: Math.min(3, s.lane), blockedNow: false, wide: false, kakariNow: false, behind: false,
           surge: 0, shrink: 0, pullT: 0, reinFight: false, bumpT: null, bumpSide: 0, bond: opts.bond, bondF: S.bondF(opts.bond), spurtTension: null, lastEv: null };
         Object.defineProperty(sim.ctl, 'push', { get() { return Math.max(0, this.gear); }, enumerable: false });
         Object.defineProperty(sim.ctl, 'hold', { get() { return this.gear < -0.05; }, enumerable: false });
         s.delay = 99; s.late = false; // スタートはプレイヤーの合図で
       }
     }
+    sim.gateWait = S.gateWaitOf(rng);
     S.say(sim, 0, 'スタートしました！', 'start');
     for (const s of st) if (s.late) S.say(sim, 0.6, `${s.h.name}、出遅れた！`, 'trouble');
     return sim;
@@ -252,16 +260,22 @@
   const rateOf = (c, t) => { c.taps = (c.taps || []).filter(x => t - x < 1); c.taps.push(t); return c.taps.length; };
   const gearStep = n => Math.min(0.25, 0.05 + 0.025 * Math.min(n, 8));
   S.ctl = {
-    // しごく。ゲートの中ならスタートの合図
-    up(sim) {
+    // しごく。ゲートの中ならスタートの合図。at＝押した時刻（レースの秒。負はゲートの中。省くと sim.t）
+    // スタートの戻り値：'good'（開く瞬間に合った）・'ok'・'late'（出遅れ）・'fumble'（早すぎて馬が煽った。まだ出ていない）。走っている間は 'ok'・'fast'
+    up(sim, at) {
       const c = sim.ctl; if (!c || sim.over) return null;
       const s = sim.st[sim.me];
       if (!c.started) {
+        const G = S.GATE;
+        let t = at == null ? sim.t : at < 0 ? at : Math.max(at, sim.t);
+        if (t < -G.buf) { c.fumble = true; c.tension = U.clamp(c.tension + G.fret * S.temperF(s), 0, 100); return 'fumble'; }
+        if (t < 0) t = 0; // 開く直前の押しは、開いた瞬間に受け付ける
         c.started = true;
-        if (sim.t < 0.05) { s.delay = 0.05; c.startGood = true; return 'good'; }
-        s.delay = sim.t; if (sim.t > 0.5) { s.late = true; s.E -= S.LATE_E; S.say(sim, sim.t, `${s.h.name}、出遅れた！`, 'trouble'); return 'late'; }
-        c.startGood = sim.t < 0.25;
-        return c.startGood ? 'good' : 'ok';
+        if (t < G.good && !c.fumble) { s.delay = 0.05; c.startGood = true; return 'good'; }
+        c.startGood = false;
+        s.delay = c.fumble ? Math.max(t, G.fumble) : t;
+        if (s.delay > 0.5) { s.late = true; s.E -= S.LATE_E; S.say(sim, sim.t, `${s.h.name}、出遅れた！`, 'trouble'); return 'late'; }
+        return 'ok';
       }
       const n = rateOf(c, sim.t), d = gearStep(n);
       const g0 = c.gear; c.gear = Math.min(1, c.gear + d);

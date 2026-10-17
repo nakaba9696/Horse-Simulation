@@ -17,6 +17,8 @@ static const double LEN = 2.4;
 static const double DS = 0.68, MISFIT = 10.0, MISFIT_FROM = 0.2, TENSE_COST = 1.0, KAKARI_COST = 1.6;
 static const double T_BASE = 25.0, T_HOT = 0.5, T_KAKARI = 15.0, T_SETTLE = 0.08, T_CALM = 1.2, T_LANE = 8.0;
 static const double START_ACC = 7.5, START_SKILL_ACC = 1.35, EASY_START = 0.95, LATE_E = 0.15, PUSH_BASE = 0.25;
+// ゲート（JS の S.GATE）：待つ秒＝wait＋spread×くじ（種の乱数は進めない）・GOOD の幅 buf と good・早押しの出の遅れ fumble・早押しで上がる気分 fret
+static const double G_WAIT = 2.2, G_SPREAD = 1.6, G_BUF = 0.12, G_GOOD = 0.1, G_FUMBLE = 0.35, G_FRET = 4.0;
 static const double LANE_V = 3.0, LANE_DX = 2.0, LANE_GAP = 0.8, LANE_DRIFT = 10.0;
 static const double EARLY_PUSH = 500.0, GEAR_GAP = 18.0, GEAR_COST = 0.05, POS_K = 0.004, POS_MAX = 0.03;
 static const double W_K = 0.4, W_WIND = 0.6, W_COST = 0.96, W_WINDCOST = 0.98, W_EARLY = 0.2, W_EARLYCOST = 1.2;
@@ -215,6 +217,7 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 			s.delay = 99.0; s.late = false;
 		}
 	}
+	{ Rng g; g.s = sim.rng.s ^ 0x9E3779B9u; if (!g.s) g.s = 1; sim.gateWait = G_WAIT + G_SPREAD * g.next(); }
 	say(sim, 0.0, U8("スタートしました！"), "start");
 	for (auto &s : sim.st) if (s.late) say(sim, 0.6, s.name + U8("、出遅れた！"), "trouble");
 	return simp;
@@ -229,17 +232,21 @@ static int rate_of(Ctl &c, double t) {
 }
 static inline double gear_step(int n) { return mn(0.25, 0.05 + 0.025 * std::min(n, 8)); }
 
-Variant ctl_up(Sim &sim) {
+Variant ctl_up(Sim &sim, const Variant &at) {
 	if (!sim.hasCtl || sim.over) return Variant();
 	Ctl &c = sim.ctl;
 	Runner &s = sim.st[sim.me];
 	if (!c.started) {
+		double t = sim.t;
+		if (at.get_type() != Variant::NIL) { double a = (double)at; t = a < 0 ? a : mx(a, sim.t); }
+		if (t < -G_BUF) { c.fumble = true; c.tension = clamp(c.tension + G_FRET * temperF(s), 0.0, 100.0); return String("fumble"); }
+		if (t < 0) t = 0; // 開く直前の押しは、開いた瞬間に受け付ける
 		c.started = true;
-		if (sim.t < 0.05) { s.delay = 0.05; c.startGood = 1; return String("good"); }
-		s.delay = sim.t;
-		if (sim.t > 0.5) { s.late = true; s.E -= LATE_E; say(sim, sim.t, s.name + U8("、出遅れた！"), "trouble"); return String("late"); }
-		c.startGood = sim.t < 0.25 ? 1 : 0;
-		return String(c.startGood ? "good" : "ok");
+		if (t < G_GOOD && !c.fumble) { s.delay = 0.05; c.startGood = 1; return String("good"); }
+		c.startGood = 0;
+		s.delay = c.fumble ? mx(t, G_FUMBLE) : t;
+		if (s.delay > 0.5) { s.late = true; s.E -= LATE_E; say(sim, sim.t, s.name + U8("、出遅れた！"), "trouble"); return String("late"); }
+		return String("ok");
 	}
 	int n = rate_of(c, sim.t); double d = gear_step(n);
 	double g0 = c.gear; c.gear = mn(1.0, c.gear + d);

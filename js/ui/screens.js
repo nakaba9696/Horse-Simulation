@@ -177,7 +177,9 @@
     const b = [];
     if (!h.name) b.push(`<button class="btn sm gold" data-act="name" data-id="${h.id}">名前を付ける</button>`);
     if (h.loc === 'farm' && age >= 2) b.push(`<button class="btn sm gold" data-act="to-stable" data-id="${h.id}">入厩させる</button>`);
-    if (h.loc === 'stable') b.push(`<button class="btn sm" data-act="to-farm" data-id="${h.id}">放牧に出す</button>`, `<button class="btn sm ${h.auto ? 'gold' : ''}" data-act="auto" data-id="${h.id}">おまかせ ${h.auto ? 'ON' : 'OFF'}</button>`);
+    // 放牧に出すのは馬主・生産者のゲームだけ（騎手のゲームは出さない。持ち主の指摘 2026-10-17「放牧いらない」。前のセーブで牧場にいる馬は「入厩させる」で戻せる）
+    const jockey = HS.Jockey && HS.Jockey.isMode();
+    if (h.loc === 'stable') b.push(...(jockey ? [] : [`<button class="btn sm" data-act="to-farm" data-id="${h.id}">放牧に出す</button>`]), `<button class="btn sm ${h.auto ? 'gold' : ''}" data-act="auto" data-id="${h.id}">おまかせ ${h.auto ? 'ON' : 'OFF'}</button>`);
     if ((h.loc === 'stable' || h.loc === 'farm') && (h.starts || 0) > 0) b.push(`<button class="btn sm" data-act="retire" data-id="${h.id}">引退</button>`);
     if (h.loc === 'mare') b.push(`<button class="btn sm gold" data-act="breed" data-id="${h.id}">種付け</button>`);
     b.push(`<button class="btn sm red" data-act="sell" data-id="${h.id}">売却（${U.money(W.sellPrice(h))}）</button>`);
