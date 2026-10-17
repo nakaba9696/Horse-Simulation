@@ -99,9 +99,149 @@
       "loop_offset": 3,
       "loop_begin_sample": 132300,
       "loop_end_sample": 3018828
+    },
+    "paddockUK": {
+      "file": "paddockUK.ogg",
+      "scene": "パドック_イギリス・アイルランド",
+      "loop": true,
+      "bpm": 104,
+      "seconds": 58.385,
+      "loop_offset": 3,
+      "loop_begin_sample": 132300,
+      "loop_end_sample": 2574796
+    },
+    "raceUK": {
+      "file": "raceUK.ogg",
+      "scene": "レース_イギリス・アイルランド",
+      "loop": true,
+      "bpm": 172,
+      "seconds": 64.396,
+      "loop_offset": 8.581497,
+      "loop_begin_sample": 378444,
+      "loop_end_sample": 2839884
+    },
+    "paddockFR": {
+      "file": "paddockFR.ogg",
+      "scene": "パドック_フランス",
+      "loop": true,
+      "bpm": 120,
+      "seconds": 67,
+      "loop_offset": 3,
+      "loop_begin_sample": 132300,
+      "loop_end_sample": 2954700
+    },
+    "raceFR": {
+      "file": "raceFR.ogg",
+      "scene": "レース_フランス",
+      "loop": true,
+      "bpm": 128,
+      "seconds": 63,
+      "loop_offset": 10.500045,
+      "loop_begin_sample": 463052,
+      "loop_end_sample": 2778316
+    },
+    "paddockUS": {
+      "file": "paddockUS.ogg",
+      "scene": "パドック_アメリカ・カナダ",
+      "loop": true,
+      "bpm": 92,
+      "seconds": 65.61,
+      "loop_offset": 3,
+      "loop_begin_sample": 132300,
+      "loop_end_sample": 2893388
+    },
+    "raceUS": {
+      "file": "raceUS.ogg",
+      "scene": "レース_アメリカ・カナダ",
+      "loop": true,
+      "bpm": 152,
+      "seconds": 63,
+      "loop_offset": 6.157914,
+      "loop_begin_sample": 271564,
+      "loop_end_sample": 2778316
+    },
+    "paddockAU": {
+      "file": "paddockAU.ogg",
+      "scene": "パドック_オーストラリア",
+      "loop": true,
+      "bpm": 116,
+      "seconds": 60.931,
+      "loop_offset": 3,
+      "loop_begin_sample": 132300,
+      "loop_end_sample": 2687052
+    },
+    "raceAU": {
+      "file": "raceAU.ogg",
+      "scene": "レース_オーストラリア",
+      "loop": true,
+      "bpm": 148,
+      "seconds": 58.134,
+      "loop_offset": 6.243175,
+      "loop_begin_sample": 275324,
+      "loop_end_sample": 2563708
+    },
+    "paddockHK": {
+      "file": "paddockHK.ogg",
+      "scene": "パドック_香港・シンガポール",
+      "loop": true,
+      "bpm": 100,
+      "seconds": 60.6,
+      "loop_offset": 3,
+      "loop_begin_sample": 132300,
+      "loop_end_sample": 2672460
+    },
+    "raceHK": {
+      "file": "raceHK.ogg",
+      "scene": "レース_香港・シンガポール",
+      "loop": true,
+      "bpm": 146,
+      "seconds": 58.89,
+      "loop_offset": 6.287619,
+      "loop_begin_sample": 277284,
+      "loop_end_sample": 2597028
+    },
+    "paddockME": {
+      "file": "paddockME.ogg",
+      "scene": "パドック_ドバイ・サウジ",
+      "loop": true,
+      "bpm": 96,
+      "seconds": 63,
+      "loop_offset": 3,
+      "loop_begin_sample": 132300,
+      "loop_end_sample": 2778316
+    },
+    "raceME": {
+      "file": "raceME.ogg",
+      "scene": "レース_ドバイ・サウジ",
+      "loop": true,
+      "bpm": 138,
+      "seconds": 65.609,
+      "loop_offset": 9.956553,
+      "loop_begin_sample": 439084,
+      "loop_end_sample": 2893356
+    },
+    "paddockDE": {
+      "file": "paddockDE.ogg",
+      "scene": "パドック_ドイツ",
+      "loop": true,
+      "bpm": 108,
+      "seconds": 56.333,
+      "loop_offset": 3,
+      "loop_begin_sample": 132300,
+      "loop_end_sample": 2484300
+    },
+    "raceDE": {
+      "file": "raceDE.ogg",
+      "scene": "レース_ドイツ",
+      "loop": true,
+      "bpm": 144,
+      "seconds": 63,
+      "loop_offset": 9.666667,
+      "loop_begin_sample": 426300,
+      "loop_end_sample": 2778300
     }
   },
   "note": "tools/render_bgm.js が js/ui/audio.js の曲から書き出す（手で直さない）。くり返す曲は、終わりまで鳴らしたら loop_offset 秒へ戻る",
   "sample_rate": 44100,
-  "source_hash": "75b8e5d89b90dc68"
+  "source_hash": "e983aeec84dde6aa"
 }

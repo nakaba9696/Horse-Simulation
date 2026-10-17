@@ -39,7 +39,29 @@ module.exports = function (check, assert, HS) {
     const loops = SCENE_SONGS.filter(k => r[k].loop);
     assert(new Set(loops.map(k => r[k].bpm)).size === loops.length, '場面の曲の速さが重なっている');
     assert(loops.every(k => k === 'race' || r[k].bpm < r.race.bpm), 'レースの曲がいちばん速くない');
+    // 国の曲：7th・テンションの和音が多く、楽器は4つ以上、レースはその国のパドックより速い
+    for (const g of new Set(Object.values(HS.Audio.REGION))) {
+      for (const k of ['paddock' + g, 'race' + g]) { assert(r[k] && r[k].loop, `国の曲 ${k} が無い`); assert(r[k].rich >= 0.6, `${k} の 7th・テンションの和音が ${Math.round(r[k].rich * 100)}%`); assert(r[k].instruments.length >= 4, `${k} の楽器が ${r[k].instruments.length}`); }
+      assert(r['race' + g].bpm > r['paddock' + g].bpm, `race${g} が paddock${g} より速くない`);
+    }
     return loops.map(k => `${k} ${r[k].bpm}`).join('・');
+  });
+  check('audio: 海外のレースはその国の曲（GF はその特別な曲）', () => {
+    const AU = HS.Audio, D = HS.DATA;
+    const countries = new Set(Object.values(D.courses).map(c => c.country).filter(Boolean));
+    for (const c of countries) assert(AU.REGION[c], `国 ${c} の曲が決まっていない`);
+    for (const [name, c] of Object.entries(D.courses)) {
+      const race = { course: name, grade: 'G1' }, g = c.country && AU.REGION[c.country];
+      for (const sc of ['paddock', 'race']) {
+        const want = g ? sc + g : sc;
+        assert(AU.songFor({ scene: sc }, race) === want, `${name} の ${sc} の曲が ${AU.songFor({ scene: sc }, race)}（${want} のはず）`);
+        assert(AU.SONGS[want], `${want} が無い`);
+      }
+    }
+    assert(AU.songFor({ scene: 'paddock' }, { course: '東京', grade: 'GF' }) === 'paddockGF', 'GF のパドックの曲が違う');
+    assert(AU.songFor({ scene: 'race' }, { course: 'ロンシャン', country: '仏' }) === 'raceFR' && AU.songFor({ scene: 'race' }, null) === 'race', '国の曲の選び方が違う');
+    assert(AU.songFor({ scene: 'fanfare' }, { course: 'ロンシャン' }) === 'fanfare', 'ファンファーレは国で替えない');
+    return [...countries].map(c => `${c}→${AU.REGION[c]}`).join('・');
   });
   check('audio: Godot 用の書き出しと聞き比べのファイルが今の曲から作られている', () => {
     const R = require(path.join(ROOT, 'tools/render_bgm.js')), AU = HS.Audio;
