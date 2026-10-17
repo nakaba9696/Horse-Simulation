@@ -158,6 +158,9 @@ func _make() -> void:
 	celebrate("オリジナルホースが生まれた", String(r.horse.name), "父 %s・母 %s%s" % [r.horse.sire, r.horse.dam, "・ボーナス +%s" % HSU.num(r.bonus) if r.bonus else ""], func(): go("stable"))
 
 func focus_first() -> void:
+	if b_make and not b_make.disabled and sire != "" and dam != "":
+		b_make.grab_focus.call_deferred()
+		return
 	if _focus_id != "":
 		for b in rows:
 			if String(b.get_meta("id", "")) == _focus_id:

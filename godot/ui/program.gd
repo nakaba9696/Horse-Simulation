@@ -53,7 +53,7 @@ func build() -> void:
 	scroll.size = Vector2(1600 - PAD_X * 2, 1000 - 330 - 56)
 	add_child(scroll)
 	list = VBoxContainer.new()
-	list.add_theme_constant_override("separation", 3)
+	list.add_theme_constant_override("separation", 2)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(list)
 	_fill(false)
@@ -187,7 +187,7 @@ func _seg(label: String, key: String, opts: Array) -> HBoxContainer:
 func _row(h: Dictionary, r: Dictionary) -> Button:
 	var race: Dictionary = r.race
 	var mine: bool = r.state != null
-	var rb := UiScreen.row_button(36, mine)
+	var rb := UiScreen.row_button(32, mine)
 	var b: Button = rb[0]
 	var hb: HBoxContainer = rb[1]
 	var faded: bool = r.why != null and not mine
@@ -208,7 +208,9 @@ func _row(h: Dictionary, r: Dictionary) -> Button:
 	cl.custom_minimum_size.x = COLS[2][1]
 	cl.add_theme_constant_override("separation", 6)
 	cl.add_child(UiTheme.label(String(race.course), 14))
-	cl.add_child(UiTheme.chip("%s%sm" % [race.surface, HSU.num(race.dist)], UiTheme.TURF if race.surface == "芝" else UiTheme.DIRT, Color.WHITE, 12))
+	var sc := UiTheme.chip("%s%sm" % [race.surface, HSU.num(race.dist)], UiTheme.TURF if race.surface == "芝" else UiTheme.DIRT, Color.WHITE, 12)
+	sc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	cl.add_child(sc)
 	hb.add_child(cl)
 	var dm := UiTheme.mark(int(r.dist))
 	dm.custom_minimum_size.x = COLS[3][1]

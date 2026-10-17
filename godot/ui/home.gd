@@ -262,6 +262,26 @@ func _build_lower() -> void:
 	if n == 0:
 		(pb[1] as VBoxContainer).add_child(UiTheme.label("8週先までなし", 14, UiTheme.FAINT))
 	b.add_child(pb[0])
+	# 今週の重賞（お手馬が少ないときに空く下半分を、今週の様子で埋める）
+	var gr: Array = HSWorld.week_races().filter(func(r): return r.get("graded") and r.get("region") in ["JRA", "海外"])
+	if gr.size() and HSWorld.mine("stable").size() + HSWorld.mine("farm").size() < 7:
+		left.add_child(UiScreen.section("今週の重賞", "%d" % gr.size()))
+		var pw := UiScreen.panel_box(false, 3)
+		for r in gr.slice(0, 5):
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 8)
+			row.add_child(UiTheme.class_chip(HSRaces.grade_badge(r), true, 11))
+			var nl := UiTheme.label("%s　%s %s%sm　%s" % [HSRaces.label(r), r.course, r.surface, HSU.num(r.dist), _age_cond(r)], 14)
+			nl.clip_text = true
+			nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(nl)
+			(pw[1] as VBoxContainer).add_child(row)
+		left.add_child(pw[0])
+
+static func _age_cond(r: Dictionary) -> String:
+	var s: String = {"2": "2歳", "3": "3歳", "3+": "3歳以上", "4+": "4歳以上"}.get(String(HSU.or_(r.get("age"), "")), "")
+	if r.get("sex") == "牝": s += "牝"
+	return s
 
 # ---- 右：騎乗依頼・GF の招待・今週の騎乗・ニュース ----
 func _build_right() -> void:

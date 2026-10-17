@@ -19,6 +19,7 @@ var top_box: VBoxContainer
 var scroll: ScrollContainer
 var list: VBoxContainer
 var pv: VBoxContainer
+var portrait: UiHorsePortrait
 var b_buy: Button
 var stat_own: PanelContainer
 
@@ -206,20 +207,23 @@ func _unhandled_input(ev: InputEvent) -> void:
 # ---- 右の見本 ----
 func _preview(i: int) -> void:
 	sel = maxi(0, i)
-	for c in pv.get_children(): c.queue_free()
+	for c in pv.get_children():
+		if c != portrait: c.queue_free()
 	b_buy = null
 	if i < 0 or i >= shown.size():
 		pv.add_child(UiTheme.label("馬を選ぶと、ここに能力が出ます", 14, UiTheme.MUTED))
+		if portrait: portrait.visible = false
 		return
 	var x: Dictionary = shown[i]
 	var h: Dictionary = x.it.horse
 	var G = HSWorld.G
 	# 毛色の帯（絵の代わりに、毛色と勝負服の色）
-	var L := UiArt.coat_look(String(HSU.or_(h.get("coat"), "鹿毛")), 2.0)
-	var sw := ColorRect.new()
-	sw.color = Color(String(L.body))
-	sw.custom_minimum_size = Vector2(0, 10)
-	pv.add_child(sw)
+	if portrait == null:
+		portrait = UiHorsePortrait.new()
+		portrait.custom_minimum_size = Vector2(0, 170)
+		pv.add_child(portrait)
+	portrait.visible = true
+	portrait.set_horse(String(h.name), String(HSU.or_(h.get("coat"), "鹿毛")), 2.0)
 	var t := UiTheme.title(String(h.name), 22, UiTheme.GOLD_BRIGHT if x.it.get("legend") else UiTheme.IVORY)
 	t.clip_text = true
 	pv.add_child(t)

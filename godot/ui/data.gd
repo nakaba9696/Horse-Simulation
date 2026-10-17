@@ -3,7 +3,7 @@
 # 中身は G（HSWorld.G）の記録と HSJockey・HSSpecial・HSTrophy・HSHall を読むだけ
 extends UiScreen
 
-const TABS := [["me", "わたしの成績"], ["special", "スペシャルホース"], ["trophy", "トロフィー"], ["lead", "リーディング"], ["awards", "騎手の表彰"], ["hall", "殿堂"], ["course", "コースレコード"], ["gf", "GF"]]
+const TABS := [["me", "わたしの成績"], ["special", "スペシャルホース"], ["trophy", "トロフィー"], ["lead", "リーディング"], ["awards", "騎手の表彰"], ["hall", "殿堂"], ["course", "コースレコード"], ["mounts", "乗った馬"], ["hist", "騎乗の記録"], ["gf", "GF"]]
 
 var tab := 0
 var lead_y := -1.0
@@ -66,6 +66,8 @@ func _fill() -> void:
 		"hall": _hall()
 		"course": _course()
 		"gf": _gf()
+		"mounts": _mounts()
+		"hist": _hist()
 	if kb_hint: kb_hint.text = _note()
 	focus_first()
 
@@ -256,6 +258,38 @@ func _course() -> void:
 		var mine: bool = r.get("rode") == true or r.get("mine") == true
 		_row([["%s %s%sm" % [p[0], "ダート" if p[1] == "ダ" else "芝", p[2]], 260], [HSU.time(float(r.t)), 110, UiTheme.GOLD_BRIGHT, R], [String(r.name), 0, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY],
 			[String(HSU.or_(r.get("jockey"), "")), 180, UiTheme.MUTED], [String(HSU.or_(r.get("race"), "")), 260, UiTheme.MUTED], [yl(r.year), 100, UiTheme.MUTED, R]], mine)
+
+# これまでに乗った馬（勝ち数・最高の着順・騎乗数の順）
+func _mounts() -> void:
+	var ms: Dictionary = HSU.or_(HSJockey.me().get("mounts"), {})
+	list.add_child(UiScreen.section("乗った馬", "%d頭" % ms.size()))
+	if ms.is_empty():
+		_empty("まだ乗っていません")
+		return
+	var names := ms.keys()
+	names = HSU.stable_sort(names, func(a, b):
+		var x: Dictionary = ms[a]
+		var y: Dictionary = ms[b]
+		if x.wins != y.wins: return x.wins > y.wins
+		if x.best != y.best: return x.best < y.best
+		return x.rides > y.rides)
+	_head([["馬", 0], ["騎乗", 110, UiTheme.MUTED, R], ["1着", 110, UiTheme.MUTED, R], ["最高", 110, UiTheme.MUTED, R]])
+	for n in names.slice(0, 60):
+		var m: Dictionary = ms[n]
+		_row([[String(n), 0, UiTheme.GOLD_BRIGHT if m.best <= 3 else UiTheme.IVORY], [str(int(m.rides)), 110, UiTheme.IVORY, R], [str(int(m.wins)), 110, UiTheme.IVORY, R], ["%d着" % int(m.best), 110, UiTheme.MUTED, R]])
+
+# 騎乗の記録（新しい順）
+func _hist() -> void:
+	var hs: Array = HSJockey.me().history
+	list.add_child(UiScreen.section("騎乗の記録", "%d鞍" % hs.size()))
+	if hs.is_empty():
+		_empty("まだ騎乗していません")
+		return
+	_head([["日付", 170], ["格", 60, UiTheme.MUTED, C], ["レース", 0], ["馬", 260], ["人気", 90, UiTheme.MUTED, R], ["着順", 90, UiTheme.MUTED, R]])
+	for r in hs.slice(0, 80):
+		var p := int(r.pos)
+		_row([["%s %s月%s週" % [yl(r.y), HSU.num(r.m), HSU.num(r.w)], 170, UiTheme.MUTED], [String(HSU.or_(r.get("grade"), "")), 60, UiTheme.GOLD_BRIGHT, C], [String(r.race), 0], [String(r.horse), 260],
+			[str(int(HSU.or_(r.get("pop"), 0))), 90, UiTheme.MUTED, R], ["%d着" % p, 90, UiTheme.GOLD_BRIGHT if p <= 3 else UiTheme.IVORY, R]], p == 1)
 
 # グランドフィナーレ：区分ごとに、いまの1位と自分の馬のいちばん上の順位
 func _gf() -> void:
