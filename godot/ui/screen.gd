@@ -18,6 +18,9 @@ var shots: Array = []
 var out_dir := "res://out"
 var clock := 0.0
 var demo := -1
+var _modal: Control = null       # 小窓（確かめ・見せ場）。開いている間は Esc・B で閉じる
+var _modal_back: Callable
+var _modal_focus: Control = null
 var _toast: PanelContainer
 var _toast_until := 0.0
 
@@ -32,6 +35,13 @@ func _ready() -> void:
 				UiFlow.demo_week(demo)
 			else:
 				UiFlow.demo(demo)
+			if OS.get_cmdline_user_args().has("--setup=retire"):
+				# 撮影の見本：牡馬と牝馬を1頭ずつ引退させる（生産・牧場の画面）
+				for sx in ["牡", "牝"]:
+					for h in HSWorld.mine():
+						if h.get("loc") != "retired" and (h.sex == "牝") == (sx == "牝"):
+							HSJockey.retire(h.id)
+							break
 		else:
 			UiFlow.go.call_deferred(get_tree(), "title")
 			return
@@ -43,6 +53,12 @@ func _ready() -> void:
 	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(fade)
 	enter_anim()
+	# 撮影の見本：見せ場とご褒美の場面
+	var args := OS.get_cmdline_user_args()
+	if args.has("--setup=celebrate"):
+		celebrate("トロフィーを手にした", "三冠", "サンプルホース・ボーナス賞金 5億円")
+	elif args.has("--setup=scene"):
+		owner_scene({"oid": "makino", "kind": "up1", "reward": "祝いの品 100万円"})
 	if shots.size() > 0:
 		_capture()
 	else:
@@ -216,6 +232,15 @@ static func button(text: String, gold := false, w := 0.0, h := 44.0, fs := 18) -
 	b.mouse_entered.connect(func(): if b.focus_mode != Control.FOCUS_NONE: b.grab_focus())
 	return b
 
+# 横の余白の小さいボタン（コマンドの札を1行に並べるとき）
+static func compact(b: Button, padx := 8.0) -> void:
+	var th := UiTheme.get_theme()
+	for st in ["normal", "hover", "focus", "pressed", "hover_pressed", "disabled"]:
+		var sb := (b.get_theme_stylebox(st) if b.has_theme_stylebox_override(st) else th.get_stylebox(st, "Button")).duplicate() as StyleBox
+		sb.content_margin_left = padx
+		sb.content_margin_right = padx
+		b.add_theme_stylebox_override(st, sb)
+
 # 能力の数の札（docs/UI.md「能力の数の札」：低い 205 青 → 高い 35 金赤）
 static func num_chip(v: float, lo := 40.0, hi := 85.0, big := false) -> PanelContainer:
 	var u := clampf((v - lo) / (hi - lo), 0.0, 1.0)
@@ -226,6 +251,170 @@ static func spacer() -> Control:
 	var s := Control.new()
 	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return s
+
+# ---- 小窓（docs/UI.md 4「取り返しのつかない確かめは『やめる』を先に選ぶ」） ----
+func open_modal(panel: Control, first: Control = null, on_cancel := Callable(), dim_a := 0.62) -> void:
+	close_modal()
+	_modal_focus = get_viewport().gui_get_focus_owner()
+	var dim := ColorRect.new()
+	dim.color = Color(0.0, 0.03, 0.02, dim_a)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(dim)
+	var cc := CenterContainer.new()
+	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.add_child(cc)
+	cc.add_child(panel)
+	_modal = dim
+	_modal_back = on_cancel
+	dim.modulate.a = 0.0
+	create_tween().tween_property(dim, "modulate:a", 1.0, 0.16)
+	if first:
+		first.grab_focus.call_deferred()
+
+func close_modal() -> void:
+	if _modal == null:
+		return
+	_modal.queue_free()
+	_modal = null
+	if is_instance_valid(_modal_focus) and _modal_focus.is_inside_tree():
+		_modal_focus.grab_focus()
+
+# 確かめ：本文と、危ない操作のボタン（暗い赤）。カーソルは「やめる」から
+func confirm(text: String, ok_label: String, on_ok: Callable) -> void:
+	var pb := UiScreen.panel_box(true, 16)
+	var p: PanelContainer = pb[0]
+	p.custom_minimum_size = Vector2(560, 0)
+	var t := UiTheme.title(text, 20)
+	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	t.custom_minimum_size.x = 520
+	(pb[1] as VBoxContainer).add_child(t)
+	var h := HBoxContainer.new()
+	h.alignment = BoxContainer.ALIGNMENT_END
+	h.add_theme_constant_override("separation", 12)
+	var no := UiScreen.button("やめる", false, 150, 48, 17)
+	no.pressed.connect(close_modal)
+	h.add_child(no)
+	var ok := UiScreen.danger_button(ok_label)
+	ok.pressed.connect(func(): close_modal(); on_ok.call())
+	h.add_child(ok)
+	(pb[1] as VBoxContainer).add_child(h)
+	open_modal(p, no)
+
+# 見せ場（重賞の優勝・トロフィー・スペシャルホース・オリジナルホースの誕生）：光の筋と紙吹雪・大きな明朝の題字。決定で閉じる
+func celebrate(kicker: String, title: String, sub: String, on_done := Callable()) -> void:
+	var box := Control.new()
+	box.custom_minimum_size = Vector2(1600, 1000)
+	var fx := UiCelebrate.new()
+	box.add_child(fx)
+	var v := VBoxContainer.new()
+	v.set_anchors_preset(Control.PRESET_CENTER)
+	v.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	v.grow_vertical = Control.GROW_DIRECTION_BOTH
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", 10)
+	box.add_child(v)
+	v.add_child(UiTheme.label(kicker, 22, UiTheme.GOLD_BRIGHT, HORIZONTAL_ALIGNMENT_CENTER))
+	var t := UiTheme.title(title, 76, UiTheme.IVORY)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	t.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	t.add_theme_constant_override("shadow_offset_y", 4)
+	v.add_child(t)
+	var line := ColorRect.new()
+	line.color = UiTheme.GOLD
+	line.custom_minimum_size = Vector2(520, 2)
+	line.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	v.add_child(line)
+	if sub != "":
+		var sl := UiTheme.label(sub, 20, UiTheme.IVORY, HORIZONTAL_ALIGNMENT_CENTER)
+		v.add_child(sl)
+	var b := UiScreen.button("つづける", true, 260, 56, 22)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var done := func():
+		close_modal()
+		if on_done.is_valid(): on_done.call()
+	b.pressed.connect(done)
+	var bm := MarginContainer.new()
+	bm.add_theme_constant_override("margin_top", 30)
+	bm.add_child(b)
+	bm.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	v.add_child(bm)
+	t.scale = Vector2(1.25, 1.25)
+	t.pivot_offset = Vector2(400, 50)
+	open_modal(box, b, done, 0.88)
+	create_tween().tween_property(t, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+# 馬主のご褒美の場面（js/ui/ownersui.js の ownerScene）：胸から上の顔・何が起きたか・名前と立場・台詞・ご褒美・「ありがとうございます」
+const OWNER_KICK := {"up1": "間柄が「信頼」になった", "up2": "間柄が「主戦」になった", "up3": "間柄が「相棒」になった", "bond": "好感度がいっぱいになった", "gift": "引退した馬を譲ってもらった", "award": "名コンビ賞"}
+func owner_scene(q: Dictionary, on_done := Callable()) -> void:
+	var o = HSOwners.by(String(q.oid))
+	if o == null:
+		if on_done.is_valid(): on_done.call()
+		return
+	var p := PanelContainer.new()
+	var sb := UiTheme.panel_gold(0.95)
+	sb.border_color = Color(String(o.silks.base)).lerp(UiTheme.GOLD, 0.5)
+	sb.set_border_width_all(2)
+	p.add_theme_stylebox_override("panel", sb)
+	p.custom_minimum_size = Vector2(1000, 520)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 28)
+	p.add_child(hb)
+	var fp := "res://assets/owners/%s_joy.webp" % q.oid
+	if ResourceLoader.exists(fp):
+		var tr := TextureRect.new()
+		tr.texture = load(fp)
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.custom_minimum_size = Vector2(380, 480)
+		hb.add_child(tr)
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", 10)
+	hb.add_child(v)
+	v.add_child(UiTheme.label(String(OWNER_KICK.get(q.kind, "")), 18, UiTheme.GOLD_BRIGHT))
+	var nh := HBoxContainer.new()
+	nh.add_theme_constant_override("separation", 12)
+	nh.add_child(UiTheme.title(String(o.name), 34))
+	nh.add_child(UiTheme.label(String(o.get("title", "")), 14, UiTheme.MUTED))
+	v.add_child(nh)
+	var lines := HSOwners.scene_lines(String(q.oid), String(q.kind), {"horse": q.get("horse", "")})
+	var labs: Array = []
+	for t in lines:
+		var l := UiTheme.label("「%s」" % t, 17)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = 520
+		l.modulate.a = 0.0
+		v.add_child(l)
+		labs.append(l)
+	if q.get("reward"):
+		var rl := UiTheme.label("ご褒美：%s" % q.reward, 18, UiTheme.GOLD_BRIGHT)
+		rl.modulate.a = 0.0
+		v.add_child(rl)
+		labs.append(rl)
+	var b := UiScreen.button("ありがとうございます", true, 300, 54, 20)
+	var done := func():
+		close_modal()
+		if on_done.is_valid(): on_done.call()
+	b.pressed.connect(done)
+	v.add_child(b)
+	open_modal(p, b, done)
+	for i in labs.size():
+		create_tween().tween_property(labs[i], "modulate:a", 1.0, 0.3).set_delay(0.15 + i * 0.35)
+
+# 危ない操作（引退・放す・消す）のボタン：暗い赤
+static func danger_button(text: String, w := 180.0, h := 48.0, fs := 17) -> Button:
+	var b := UiScreen.button(text, false, w, h, fs)
+	var n := UiTheme.box(Color("5a1f1c"), Color("8a3a33"), 1, UiTheme.R_BUTTON, Vector4(20, 9, 20, 11))
+	n.border_width_bottom = 4
+	var f := n.duplicate() as StyleBoxFlat
+	f.border_color = UiTheme.BAD
+	f.set_border_width_all(2)
+	f.border_width_bottom = 4
+	b.add_theme_stylebox_override("normal", n)
+	b.add_theme_stylebox_override("hover", f)
+	b.add_theme_stylebox_override("focus", f)
+	return b
 
 # ---- トースト（押した結果のひと言。下の真ん中に 2.2 秒） ----
 func toast(text: String, kind := "") -> void:
@@ -290,7 +479,11 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if shots.size() > 0:
 		return
 	if ev.is_action_pressed("ui_cancel"):
-		on_back()
+		if _modal != null:
+			if _modal_back.is_valid(): _modal_back.call()
+			else: close_modal()
+		else:
+			on_back()
 		get_viewport().set_input_as_handled()
 		return
 	var d := 0

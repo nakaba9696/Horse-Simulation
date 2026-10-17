@@ -266,10 +266,18 @@ func _build_table() -> void:
 		fbw.custom_minimum_size.x = COLS[0][1]
 		fbw.add_child(UiTheme.frame_box(int(hinfo.frame), int(hinfo.num), 28, 16))
 		h.add_child(fbw)
+		var nh := HBoxContainer.new()
+		nh.add_theme_constant_override("separation", 6)
+		nh.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var nl := UiTheme.label(String(hinfo.name), 17, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY)
-		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nl.clip_text = true
-		h.add_child(nl)
+		nh.add_child(nl)
+		# 史実・スペシャルの小さな印（docs/UI.md「出走表」2）
+		if hinfo.get("legend"):
+			nh.add_child(UiTheme.chip("★スペシャル", UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 11))
+		elif hinfo.get("hist"):
+			nh.add_child(UiTheme.chip("史実", UiTheme.SURFACE_3, UiTheme.MUTED, 11))
+		h.add_child(nh)
 		var sa := UiTheme.num_label("%s%d" % [hinfo.sex, int(hinfo.get("age", 4))], 15)
 		sa.custom_minimum_size.x = COLS[2][1]
 		h.add_child(sa)

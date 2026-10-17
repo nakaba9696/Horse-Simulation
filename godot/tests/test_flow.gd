@@ -52,10 +52,35 @@ func run(t) -> void:
 		t.eq(HSData.digest_save(HSJson.parse(HSWorld.serialize())), s1, "flow: セーブの往復で同じ状態（%d週目）" % wk)
 		t.ok(not UiFlow.save_info().is_empty(), "flow: タイトルに出すセーブの要点")
 	t.ok(rode > 0 and autos > 0, "flow: 自分で乗った鞍とおまかせの鞍がある（%d・%d）" % [rode, autos])
-	# 画面を組めるか（ホーム・番組表・店・週の結果・タイトル）
+	# 引退（牧場に残る）→ オリジナルホース（父と母から仔を作る）
+	var G = HSWorld.G
+	G.player.money = 1e9
+	var male = null
+	var female = null
+	for it in HSU.stable_sort(HSWorld.market_historic(), func(a, b): return a.price < b.price):
+		if female == null and it.horse.sex == "牝":
+			t.eq(HSWorld.buy(it), null, "flow: 牝馬を買う")
+			female = it.horse.name
+	for h in HSWorld.mine():
+		if h.sex == "牝" and h.name == female: female = h
+		elif h.sex != "牝" and male == null: male = h
+	t.ok(male is Dictionary and female is Dictionary, "flow: 牡馬と牝馬がいる")
+	t.eq(HSJockey.retire(male.id).get("to"), "retired", "flow: 牡馬を引退させると牧場に残る")
+	t.eq(HSJockey.retire(female.id).get("to"), "retired", "flow: 牝馬を引退させると牧場に残る")
+	t.eq(HSOriginal.retired("牡").size() + HSOriginal.retired("牝").size(), 2, "flow: 牧場の馬（父と母）")
+	var made := HSOriginal.make(male.id, female.id, "テストノホシ")
+	t.ok(made.has("horse") and made.horse.name == "テストノホシ" and made.horse.get("original"), "flow: オリジナルホースが生まれる")
+	t.ok(HSOriginal.make(male.id, female.id, "").has("err"), "flow: 牝馬は1年に1頭")
+	# 出走の優先順：表に無い格（新馬戦）は JS と同じく NaN で、乱数は1回引く
+	var r1 := HSRng.new(5.0)
+	var r2 := HSRng.new(5.0)
+	r2.next()
+	var pr := HSRaces.priority(made.horse, {"graded": false, "cls": "newcomer", "name": "2歳新馬"}, G.year, r1)
+	t.ok(is_nan(pr) and r1.next() == r2.next(), "flow: 新馬戦の優先順は NaN（乱数は1回）")
+	# 画面を組めるか（ホーム・番組表・店・週の結果・タイトル・厩舎・生産・データ・馬主・GF）
 	UiFlow.report = HSWorld.finish_week({})
 	UiFlow.program_id = HSWorld.mine()[0].id if HSWorld.mine().size() else ""
-	for n in ["home", "program", "shop", "week_result", "title"]:
+	for n in ["home", "program", "shop", "week_result", "title", "stable", "breed", "data", "owners", "gf"]:
 		var sc = load("res://scenes/%s.tscn" % n).instantiate()
 		t.root.add_child(sc)
 		var ok: bool = sc.get_child_count() > 3
@@ -63,6 +88,14 @@ func run(t) -> void:
 		if n == "program": ok = ok and sc.rows.size() > 0
 		if n == "shop": ok = ok and sc.rows.size() > 0
 		if n == "week_result": ok = ok and sc.b_next != null
+		if n == "stable": ok = ok and sc.rows.size() > 0
+		if n == "breed": ok = ok and sc.rows.size() == 2
+		if n == "data":
+			for k in sc.TABS.size():
+				sc.on_tab(1)
+			ok = ok and sc.rows.size() > 0
+		if n == "owners": ok = ok and sc.rows.size() == HSOwners.LIST().size()
+		if n == "gf": ok = ok and sc.rows.size() > 0
 		t.ok(ok, "flow: 画面を組める（%s）" % n)
 		sc.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(UiFlow.save_path))

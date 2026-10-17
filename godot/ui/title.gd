@@ -10,7 +10,7 @@ var name_edit: LineEdit
 var region := "美浦"
 var seg_btns: Array[Button] = []
 var b_start: Button
-var confirm: PanelContainer
+var confirm_box: PanelContainer
 var b_no: Button
 
 func needs_world() -> bool: return false
@@ -132,18 +132,18 @@ func _build_new() -> void:
 	v.add_child(bh)
 	# 消して始める確かめ（「やめる」から）
 	var cb := UiScreen.panel_box(true, 12)
-	confirm = cb[0]
-	confirm.position = Vector2(640, 470)
-	confirm.custom_minimum_size = Vector2(520, 0)
-	confirm.visible = false
-	add_child(confirm)
+	confirm_box = cb[0]
+	confirm_box.position = Vector2(640, 470)
+	confirm_box.custom_minimum_size = Vector2(520, 0)
+	confirm_box.visible = false
+	add_child(confirm_box)
 	var cv: VBoxContainer = cb[1]
 	cv.add_child(UiTheme.title("つづきのセーブを消して始めますか", 20))
 	var ch := HBoxContainer.new()
 	ch.alignment = BoxContainer.ALIGNMENT_END
 	ch.add_theme_constant_override("separation", 12)
 	b_no = UiScreen.button("やめる", false, 140, 48, 17)
-	b_no.pressed.connect(func(): confirm.visible = false; b_start.grab_focus())
+	b_no.pressed.connect(func(): confirm_box.visible = false; b_start.grab_focus())
 	ch.add_child(b_no)
 	var b_yes := UiScreen.button("消して始める", false, 180, 48, 17)
 	b_yes.add_theme_stylebox_override("normal", UiTheme.box(Color("5a1f1c"), Color("8a3a33"), 1, UiTheme.R_BUTTON, Vector4(20, 9, 20, 11)))
@@ -169,13 +169,13 @@ func _open_new() -> void:
 
 func _close_new() -> void:
 	win.visible = false
-	confirm.visible = false
+	confirm_box.visible = false
 	menu.modulate.a = 1.0
 	b_new.grab_focus()
 
 func _start() -> void:
 	if UiFlow.has_save():
-		confirm.visible = true
+		confirm_box.visible = true
 		b_no.grab_focus()
 		return
 	_really_start()
@@ -186,8 +186,8 @@ func _really_start() -> void:
 	go("home")
 
 func on_back() -> void:
-	if confirm.visible:
-		confirm.visible = false
+	if confirm_box.visible:
+		confirm_box.visible = false
 		b_start.grab_focus()
 	elif win.visible:
 		_close_new()
