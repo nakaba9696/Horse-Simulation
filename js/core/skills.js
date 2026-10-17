@@ -27,7 +27,7 @@
       learn: p => p.style !== '逃げ' && p.guts >= 88,
       when: x => x.inStraight && x.R > 60 && x.left && x.right && x.faster },
     // 損
-    { id: 'sasari', at: 'any', label: 'ささり癖', group: '損', bad: true, note: '脚が無いときにムチを入れると、ムチと反対へよれる', fx: { spd: -0.025, sec: 1.5, drift: 1 },
+    { id: 'sasari', at: 'any', label: 'ささり癖', group: '損', bad: true, note: '脚が無いときにムチを入れると、ささって伸びを欠く（進路は変わらない）', fx: { spd: -0.035, sec: 1.5 },
       learn: p => p.mind < 64 && p.guts < 76,
       when: x => x.c ? x.c.lastWhip && x.t - x.c.lastWhip.t < 0.15 && x.s.E < 0.12 : x.whipping && x.s.E < 0.15 },
     { id: 'kongomi', at: 'any', label: '揉まれ弱い', group: '損', bad: true, note: '馬群に包まれたままだと、やる気をなくす', fx: { E: -0.03 },
