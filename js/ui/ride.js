@@ -171,7 +171,7 @@
       let acc = 0, last = null, done = false, result = null;
       let prev = sim.st.map(s => [s.x, s.lane, s.v]);
       let finishedAt = null, myPos = null;
-      if (AU) { AU.bgm('race'); }
+      if (AU) { AU.bgm('race', race); }
       const lerpView = k => sim.st.map((s, j) => ({
         x: prev[j][0] + (s.x - prev[j][0]) * k, lane: prev[j][1] + (s.lane - prev[j][1]) * k, v: s.v,
         num: s.r.num, frame: s.r.frame, cap: meta[j].cap, silks: meta[j].silks, coat: s.h.coat, name: s.h.name, mine: !!s.me,

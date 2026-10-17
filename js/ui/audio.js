@@ -283,6 +283,53 @@
     const g = gn(0); fl.connect(g); g.connect(out);
     pluckAmp(g, t, dur, 0.06 * v, 0.22, 0.06);
   });
+  // 国の楽器：アコーディオン（2枚のリードを少しずらしたうなり）・二胡（すくい上げと深いビブラート）・
+  // 箏（押して少し上げる爪弾き）・ウード（鼻にかかった撥弦）・クリーンのギター（カントリーの張り）・ひずんだ和音の刻み
+  V.accordion = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.15, fl = filt('lowpass', 3800, 0.8), g = gn(0);
+    for (const [m, dt, a] of [[1, -13, 1], [1, 13, 1], [0.5, 0, 0.45]]) { const o = osc('reed', f * m, t, end); o.detune.value = dt; const og = gn(a); o.connect(og); og.connect(fl); }
+    fl.connect(g); g.connect(out);
+    amp(g, t, dur, 0.025, 0.05 * v, 0.2, 0.85, 0.08);
+  });
+  V.erhu = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.25, a = osc('sawtooth', f, t, end);
+    a.frequency.setValueAtTime(f * 0.94, t); a.frequency.exponentialRampToValueAtTime(f, t + 0.07);
+    const bp = filt('bandpass', Math.min(f * 2.5, 5000), 1.3), lp = filt('lowpass', 4200, 0.7);
+    a.connect(bp); bp.connect(lp);
+    if (dur > 0.2) vib([a], f, t, 6.2, 0.011, 0.12, end);
+    const g = gn(0); lp.connect(g); g.connect(out);
+    amp(g, t, dur, 0.05, 0.2 * v, 0.2, 0.85, 0.1);
+  });
+  V.zheng = each((out, f, t, dur, v) => {
+    const end = t + dur + 1.0, a = osc('bright', f, t, end), b = osc('sine', f * 2, t, end), bg = gn(0.2);
+    a.frequency.setValueAtTime(f * 0.985, t + 0.12); a.frequency.linearRampToValueAtTime(f, t + 0.2);
+    const fl = filt('lowpass', f * 3, 1.2); fl.frequency.setValueAtTime(Math.min(f * 14, 9000), t); fl.frequency.setTargetAtTime(f * 2.5, t, 0.1);
+    a.connect(fl); b.connect(bg); bg.connect(fl);
+    const g = gn(0); fl.connect(g); g.connect(out);
+    pluckAmp(g, t, dur, 0.1 * v, 0.6, 0.15);
+  });
+  V.oud = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.6, g = gn(0), bp = filt('bandpass', Math.min(f * 3, 4000), 1.1);
+    for (const dt of [-4, 4]) { const o = osc('bright', f, t, end); o.detune.value = dt; o.frequency.setValueAtTime(f * 1.01, t); o.frequency.setTargetAtTime(f, t, 0.02); o.connect(bp); }
+    bp.connect(g); g.connect(out);
+    pluckAmp(g, t, dur, 0.22 * v, 0.32, 0.08);
+  });
+  V.twang = each((out, f, t, dur, v) => {
+    const end = t + dur + 0.6, a = osc('sawtooth', f, t, end), fl = filt('lowpass', f * 3, 2);
+    fl.frequency.setValueAtTime(Math.min(f * 12, 8000), t); fl.frequency.setTargetAtTime(f * 3.5, t, 0.08);
+    a.connect(fl);
+    if (dur > 0.3) vib([a], f, t, 5.5, 0.006, 0.2, end);
+    const g = gn(0); fl.connect(g); g.connect(out);
+    amp(g, t, dur, 0.003, 0.09 * v, 0.35, 0.35, 0.1);
+  });
+  V.crunch = (out, fs, t, dur, v) => {
+    const end = t + dur + 0.2, pre = gn(0.5);
+    fs.forEach((f, i) => { const o = osc('sawtooth', f, t, end); o.detune.value = i % 2 ? 7 : -7; o.connect(pre); });
+    const ws = E.ctx.createWaveShaper(); ws.curve = dist(); pre.connect(ws);
+    const fl = filt('lowpass', 2400, 0.9); ws.connect(fl);
+    const g = gn(0); fl.connect(g); g.connect(out);
+    amp(g, t, dur, 0.003, 0.05 * v, 0.12, 0.5, 0.05);
+  };
   // ベース：スラップ・指弾き・ウッドベース風・低い正弦（サブ）・アシッド（共鳴の強いフィルターがうねる）
   V.slap = each((out, f, t, dur, v) => {
     const end = t + dur + 0.2;
@@ -367,6 +414,10 @@
     q: (o, t, v, r) => { drop(o, t, 400, 340, 0.03, 0.42 * v, 0.07); hit(o, t, 0.02, 'bandpass', 2200, 0.15 * v, 0.006, 2, r); },
     Q: (o, t, v, r) => { drop(o, t, 270, 225, 0.04, 0.48 * v, 0.1); hit(o, t, 0.02, 'bandpass', 1800, 0.12 * v, 0.006, 2, r); },
     w: (o, t, v) => drop(o, t, 2500, 2450, 0.01, 0.28 * v, 0.016),
+    // 銅鑼・ダルブッカ（ドゥム＝低い胴、テク＝縁の高い音）
+    G: (o, t, v, r) => { drop(o, t, 92, 84, 0.9, 0.45 * v, 0.9); drop(o, t, 136, 131, 0.6, 0.18 * v, 0.7); drop(o, t, 203, 199, 0.6, 0.12 * v, 0.5); hit(o, t, 2.5, 'bandpass', 420, 0.25 * v, 0.7, 0.7, r); },
+    d: (o, t, v, r) => { drop(o, t, 150, 92, 0.05, 0.7 * v, 0.16); hit(o, t, 0.04, 'lowpass', 700, 0.2 * v, 0.012, 0, r); },
+    e: (o, t, v, r) => { hit(o, t, 0.06, 'bandpass', 3400, 0.5 * v, 0.018, 3, r); drop(o, t, 900, 820, 0.02, 0.15 * v, 0.015, 'triangle'); },
     // 吹き上がる雑音（区切りの前の1小節）
     z: (o, t, v, r, e8) => {
       const L = 8 * e8, s = noiseSrc(t, t + L + 0.02, (r || 0) * 1.6), fl = filt('bandpass', 500, 1.3), g = gn(0);
@@ -378,10 +429,10 @@
   const VEL = { X: 1, x: 0.7, g: 0.28 };
   // 太鼓の置き場所（左右・響き）。nofilt はフィルターの掃き（sweep）を受けない
   const DMIX = {
-    k: { vol: 0.55, rev: 0.04 }, K: { vol: 0.37, rev: 0.03, nofilt: true }, s: { rev: 0.28 }, p: { vol: 3.9, pan: 0.04, rev: 0.3 }, R: { vol: 3.3, pan: -0.18, rev: 0.18 },
+    k: { vol: 0.45, rev: 0.04 }, K: { vol: 0.37, rev: 0.03, nofilt: true }, s: { rev: 0.28 }, p: { vol: 3.9, pan: 0.04, rev: 0.3 }, R: { vol: 3.3, pan: -0.18, rev: 0.18 },
     h: { pan: 0.35, vol: 5.6, rev: 0.04 }, o: { pan: 0.35, vol: 2, rev: 0.06 }, S: { pan: -0.45, vol: 2.8, rev: 0.06 }, c: { pan: -0.3, rev: 0.25 }, r: { pan: -0.2, vol: 1.5, rev: 0.1 },
     t: { pan: -0.25, rev: 0.2 }, m: { pan: 0, rev: 0.2 }, l: { pan: 0.25, rev: 0.2 }, T: { vol: 0.55, rev: 0.35 },
-    q: { pan: 0.45, vol: 0.8, rev: 0.14 }, Q: { pan: 0.3, vol: 0.8, rev: 0.14 }, w: { pan: -0.45, rev: 0.2 }, z: { rev: 0.25 },
+    q: { pan: 0.45, vol: 0.8, rev: 0.14 }, G: { pan: -0.15, rev: 0.4 }, d: { pan: 0.15, vol: 0.6, rev: 0.12 }, e: { pan: -0.25, vol: 2.5, rev: 0.15 }, Q: { pan: 0.3, vol: 0.8, rev: 0.14 }, w: { pan: -0.45, rev: 0.2 }, z: { rev: 0.25 },
   };
   const DUCKERS = { k: 1, K: 1 }; // このキックに合わせて、うねらせるトラック（sp.duck）の音量を一瞬下げる
 
@@ -473,14 +524,16 @@
     if (kind === 'o') return r + 12;
     if (kind === '5') return lowest((c.root + (c.iv.includes(7) ? 7 : c.iv.includes(6) ? 6 : c.iv.includes(8) ? 8 : 7)) % 12, r);
     if (kind === '7') return lowest((c.root + (c.iv.includes(11) ? 11 : 10)) % 12, r);
+    if (kind === '3') return lowest((c.root + (c.iv.includes(3) ? 3 : c.iv.includes(4) ? 4 : 5)) % 12, r);
+    if (kind === '6') return lowest((c.root + 9) % 12, r);
     return r;
   };
   const LO = {
     brass: 58, epiano: 53, piano: 57, stab: 55, vibes: 62, gtr: 52, cut: 58, organ: 55, saw: 50, pad: 50, strings: 53, choir: 55,
-    pluck: 62, bell: 72, lead: 64, guitar: 60, flute: 67,
+    pluck: 62, bell: 72, lead: 64, guitar: 60, flute: 67, accordion: 60, erhu: 62, zheng: 62, oud: 55, twang: 55, crunch: 40,
   };
   // 型：[位置, 長さ, 何を鳴らすか, 強さ]（位置と長さは8分音符で、1小節＝8）
-  //   何を：r 根音（分数コードはその低音）・o 1オクターブ上・5 5度・7 7度・c 和音・a0〜 分散和音の何番目か
+  //   何を：r 根音（分数コードはその低音）・o 1オクターブ上・3 3度・5 5度・6 6度・7 7度・c 和音・p 力の和音（根音・5度・オクターブ）・a0〜 分散和音の何番目か
   //   後ろに「>」を付けると16分音符、「>>」で8分音符先のコードを先取りする（食い）
   const P16 = (s, kinds, len) => s.split('').map((ch, i) => VEL[ch] ? [i / 2, len || 0.5, kinds[i % kinds.length], VEL[ch]] : null).filter(Boolean);
   const PAT = {
@@ -501,6 +554,9 @@
     acid: P16('XxXgXxgXxXgXxgXX', ['r', 'r', 'o', 'r', 'r', '5', 'o', 'r', 'r', 'r', 'o', 'r', '7', 'r', 'o', 'r>']),
     // R&B（ゴーストと食い）
     rnb: [[0, 1.5, 'r'], [1.5, 0.5, 'r', 0.35], [2.5, 0.5, '5', 0.7], [3, 1, 'o', 0.8], [4, 1.5, 'r'], [6, 0.5, '5', 0.6], [6.5, 0.5, 'r', 0.45], [7, 1, 'r>>', 0.85]],
+    two: [[0, 3.5, 'r'], [4, 3.5, '5']],
+    boogie: [[0, 1, 'r'], [1, 1, '3'], [2, 1, '5'], [3, 1, '6'], [4, 1, '7'], [5, 1, '6'], [6, 1, '5'], [7, 1, '3']],
+    seq8: [0, 1, 2, 3, 4, 5, 6, 7].map(p => [p, 0.5, p % 2 ? 'o' : 'r', p % 2 ? 0.7 : 1]),
     // 和音
     epHouse: [[1, 0.75, 'c', 0.8], [2.5, 0.5, 'c', 0.6], [3.5, 1.5, 'c>', 0.95], [5, 0.75, 'c', 0.7], [6.5, 0.5, 'c', 0.6], [7.5, 1.5, 'c>', 0.95]],
     epRnb: [[0, 2.5, 'c', 0.8], [3.5, 1.5, 'c>', 0.7], [5.5, 0.5, 'c', 0.45], [6, 1, 'c', 0.6], [7.5, 2, 'c>', 0.75]],
@@ -509,6 +565,9 @@
     bossaGtr: [[0, 1, 'c', 0.9], [1.5, 1, 'c', 0.65], [3, 1, 'c', 0.8], [5, 1, 'c', 0.7], [6, 1, 'c', 0.8], [7.5, 1, 'c>', 0.6]],
     cut16: P16('gg.gXgggggxgXg.x', ['c'], 0.4),
     stab: [[0, 1, 'c'], [3, 1, 'c'], [5, 0.5, 'c'], [6, 1, 'c']],
+    strum8: P16('X.x.Xgx.X.xgX.x.', ['c'], 1),
+    pompe: [[0, 0.5, 'c', 0.5], [2, 0.5, 'c'], [4, 0.5, 'c', 0.5], [6, 0.5, 'c']],
+    chug8: [0, 1, 2, 3, 4, 5, 6, 7].map(p => [p, 0.8, 'p', p % 2 ? 0.75 : 1]),
     hit: [[0, 2, 'c']],
     hold: [[0, 8, 'c']],
     arp8: [0, 1, 2, 3, 4, 3, 2, 1].map((k, i) => [i, 1, 'a' + k]),
@@ -537,9 +596,10 @@
         let len = Math.min(l, toNext);
         if (!ant) len = Math.min(len, slot.p + slot.len - p); // コードの変わり目で切る
         let kind = w;
-        if ((kind === 'o' || kind === '5' || kind === '7') && !ant && p === slot.p && si > 0) kind = 'r'; // 変わり目は根音から
+        if ('o5736'.includes(kind) && !ant && p === slot.p && si > 0) kind = 'r'; // 変わり目は根音から
         let notes;
         if (kind === 'c') { notes = voiceChord(c, lo, prev, inst); prev = notes; }
+        else if (kind === 'p') { const r = lowest(c.root, lo); notes = [r, r + 7, r + 12]; }
         else if (kind[0] === 'a') { const vc = voicing(c, lo), k = +kind.slice(1); notes = [vc[k % vc.length] + 12 * Math.floor(k / vc.length)]; }
         else notes = [bassNote(c, kind, inst)];
         toks.push(`${notes.map(nname).join('+')}:${num(adv)}${len !== adv ? '_' + num(len) : ''}${vel != null && vel !== 1 ? '^' + num(vel) : ''}`);
@@ -587,6 +647,19 @@
       fill: { K: 'X......X..X.....', p: '....X.......X...', s: '....x..g.g..xgxx', h: 'XgxgXgxgXgxg....' },
     },
   };
+  // 国の曲の太鼓
+  Object.assign(DRUMS, {
+    celtic: { main: { k: 'X.......X.x.....', s: '....x.......x...', S: 'gxgxgxgxgxgxgxgx', Q: 'x.gx.gx.gx.gx.g.' }, fill: { k: 'X.......X.x.....', s: '....x.......xgxx', S: 'gxgxgxgxgxgxgxgx', Q: 'x.gx.gx.gxgxXxXx' } },
+    dnb: {
+      main: { k: 'X.........X.....' + 'X.X.......X..x..', s: '....X..g.g..X..g', h: 'xgxgxgxgxgxgxgxg', o: '..............x.' },
+      fill: { k: 'X.........X.....', s: '....X..g.gXgXXXX', h: 'xgxgxgxgxgxg....' },
+    },
+    swing: { main: { k: 'g.......g.......', h: 'x...x.x.x...x.x.', R: '....x.......x...' }, fill: { k: 'g.......g.......', h: 'x...x.x.x...x...', R: '....x.......x.x.' } },
+    shuffle: { main: { k: 'X...x...X...x...', s: '....X.......X...', h: 'X.x.X.x.X.x.X.x.' }, fill: { k: 'X...x...X.......', s: '....X.......X.x.', t: '..........x.....', m: '............x...', h: 'X.x.X.x.X.......' } },
+    lofi: { main: { k: 'X......X.X......', s: '....X.......X...', h: 'x.x.x.xgx.x.x.xg' }, fill: { k: 'X......X.X......', s: '....X.......X.gg', h: 'x.x.x.xgx.x.....' } },
+    maqsum: { main: { d: 'X.......X.......', e: '..X...X.g...X.g.', S: 'gxgxgxgxgxgxgxgx' }, fill: { d: 'X.......X...X.X.', e: '..X...X.g.XgXgXX', S: 'gxgxgxgxgxgxgxgx' } },
+    march: { main: { k: 'X.......X.......', s: '....x..g....xgg.', h: 'x.x.x.x.x.x.x.x.' }, fill: { k: 'X.......X.......', s: '....x..g.gxgxxXX', h: 'x.x.x.x.........' } },
+  });
   const FILL = { k: 'X.....x.X.......', s: '....X...XX......', t: '..........XX....', m: '............XX..', l: '..............XX', h: 'X.x.X.x.........' };
   const MIX = {
     lead: { vol: 1, rev: 0.2, dly: 0.22 }, lead2: { vol: 0.8, pan: -0.3, rev: 0.25, dly: 0.08, wide: 0.3 }, comp: { vol: 0.8, pan: 0.3, rev: 0.2, wide: 0.7 },
@@ -649,7 +722,7 @@
     });
     const tracks = TRACKS.map(k => ({ name: k, mix: Object.assign({}, MIX[k], (sp.mix || {})[k], { duck: (sp.duck || {})[k] || 0 }), seq: seqs[k].join(' | ') }));
     tracks.push({ name: 'drums', drum: lanes, mix: Object.assign({ vol: 1 }, (sp.mix || {}).drums) });
-    return { bpm: sp.bpm, loop: !!sp.loop, loopStart: sp.loop ? loopBars * 8 : 0, length: bars * 8, swing: sp.swing || 0, rev: sp.rev, tracks, sweeps };
+    return { bpm: sp.bpm, loop: !!sp.loop, loopStart: sp.loop ? loopBars * 8 : 0, length: bars * 8, swing: sp.swing || 0, shuffle: sp.shuffle || 0, rev: sp.rev, tracks, sweeps };
   }
 
   // ---------- 曲（どれもこのゲームのための書き下ろし） ----------
@@ -878,6 +951,240 @@
       mix: { lead: { vol: 1, rev: 0.28 }, lead2: { vol: 0.55 }, comp: { vol: 0.8 }, comp2: { vol: 0.45 }, pad: { vol: 0.5 } },
     },
   };
+  // ---------- 海外のレースの曲（国ごと。どれも書き下ろしで、国歌・民謡・既存の曲の節は使わない） ----------
+  // 曲の骨はクラブ・ミュージックのまま、その国らしい楽器・音階・拍を混ぜる
+  const W = {};
+  // イギリス・アイルランド：ケルトの節回し（装飾の短い音）と、弦・ブラスの格調。レースはドラムンベース
+  W.ukPA = bars([
+    'D6:1.5 A5:0.5 F#5:1 A5:1 B5:0.25 A5:0.25 F#5:0.5 E5:1 D5:2', 'E5:1 G5:1 C6:2 B5:0.25 C6:0.25 B5:0.5 A5:1 G5:2',
+    'B5:1.5 A5:0.5 G5:1 B5:1 D6:2 E6:0.25 D6:0.25 B5:1.5', 'A5:3 F#5:1 E5:2 D5:2',
+    'F#5:1 A5:1 B5:1.5 D6:0.5 C#6:1 B5:1 A5:2', 'B5:1 A5:0.5 G5:0.5 F#5:1 D5:1 G5:2 B5:2',
+    'E6:1.5 D6:0.5 B5:1 G5:1 A5:0.25 B5:0.25 A5:0.5 G5:1 E5:2', 'D5:2 E5:1 G5:1 C#6:2 A5:2',
+  ]);
+  W.ukPB = bars(['B5:3 A5:1 F#5:2 D5:2', 'C#6:3 B5:1 A5:2 E5:2', 'A5:3 F#5:1 C#6:2 E6:2', 'D6:6 R:2', 'G5:2 B5:2 F#6:3 E6:1', 'E6:2 C#6:2 A5:2 F#5:2', 'G5:1.5 A5:0.5 B5:1 D6:1 F#6:4', 'E6:4 C#6:2 A5:2']);
+  W.ukRA = bars(['B5:2 E6:1 F#6:1 G6:2 F#6:1 E6:1', 'D6:3 B5:1 G5:2 B5:2', 'C6:2 B5:1 A5:1 E5:2 G5:1 A5:1', 'B5:4 A5:2 F#5:2', 'B5:2 E6:1 F#6:1 G6:2 A6:1 G6:1', 'E6:3 D6:1 B5:2 G5:2', 'A5:2 C6:1 E6:1 F#6:2 E6:1 C6:1', 'D6:2 B5:2 D#6:2 F#6:2']);
+  W.ukRB = bars(['E5:2 G5:1 B5:1 C6:3 B5:1', 'A5:3 F#5:1 D5:4', 'F#5:2 A5:1 B5:1 D6:3 C#6:1', 'B5:6 R:2', 'C6:2 B5:1 A5:1 E5:3 G5:1', 'A5:2 F#5:2 D5:2 A5:2', 'B5:2 D6:2 F#6:3 E6:1', 'E6:4 D#6:4']);
+  W.ukRC = bars(['G5:2 B5:2 E6:3 D6:1', 'D6:2 B5:2 A5:3 F#5:1', 'G5:3 F#5:1 E5:2 B5:2', 'D6:4 B5:2 A5:1 B5:1', 'G5:2 B5:2 E6:3 G6:1', 'F#6:3 E6:1 D6:2 B5:2', 'E6:4 F#6:2 E6:2', 'D#6:4 C6:2 B5:2']);
+  W.ukRD = bars(['E5:4 G5:2 A5:2', 'B5:6 A5:1 G5:1', 'D5:4 G5:2 B5:2', 'C6:6 B5:1 A5:1', 'B5:4 E6:2 D6:2', 'E6:6 D6:1 B5:1', 'C6:4 B5:2 A5:2', 'D#6:4 F#6:4']);
+  // フランス：ミュゼットのアコーディオンとマヌーシュのギター（パドック）、ジャズの和音のフレンチ・ハウス（レース）
+  W.frPA = bars(['E5:1.5 F5:0.5 E5:1 C5:1 A4:2 B4:1 C5:1', 'D5:1.5 E5:0.5 F5:1 A5:1 B5:2 A5:2', 'G#5:1.5 A5:0.5 G#5:1 E5:1 D5:2 B4:2', 'C5:3 E5:1 A5:2 F#5:2', 'F5:1.5 E5:0.5 D5:1 F5:1 A5:2 D6:2', 'C6:2 B5:1 A5:1 E5:2 C5:2', 'D#5:1.5 F#5:0.5 A5:1 C6:1 B5:2 A5:2', 'G#5:2 F5:1 D5:1 B4:2 G#4:2']);
+  W.frPA2 = bars(['C5:8', 'F5:8', 'D5:8', 'E5:8', 'F5:8', 'E5:8', 'D#5:8', 'D5:8']);
+  W.frPB = bars(['A5:3 B5:1 D6:2 F6:2', 'E6:3 C6:1 A5:2 F#5:2', 'F5:1.5 A5:0.5 D6:1 F6:1 E6:2 D6:2', 'C6:6 R:2', 'C6:1.5 A5:0.5 F5:1 Eb5:1 F5:2 A5:2', 'B5:1.5 G#5:0.5 E5:1 D5:1 B4:2 G#4:2', 'A4:1 C5:1 E5:1 F#5:1 A5:2 C6:2', 'B5:2 A5:2 G#5:2 F5:2']);
+  W.frRA = bars(['R:1 A5:0.5 C6:1 E6:1.5 D6:1 C6:1 A5:2', 'G5:1.5 E5:0.5 D5:1 B4:1 C#5:1.5 Bb4:0.5 G5:2', 'R:1 F5:0.5 A5:1 C6:1.5 E6:1 D6:1 A5:2', 'B5:1.5 A5:0.5 F5:1 E5:1 D5:2 B4:2', 'R:1 E5:0.5 G5:1 B5:1.5 D6:1 B5:1 G5:2', 'C6:1.5 A5:0.5 G5:1 E5:1 F#5:1.5 E5:0.5 C6:2', 'Bb5:2 A5:1 F5:1 D5:2 A5:2', 'G5:1.5 Bb5:0.5 A5:1 E5:1 G5:2 R:2']);
+  W.frRB = bars(['D6:3 C6:1 A5:2 F5:2', 'E6:3 C6:1 G5:2 E5:2', 'F5:1.5 A5:0.5 Bb5:1 D6:1 F6:2 D6:2', 'F6:2 D6:2 E6:2 A5:2', 'D6:1.5 C6:0.5 A5:1 F5:1 C6:2 D6:2', 'E6:2 C6:2 F#6:1.5 Eb6:0.5 C6:2', 'Bb5:3 A5:1 F5:2 D5:2', 'F5:2 G5:2 E5:1 G5:1 Bb5:1 Db6:1']);
+  W.frRC = bars(['A5:1.5 C6:1.5 E6:1 F6:1.5 E6:1 C6:1.5', 'D6:1.5 B5:1 G5:1.5 E6:1 F6:1 E6:2', 'D6:3 B5:1 G5:1.5 E5:0.5 G5:2', 'A5:3 C6:1 E6:2 G6:2', 'F6:1.5 D6:1.5 C6:1 A5:1.5 C6:1 D6:1.5', 'D6:1.5 Bb5:1 G5:1.5 C#6:1 Bb5:1 G5:2', 'F5:1.5 A5:0.5 C6:1 E6:1 D6:4', 'Bb5:1.5 A5:0.5 F5:1 D5:1 E5:1.5 G5:0.5 A5:2']);
+  // アメリカ・カナダ：シャッフルの12小節のブルースとカントリーのギター（パドック）、サザン・ロック（レース）
+  W.usPA = bars([
+    'R:1 G5:0.5 G#5:0.5 B5:1 E6:2 D6:1 B5:2', 'C#6:1.5 B5:0.5 A5:1 G5:1 F#5:2 E5:2', 'G#5:3 B5:1 D6:2 B5:2', 'E6:6 R:2',
+    'R:1 C6:0.5 C#6:0.5 E6:1 A5:2 G5:1 E5:2', 'F#5:3 E5:1 C#5:2 E5:2', 'B5:1.5 G#5:0.5 E5:1 D5:1 E5:4', 'B4:1 C#5:1 E5:2 G#5:2 E5:2',
+    'A5:3 G#5:1 F#5:2 C#5:2', 'D#5:1.5 F#5:0.5 A5:1 G#5:1 B5:2 F#5:2', 'G#5:2 E5:2 B4:2 C#5:2', 'A4:2 C#5:2 D5:1 D#5:1 F#5:2',
+  ]);
+  W.usRA = bars(['E5:1 G5:0.5 G#5:0.5 B5:1 D6:1 B5:1 G#5:1 E5:2', 'F#5:1.5 A5:0.5 B5:1 D6:1 B5:2 A5:2', 'E5:1.5 C#5:0.5 E5:1 A5:1 C#6:2 B5:2', 'G#5:6 R:2', 'B5:1 D6:1 E6:1 D6:1 B5:2 G5:2', 'A5:1 F#5:1 A5:1 D6:1 F#6:2 E6:2', 'E6:3 C#6:1 A5:2 E5:2', 'D6:1.5 D#6:0.5 F#6:2 A5:2 B5:2']);
+  W.usRB = bars(['E5:3 G#5:1 B5:4', 'D5:3 F#5:1 A5:4', 'C#5:3 E5:1 A5:4', 'B5:6 R:2', 'A5:3 C#6:1 E6:4', 'D6:3 B5:1 F#6:4', 'E6:3 C#6:1 F#6:4', 'E6:4 D#6:4']);
+  W.usRC = bars(['G#5:2 B5:2 F#6:3 E6:1', 'D#6:3 B5:1 F#5:4', 'E6:2 C#6:2 G#5:3 B5:1', 'A5:6 F#5:1 A5:1', 'B5:2 E6:2 G#6:3 F#6:1', 'E6:3 C#6:1 A5:4', 'C#6:2 B5:2 A5:2 E5:2', 'D6:2 D#6:2 F#6:2 A6:2']);
+  // オーストラリア：明るいアコースティック・ハウス（パドック）、パワー・ポップのロック（レース）
+  W.auPA = bars(['E5:1 A5:1 B5:1 C#6:1.5 B5:0.5 A5:1 E5:2', 'B5:1.5 G#5:0.5 E5:1 B4:1 E5:2 G#5:2', 'A5:1 C#6:1 E6:1.5 C#6:0.5 B5:1 A5:1 F#5:2', 'E5:3 F#5:1 A5:2 C#6:2', 'E5:1 A5:1 B5:1 C#6:1.5 E6:0.5 F#6:1 E6:2', 'B5:1.5 G#5:0.5 B5:1 E6:1 G#6:2 F#6:2', 'E6:3 C#6:1 A5:2 F#5:2', 'A5:2 B5:2 G#5:2 D6:2']);
+  W.auPB = bars(['F#5:2 A5:1 C#6:1 E6:3 D6:1', 'C#6:3 B5:1 G#5:2 E5:2', 'D5:1 F#5:1 A5:1 C#6:1 B5:4', 'C#6:2 B5:2 A5:2 E5:2', 'F#5:2 A5:1 C#6:1 E6:3 F#6:1', 'E6:2 C#6:2 A5:2 C#6:2', 'D6:3 C#6:1 A5:2 F#5:2', 'A5:4 G#5:2 B5:2']);
+  W.auRA = bars(['F#5:1 A5:1 D6:1 E6:1.5 D6:0.5 A5:1 F#5:2', 'E5:1.5 C#5:0.5 E5:1 A5:1 C#6:2 E6:2', 'D6:3 C#6:1 B5:2 F#5:2', 'G5:2 B5:2 D6:2 F#6:2', 'F#6:3 E6:1 D6:2 A5:2', 'C#6:1.5 E6:0.5 C#6:1 A5:1 E5:2 A5:2', 'B5:3 A5:1 G5:2 D6:2', 'D6:4 C#6:2 E6:2']);
+  W.auRB = bars(['G5:2 B5:2 E6:3 D6:1', 'C#6:3 A5:1 F#5:4', 'B5:2 D6:2 F#6:3 E6:1', 'E6:6 R:2', 'G6:3 F#6:1 E6:2 B5:2', 'A6:3 E6:1 C#6:2 A5:2', 'B5:2 D6:2 G6:2 F#6:2', 'D6:2 E6:2 C#6:2 G6:2']);
+  W.auRC = bars(['D6:3 B5:1 D6:2 F#6:2', 'E6:3 C#6:1 E6:2 A6:2', 'A6:3 F#6:1 E6:2 C#6:2', 'D6:6 B5:1 C#6:1', 'D6:3 B5:1 D6:2 G6:2', 'F#6:3 E6:1 C#6:2 A5:2', 'B5:2 D6:2 E6:2 C#6:2', 'D6:4 E6:2 G6:2']);
+  // 香港・シンガポール：五音の音階、二胡と箏、銅鑼。パドックはゆったりのヒップホップ、レースはファンク・ロック
+  W.hkPA = bars(['A5:1.5 B5:0.5 A5:1 F#5:1 E5:1 D5:1 E5:2', 'F#5:3 E5:0.5 D5:0.5 B4:2 D5:2', 'E5:1.5 F#5:0.5 A5:1 B5:1 A5:2 F#5:2', 'E5:6 R:2', 'A5:1.5 B5:0.5 D6:1 E6:1 D6:1 B5:1 A5:2', 'B5:3 A5:0.5 F#5:0.5 E5:2 F#5:2', 'E5:1.5 F#5:0.5 B5:1 A5:1 F#5:2 E5:2', 'D5:4 E5:2 F#5:2']);
+  W.hkPB = bars(['B5:3 A5:1 F#5:2 D5:2', 'E5:1.5 F#5:0.5 A5:1 B5:1 A5:4', 'D6:3 B5:1 A5:2 F#5:2', 'E5:6 R:2', 'A5:1.5 B5:0.5 D6:1 E6:1 F#6:2 E6:2', 'E6:3 B5:1 A5:2 F#5:2', 'E5:1.5 F#5:0.5 A5:1 B5:1 D6:2 B5:2', 'A5:6 R:2']);
+  W.hkRA = bars(['E5:1 G5:0.5 A5:0.5 B5:1 D6:1 B5:0.5 A5:0.5 G5:1 E5:2', 'G5:1 A5:1 B5:2 R:1 D6:1 B5:2', 'E6:1 D6:0.5 B5:0.5 A5:1 G5:1 E5:0.5 G5:0.5 A5:1 B5:2', 'A5:6 R:2', 'G5:1 B5:1 D6:2 E6:1 D6:1 B5:2', 'A5:1 B5:1 D6:2 B5:1 A5:1 D5:2', 'E5:1 G5:1 A5:1 B5:1 D6:1 E6:1 G6:2', 'F#6:2 D6:2 B5:2 A5:2']);
+  W.hkRB = bars(['E5:3 G5:1 B5:4', 'A5:3 B5:1 D6:4', 'D6:3 A5:1 F#5:4', 'G5:6 R:2', 'E6:3 D6:1 B5:4', 'D6:3 B5:1 A5:4', 'C6:3 A5:1 E5:4', 'D#6:4 D6:2 A5:2']);
+  W.hkRC = bars(['E6:1.5 D6:0.5 B5:1 A5:1 G5:2 E5:2', 'D6:1.5 E6:0.5 D6:1 A5:1 F#5:4', 'B5:1.5 D6:0.5 B5:1 A5:1 G5:2 D5:2', 'E5:6 D5:1 E5:1', 'A5:1.5 B5:0.5 D6:1 E6:1 G6:2 E6:2', 'F#6:3 E6:1 D6:2 A5:2', 'E6:4 F#6:2 E6:2', 'D#6:2 F#6:2 A6:2 D6:2']);
+  // ドバイ・サウジ：ヒジャーズの音階（D E♭ F# G A B♭ C）、ナイ（笛）とウード、ダルブッカのマクスームの拍
+  W.mePA = bars(['D5:1 Eb5:1 F#5:2 G5:1 F#5:1 Eb5:2', 'G5:1.5 Bb5:0.5 D6:2 C6:1 Bb5:1 G5:2', 'A5:1 Bb5:0.5 A5:0.5 G5:1 F#5:1 Eb5:1 F#5:1 D5:2', 'G5:6 R:2', 'Eb5:1 G5:1 Bb5:2 D6:1.5 C6:0.5 Bb5:2', 'A5:2 D6:1 C6:1 Bb5:2 D5:2', 'G5:1 F#5:0.5 G5:0.5 Bb5:1 G5:1 Eb5:2 D5:2', 'G5:2 A5:2 F#5:2 Eb5:2']);
+  W.mePB = bars(['D5:2 G5:2 Bb5:3 A5:1', 'G5:3 Eb5:1 D5:2 C5:2', 'A5:3 C6:1 E6:2 C6:2', 'D6:6 R:2', 'G5:2 Bb5:2 D6:3 C6:1', 'Eb6:3 D6:1 C6:2 G5:2', 'Bb5:2 G5:2 Eb5:2 G5:2', 'F#5:3 Eb5:1 D5:4']);
+  W.meRA = bars(['D5:0.5 Eb5:0.5 F#5:1 G5:1 A5:1 G5:0.5 F#5:0.5 Eb5:1 D5:2', 'A5:1 Bb5:1 A5:1 G5:1 F#5:2 R:2', 'G5:1 Bb5:1 D6:2 C6:1 Bb5:1 G5:2', 'F#5:1 G5:0.5 F#5:0.5 Eb5:2 D5:4', 'D6:1 C6:0.5 Bb5:0.5 A5:1 G5:1 A5:2 Bb5:2', 'G5:1 Eb5:1 D5:1 C5:1 D5:2 Eb5:2', 'G5:1 Bb5:1 C6:1 D6:1 Eb6:2 D6:2', 'G5:2 A5:2 F#5:1 Eb5:1 C6:2']);
+  W.meRB = bars(['Bb5:3 A5:1 G5:4', 'D5:2 G5:2 A5:2 Bb5:2', 'C6:3 Bb5:1 G5:2 Eb5:2', 'F#5:4 Eb5:2 D5:2', 'G5:2 Bb5:2 D6:3 C6:1', 'Bb5:3 G5:1 D6:4', 'Eb6:3 D6:1 C6:2 G5:2', 'G5:4 F#5:2 Eb5:2']);
+  W.meRC = bars(['G5:1 Bb5:1 Eb6:2 D6:1.5 C6:0.5 Bb5:2', 'A5:1.5 Bb5:0.5 A5:1 F#5:1 Eb5:2 D5:2', 'Eb5:1 G5:1 C6:2 Bb5:1.5 A5:0.5 G5:2', 'Bb5:6 A5:1 Bb5:1', 'D6:1 Eb6:1 D6:1 Bb5:1 G5:2 Bb5:2', 'C6:1.5 Bb5:0.5 A5:1 F#5:1 Eb5:1 F#5:1 D5:2', 'Eb5:2 G5:2 Bb5:2 D6:2', 'G5:4 F#5:4']);
+  // ドイツ：ブラスの重い和音と、電子音の繰り返し（パドック）。行進のスネアを乗せたテクノ（レース）
+  W.dePA = bars(['D5:3 G5:1 Bb5:4', 'G5:3 F5:1 Eb5:4', 'F5:3 D5:1 Bb4:4', 'C5:6 R:2', 'D5:3 G5:1 A5:2 Bb5:2', 'C6:3 Bb5:1 G5:4', 'Bb5:3 G5:1 D5:2 Eb5:2', 'G5:4 F#5:4']);
+  W.dePB = bars(['G5:2 Bb5:2 D6:4', 'C6:3 A5:1 F5:4', 'F5:2 A5:2 C6:4', 'Bb5:6 R:2', 'Eb5:2 G5:2 D6:3 C6:1', 'Bb5:4 A5:4', 'F5:2 A5:2 D6:4', 'G5:4 F#5:4']);
+  W.deRA = bars(['G4:1 C5:1 Eb5:1 G5:3 F5:1 Eb5:1', 'C5:3 Eb5:1 G5:4', 'F5:2 D5:1 Bb4:1 G5:3 F5:1', 'C5:4 B4:2 Ab4:2', 'G5:1 C6:1 D6:1 Eb6:3 D6:1 C6:1', 'C6:3 G5:1 Eb5:4', 'Ab5:2 G5:1 F5:1 C5:2 Eb5:2', 'D5:4 F5:2 Bb5:2']);
+  W.deRB = bars(['Eb5:2 Ab5:2 C6:3 Bb5:1', 'Bb5:3 F5:1 D5:4', 'D5:2 F5:2 Bb5:3 A5:1', 'G5:6 R:2', 'Ab5:2 C6:2 Eb6:3 C6:1', 'Eb6:3 C6:1 Bb5:4', 'G5:2 Bb5:2 D6:4', 'C6:4 B5:4']);
+  W.deRC = bars(['Eb6:3 D6:1 C6:2 G5:2', 'F5:3 Bb5:1 D6:4', 'C6:3 Bb5:1 G5:2 Eb5:2', 'D5:2 F5:2 B5:2 Bb5:2', 'G5:2 C6:2 Eb6:3 G6:1', 'F6:3 D6:1 Bb5:4', 'C6:2 Eb6:2 Ab5:2 C6:2', 'C6:4 B5:4']);
+
+  Object.assign(SPEC, {
+    paddockUK: {
+      bpm: 104, loop: true, swing: 0.1, rev: 0.6,
+      band: { lead: 'flute', lead2: 'gtr', comp: 'strum8', compInst: 'gtr', pad: 'sus', padInst: 'strings', bass: 'anthem', bassInst: 'bass', drum: 'celtic' },
+      form: ['A', 'B', 'A2'],
+      parts: {
+        A: { ch: 'Dadd9 | C/D | G/D | Dadd9 | Bm7 | Gmaj7 | Em7 | A7sus A7', mel: W.ukPA },
+        B: { ch: 'Gmaj7 | A/G | F#m7 | Bm7 | Em9 | F#m7 | Gmaj7 | A7sus A7', lead: 'strings', mel: W.ukPB },
+        A2: { from: 'A', mel2: T(W.ukPA, -12) },
+      },
+      mix: { lead: { vol: 1, rev: 0.3, dly: 0.2 }, lead2: { vol: 0.5, pan: 0.3 }, comp: { vol: 0.75, pan: -0.3 }, pad: { vol: 0.5 } },
+    },
+    raceUK: {
+      bpm: 172, loop: true,
+      band: { lead: 'flute', lead2: 'brass', comp: 'deepStab', compInst: 'stab', pad: 'sus', padInst: 'strings', bass: 'half', bassInst: 'sub', drum: 'dnb' },
+      intro: ['I'], form: ['A', 'B', 'C', 'C2', 'D'],
+      duck: { pad: 0.35 },
+      parts: {
+        I: { ch: 'Em9 | Em9 | Cmaj9 | B7sus B7b9', sweep: [400, 18000], riser: true, comp: null, dr: { h: rep('xgxgxgxgxgxgxgxg', 4), k: dots(32) + rep('X.........X.....', 2), s: dots(48) + '....X..g.gXgXXXX', c: 'X' + dots(63) } },
+        A: { ch: 'Em9 | Cmaj9 | Am9 | B7sus B7b9 | Em9 | Cmaj9 | Am9 D13 | Gmaj7 B7#9', mel: W.ukRA },
+        B: { ch: 'Cmaj7 | D/C | Bm7 | Em9 | Am9 | D/F# | Gmaj7 | B7sus B7', lead: 'brass', lead2: 'strings', mel: W.ukRB, mel2: T(W.ukRB, -12), comp: 'stab', compInst: 'brass' },
+        C: { ch: 'Cmaj9 | D6 | Em9 | Em9/D | Cmaj9 | D6 | B7sus | B7b9', lead: 'strings', mel: W.ukRC, mel2: T(W.ukRC, -12) },
+        C2: { from: 'C', lead2: 'flute', mel2: W.ukRC },
+        D: { ch: 'Em9 | Cmaj9 | G/B | Am9 | Em9 | Cmaj9 | Am9 | B7#9', mel: W.ukRD, comp: null, riser: true, drum: null, dr: { h: rep('xgxgxgxgxgxgxgxg', 8), k: dots(64) + rep('X.........X.....', 4) } },
+      },
+      mix: { lead: { vol: 1, rev: 0.28, dly: 0.25 }, lead2: { vol: 0.6 }, comp: { vol: 0.7, dly: 0.3 }, pad: { vol: 0.55 }, bass: { vol: 0.9 } },
+    },
+    paddockFR: {
+      bpm: 120, loop: true, shuffle: 0.33, rev: 0.5,
+      band: { lead: 'accordion', lead2: 'vibes', comp: 'pompe', compInst: 'gtr', pad: null, bass: 'two', bassInst: 'ubass', drum: 'swing', crash: false },
+      form: ['A', 'A2', 'B', 'A3'],
+      parts: {
+        A: { ch: 'Am6 | Dm6 | E7 | Am6 | Dm6 | Am6/C | B7 | E7b9', mel: W.frPA },
+        A2: { from: 'A', mel2: W.frPA2 },
+        B: { ch: 'Dm6 | Am6 | Dm6 | Am6 | F7 | E7 | Am6 | E7sus E7b9', mel: W.frPB, pad: 'sus', padInst: 'strings' },
+        A3: { from: 'A', lead: 'vibes', lead2: 'accordion', mel2: T(W.frPA, -12) },
+      },
+      mix: { lead: { vol: 0.95, rev: 0.25, dly: 0.1 }, lead2: { vol: 0.6, pan: 0.3 }, comp: { vol: 1, pan: -0.3, wide: 0.2 }, pad: { vol: 0.4 } },
+    },
+    raceFR: {
+      bpm: 128, loop: true, swing: 0.1,
+      band: { lead: 'accordion', lead2: 'strings', comp: 'epHouse', compInst: 'epiano', pad: 'sus', padInst: 'strings', bass: 'house', bassInst: 'bass', drum: 'house' },
+      intro: ['I'], form: ['A', 'B', 'C', 'D'],
+      duck: { pad: 0.45, comp: 0.25 },
+      parts: {
+        I: { ch: 'Fmaj9 | Em7 A7b9 | Dm9 | Gm9 C13', sweep: [300, 9000], riser: true, dr: { K: rep('X...', 16), o: dots(16) + rep('..X.', 12), p: dots(32) + rep('....X.......X...', 2), c: 'X' + dots(63) } },
+        A: { ch: 'Fmaj9 | Em7 A7b9 | Dm9 | G13 | Cmaj9 | Am7 D9 | Gm9 | C13', mel: W.frRA },
+        B: { ch: 'Bbmaj9 | Am7 | Gm9 | C9sus C13 | Bbmaj9 | Am7 D7b9 | Gm9 | C7sus C7b9', lead: 'vibes', comp2: 'cut16', mel: W.frRB },
+        C: { ch: 'Dm9 | G13 | Cmaj9 | Fmaj9 | Bbmaj9 | Em7b5 A7b9 | Dm9 | Gm9 C13', mel: W.frRC, mel2: T(W.frRC, -12), lead2: 'vibes' },
+        D: { ch: 'Fmaj9 | Fmaj9 | Bbmaj9 | C13', pad: null, sweep: [700, 16000], riser: true, mute: ['o'] },
+      },
+      mix: { lead: { vol: 0.9, dly: 0.2 }, lead2: { vol: 0.55 }, comp: { vol: 0.85 }, comp2: { vol: 0.5 }, pad: { vol: 0.5 } },
+    },
+    paddockUS: {
+      bpm: 92, loop: true, shuffle: 0.33,
+      band: { lead: 'twang', lead2: 'organ', comp: 'stab', compInst: 'organ', pad: null, bass: 'boogie', bassInst: 'bass', drum: 'shuffle', crash: false },
+      form: ['A', 'A2'],
+      parts: {
+        A: { ch: 'E9 | A13 | E9 | E9 | A13 | A13 | E9 | C#7#9 | F#m9 | B13 | E9 C#7#9 | F#m9 B7#9', mel: W.usPA },
+        A2: { from: 'A', lead: 'brass', lead2: 'twang', mel2: T(W.usPA, -12), pad: 'sus', padInst: 'organ' },
+      },
+      mix: { lead: { vol: 1, rev: 0.22, dly: 0.12 }, lead2: { vol: 0.7, pan: 0.3 }, comp: { vol: 1 }, pad: { vol: 0.45 }, bass: { vol: 0.55 } },
+    },
+    raceUS: {
+      bpm: 152, loop: true,
+      band: { lead: 'guitar', lead2: 'brass', comp: 'chug8', compInst: 'crunch', pad: 'sus', padInst: 'organ', bass: 'rock8', bassInst: 'bass', drum: 'rock' },
+      intro: ['I'], form: ['A', 'B', 'C', 'C2', 'D'],
+      parts: {
+        I: { ch: 'E9 | B7#9', pad: null, mel: 'R:8 | R:4 E4+B4+E5:1 R:1 D#4+A4+D5:2', dr: { k: 'X.......X.......' + 'X.......X.X.X.X.', s: dots(16) + '....X...XXXXXXXX', c: 'X' + dots(31) } },
+        A: { ch: 'E9 | D6 | A/C# | E9 | G6 | D/F# | A | B7#9', mel: T(W.usRA, -12) },
+        B: { ch: 'C#m7 | Bm7 | A | E/G# | F#m7 | Gmaj7 | A6 | B7sus B7', mel: T(W.usRB, -12), mel2: T(W.usRB, -12), comp: 'stab', compInst: 'organ' },
+        C: { ch: 'Eadd9 | B/D# | C#m7 | A6 | E/G# | F#m7 | A/B | B7#9', mel: T(W.usRC, -12) },
+        C2: { from: 'C', mel2: T(W.usRC, -12) },
+        D: { ch: 'E9 | E9 | E9 | B7#9', comp: null, mel: rep('E5:1 E5:0.5 G5:1 E5:0.5 A5:1 G5:0.5 E5:1.5 D5:1 B4:1 | ', 3) + 'E5:2 G5:2 G#5:2 B5:2', riser: true },
+      },
+      mix: { lead: { vol: 1, rev: 0.15, dly: 0.12 }, lead2: { vol: 0.5 }, comp: { vol: 0.8, pan: -0.25, wide: 0.6 }, pad: { vol: 0.4 }, bass: { vol: 0.55 } },
+    },
+    paddockAU: {
+      bpm: 116, loop: true, swing: 0.08,
+      band: { lead: 'pluck', lead2: 'vibes', comp: 'strum8', compInst: 'gtr', pad: 'sus', padInst: 'pad', bass: 'house', bassInst: 'bass', drum: 'house' },
+      form: ['A', 'B', 'A2', 'T'],
+      duck: { pad: 0.4 },
+      parts: {
+        A: { ch: 'Aadd9 | E/G# | F#m7 | Dmaj9 | Aadd9 | E/G# | Dmaj9 | E9sus E9', mel: W.auPA, mute: ['p'], addDr: { R: '....x.......x...' } },
+        B: { ch: 'Dmaj9 | C#m7 | Bm9 | Aadd9 | Dmaj9 | C#m7 F#m7 | Bm9 | E9sus E9', mel: W.auPB },
+        A2: { from: 'A', mute: [], addDr: {}, mel2: T(W.auPA, 12) },
+        T: { ch: 'Dmaj9 | E/D | C#m7 F#m7 | Bm9 E9sus', lead: 'strings', mel: 'A5:8 | G#5:8 | G#5:4 A5:4 | A5:4 B5:4', riser: true },
+      },
+      mix: { lead: { vol: 1.1, rev: 0.25, dly: 0.25 }, lead2: { vol: 0.5, pan: 0.3 }, comp: { vol: 0.8, pan: -0.25 }, pad: { vol: 0.45 } },
+    },
+    raceAU: {
+      bpm: 148, loop: true,
+      band: { lead: 'lead', lead2: 'brass', comp: 'chug8', compInst: 'crunch', pad: 'sus', padInst: 'organ', bass: 'rock8', bassInst: 'bass', drum: 'rock' },
+      intro: ['I'], form: ['A', 'B', 'C', 'C2'],
+      parts: {
+        I: { ch: 'Dadd9 | A7sus A', pad: null, dr: { k: 'X.......X.......' + 'X.......X.X.X.X.', s: dots(16) + '....X...XXXXXXXX', c: 'X' + dots(31) } },
+        A: { ch: 'Dadd9 | A/C# | Bm7 | Gmaj7 | Dadd9 | A/C# | Gmaj7 | A7sus A', mel: T(W.auRA, -12), addDr: { o: '..............x.' } },
+        B: { ch: 'Em7 | F#m7 | Gmaj7 | A6 | Em7 | F#m7 | Gmaj7 | A7sus A7', mel: T(W.auRB, -12), comp: 'strum8', compInst: 'gtr' },
+        C: { ch: 'Gmaj7 | A6 | F#m7 | Bm7 | Gmaj7 | A6 | Bm7 A/C# | Dadd9 A7', mel: T(W.auRC, -12), mel2: T(W.auRC, -24) },
+        C2: { from: 'C', lead2: 'bell', mel2: W.auRC },
+      },
+      mix: { lead: { vol: 0.9, dly: 0.18 }, lead2: { vol: 0.55 }, comp: { vol: 0.75, pan: -0.25, wide: 0.6 }, pad: { vol: 0.4 }, bass: { vol: 0.55 } },
+    },
+    paddockHK: {
+      bpm: 100, loop: true, swing: 0.2, rev: 0.6,
+      band: { lead: 'erhu', lead2: 'zheng', comp: 'arpUp', compInst: 'zheng', pad: 'sus', padInst: 'pad', bass: 'deep', bassInst: 'sub', drum: 'lofi' },
+      form: ['A', 'B', 'A2'],
+      parts: {
+        A: { ch: 'D69 | Bm11 | Gmaj9 | A9sus | D69 | Bm11 | Em9 | A9sus A13', mel: W.hkPA, addDr: { G: 'X' + dots(127) } },
+        B: { ch: 'Gmaj9 | F#m11 | Em9 | Bm11 | Gmaj9 | F#m11 | Em9 | A9sus', mel: W.hkPB },
+        A2: { from: 'A', mel2: T(W.hkPA, -12) },
+      },
+      mix: { lead: { vol: 0.9, rev: 0.3, dly: 0.25 }, lead2: { vol: 0.5, pan: 0.3 }, comp: { vol: 0.55, dly: 0.25 }, pad: { vol: 0.55 }, bass: { vol: 0.7 } },
+    },
+    raceHK: {
+      bpm: 146, loop: true, swing: 0.08,
+      band: { lead: 'erhu', lead2: 'brass', comp: 'cut16', compInst: 'cut', comp2: 'stab', comp2Inst: 'brass', pad: 'sus', padInst: 'strings', bass: 'slap', bassInst: 'slap', drum: 'funk' },
+      intro: ['I'], form: ['A', 'B', 'C', 'C2'],
+      parts: {
+        I: { ch: 'Em9 | B7#9', comp2: null, mel: 'R:8 | R:4 E5+B5:0.5 R:0.5 E5+B5:1 R:0.5 D#5+A5:1.5', dr: { G: 'X' + dots(31), k: 'X' + dots(15) + 'X.......X.X.X.X.', s: dots(16) + '....X...XxXxXXXX' } },
+        A: { ch: 'Em9 | A9 | Em9 | A9 | Cmaj9 | D6 | Em9 | B7#9', mel: W.hkRA, addDr: { G: 'X' + dots(127) } },
+        B: { ch: 'Cmaj9 | D6 | Bm7 | Em9 | Cmaj9 | D6 | F#m7b5 | B7#9', lead: 'brass', lead2: 'erhu', mel: T(W.hkRB, -12), mel2: W.hkRB },
+        C: { ch: 'Am9 | D9 | Gmaj9 | Cmaj9 | Am9 | D9 | B7sus | B7#9', mel: W.hkRC, mel2: T(W.hkRC, -12), addDr: { G: 'X' + dots(127) } },
+        C2: { from: 'C', comp2: 'raceStab' },
+      },
+      mix: { lead: { vol: 0.85, rev: 0.2, dly: 0.15 }, lead2: { vol: 0.55 }, comp: { vol: 0.55 }, comp2: { vol: 0.45, pan: 0.3 }, pad: { vol: 0.45 } },
+    },
+    paddockME: {
+      bpm: 96, loop: true, swing: 0.1, rev: 0.65,
+      band: { lead: 'flute', lead2: 'oud', comp: 'arpUp', compInst: 'oud', pad: 'sus', padInst: 'pad', bass: 'deep', bassInst: 'sub', drum: 'maqsum', crash: false },
+      form: ['A', 'B', 'A2'],
+      parts: {
+        A: { ch: 'D7b9 | Ebmaj7 | D7b9 | Gm7 | Cm9 | Bbmaj7 | Ebmaj7 | D7sus D7b9', mel: W.mePA },
+        B: { ch: 'Gm9 | Cm9 | Fmaj7 | Bbmaj7 | Ebmaj7 | Cm7 | Ebmaj7 | D7b9', lead: 'strings', mel: W.mePB, addDr: { K: 'X.......X.......' } },
+        A2: { from: 'A', mel2: T(W.mePA, -12), addDr: { K: 'X.......X.......' } },
+      },
+      mix: { lead: { vol: 0.9, rev: 0.35, dly: 0.2 }, lead2: { vol: 0.6, pan: 0.3 }, comp: { vol: 0.55, dly: 0.2 }, pad: { vol: 0.5 }, bass: { vol: 0.7 } },
+    },
+    raceME: {
+      bpm: 138, loop: true,
+      band: { lead: 'oud', lead2: 'strings', comp: 'raceStab', compInst: 'stab', pad: 'sus', padInst: 'strings', bass: 'roll', bassInst: 'bass', drum: 'techno' },
+      intro: ['I'], form: ['A', 'B', 'C', 'C2'],
+      duck: { pad: 0.45, comp: 0.3 },
+      parts: {
+        I: { ch: 'D7b9 | D7b9 | Ebmaj7 | D7sus D7b9', sweep: [500, 18000], riser: true, comp: null, dr: { d: rep('X.......X.......', 4), e: rep('..X...X.g...X.g.', 4), K: dots(32) + rep('X...', 8) } },
+        A: { ch: 'D7b9 | D7b9 | Ebmaj7 | D7b9 | Gm9 | Cm9 | Ebmaj7 | D7sus D7b9', mel: W.meRA, addDr: { d: 'X.......X.......', e: '..x...x.....x...' } },
+        B: { ch: 'Gm9 | Gm9 | Cm9 | D7b9 | Gm9 | Ebmaj7 | Cm9 | D7sus D7b9', lead: 'strings', lead2: 'oud', mel: W.meRB, mel2: T(W.meRB, -12), addDr: { e: '..x...x.g...x.g.' } },
+        C: { ch: 'Ebmaj7 | D7b9 | Cm9 | Gm9 | Ebmaj7 | D7b9 | Cm9 | D7sus D7b9', lead: 'saw', mel: T(W.meRC, -12), mel2: T(W.meRC, -12), addDr: { d: 'X.......X.......', e: '..x...x.g...x.g.' } },
+        C2: { from: 'C', lead: 'strings', lead2: 'oud', mel: W.meRC },
+      },
+      mix: { lead: { vol: 1, rev: 0.22, dly: 0.2 }, lead2: { vol: 0.6 }, comp: { vol: 0.6, wide: 0.8 }, pad: { vol: 0.5 } },
+    },
+    paddockDE: {
+      bpm: 108, loop: true,
+      band: { lead: 'brass', lead2: 'strings', comp: 'arpUp', compInst: 'pluck', pad: 'sus', padInst: 'pad', bass: 'seq8', bassInst: 'bass', drum: 'march' },
+      form: ['A', 'B', 'A2'],
+      parts: {
+        A: { ch: 'Gm9 | Ebmaj7 | Bb/D | F/A | Gm9 | Cm9 | Ebmaj7 | D7sus D7b9', mel: W.dePA, addDr: { T: 'X' + dots(127) } },
+        B: { ch: 'Ebmaj7 | F/Eb | Dm7 | Gm7 | Cm9 | F7sus F7 | Bbmaj7 | D7sus D7', lead: 'strings', lead2: 'brass', mel: W.dePB, mel2: T(W.dePB, -12), padInst: 'choir' },
+        A2: { from: 'A', mel2: T(W.dePA, -12) },
+      },
+      mix: { lead: { vol: 1.15, rev: 0.3 }, lead2: { vol: 0.6 }, comp: { vol: 0.6, dly: 0.25 }, pad: { vol: 0.6 }, bass: { vol: 0.8 } },
+    },
+    raceDE: {
+      bpm: 144, loop: true,
+      band: { lead: 'brass', lead2: 'strings', comp: 'raceStab', compInst: 'stab', pad: 'sus', padInst: 'strings', bass: 'roll', bassInst: 'bass', drum: 'techno' },
+      intro: ['I'], form: ['A', 'B', 'C', 'C2'],
+      duck: { pad: 0.45, comp: 0.3 },
+      parts: {
+        I: { ch: 'Cm9 | Cm9 | Abmaj7 | G7sus G7b9', sweep: [500, 18000], riser: true, comp: null, dr: { K: rep('X...', 16), s: rep('x.gg....x.gg....', 3) + 'x.ggx.ggxxxxXXXX', T: 'X' + dots(47) + 'X.x.X.x.XxXxXXXX' } },
+        A: { ch: 'Cm9 | Abmaj7 | Bb6 | G7sus G7b9 | Cm9 | Abmaj7 | Fm9 | G7sus G7#9', mel: W.deRA, mel2: T(W.deRA, -12), addDr: { s: 'x.gg....x.gg....', T: 'X' + dots(127) } },
+        B: { ch: 'Abmaj7 | Bb/Ab | Gm7 | Cm9 | Fm9 | Bb9sus | Ebmaj7 | G7sus G7', lead: 'strings', lead2: 'brass', mel: W.deRB, mel2: T(W.deRB, -12), comp: 'stab', compInst: 'brass' },
+        C: { ch: 'Cm9 | Bb/C | Abmaj7 | G7#9 | Cm9 | Bb/C | Abmaj7 Fm9 | G7sus G7b9', mel: W.deRC, mel2: T(W.deRC, -12), addDr: { s: 'x.gg....x.gg.g.g', T: 'X' + dots(127) } },
+        C2: { from: 'C', lead2: 'choir' },
+      },
+      mix: { lead: { vol: 0.95, rev: 0.22, dly: 0.12 }, lead2: { vol: 0.55 }, comp: { vol: 0.6, wide: 0.8 }, pad: { vol: 0.5 } },
+    },
+  });
   const SONGS = {};
   for (const [k, sp] of Object.entries(SPEC)) SONGS[k] = arrange(k, sp);
   AU.SONGS = SONGS;
@@ -935,7 +1242,7 @@
           on++; if (ev.p % 2 !== 0) off++;
         }
       }
-      info[k] = Object.assign({ seconds: s.length * sec, loopSeconds: s.loop ? (s.length - s.loopStart) * sec : 0, loop: s.loop, bpm: s.bpm, swing: s.swing, tracks: c.tracks.length, notes: on, offbeat: on ? off / on : 0, instruments: [...insts] }, color(k));
+      info[k] = Object.assign({ seconds: s.length * sec, loopSeconds: s.loop ? (s.length - s.loopStart) * sec : 0, loop: s.loop, bpm: s.bpm, swing: s.swing, shuffle: s.shuffle, tracks: c.tracks.length, notes: on, offbeat: on ? off / on : 0, instruments: [...insts] }, color(k));
     }
     return { errors: errs, info };
   };
@@ -985,7 +1292,7 @@
       const lp = filt('lowpass', 2800), fb = gn(fbv), p = panner(pan), o = gn(0.42);
       dhp.connect(d); d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(p); p.connect(o); o.connect(st.in);
     }
-    st.sw = p => (song.swing && Math.abs(p % 1 - 0.5) < 1e-6 ? song.swing * 0.5 : 0);
+    st.sw = p => (song.swing && Math.abs(p % 1 - 0.5) < 1e-6 ? song.swing * 0.5 : 0) + (song.shuffle && Math.abs(p % 2 - 1) < 1e-6 ? song.shuffle : 0);
     const tracks = cs.tracks.map(tr => {
       const ch = tr.sweep ? null : channel(st, tr.mix);
       return { tr, out: ch && ch.inp, duck: ch && ch.duck, duckAmt: tr.mix.duck || 0, i: 0, base: 0, first: tr.events.findIndex(ev => ev.p >= song.loopStart) };
@@ -1023,8 +1330,19 @@
     g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.setTargetAtTime(0, now, 0.08);
     setTimeout(() => { try { st.out.disconnect(); } catch (e) { /* 外れている */ } for (const l of st.lfos) try { l.stop(); } catch (e) { /* 止まっている */ } }, 1500);
   }
-  // 年末の大レース（GF）には、その場面の特別な曲があればそちらを鳴らす
-  const pick = (name, race) => (race && race.grade === 'GF' && SONGS[name + 'GF']) ? name + 'GF' : name;
+  // 年末の大レース（GF）には、その場面の特別な曲があればそちらを鳴らす。海外のレースは国（地域）の曲を鳴らす
+  const REGION = { 英: 'UK', 愛: 'UK', 仏: 'FR', 米: 'US', 加: 'US', 豪: 'AU', 香港: 'HK', 星: 'HK', UAE: 'ME', サウジ: 'ME', 独: 'DE' };
+  AU.REGION = REGION;
+  AU.region = race => {
+    if (!race) return null;
+    const D = globalThis.HS && HS.DATA, c = D && D.courses && D.courses[race.course];
+    return REGION[race.country || (c && c.country)] || null;
+  };
+  const pick = (name, race) => {
+    if (race && race.grade === 'GF' && SONGS[name + 'GF']) return name + 'GF';
+    const r = AU.region(race);
+    return r && SONGS[name + r] ? name + r : name;
+  };
   AU.bgm = function (name0, race) {
     const name = pick(name0, race);
     if (!E) { wantSong = [name0, race]; return; }
@@ -1052,9 +1370,10 @@
       if (cur) cur.onEnd = res; else res();
     });
   };
-  // 画面ごとの曲
-  AU.songFor = st => st.screen === 'title' || st.screen === 'newgame' ? 'title'
-    : st.screen === 'game' && st.view && (st.view.name === 'jrecord' || st.view.name === 'records') ? 'glory' : 'home';
+  // 画面ごとの曲。st.scene（'paddock'・'race'・'fanfare'）とレースを渡すと、その場面・国の曲
+  AU.songFor = (st, race) => st.scene ? pick(st.scene, race)
+    : st.screen === 'title' || st.screen === 'newgame' ? 'title'
+      : st.screen === 'game' && st.view && (st.view.name === 'jrecord' || st.view.name === 'records') ? 'glory' : 'home';
   // 書き出しのときの8分音符の秒：くり返しの長さが 128 サンプル（Web Audio が一度に描く単位）の倍数になるように、
   // ごくわずか（0.002% 以下）丸める。半端だと、音の高さの動きが周ごとに少しずれて、つなぎ目で波形が合わない
   AU.renderEighth = function (name) {
