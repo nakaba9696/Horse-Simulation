@@ -1,0 +1,107 @@
+{
+  "songs": {
+    "title": {
+      "file": "title.ogg",
+      "scene": "タイトル",
+      "loop": true,
+      "bpm": 124,
+      "seconds": 80.419,
+      "loop_offset": 10.741927,
+      "loop_begin_sample": 473719,
+      "loop_end_sample": 3546487
+    },
+    "home": {
+      "file": "home.ogg",
+      "scene": "ホーム",
+      "loop": true,
+      "bpm": 112,
+      "seconds": 75.857,
+      "loop_offset": 7.285714,
+      "loop_begin_sample": 321300,
+      "loop_end_sample": 3345300
+    },
+    "paddock": {
+      "file": "paddock.ogg",
+      "scene": "パドック",
+      "loop": true,
+      "bpm": 120,
+      "seconds": 75,
+      "loop_offset": 11,
+      "loop_begin_sample": 485100,
+      "loop_end_sample": 3307500
+    },
+    "paddockGF": {
+      "file": "paddockGF.ogg",
+      "scene": "GFのパドック",
+      "loop": true,
+      "bpm": 92,
+      "seconds": 86.479,
+      "loop_offset": 3,
+      "loop_begin_sample": 132300,
+      "loop_end_sample": 3813708
+    },
+    "race": {
+      "file": "race.ogg",
+      "scene": "レース",
+      "loop": true,
+      "bpm": 140,
+      "seconds": 92.143,
+      "loop_offset": 9.857143,
+      "loop_begin_sample": 434700,
+      "loop_end_sample": 4063500
+    },
+    "fanfare": {
+      "file": "fanfare.ogg",
+      "scene": "ファンファーレ",
+      "loop": false,
+      "bpm": 108,
+      "seconds": 17.628,
+      "loop_offset": 0,
+      "loop_begin_sample": 0,
+      "loop_end_sample": 0
+    },
+    "fanfareGF": {
+      "file": "fanfareGF.ogg",
+      "scene": "GFのファンファーレ",
+      "loop": false,
+      "bpm": 104,
+      "seconds": 20.639,
+      "loop_offset": 0,
+      "loop_begin_sample": 0,
+      "loop_end_sample": 0
+    },
+    "victory": {
+      "file": "victory.ogg",
+      "scene": "勝利",
+      "loop": false,
+      "bpm": 132,
+      "seconds": 8.982,
+      "loop_offset": 0,
+      "loop_begin_sample": 0,
+      "loop_end_sample": 0
+    },
+    "lose": {
+      "file": "lose.ogg",
+      "scene": "負け",
+      "loop": false,
+      "bpm": 96,
+      "seconds": 11.49,
+      "loop_offset": 0,
+      "loop_begin_sample": 0,
+      "loop_end_sample": 0
+    },
+    "glory": {
+      "file": "glory.ogg",
+      "scene": "栄光_成績と表彰",
+      "loop": true,
+      "bpm": 88,
+      "seconds": 68.454,
+      "loop_offset": 3,
+      "loop_begin_sample": 132300,
+      "loop_end_sample": 3018828
+    }
+  },
+  "note": "tools/render_bgm.js が js/ui/audio.js の曲から書き出す（手で直さない）。くり返す曲は、終わりまで鳴らしたら loop_offset 秒へ戻る",
+  "sample_rate": 44100,
+  "source_hash": "75b8e5d89b90dc68"
+}

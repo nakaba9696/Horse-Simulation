@@ -48,7 +48,7 @@
   UI.nav = function (tab) {
     if (!isJ()) return nav0(tab);
     const items = [['home', 'ホーム'], ['stable', '厩舎'], ['market', '馬の店'], ['breed', '生産'], ['races', 'レース'], ['jrecord', 'データ'], ['menu', 'メニュー']];
-    return `<nav class="nav"><div class="in">${items.map(([k, lb]) => `<button data-act="tab" data-tab="${k}" class="${tab === k ? 'on' : ''}"><span class="ic">${UI.icon(k)}</span>${lb}</button>`).join('')}</div></nav>`;
+    return `<nav class="nav"><div class="in">${items.map(([k, lb]) => `<button data-act="tab" data-tab="${k}" class="${tab === k ? 'on' : ''}" data-help="${e((UI.kit && UI.kit.NAV_HELP[k]) || '')}"><span class="ic">${UI.icon(k)}</span>${lb}</button>`).join('')}</div></nav>`;
   };
 
   // ---------- 生産：オリジナルホース（引退させた牡馬と牝馬から） ----------
@@ -167,9 +167,9 @@
         <div class="mgr-mid">
           <div class="plaque"><div class="y">${W.yLabel(G.year)}</div><div class="mw">${G.month}<small>月</small> 第${G.week}<small>週</small></div></div>
           <div class="wx">${wx ? `<div class="ic">${T.weatherIcon(wx)}</div><div><div class="small">${e(main.course)}</div><b>${wx}・${main.ground}</b></div>` : ''}</div>
-          <button class="go ${rides.length ? 'on' : ''}" data-act="next" ${over ? 'disabled' : ''}>${rides.length ? 'レースへ' : '次の週へ'}<small>${rides.length ? `${rides.length}鞍に騎乗` : ''}</small></button>
+          <button class="go ${rides.length ? 'on' : ''}" data-act="next" ${over ? 'disabled' : 'data-autofocus'}>${rides.length ? 'レースへ' : '次の週へ'}<small>${rides.length ? `${rides.length}鞍に騎乗` : ''}</small></button>
         </div>
-        <div class="mgr-cmds">${cmds.map(([k, lb, sub]) => `<button data-act="tab" data-tab="${k}"><span class="ic">${UI.icon(k)}</span><b>${lb}</b><small>${sub}</small></button>`).join('')}</div>
+        <div class="mgr-cmds">${cmds.map(([k, lb, sub]) => `<button data-act="tab" data-tab="${k}" data-help="${e((UI.kit && UI.kit.NAV_HELP[k === 'stable' ? 'stable' : k]) || '')}"><span class="ic">${UI.icon(k)}</span><b>${lb}</b><small>${sub}</small></button>`).join('')}</div>
         <div class="mgr-foot small">今年 ${yr.rides}戦${yr.wins}勝（2着${yr.w2}・3着${yr.w3}）・通算 ${j.total.rides}戦${j.total.wins}勝・評判 ${J.repLabel(j.rep)}・騎乗技術 ${Math.round(j.skill)}</div>
       </div>
       ${!W.mine().length && !over ? `<div class="panel gold mt">📌 <a href="#" data-act="tab" data-tab="market">馬の店でデビュー前の史実馬を買おう</a>（2歳の4月から自動で入厩し、レースに出られる）。お手馬は${T.MAX_OWN}頭まで。毎月の費用がかかり、資金がマイナスのまま2か月続くとシーズンが終わる。</div>` : ''}
@@ -206,45 +206,72 @@
   }
 
   // ---------- 馬の店：品ぞろえ（開いている走っていない馬から、牡馬・牝馬それぞれ10頭を毎月選ぶ。js/core/eraless.js の E.shop）----------
-  // 見た目は古典的な騎手ゲームの店（持ち主の指摘 2026-10-16「店はこんな感じのUIを想定」）：牡馬・牝馬の切り替え（Q・E／LB・RB）、
-  // 一行ずつ 馬名・性齢・芝・ダート（完成の総合力）・値段。買えない値段は赤。行を押すと馬の画面（そこで買う）
+  // 画面の共通部品（js/ui/uikit.js・docs/UI.md）で作る：見出しの帯・牡馬と牝馬のタブ（Q・E／LB・RB）・並べ替えのできる表・右の見本（選んだ馬の能力と買うボタン）
+  // 行を押すと馬の画面。赤い値段は資金不足。★＝倒したスペシャルホース、外＝外国の馬、地＝地方の馬
+  const SHOP_STYLE = ['逃げ', '先行', '差し', '追込'];
+  const SHOP_COLS = [
+    { k: 'name', label: '馬名', val: x => x.it.horse.name, str: true, dir: 1 },
+    { k: 'turf', label: '芝', title: '総合力（芝・伸びきったとき）', val: x => x.fh.turf, dir: -1 },
+    { k: 'dirt', label: 'ダ', title: '総合力（ダート・伸びきったとき）', val: x => x.fh.dirt, dir: -1 },
+    { k: 'dist', label: '距離', val: x => x.it.horse.distMin * 10000 + x.it.horse.distMax, dir: 1 },
+    { k: 'style', label: '脚質', val: x => SHOP_STYLE.indexOf(x.it.horse.style), dir: 1 },
+    { k: 'price', label: '値段', val: x => x.it.price, dir: -1 },
+  ];
+  const shopItems = () => {
+    const all = W.marketHistoric().map((it, i) => ({ it, i, kind: 'hist' })).concat(W.marketForeign().map((it, i) => ({ it, i, kind: 'fhist' })));
+    for (const x of all) { x.fh = T.fhPeak(x.it.horse); x.f = x.it.horse.sex === '牝'; }
+    return all;
+  };
+  const shopMark = it => { const E = HS.Eraless; return it.legend ? '<i class="sp" title="スペシャルホース">★</i>' : HS.DATA.isForeign(it.data || {}) ? '<i title="外国の馬">外</i>' : E && E.lockOf && it.data && E.lockOf(it.data) === 'local' ? '<i title="地方の馬">地</i>' : '<i class="none"></i>'; };
   const market0 = S.market;
   S.market = function (st) {
     if (!isJ()) return market0(st);
-    const G = W.get(), money = G.player.money;
+    const G = W.get(), money = G.player.money, K = UI.kit;
     const sex = st.msex === 'f' ? 'f' : 'm';
-    const all = W.marketHistoric().map((it, i) => ({ it, i, kind: 'hist' })).concat(W.marketForeign().map((it, i) => ({ it, i, kind: 'fhist' })));
-    for (const x of all) { x.fh = T.fhPeak(x.it.horse); x.f = x.it.horse.sex === '牝'; }
+    const all = shopItems();
     const nM = all.filter(x => !x.f).length, nF = all.length - nM;
-    const items = all.filter(x => x.f === (sex === 'f'));
-    items.sort((a, b) => ((b.it.legend ? 1 : 0) - (a.it.legend ? 1 : 0)) || b.it.price - a.it.price); // 倒したスペシャルホースは上に
+    let items = all.filter(x => x.f === (sex === 'f'));
+    items.sort((a, b) => ((b.it.legend ? 1 : 0) - (a.it.legend ? 1 : 0)) || b.it.price - a.it.price); // 並べ替えていないとき：倒したスペシャルホースが上、あとは高い順
+    if (st.msort) items = HS.List.sort(items, SHOP_COLS, st.msort, st.mdir);
     const full = !T.canBuy();
-    const E = HS.Eraless;
-    const mark = it => it.legend ? '<i class="mk sp">★</i>' : HS.DATA.isForeign(it.data || {}) ? '<i class="mk">外</i>' : E && E.lockOf && it.data && E.lockOf(it.data) === 'local' ? '<i class="mk">地</i>' : '<i class="mk none"></i>';
-    const rows = items.map(({ it, fh }, k) => {
-      const h = it.horse, best = fh.turf >= fh.dirt ? 'turf' : 'dirt';
-      return `<div class="hs-row ${it.legend ? 'legend' : ''}" data-act="horse" data-id="${e(h.id)}" style="--i:${Math.min(k, 12)}">
-        ${mark(it)}<span class="bar"><b class="nm">${e(h.name)}</b><span class="sa">${h.sex === '牝' ? '牝' : h.sex === 'セ' ? 'セ' : '牡'}${G.year - h.born}</span>
-        <span class="vals"><span class="hx ${best === 'turf' ? 'hi' : ''}">${fh.turf}</span><span class="hx ${best === 'dirt' ? 'hi' : ''}">${fh.dirt}</span></span></span>
-        <span class="pr ${it.price > money ? 'over' : ''}">${U.money(it.price)}</span></div>`;
-    }).join('');
     const nextM = G.month === 12 ? 1 : G.month + 1;
-    return `<div class="hshop">
-      <div class="hs-top"><span class="yen">¥</span><span class="ttl">HORSE SHOP</span>
-        <span class="fund"><small>MONEY</small><b>${U.money(money)}</b></span></div>
-      <div class="hs-tabs"><button class="lr" data-act="msex" data-sex="${sex === 'm' ? 'f' : 'm'}" data-lr="prev" aria-label="切り替え">◀</button>
-        <button class="tb m ${sex === 'm' ? 'on' : ''}" data-act="msex" data-sex="m"><kbd>Q</kbd>MALE<small>${nM}</small></button>
-        <span class="own">お手馬 ${T.ownCount()}/${T.MAX_OWN}${full ? '（いっぱい）' : ''}</span>
-        <button class="tb f ${sex === 'f' ? 'on' : ''}" data-act="msex" data-sex="f">FEMALE<small>${nF}</small><kbd>E</kbd></button>
-        <button class="lr" data-act="msex" data-sex="${sex === 'm' ? 'f' : 'm'}" data-lr="next" aria-label="切り替え">▶</button></div>
-      <div class="hs-head"><span>NAME</span><span>SEX-AGE</span><span>TURF</span><span>DIRT</span><span class="p">PRICE</span></div>
-      ${items.length ? `<div class="hs-list">${rows}</div>` : `<div class="panel empty">いま並んでいる${sex === 'f' ? '牝馬' : '牡馬'}はいません。${nextM}月に入れ替わります。</div>`}
-      <div class="hs-foot"><span class="tag ${sex}">${sex === 'f' ? 'FEMALE' : 'MALE'}</span><span class="jp">${sex === 'f' ? '牝馬' : '牡馬'}リスト</span>
-        <span class="note">毎月入れ替え（次は${nextM}月）・TURF / DIRT は${T.FH_NAME}（伸びきったときの強さ）・赤い値段は資金が足りない</span></div>
-    </div>
-      <div class="small muted mt">1989〜2026年に走った馬のうち、いま走っていない馬から選んで、デビュー前の2歳として売る。倒したスペシャルホースはいつも並ぶ（★）。外＝外国の馬、地＝地方の馬。はじめは G3 までの馬だけで、自分の馬で勝つと、次の月の入れ替えからその格・地方・国の馬も選ばれるようになる。</div>
-      ${E && E.locks ? `<div class="shop-locks mt">${E.locks().map(l => `<span class="lk ${l.open ? 'open' : ''}"><b>${l.open ? '' : '🔒 '}${e(l.label)}</b> ${l.n}頭<small>${l.open ? '選ばれる' : `${e(l.hint)}と選ばれる`}</small></span>`).join('')}</div>` : ''}`;
+    const head = `<tr><th></th>${K.sortHead(SHOP_COLS.slice(0, 1), st.msort, st.mdir, 'msort')}<th class="c">性齢</th>${K.sortHead(SHOP_COLS.slice(1), st.msort, st.mdir, 'msort', c => c.k === 'price' ? 'r' : 'c')}</tr>`;
+    const rows = items.map(({ it, fh }, k) => {
+      const h = it.horse;
+      return `<tr class="${it.legend ? 'legend' : ''}" data-act="horse" data-id="${e(h.id)}" data-pv="shop:${e(h.id)}" style="--i:${Math.min(k, 12)}"${k === 0 ? ' data-autofocus' : ''}>
+        <td class="mk">${shopMark(it)}</td><td><div class="nm">${e(h.name)}</div><div class="sub">${e(h.coat || '')}${h.sire && h.sire !== '?' ? `・父 ${e(h.sire)}` : ''}</div></td>
+        <td class="c w">${h.sex === '牝' ? '牝' : h.sex === 'セ' ? 'セ' : '牡'}${G.year - h.born}</td>
+        <td class="c">${K.num(fh.turf, '総合力（芝）', false, 40, 85)}</td><td class="c">${K.num(fh.dirt, '総合力（ダート）', false, 40, 85)}</td>
+        <td class="c w small">${h.distMin}〜${h.distMax}</td><td class="c">${UI.kyakuArrows(h.style, h)}<div class="sub">${e(h.style)}</div></td>
+        <td class="r">${K.price(it.price, money)}</td></tr>`;
+    }).join('');
+    const E = HS.Eraless;
+    return K.band({ icon: 'market', title: '馬の店', sub: `デビュー前の2歳を売る。毎月入れ替え（次は${nextM}月）`, right: K.stat('資金', U.money(money), 'money') + K.stat('お手馬', `${T.ownCount()} / ${T.MAX_OWN}`, full ? 'warn' : '') })
+      + K.tabs([['m', '牡馬', nM], ['f', '牝馬', nF]], sex, 'msex', 'sex')
+      + `<div class="u-split"><div>
+        ${items.length ? `<div class="u-tbox"><table class="u-t shop-t">${head}${rows}</table></div>` : `<div class="u-empty">いま並んでいる${sex === 'f' ? '牝馬' : '牡馬'}はいません。${nextM}月に入れ替わります。</div>`}
+        <div class="shop-note">芝・ダは${T.FH_NAME}（伸びきったときの強さ）。見出しを押すと並べ替え。${full ? '<b class="warn">お手馬がいっぱいで買えない（引退させると空く）。</b>' : ''}</div>
+        ${E && E.locks ? `<h2 class="sec">品ぞろえの広がり<span class="r">勝つと次の月から選ばれる</span></h2><div class="shop-locks">${E.locks().map(l => `<span class="lk ${l.open ? 'open' : ''}"><b>${l.open ? '' : '🔒 '}${e(l.label)}</b> ${l.n}頭<small>${l.open ? '選ばれる' : `${e(l.hint)}と選ばれる`}</small></span>`).join('')}</div>` : ''}
+      </div><aside class="u-side"><div class="u-pv" id="u-pv">${items.length ? UI.previews.shop(items[0].it.horse.id) : '<div class="pv-empty">馬を選ぶと、ここに能力が出ます。</div>'}</div></aside></div>`;
   };
+  // 右の見本：選んでいる馬の能力（伸びきったとき）・距離・脚質・特殊能力と、買うボタン
+  UI.previews = UI.previews || {};
+  UI.previews.shop = function (id) {
+    const x = shopItems().find(z => z.it.horse.id === id); if (!x) return '';
+    const G = W.get(), K = UI.kit, h = x.it.horse, money = G.player.money;
+    const over = x.it.price > money, full = !T.canBuy();
+    return `<canvas class="pv-art" width="640" height="320" data-art="portrait" data-id="${e(h.id)}"></canvas>
+      <div class="pv-nm">${e(h.name)}${x.it.legend ? ' <span class="chip legend">スペシャル</span>' : ''}</div>
+      <div class="pv-sub">${h.sex === '牝' ? '牝' : '牡'}${G.year - h.born}・${e(h.coat || '')}${h.sire && h.sire !== '?' ? `・父 ${e(h.sire)}` : ''}${h.dam && h.dam !== '?' ? `・母 ${e(h.dam)}` : ''}</div>
+      <div class="pv-row"><span>${T.FH_NAME}（完成）</span>${K.fh(x.fh.turf, x.fh.dirt)}</div>
+      <div class="pv-grid">${['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'].map(k => `<div>${K.num(h.pot[k], H.STAT_LABEL[k])}${H.STAT_SHORT[k]}</div>`).join('')}<div>${K.num((h.kire || 4) * 12.5, '脚の切れ')}<span>切れ ${h.kire || 4}</span></div></div>
+      <div class="pv-row"><span>距離</span><b>${h.distMin}〜${h.distMax}m</b></div>
+      <div class="pv-row"><span>脚質・成長</span><b>${e(h.style)}・${e(h.growth || '')}</b></div>
+      ${UI.hasSkills(h) ? `<div class="skills">${UI.skillChips(h)}</div>` : ''}
+      <div class="pv-price">${K.price(x.it.price, money)}<span class="btns"><button class="btn sm" data-act="horse" data-id="${e(h.id)}">詳しく</button><button class="btn sm gold" data-act="buy" data-kind="${x.kind}" data-i="${x.i}" ${over || full ? 'disabled' : ''}>買う</button></span></div>
+      ${over ? '<div class="small" style="color:var(--bad)">資金が足りない</div>' : full ? '<div class="small" style="color:var(--warn)">お手馬がいっぱい</div>' : ''}`;
+  };
+  App.act.msort = d => { const v = App.st.view = App.st.view || { name: App.st.tab }; const s = { sortKey: v.msort, sortDir: v.mdir }; HS.List.toggle(s, SHOP_COLS, d.k); v.msort = s.sortKey; v.mdir = s.sortDir; App.render(); };
   App.act.msex = d => { App.st.view = App.st.view || { name: App.st.tab }; App.st.view.msex = d.sex; App.render(); };
   const retire0 = App.act.retire;
   App.act.retire = async d => {
@@ -301,7 +328,7 @@
     if (tab === 'me') {
       const ys = Object.keys(j.years).map(Number).sort((a, b) => b - a);
       body = `<div class="tblwrap"><table class="t"><tr><th>年</th><th>騎乗</th><th>1着</th><th>2着</th><th>3着</th><th>勝率</th><th>順位</th></tr>
-        ${ys.map(y => { const r = j.years[y]; return `<tr><td>${y}</td><td class="num">${r.rides}</td><td class="num"><b>${r.wins}</b></td><td class="num">${r.w2}</td><td class="num">${r.w3}</td><td class="num">${r.rides ? (r.wins / r.rides * 100).toFixed(1) : '0.0'}%</td><td class="num">${J.myRank(y) || '-'}</td></tr>`; }).join('')}
+        ${ys.map(y => { const r = j.years[y]; return `<tr><td>${W.yLabel(y)}</td><td class="num">${r.rides}</td><td class="num"><b>${r.wins}</b></td><td class="num">${r.w2}</td><td class="num">${r.w3}</td><td class="num">${r.rides ? (r.wins / r.rides * 100).toFixed(1) : '0.0'}%</td><td class="num">${J.myRank(y) || '-'}</td></tr>`; }).join('')}
         <tr><td><b>通算</b></td><td class="num">${j.total.rides}</td><td class="num"><b>${j.total.wins}</b></td><td class="num">${j.total.w2}</td><td class="num">${j.total.w3}</td><td class="num">${j.total.rides ? (j.total.wins / j.total.rides * 100).toFixed(1) : '0.0'}%</td><td></td></tr></table></div>
         <h2 class="sec">重賞の勝ち鞍</h2>
         ${j.big.length ? `<div class="panel">${j.big.slice().reverse().map(b => `<div>${W.yLabel(b.y)} ${UI.gradeTag({ grade: b.grade, region: b.region, year: b.y })} ${e(b.race)}　${e(b.horse)}</div>`).join('')}</div>` : '<div class="panel empty">まだ重賞を勝っていません。</div>'}`;
@@ -377,8 +404,9 @@
     App.render();
     App.modal(`<h3>${e(name)}騎手、デビュー</h3>
       <p>${W.get().year}年1月。${e(W.get().jockey.region)}所属の新人騎手として、最初の依頼を待つ。</p>
-      <ul class="small"><li><b>騎乗依頼</b>：毎週、馬主から依頼が来る。受けたレースに乗る。仲良くなるほど大きなレースの依頼が来る。</li>
-        <li><b>騎乗</b>：「抑える」で脚をため、「追う」を馬の拍子に合わせて押し、ゴール前は「ムチ」。前が壁なら進路を変える。</li>
+      <ul class="small"><li><b>馬の店</b>：デビュー前の史実馬を買う。2歳の4月から入厩し、厩舎の「番組表」で出るレースを選ぶ。</li>
+        <li><b>騎乗依頼</b>：毎週、馬主から依頼が来る。受けたレースに乗る。仲良くなるほど大きなレースの依頼が来る。</li>
+        <li><b>騎乗</b>：↓で引いて脚をため、↑の連打でしごいて速さを上げる。ゴール前はムチ。前が壁なら進路を変える。</li>
         <li>操作したくないレースは「おまかせ」で乗れる。</li><li>勝って評判を上げれば、強い馬と大きいレースの依頼が来る。</li></ul>
       <div class="btns"><button class="btn gold" data-act="close">はじめる</button></div>`);
   };
@@ -405,8 +433,10 @@
         const bg = App.modal('<div class="ride-holder"></div>', { wide: true, noClose: true });
         const AU = HS.Audio;
         if (AU && AU.ready() && AU.settings.bgm > 0 && card.race.graded) {
-          bg.querySelector('.ride-holder').innerHTML = `<div class="panel gold center" style="padding:40px 10px"><div class="serif" style="font-size:22px;font-weight:900;color:var(--gold2)">${e(R.label(card.race))}</div><div class="mt">ファンファーレ</div><button class="btn sm mt" data-x="skipfan">飛ばす</button></div>`;
-          await Promise.race([AU.playOnce('fanfare', card.race), new Promise(res => { bg.querySelector('[data-x=skipfan]').onclick = () => { AU.stopBgm(); res(); }; })]);
+          bg.querySelector('.ride-holder').innerHTML = `<div class="panel gold center" style="padding:40px 10px"><div class="serif" style="font-size:22px;font-weight:900;color:var(--gold2)">${e(R.label(card.race))}</div><div class="mt">ファンファーレ</div><button class="btn sm mt" data-x="skipfan">飛ばす（A／Enter）</button></div>`;
+          let offSkip = null; // パッドとキーでも飛ばせる（js/ui/ride.js の RD.onSkip）
+          await Promise.race([AU.playOnce('fanfare', card.race), new Promise(res => { const go = () => { if (offSkip) offSkip(); AU.stopBgm(); res(); }; offSkip = HS.Ride.onSkip(go); bg.querySelector('[data-x=skipfan]').onclick = go; })]);
+          if (offSkip) offSkip();
         }
         played[card.race.key] = await HS.Ride.ride(bg.querySelector('.ride-holder'), card);
         App.closeModal();
