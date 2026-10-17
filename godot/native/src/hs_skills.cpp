@@ -17,7 +17,7 @@ static void init_ids() {
 	if (!g_ids.empty()) return;
 	const char *base[] = { "spurt",
 		// 発動の特殊能力（LIST の順）
-		"saikoubi", "chokusen", "oosoto", "bagun", "sasari", "kongomi", "sessenB", "isshun", "hanno", "startdash", "nebari", "tanki", "yonkaku", "oriai",
+		"saikoubi", "chokusen", "oosoto", "sasari", "kongomi", "sessenB", "isshun", "hanno", "startdash", "nebari", "tanki", "yonkaku", "oriai",
 		"nimai", "demuchi", "makuri", "dokonjo", "sessen",
 		// 馬の特殊能力（HSHorse.SKILLS）
 		"big", "fresh", "tataki", "left", "right", "small", "long", "summer", "winter", "hipace", "slowpace", "oonige", "longspurt", "narabu", "nino", "jiyu",
@@ -55,24 +55,21 @@ static Fx fx(double spd, double sec, bool free_, double top = 0, double E = 0, d
 static Fx fxE(double E) { Fx f; f.E = E; return f; }
 
 static const Def LIST[] = {
-	{ "saikoubi", AT_ST, "豪脚", true, false, fx(0.07, 4.0, true, 0.3),
+	{ "saikoubi", AT_ST, "最後方一気", true, false, fx(0.07, 4.0, true, 0.3),
 		[](const P &p) { return p.style == ST_OIKOMI && p.kire >= 6; },
 		[](const X &x) { return x.inStraight && x.R > 100 && x.rank >= x.n - 2 && x.whipping; } },
 	{ "chokusen", AT_ST, "末脚", true, false, fx(0.05, 4.0, true, 0.2),
 		[](const P &p) { return sashi(p.style) && p.kire >= 6; },
 		[](const X &x) { return x.inStraight && x.R > 100 && x.rank > x.n / 2.0 && x.whipping; } },
-	{ "oosoto", AT_ST, "外差し", true, false, fx(0.045, 4.0, true, 0.2),
+	{ "oosoto", AT_ST, "大外一気", true, false, fx(0.045, 4.0, true, 0.2),
 		[](const P &p) { return sashi(p.style) && p.slope >= 82; },
 		[](const X &x) { return x.inStraight && x.R > 100 && x.s->lane >= 5 && x.whipping; } },
-	{ "bagun", AT_ST, "馬群を割る", false, false, fx(0.05, 3.0, true),
-		[](const P &p) { return p.style != ST_NIGE && p.guts >= 88; },
-		[](const X &x) { return x.inStraight && x.R > 60 && x.left && x.right && x.faster; } },
 	{ "sasari", AT_ANY, "ささり癖", false, true, fx(-0.035, 1.5, false),
 		[](const P &p) { return p.mind < 64 && p.guts < 76; },
 		[](const X &x) {
 			if (x.c) return x.c->hasLastWhip && x.t - x.c->lwT < 0.15 && x.s->E < 0.12;
 			return x.whipping && x.s->E < 0.15; } },
-	{ "kongomi", AT_ANY, "揉まれ弱い", false, true, fxE(-0.03),
+	{ "kongomi", AT_ANY, "馬混み苦手", false, true, fxE(-0.03),
 		[](const P &p) { return p.mind < 70 && (p.style == ST_NIGE || p.style == ST_OIKOMI); },
 		[](const X &x) { return x.sk->boxedFor >= 3; } },
 	{ "sessenB", AT_ST, "叩き合い×", false, true, fx(-0.015, 1.5, false),
@@ -90,10 +87,10 @@ static const Def LIST[] = {
 	{ "nebari", AT_ST, "粘り込み", false, false, fx(0.05, 3.5, true),
 		[](const P &p) { return (p.style == ST_NIGE || p.style == ST_SENKO) && p.sta >= 85; },
 		[](const X &x) { return x.R <= 300 && x.sk->led600 && x.rank <= 3 && x.leader->x - x.s->x < LEN; } },
-	{ "tanki", AT_MID, "マイペース", false, false, fxE(0.06),
+	{ "tanki", AT_MID, "単騎逃げ", false, false, fxE(0.06),
 		[](const P &p) { return p.style == ST_NIGE && p.mind >= 65; },
 		[](const X &x) { return !x.inStraight && x.sk->soloFor >= 10; } },
-	{ "yonkaku", AT_ST, "早め先頭", false, false, fxE(0.05),
+	{ "yonkaku", AT_ST, "4角先頭", false, false, fxE(0.05),
 		[](const P &p) { return (p.style == ST_SENKO || p.style == ST_SASHI) && p.spd >= 86 && p.kire <= 4; },
 		[](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.rank == 1; } },
 	{ "oriai", AT_MID, "折り合い上手", false, false, fxE(0.02),
@@ -108,7 +105,7 @@ static const Def LIST[] = {
 	{ "makuri", AT_ST, "まくり", false, false, fxE(0.06),
 		[](const P &p) { return sashi(p.style) && p.kire <= 4 && p.sta >= 78; },
 		[](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.sk->rankMid >= 0 && x.sk->rankMid - x.rank >= 4 && x.leader->x - x.s->x < 2 * LEN; } },
-	{ "dokonjo", AT_ANY, "勝負根性", false, false, fxE(0.02),
+	{ "dokonjo", AT_ANY, "ど根性", false, false, fxE(0.02),
 		[](const P &p) { return p.guts >= 88; },
 		[](const X &x) { return x.sk->duelFor >= 3; } },
 	{ "sessen", AT_ST, "叩き合い", false, false, fx(0.03, 2.5, true),
@@ -116,7 +113,7 @@ static const Def LIST[] = {
 		[](const X &x) { return x.R < 100 && x.close; } },
 };
 static const int NLIST = sizeof(LIST) / sizeof(LIST[0]);
-static const char *GROUP_OF[NLIST] = { "爆発", "爆発", "爆発", "爆発", "損", "損", "損", "速さ", "速さ", "速さ", "速さ", "気性", "気性", "気性", "根性", "根性", "根性", "根性", "根性" };
+static const char *GROUP_OF[NLIST] = { "爆発", "爆発", "爆発", "損", "損", "損", "速さ", "速さ", "速さ", "速さ", "気性", "気性", "気性", "根性", "根性", "根性", "根性", "根性" };
 static const char *ORDER[5] = { "爆発", "損", "速さ", "気性", "根性" };
 // 発動の特殊能力の番号（id の番号 1〜19）→ 表の位置
 static inline const Def *def_of(int id) { return (id >= 1 && id <= NLIST) ? &LIST[id - 1] : nullptr; }
@@ -144,7 +141,7 @@ std::vector<int> skills_of(const Dictionary &h, const Variant &w_idx) {
 	Variant tf = h.get("trigFixed", Variant());
 	if (tf.booleanize()) {
 		Array a = tf;
-		for (int i = 0; i < a.size(); i++) out.push_back(skill_id(a[i]));
+		for (int i = 0; i < a.size(); i++) { int id = skill_id(a[i]); if (def_of(id)) out.push_back(id); } // 無くした特殊能力は外す
 		return out;
 	}
 	double spd, sta, guts, mind, slope;
