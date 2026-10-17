@@ -188,7 +188,10 @@ module.exports = function (check, assert, HS) {
     const G = W.get();
     const sd = tops.find(d => d.sex === '牡');
     const s = SP.horse(sd, { age: '3+', year: G.year }); s.id = 'lg1'; s.owner = 'P'; s.loc = 'retired'; s.legend = false; G.horses[s.id] = s;
-    const mare = W.all().find(x => x.hist && x.sex === '牝' && G.year - x.born >= 4);
+    // 母は、両親の能力が上限（O.MAX_SKILLS）に収まる牝馬を選ぶ。世界の最初の牝馬にすると、史実馬のデータを足しただけで
+    // 母が変わり、能力の多い母だと固有の能力が候補から落ちて、この確かめが通らなくなる
+    const mares = W.all().filter(x => x.hist && x.sex === '牝' && G.year - x.born >= 4);
+    const mare = mares.find(x => O.candidates(s, x).length <= O.MAX_SKILLS) || mares[0];
     mare.owner = 'P'; mare.loc = 'retired';
     const uid = K.UNIQUE_OF[sd.name].id;
     assert(O.skillsOf(s)[0] === uid && O.candidates(s, mare).includes(uid), `候補に入らない ${O.candidates(s, mare).join(',')}`);
