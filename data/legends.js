@@ -233,5 +233,54 @@ HS.DATA.legendsExtra = [
  // 出典：https://ja.wikipedia.org/wiki/アイシングラス_(競走馬)
  // 出典：https://en.wikipedia.org/wiki/Isinglass_(horse)
  { name:'アイシングラス', nameEn:'Isinglass', country:'英', born:1890, sex:'牡', coat:'鹿毛', sire:'アイソノミー', dam:'デッドロック', damsire:'ウェンロック', rating:93, surface:'芝', distMin:1000, distMax:4000, style:'先行', growth:'普通', retire:1895, wins:['1893英2000ギニー','1893英ダービー','1893英セントレジャー','1894プリンセスオブウェールズステークス','1894エクリプスステークス','1894ジョッキークラブステークス','1895アスコットゴールドカップ'], note:'12戦11勝。英国で6頭目の三冠馬。唯一の負けは1893年ランカシャープレートの2着。獲得賞金は当時の世界記録', uncertain:true },
+ // ===== 2026-10-17 に足した名馬（持ち主が「ゲームに入っていない名馬」の一覧から選んだ12頭。史実は各行の上の出典） =====
+ // 通算は en.wikipedia の 16戦6勝（年ごとの出走を数えると 6＋7＋3）。ja.wikipedia は13戦6勝。母 Perdita のカナは ja.wikipedia（パーディタ）。
+ // style は推定（2000ギニーは2ハロンから先頭、セントレジャーは半マイルから先頭）。distMin は2歳の5ハロン戦、distMax はセントレジャー
+ // 出典：https://ja.wikipedia.org/wiki/ダイヤモンドジュビリー_(競走馬)
+ // 出典：https://en.wikipedia.org/wiki/Diamond_Jubilee_(horse)
+ { name:'ダイヤモンドジュビリー', nameEn:'Diamond Jubilee', country:'英', born:1897, sex:'牡', coat:'鹿毛', sire:'セントサイモン', dam:'パーディタ', damsire:'ハンプトン', rating:89, surface:'芝', distMin:1000, distMax:2900, style:'先行', growth:'普通', retire:1901, wins:['1900英2000ギニー','1900ニューマーケットステークス','1900英ダービー','1900エクリプスステークス','1900英セントレジャー'], note:'16戦6勝。英国で9頭目の三冠馬。全兄にダービー馬パーシモン。気性の激しさで知られた', uncertain:true },
+ // 毛色は ja.wikipedia の青鹿毛（en.wikipedia は Brown）。父 Disguise・母 Biturica・母父 Hamburg のカナは推定（ja.wikipedia では英字のまま）。
+ // 勝ち鞍はどれも data/races_world.js に無い（フューチュリティステークス・アラバマステークスなど）。距離の幅（2歳の5ハロン〜）と脚質は推定
+ // 出典：https://ja.wikipedia.org/wiki/マスケット_(1906年生の競走馬) ・ https://en.wikipedia.org/wiki/Maskette
+ { name:'マスケット', nameEn:'Maskette', country:'米', born:1906, sex:'牝', coat:'青鹿毛', sire:'ディスガイズ', dam:'ビトゥリカ', damsire:'ハンブルグ', rating:85, surface:'ダ', distMin:1000, distMax:2000, style:'先行', growth:'早め', retire:1910, wins:['1908スピナウェイステークス','1908メイトロンステークス','1908フューチュリティステークス','1909アラバマステークス','1909ガゼルハンデキャップ'], note:'17戦12勝。牝馬を相手には一度も負けなかった。2歳で牡馬も出るフューチュリティステークスを勝った。1908年の最優秀2歳牝馬・1909年の最優秀3歳牝馬', uncertain:true },
+ // 仏ダービー＝ジョッケクルブ賞（2400m）、パリ大賞＝当時は3000m。父 Prestige・母 Gemma のカナは推定。母父 Florizel はダイヤモンドジュビリーの全兄（ja.wikipedia の表記フロリゼル）。
+ // style は推定（パリ大賞は残り800mから競り合って差し切った）。distMin は2歳の1000m戦、distMax はパリ大賞
+ // 出典：https://en.wikipedia.org/wiki/Sardanapale_(horse)
+ { name:'サルダナパル', nameEn:'Sardanapale', country:'仏', born:1911, sex:'牡', coat:'鹿毛', sire:'プレスティージ', dam:'ジェンマ', damsire:'フロリゼル', rating:90, surface:'芝', distMin:1000, distMax:3000, style:'差し', growth:'普通', retire:1914, wins:['1913モルニ賞','1914仏ダービー','1914パリ大賞'], note:'16戦11勝。1914年の欧州の首位とされる。第一次世界大戦で競馬が止まり、3歳の夏で引退した', uncertain:true },
+ // 大戦のため1916年のダービー・オークスはニューマーケットの代わりの競走（ニューダービー・ニューオークス）。通算は en.wikipedia の 7戦4勝（ja.wikipedia は8戦4勝）。
+ // 母 Silver Fowl・母父 Wildfowler のカナは推定。style はダービーの内から伸びた勝ち方からの見立て。distMin は2歳の5ハロン戦
+ // 出典：https://ja.wikipedia.org/wiki/フィフィネラ ・ https://en.wikipedia.org/wiki/Fifinella_(horse)
+ { name:'フィフィネラ', nameEn:'Fifinella', country:'英', born:1913, sex:'牝', coat:'栗毛', sire:'ポリメラス', dam:'シルヴァーファウル', damsire:'ワイルドファウラー', rating:87, surface:'芝', distMin:1000, distMax:2400, style:'差し', growth:'普通', retire:1917, wins:['1915チェヴァリーパークステークス','1916英ダービー','1916英オークス'], note:'7戦4勝。英ダービーを勝った最後の牝馬（いまのところ）。2日後のオークスも5馬身差', uncertain:true },
+ // 大レースの勝ちは無い（ニューマーケットだけで24戦16勝）。母 Bromus は ja.wikipedia のブロモス、母父 Sainfoin のカナ（セインフォイン）は推定。
+ // style と距離の幅（短距離〜3歳時に勝った10ハロン）は推定
+ // 出典：https://ja.wikipedia.org/wiki/ファラリス_(競走馬) ・ https://en.wikipedia.org/wiki/Phalaris_(horse)
+ { name:'ファラリス', nameEn:'Phalaris', country:'英', born:1913, sex:'牡', coat:'黒鹿毛', sire:'ポリメラス', dam:'ブロモス', damsire:'セインフォイン', rating:84, surface:'芝', distMin:1000, distMax:2000, style:'先行', growth:'普通', retire:1918, wins:['1917チャレンジステークス','1918チャレンジステークス'], note:'24戦16勝。1917・1918年の英国の短距離の首位。種牡馬としていまのサラブレッドの多くの父系の祖になった', uncertain:true },
+ // 大戦中のためスペインのサンセバスティアンで走り、7戦5勝。フランスで1戦1勝（4歳）。母 Rondeau は ja.wikipedia のロンド。
+ // 父 Ajax は data/stallions_old.js の 'アジャックス'（1901年生のフランスの馬。1934年生の豪州のアジャックスとは別の馬）。style は推定
+ // 出典：https://ja.wikipedia.org/wiki/テディ_(競走馬) ・ https://en.wikipedia.org/wiki/Teddy_(horse)
+ { name:'テディ', nameEn:'Teddy', country:'仏', born:1913, sex:'牡', coat:'鹿毛', sire:'アジャックス', dam:'ロンド', damsire:'ベイロナルド', rating:82, surface:'芝', distMin:1700, distMax:2800, style:'先行', growth:'普通', retire:1917, wins:['1916サンセバスティアン大賞','1916ビリャメホル賞'], note:'8戦6勝。スペインのセントレジャー（ビリャメホル賞）を勝った。種牡馬としてサーギャラハッド・ブルドッグ・ラトロワンヌの父', uncertain:true },
+ // 芦毛（ja.wikipedia はベンドア斑の芦毛）。style は推定（「空飛ぶ牝馬」と呼ばれた先行力から逃げ）。distMax は2着の英1000ギニー（1マイル）
+ // 出典：https://ja.wikipedia.org/wiki/ムムタズマハル_(競走馬) ・ https://en.wikipedia.org/wiki/Mumtaz_Mahal_(horse)
+ { name:'ムムタズマハル', nameEn:'Mumtaz Mahal', country:'英', born:1921, sex:'牝', coat:'芦毛', sire:'ザテトラーク', dam:'レディジョセフィン', damsire:'サンドリッジ', rating:87, surface:'芝', distMin:1000, distMax:1600, style:'逃げ', growth:'早め', retire:1924, wins:['1923クイーンメアリーステークス','1923シャンペンステークス','1924キングジョージステークス','1924ナンソープステークス'], note:'10戦7勝。2歳で5勝し、3歳の英1000ギニーは2着。孫にナスルーラ', uncertain:true },
+ // 毛色は en.wikipedia の Bay or brown から黒鹿毛（ja.wikipedia に記事なし）。父 Laland・母 Nella da Gubbio のカナは推定。
+ // style はドイツダービーの見立て（速い逃げ馬を直線でとらえた）。distMin は推定、distMax はドイツダービー
+ // 出典：https://en.wikipedia.org/wiki/Nereide_(horse)
+ { name:'ネレイーデ', nameEn:'Nereide', country:'独', born:1933, sex:'牝', coat:'黒鹿毛', sire:'ラランド', dam:'ネッラダグッビオ', damsire:'グランドパレード', rating:90, surface:'芝', distMin:1200, distMax:2400, style:'差し', growth:'普通', retire:1936, wins:['1936ドイツダービー','1936ドイツオークス'], unbeaten:10, note:'10戦10勝。ドイツダービーのレコードは1993年まで破られなかった。ブラウネスバントで凱旋門賞馬コリーダを破った', uncertain:true },
+ // 1934年生の豪州の馬（Ajax II とも書く）。data/stallions_old.js の 'アジャックス'（1901年生のフランスの馬・テディの父）とは同じ名前の別の馬。
+ // 母父は en.wikipedia の Prince Galahad（ja.wikipedia は Cylgad）。カナ（ヒロイック・メドメナム・プリンスギャラハッド）は推定。style は推定。
+ // distMin は2歳の5.5ハロン戦、distMax は C.B.フィッシャープレート（12ハロン）
+ // 出典：https://ja.wikipedia.org/wiki/アジャックス_(1934年生の競走馬) ・ https://en.wikipedia.org/wiki/Ajax_II
+ { name:'アジャックス', nameEn:'Ajax', country:'豪', born:1934, sex:'牡', coat:'栗毛', sire:'ヒロイック', dam:'メドメナム', damsire:'プリンスギャラハッド', rating:89, surface:'芝', distMin:1100, distMax:2400, style:'先行', growth:'普通', retire:1940, wins:['1937ローズヒルギニー','1937コーフィールドギニー','1938ニューマーケットハンデキャップ','1938コックスプレート'], note:'46戦36勝。18連勝のあと、1939年のローソンステークスで1対40の本命ながら3頭立ての2着に敗れた。フューチュリティステークスなど4つの競走を3連覇', uncertain:true },
+ // 仏ダービー＝ジョッケクルブ賞、パリ大賞＝パリ大賞典。毛色は ja.wikipedia の黒鹿毛（en.wikipedia は Black）。母 Carissima は data/stallions.js のカリッシマ。
+ // 母父 Clarissimus のカナ（クラリッシムス）は推定。style はジョッケクルブ賞の最後方からの見立て。distMin はノアイユ賞（2200m）から推定、distMax はパリ大賞典（3000m）
+ // 出典：https://ja.wikipedia.org/wiki/ファリス_(競走馬) ・ https://en.wikipedia.org/wiki/Pharis_(horse)
+ { name:'ファリス', nameEn:'Pharis', country:'仏', born:1936, sex:'牡', coat:'黒鹿毛', sire:'ファロス', dam:'カリッシマ', damsire:'クラリッシムス', rating:90, surface:'芝', distMin:2000, distMax:3000, style:'差し', growth:'普通', retire:1939, wins:['1939ノアイユ賞','1939仏ダービー','1939パリ大賞'], unbeaten:3, note:'3戦3勝。第二次世界大戦で競馬が止まり、英国の二冠馬ブルーピーターとの対戦はかなわなかった', uncertain:true },
+ // 英国の牝馬三冠。母 Daily Double のカナは推定。style はセントレジャーの最後方からの見立て。distMin は推定、distMax はセントレジャー
+ // 出典：https://ja.wikipedia.org/wiki/メルド_(競走馬) ・ https://en.wikipedia.org/wiki/Meld_(horse)
+ { name:'メルド', nameEn:'Meld', country:'英', born:1952, sex:'牝', coat:'鹿毛', sire:'アリシドン', dam:'デイリーダブル', damsire:'フェアトライアル', rating:89, surface:'芝', distMin:1200, distMax:2900, style:'差し', growth:'普通', retire:1955, wins:['1955英1000ギニー','1955英オークス','1955コロネーションステークス','1955英セントレジャー'], note:'6戦5勝。3歳は4戦4勝で英国の牝馬三冠。仔に英ダービー馬シャーロットタウン', uncertain:true },
+ // 通算は en.wikipedia の 33戦23勝（ja.wikipedia は32戦23勝）。毛色は en.wikipedia の Dark Bay から黒鹿毛（ja.wikipedia は鹿毛）。
+ // style は逃げ（プリークネスSもトレントンHも先頭から）。distMax はサバーバンH・トレントンH（10ハロン）
+ // 出典：https://ja.wikipedia.org/wiki/ボールドルーラー ・ https://en.wikipedia.org/wiki/Bold_Ruler
+ { name:'ボールドルーラー', nameEn:'Bold Ruler', country:'米', born:1954, sex:'牡', coat:'黒鹿毛', sire:'ナスルーラ', dam:'ミスディスコ', damsire:'ディスカバリー', rating:91, surface:'ダ', distMin:1200, distMax:2000, style:'逃げ', growth:'普通', retire:1958, wins:['1956フューチュリティステークス','1957ウッドメモリアルステークス','1957プリークネスステークス','1957トレントンハンデキャップ','1958サバーバンハンデキャップ'], note:'33戦23勝。1957年の年度代表馬。北米のリーディングサイアー8回、セクレタリアトの父', uncertain:true },
 ];
 })();
