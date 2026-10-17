@@ -277,11 +277,9 @@ Variant ctl_whip(Sim &sim, const Variant &side_) {
 	c.windmill = c.whipT.size() >= 3;
 	double R = sim.D - s.x;
 	if (R > sim.straight + 200) c.tension = clamp(c.tension + 12.0, 0.0, 100.0);
+	// ムチでは進路は変わらない（どちらの手で打ってもよれない）。away は打った手と反対の側（見た目の向きだけ）
 	double away = (sim.dirLeft == sideR) ? -1.0 : 1.0;
-	bool yore = sim.rng.chance(mx(0.0, (70.0 - s.mind) / 100.0) * 0.4);
-	c.lane = clamp(c.lane + away * (yore ? 1.0 : 0.2), 0.0, 12.0);
-	c.hasLastWhip = true; c.lwT = sim.t; c.lwR = sideR; c.lwAway = away; c.lwYore = yore;
-	if (yore) return String("yore");
+	c.hasLastWhip = true; c.lwT = sim.t; c.lwR = sideR; c.lwAway = away; c.lwYore = false;
 	if (c.whips > 12) return String("tired");
 	return String(c.windmill ? "windmill" : "ok");
 }

@@ -536,11 +536,9 @@ static func _ctl_whip_gd(sim: Sim, side: Variant = null) -> Variant:
 	c.windmill = c.whipT.size() >= 3
 	var R := sim.D - s.x
 	if R > sim.straight + 200: c.tension = HSU.clamp(c.tension + 12.0, 0.0, 100.0)
+	# ムチでは進路は変わらない（どちらの手で打ってもよれない。持ち主の指摘 2026-10-17）。away は打った手と反対の側（見た目の向きだけ）
 	var away := -1.0 if ((dir_of(sim) == "左") == (side == "R")) else 1.0
-	var yore := sim.rng.chance(HSU.mx(0.0, (70.0 - s.mind) / 100.0) * 0.4)
-	c.lane = HSU.clamp(c.lane + away * (1.0 if yore else 0.2), 0.0, 12.0)
-	c.lastWhip = { t = sim.t, side = side, away = away, yore = yore }
-	if yore: return "yore"
+	c.lastWhip = { t = sim.t, side = side, away = away, yore = false }
 	if c.whips > 12: return "tired"
 	return "windmill" if c.windmill else "ok"
 # ムチの持ち替え（少しの間、打てない）
