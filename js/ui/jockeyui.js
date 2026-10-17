@@ -577,7 +577,7 @@
       <text x="6" y="12" fill="#c8d3e2" font-size="9">${course.dir}回り${geo.loop && !tr.line ? `（${geo.loop}回り）` : ''}・直線 ${geo.straight}m・${prof ? `高低差 ${hd}m` : `坂 ${geo.slope}`}</text>${profSvg}</svg>`;
   };
   // 脚質の矢印（左から追込・差し・先行・逃げ。右が前。持ち主の指摘 2026-10-16）。光っているのがこの馬の脚質で、自由自在の馬は全部が光る
-  UI.kyakuArrows = (st, h) => { const all = h && H.has(h, 'jiyu'); return `<span class="ka" title="${e(st)}${all ? '・自在性' : ''}">${['追込', '差し', '先行', '逃げ'].map(k => `<i class="${all || k === st ? 'on' : ''}"></i>`).join('')}</span>`; };
+  UI.kyakuArrows = (st, h) => { const all = h && H.has(h, 'jiyu'); return `<span class="ka" title="${e(st)}${all ? '・自由自在' : ''}">${['追込', '差し', '先行', '逃げ'].map(k => `<i class="${all || k === st ? 'on' : ''}"></i>`).join('')}</span>`; };
   UI.entryTable = function (card) {
     const { race, runners } = card;
     const G = race.free || !W.get() ? { year: race.year, month: race.month, week: race.week, seed: 0 } : W.get(); // フリーレースはセーブの年でなく、そのレースの年で

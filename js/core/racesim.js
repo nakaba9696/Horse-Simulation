@@ -286,12 +286,10 @@
       const R = sim.D - s.x;
       // 直線の前のムチは、馬が行きたがるだけ
       if (R > sim.straight + 200) c.tension = U.clamp(c.tension + 12, 0, 100);
-      // 馬はムチと反対の側へ寄る。脚が無いとき・気の荒い馬は大きくよれる
+      // ムチでは進路は変わらない（どちらの手で打ってもよれない。持ち主の指摘 2026-10-17「ムチ打つとめっちゃよれる。どっちうってもよれないようにして」）。
+      // away は打った手と反対の側（見た目の向きだけに使う）
       const away = ((S.dirOf(sim) === '左') === (side === 'R')) ? -1 : 1;
-      const yore = sim.rng.chance(Math.max(0, (70 - s.mind) / 100) * 0.4);
-      c.lane = U.clamp(c.lane + away * (yore ? 1 : 0.2), 0, 12);
-      c.lastWhip = { t: sim.t, side, away, yore };
-      if (yore) return 'yore';
+      c.lastWhip = { t: sim.t, side, away, yore: false };
       if (c.whips > 12) return 'tired';
       return c.windmill ? 'windmill' : 'ok';
     },
