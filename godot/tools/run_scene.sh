@@ -8,4 +8,4 @@ case "$1" in *x*) RES=$1; shift;; esac
 GODOT=${GODOT:-/home/user/godot-bin/godot}
 export VK_ICD_FILENAMES=${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}
 [ -d "$DIR/.godot/imported" ] || "$GODOT" --headless --path "$DIR" --import >/dev/null 2>&1
-xvfb-run -a -s "-screen 0 ${RES}x24" "$GODOT" --path "$DIR" --audio-driver Dummy --resolution "$RES" "$SCENE" "$@" 2>&1 | grep -vE "ALSA|^$"
+xvfb-run -a -s "-screen 0 ${RES}x24" "$GODOT" --path "$DIR" --fixed-fps 30 --audio-driver Dummy --resolution "$RES" "$SCENE" "$@" 2>&1 | grep -vE "ALSA|^$"

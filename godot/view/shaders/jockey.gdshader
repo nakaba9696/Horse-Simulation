@@ -33,6 +33,19 @@ float silk_mask(vec3 p) {
 	return step(1.37, y);
 }
 
+// 帽の形（素材の座標：頭の中心 x=0・上 y≈1.83・前 +z。つばは z>0.13）：つば・真ん中の縫い目・てっぺんのボタン・6枚の布の境と下の縁を暗く
+float cap_shade(vec3 p) {
+	vec3 c = p - vec3(0.0, 1.73, 0.02);
+	float k = 1.0;
+	if (p.z > 0.135 && p.y < 1.76) return 0.55;                 // つば
+	float a = atan(c.x, c.z);
+	float seam = abs(fract(a / (6.2832 / 6.0)) - 0.5);           // 布の境（0 で境）
+	k *= mix(0.8, 1.0, smoothstep(0.0, 0.06, 0.5 - seam));
+	if (p.y > 1.818 && length(p.xz - vec2(0.0, 0.02)) < 0.018) k *= 0.6;   // ボタン
+	k *= mix(0.72, 1.0, smoothstep(1.716, 1.735, p.y));          // 下の縁
+	return k;
+}
+
 void vertex() {
 	v_bp = CUSTOM0.xyz;
 	v_reg = CUSTOM0.w;
@@ -54,7 +67,7 @@ void fragment() {
 	else if (rg > 3.5 && rg < 4.5) { jc = vec3(0.012); jr = 0.32; }
 	else if (rg > 4.5 && rg < 5.5) { jc = vec3(0.23, 0.11, 0.04); jr = 0.45; }
 	else if (rg > 5.5 && rg < 6.5) { jc = vec3(0.88); jr = 0.6; }
-	else if (rg > 6.5 && rg < 7.5) { jc = cap_col; jr = 0.25; }
+	else if (rg > 6.5 && rg < 7.5) { jc = cap_col * cap_shade(v_bp); jr = 0.25; }
 	else if (rg > 7.5) { jc = vec3(0.02, 0.025, 0.03); jr = 0.12; }
 	ALBEDO = jc;
 	ROUGHNESS = jr;

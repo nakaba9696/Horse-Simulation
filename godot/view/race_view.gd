@@ -28,6 +28,7 @@ var race: Dictionary
 var tr: ViewTrack
 var course: ViewCourse
 var horses: Array[ViewHorse] = []
+var kickups: Array[ViewKickup] = []
 var font: Font
 var env: Environment
 var sun: DirectionalLight3D
@@ -87,6 +88,10 @@ func _ready() -> void:
 		add_child(h)
 		h.setup(race.horses[i], font)
 		horses.append(h)
+		var ku := ViewKickup.new()
+		h.add_child(ku)
+		ku.setup(String(race.race.get("surface", "芝")))
+		kickups.append(ku)
 		lane_vis.append(null)
 		lean.append(0.0)
 		yaw.append(0.0)
@@ -496,6 +501,7 @@ func place(H: Array, dt: float) -> void:
 			"whip": whip, "pose": pose, "head_up": float(st[3]), "ears": float(st[4]), "lead_want": lead_want}
 		var cd := cam.global_position.distance_to(p)
 		g["cam_d"] = cd
+		kickups[j].run(v if moving else 0.0, cd < 45.0)
 		h.animate(g, dt, cd < 90.0 or j == me)
 
 # ---- カメラ（FEEL.md 2） ----
@@ -717,6 +723,9 @@ func run_capture() -> void:
 			advance(minf(step, (tgt - T) / (SPEED * (0.15 if rt < slow_until else 1.0))))
 			guard += 1
 		_apply_presses()
+		if not String(sh.name).begins_with(String(video.get("name", "\u0000")) + "_"):
+			for ku in kickups:
+				ku.warm()
 		for k in 2:
 			await RenderingServer.frame_post_draw
 		var img := get_viewport().get_texture().get_image()
