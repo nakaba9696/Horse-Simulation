@@ -157,18 +157,18 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 		P[5 * 3 + 2] = 0.06 * sin(ph * TAU + seed * 3.0)
 		P[6 * 3 + 2] = 0.05 * sin(ph * TAU + seed * 3.0 - 0.8)
 		P[7 * 3 + 2] = 0.05 * sin(ph * TAU + seed * 3.0 - 1.6)
-		# 騎手：鐙の上で腰を浮かせ、馬の上下を脚で吸う。追うときは首の動きに合わせて体を前後に大きく送り、腕で首を押す
+		# 騎手：鐙の上で腰を浮かせ、馬の上下を脚で吸う。追うときは首の動きに合わせて体を前後に大きく送り、手は首に沿って前へ押す
 		var pk := clampf(push, 0.0, 1.0)
 		P[JY] = -bob * 0.75
 		P[24 * 3] = -pitch * 0.8
 		var pump := -cyc(NOD, ph + 0.04)
 		P[JX] = pk * 0.09 * pump
-		P[JY] -= pk * 0.025 * (1.0 + pump) * 0.5
-		P[25 * 3] = -0.04 - pk * (0.04 + 0.05 * pump)
-		P[26 * 3] = 0.04 + pk * (0.06 + 0.08 * pump) + pitch * 0.8
+		P[JY] -= pk * 0.012 * (1.0 + pump) * 0.5
+		P[25 * 3] = -0.04 - pk * (0.02 + 0.03 * pump)
+		P[26 * 3] = 0.04 + pk * (0.08 + 0.1 * pump) + pitch * 0.8
 		for ua in [27, 29]:
-			P[ua * 3] = pk * (0.12 + 0.34 * pump)
-			P[(ua + 1) * 3] = pk * (0.05 + 0.28 * pump)
+			P[ua * 3] = pk * (0.04 + 0.14 * pump)
+			P[(ua + 1) * 3] = pk * (0.02 + 0.12 * pump)
 		P[JU] = 0.8 * smooth(ease)
 	_kakari(P, head_up, sp, t, seed)
 	# 襲歩と常歩のあいだ：両方の形を混ぜる

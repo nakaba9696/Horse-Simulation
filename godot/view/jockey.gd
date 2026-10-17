@@ -5,16 +5,16 @@ class_name ViewJockey
 extends Node3D
 
 # 手作りの骨の付け根（体の比を直したあとの馬の座標。x 前・y 上・z 右。胴が立ち姿の高さのとき）
-# 競馬の乗り方：鐙はとても短く、腰は鞍（上面 1.63）から浮かせ、背は馬の背とほぼ平行。膝はき甲（x 0.5）の横、手は首の付け根の低い所
-const J := {24: [0.07, 1.8, 0.0], 25: [0.12, 1.82, 0.0], 26: [0.56, 1.95, 0.0],
-	27: [0.5, 1.92, -0.15], 28: [0.64, 1.8, -0.17], 29: [0.5, 1.92, 0.15], 30: [0.64, 1.8, 0.17], 31: [0.8, 1.81, 0.09]}
+# 競馬の乗り方：鐙はとても短く、腰は鞍（上面 1.63）のすぐ上に浮かせ（お尻の下は鞍の上 2〜4cm）、背は馬の背とほぼ平行。膝はき甲（x 0.5）の横、手は首の付け根の低い所
+const J := {24: [0.03, 1.705, 0.0], 25: [0.08, 1.73, 0.0], 26: [0.52, 1.88, 0.0],
+	27: [0.46, 1.85, -0.15], 28: [0.6, 1.76, -0.17], 29: [0.46, 1.85, 0.15], 30: [0.6, 1.76, 0.17], 31: [0.76, 1.78, 0.09]}
 # 鐙（足首）・膝の向き・手：馬の胴の中の点（x 前・y 上・z 右）
-const STIR := [0.08, 1.47, 0.215]       # 足首。すねは膝から斜め後ろ下へ寝る
+const STIR := [0.05, 1.48, 0.215]       # 足首。すねは膝から斜め後ろ下へ寝る
 const KNEE_POLE := [1.0, 0.1, 0.04]    # 膝は前へ、わずかに外へ（き甲の横に付ける）
 const HAND := [0.77, 1.81, 0.08]       # 手綱を持つ手（首の付け根のすぐ上）
 const HAND_UP := [0.5, 1.8, 0.1]       # 体を起こしたときの手（き甲の前の低い所。馬の胴の中）
 # 体の起こし（P[JU]＝1）：腰を鞍へ下ろし、上体を起こし、頭と腕は前へ残す
-const UP_HIP := [-0.05, -0.08]         # 腰の動き（前・上）
+const UP_HIP := [-0.03, -0.02]         # 腰の動き（前・上）
 const UP_TORSO := 0.95                 # 上体の起こし（rad）
 const UP_HEAD := -0.6
 const UP_ARM := -0.8
@@ -122,7 +122,7 @@ func setup(info: Dictionary, torso_origin: Vector3) -> void:
 	var hips := ball(n24, Vector3(0, -0.01, -0.02), 0.12, breeches, 0.85)
 	hips.scale = Vector3(1.05, 1, 1.1)
 	# 上体：腰から肩へ（前かがみ）。勝負服
-	var sh := Vector3(0, 1.93, 0.56)
+	var sh := Vector3(0, 1.86, 0.53)
 	var torso := capsule(n25, Vector3(0, 0.0, -0.08), sh - o25, 0.14, silk, 1.2, 0.8)
 	head_parts.append(torso)
 	torso.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
@@ -366,19 +366,21 @@ func _ik() -> void:
 		skel.set_bone_pose_scale(B["upperarm_" + s], Vector3.ONE * 1.08)
 	# 腰：手作りの腰の骨（24）の位置へ。前へ傾ける（座ると立つ）
 	var pel: int = B.pelvis
-	var hip := _at(24, 0.07, 1.8, 0.0)
+	var hip := _at(24, 0.03, 1.705, 0.0)
 	var gp := skel.get_bone_global_pose(pel)
 	skel.set_bone_global_pose(pel, Transform3D(gp.basis, hip))
 	_aim(pel, _gp(B.spine_01), hip + _dir(24, lerpf(0.9, 0.35, _up), lerpf(0.42, 0.94, _up), 0.0))
 	# 背骨：肩の真ん中へ
-	var sh := _at(25, 0.56, 1.93, 0.0)
+	var sh := _at(25, 0.53, 1.86, 0.0)
 	_aim(B.spine_01, _gp(B.neck_01), sh)
 	_aim(B.spine_03, _gp(B.neck_01), sh)
 	# 首と頭：頭を上げて前を見る
 	var np := _gp(B.neck_01)
-	_aim(B.neck_01, _gp(B.Head), np + _dir(26, 0.78, 0.62, 0.0))
+	_aim(B.neck_01, _gp(B.Head), np + _dir(26, 0.6, 0.8, 0.0))
 	var hg := skel.get_bone_global_pose(B.Head)
-	_aim(B.Head, hg * _head_up, hg.origin + _dir(26, 0.32, 0.95, 0.0))
+	# 頭の向きは馬の胴に合わせる（追って上体を前後に送っても前を見たまま）。体を起こすほど上体に合わせる
+	var up_d := _dir(1, 0.15, 0.99, 0.0).lerp(_dir(26, 0.15, 0.99, 0.0), _up).normalized()
+	_aim(B.Head, hg * _head_up, hg.origin + up_d)
 	# 腕：手綱を持つ手へ。肘は外・上へ
 	for arm in [["l", 28, -1.0], ["r", 30, 1.0]]:
 		var s: String = arm[0]
