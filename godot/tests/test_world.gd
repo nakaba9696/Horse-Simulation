@@ -2,7 +2,13 @@
 # 決まった遊び方で週を進め、毎週のセーブ（G）の指紋を比べる。JS のセーブ（world_save.json）を読んで続きを遊ぶのも確かめる
 extends RefCounted
 
+# 新しいゲーム・セーブを読むと HSU.ERA（年代なし）が変わるので、終わったら元に戻す（あとのテストの模擬の年代がずれないように）
 func run(t) -> void:
+	var era = HSU.ERA
+	_run(t)
+	HSU.ERA = era
+
+func _run(t) -> void:
 	var g: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/golden/world.json"))
 	var t0 := Time.get_ticks_msec()
 	HSWorld.new_game({ seed = g.new.seed, mode = "jockey", jockeyName = "テスト騎手", region = "美浦" })
