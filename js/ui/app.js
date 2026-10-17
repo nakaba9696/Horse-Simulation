@@ -366,7 +366,7 @@
         bg.querySelector('.rv-holder').innerHTML = `<div class="panel gold center" style="padding:40px 10px"><div class="serif" style="font-size:22px;font-weight:900;color:var(--gold2)">${e(R.label(r.race))}</div><div class="mt">ファンファーレ……</div><button class="btn sm mt" data-x="skipfan">飛ばす</button></div>`;
         await Promise.race([AU.playOnce('fanfare'), new Promise(res => { bg.querySelector('[data-x=skipfan]').onclick = () => { AU.stopBgm(); res(); }; })]);
       }
-      if (AU) { AU.bgm('race'); AU.raceStart(); }
+      if (AU) { AU.bgm('race', r.race); AU.raceStart(); }
       await (HS.Watch3D ? HS.Watch3D.play : HS.RaceView.play)(bg.querySelector('.rv-holder'), r, {
         speed: G.settings.animSpeed || 1, onSpeed: s => { G.settings.animSpeed = s; },
         onStart: () => AU && AU.se('gate'),

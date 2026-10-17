@@ -310,7 +310,7 @@
       let lastBump = null, countShown = 0;
       // ゴールした馬（と、模擬が止まったあとの全部の馬）は、映像の側で流して減速させる
       const coast = sim.st.map(() => null);
-      if (AU) { AU.bgm('race'); }
+      if (AU) { AU.bgm('race', race); }
       const lerpView = k => sim.st.map((s, j) => {
         const x = coast[j] ? coast[j].x : prev[j][0] + (s.x - prev[j][0]) * k;
         return {

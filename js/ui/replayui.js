@@ -65,7 +65,7 @@
     const AU = HS.Audio;
     App.inRace = true;
     const bg = App.modal('<div class="rv-holder"></div>', { wide: true, noClose: true });
-    if (AU) { AU.bgm('race'); AU.raceStart(); }
+    if (AU) { AU.bgm('race', data && data.race); AU.raceStart(); }
     try {
       await (HS.Watch3D ? HS.Watch3D.play : HS.RaceView.play)(bg.querySelector('.rv-holder'), data, Object.assign({
         speed: 1, speeds: [0.5, 1, 2, 4], seek: true,
