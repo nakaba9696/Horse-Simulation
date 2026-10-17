@@ -65,7 +65,7 @@ module.exports = function (check, assert, HS) {
     const none = mid({ tension: 70, gear: 0 }), soft = mid({ tension: 70, gear: -0.3 }), hard = mid({ tension: 70, gear: -0.8 });
     const d1 = none.tr[0] - soft.tr[0], d4 = none.tr[3] - soft.tr[3];
     assert(d1 < 1.5 && d4 > 3 * Math.max(0.3, d1), `慣性が無い（1秒で ${d1.toFixed(1)}・4秒で ${d4.toFixed(1)} 下がった）`);
-    assert(hard.tr[3] > soft.tr[3] + 10 && hard.c.reinFight && hard.s.headUp === 1, `引きすぎてもケンカしない（${hard.tr[3].toFixed(0)}・そっと ${soft.tr[3].toFixed(0)}）`);
+    assert(hard.tr[3] > soft.tr[3] + 10 && hard.c.reinFight && hard.s.kakari === 1, `引きすぎてもケンカしない（${hard.tr[3].toFixed(0)}・そっと ${soft.tr[3].toFixed(0)}）`);
     const relaxed = mid({ tension: 25, gear: -0.8 });
     assert(!relaxed.c.reinFight, '落ち着いた馬を後ろに置くだけでケンカした');
     // ムチへの素直さ
@@ -102,11 +102,32 @@ module.exports = function (check, assert, HS) {
     return `気性55の差しを脚質と違う位置で：初騎乗 気分${a.tension.toFixed(0)}・掛かり${Math.round(a.kakari * 100)}%／12回目 ${b.tension.toFixed(0)}・${Math.round(b.kakari * 100)}%`;
   });
 
-  check('oriai: 頭の上げ具合と耳の向きを全馬が出す（3D 用）', () => {
+  check('ride: 横の移動は押すとすぐ動き、手を離しても勝手に戻らず、横に馬がいると止まって印を出す', () => {
+    const rng = new U.RNG(12), field = [];
+    for (let i = 0; i < 10; i++) { const h = H.makeFiller(rng, { level: 80, surface: '芝', dist: 2000, born: 2000 }); h.style = '先行'; field.push({ horse: h, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1, rider: i === 0 ? 'P' : undefined }); }
+    const sim = S.create({ dist: 2000, surface: '芝', course: '東京', ground: '良', year: 2004 }, field, H.weekIndex(2004, 5, 1), new U.RNG(3), { ride: true });
+    S.ctl.up(sim); while (sim.st[0].x < 500) S.step(sim);
+    const me = sim.st[0];
+    // まわりの馬を遠くへ（ぶつからない所で確かめる）
+    sim.st.forEach(o => { if (o !== me) o.lane = 11; });
+    const l0 = me.lane; S.ctl.lane(sim, 1); S.step(sim); S.step(sim);
+    const moved = me.lane - l0;
+    assert(moved > 0.4, `0.2秒で動き出さない（${moved.toFixed(2)}）`);
+    for (let i = 0; i < 85; i++) { sim.st.forEach(o => { if (o !== me) o.lane = 11; }); S.step(sim); }
+    assert(Math.abs(me.lane - Math.round(l0 + 1)) < 0.05, `手を離して8.5秒で戻った（${me.lane.toFixed(2)}）`);
+    // すぐ外に馬を並べて、外へ押す
+    const o = sim.st[1]; o.x = me.x + 0.5; o.lane = me.lane + 1; o.v = me.v;
+    const before = me.lane; S.ctl.lane(sim, 1);
+    for (let i = 0; i < 5; i++) { o.x = me.x + 0.5; o.lane = before + 1; S.step(sim); }
+    assert(sim.ctl.bumpT != null && sim.ctl.bumpSide === 1 && me.lane - before < 0.25, `横の馬にぶつかっても止まらない（${(me.lane - before).toFixed(2)}・印 ${sim.ctl.bumpT}）`);
+    return `押して0.2秒で ${moved.toFixed(1)} 進路動く・手を離して8.5秒戻らない・横の馬で止まる`;
+  });
+
+  check('oriai: 掛かり（0〜1）と耳の向きを全馬が出す（3D 用）', () => {
     const rng = new U.RNG(8), field = [];
     for (let i = 0; i < 10; i++) field.push({ horse: H.makeFiller(rng, { level: 80, surface: '芝', dist: 1600, born: 2000 }), jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 });
     const sim = S.create({ dist: 1600, surface: '芝', course: '東京', ground: '良', year: 2004 }, field, H.weekIndex(2004, 5, 1), rng, {});
-    let ok = true; while (!S.step(sim)) for (const s of sim.st) if (!(s.headUp >= 0 && s.headUp <= 1 && s.ears >= -1 && s.ears <= 1)) ok = false;
+    let ok = true; while (!S.step(sim)) for (const s of sim.st) if (!(s.kakari >= 0 && s.kakari <= 1 && s.ears >= -1 && s.ears <= 1)) ok = false;
     assert(ok, '頭・耳の値が範囲の外');
     return '';
   });

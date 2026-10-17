@@ -1122,6 +1122,16 @@ check('gait: 常歩は4拍子で着いた蹄が地面にあり、関節の角度
   return `蹄の高さのずれ 最大 ${(maxGap * 100).toFixed(1)}cm・関節の1コマの変化 最大 ${maxStep.toFixed(2)}rad`;
 });
 
+check('fight: 掛かると首と頭を上げ、騎手が上体を起こす。値が無いときは掛からない', () => {
+  const R3 = HS.Race3D;
+  const a = R3.gaitTest(null, 0.3, 0.5, 0), c = R3.gaitTest(null, 0.3, 0.5, 1);
+  assert(c.rot[2] > a.rot[2] + 0.15 && c.rot[4] > a.rot[4] + 0.2, `掛かっても首・頭が上がらない ${a.rot[2].toFixed(2)}→${c.rot[2].toFixed(2)}`);
+  assert(c.rot[25] > a.rot[25] + 0.2, '掛かっても騎手が上体を起こさない');
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js/ui/ride.js'), 'utf8');
+  assert(/kakari: s\.kakari \|\| 0, ears: s\.ears != null \? s\.ears : 0\.3/.test(src), 'ride.js が掛かり・耳を渡していない');
+  return `首 ${a.rot[2].toFixed(2)}→${c.rot[2].toFixed(2)}・頭 ${a.rot[4].toFixed(2)}→${c.rot[4].toFixed(2)}`;
+});
+
 check('terrain: 3D の地面がコースの高さに合う（坂・楕円でない形・直線・馬蹄形）', () => {
   // race3d.js は前の 'look:' の確かめで読んである
   const T = HS.Track, R3 = HS.Race3D, out = [];
@@ -1292,6 +1302,8 @@ require('./extra_audio.js')(check, assert, HS); // BGM の曲の書式と長さ
 require('./extra_rumble.js')(check, assert, HS); // コントローラーの振動
 require('./extra_balance.js')(check, assert, HS); // 立ち回りの噛み合い・競り合いの気合
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
+require('./extra_ui.js')(check, assert, HS); // 画面の仕組み：並べ替え・絞り込み・番組表と予約
+require('./extra_feel.js')(check, assert, HS); // 騎乗の手ざわり（パッドの向き・状態の文字を出さない）
 
 console.log(results.join('\n'));
 console.log(`\n${passes} passed, ${failures} failed`);
