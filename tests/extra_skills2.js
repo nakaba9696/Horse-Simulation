@@ -161,8 +161,8 @@ module.exports = function (check, assert, HS) {
       assert(of.length - 1 <= K.cap(K.stats(h)), '固有の能力が持てる数を押し出す');
       if (special) tops.push(d);
     }
-    // 伝説級でない名馬も持つ（リボー＝凱旋門賞の連覇のグループ・オグリキャップ＝1989年からの史実馬）。伝説級のサイテーションも持つ
-    assert(K.hasUnique('リボー') && !SP.isTop(SP.data('リボー')) && K.hasUnique('オグリキャップ') && SP.isTop(SP.data('サイテーション')), '伝説級かどうかで決まっている');
+    // 伝説級でない名馬も持つ（リボー＝凱旋門賞の連覇のグループ・オグリキャップ＝1989年からの史実馬）。伝説級のマンノウォーも持つ（サイテーションは2026-10-19に伝説級から米国の三冠馬のグループへ）
+    assert(K.hasUnique('リボー') && !SP.isTop(SP.data('リボー')) && K.hasUnique('オグリキャップ') && SP.isTop(SP.data('マンノウォー')) && K.hasUnique('サイテーション'), '伝説級かどうかで決まっている');
     // マニカトは名鑑を足したので、スペシャルホースに入る
     assert(SP.byName('マニカト'), 'マニカトがスペシャルホースにいない');
     // 選んでいない史実馬は持たない

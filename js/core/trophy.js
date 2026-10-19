@@ -27,6 +27,14 @@
   ];
   // 手にしたときのボーナス賞金（万円・1995年の物価。いまの物価に直して渡す）。持ち主の指摘 2026-10-16「トロフィーゲットでボーナス賞金」
   TR.BONUS = { triple: 50000, ftriple: 30000, autumn: 30000, spring: 30000, grandprix: 10000, tenno: 10000, arima2: 10000, arc2: 30000, us3: 50000, uk3: 50000 };
+  // グランドフェスティバル（data/gf.js）ごとのトロフィー（持ち主の仕様書 2026-10-19「レースごとにもらえるトロフィーは違うものにする」）。
+  // 勝ったお手馬それぞれに付く（はじめの1頭はボーナス賞金も。2頭目からは more に足す）。仔へのボーナスは GF の勝ちとして js/core/original.js が数える
+  TR.GF_BONUS = 30000;
+  for (const c of HS.DATA.gf || []) {
+    const name = `${HS.Season.DC_NAME}（${c.label}）`;
+    TR.LIST.push({ id: 'gf:' + c.id, label: c.trophy, note: `${name}を勝つ`, finals: [name], legs: () => true, gf: c.id });
+    TR.BONUS['gf:' + c.id] = TR.GF_BONUS;
+  }
   TR.bonusOf = t => Math.round((TR.BONUS[t.id] || 0) * HS.U.priceIndex() / 10) * 10;
   TR.LIST.forEach(t => { const base = t.note; Object.defineProperty(t, 'note', { get: () => `${base}（ボーナス賞金 ${HS.U.money(TR.bonusOf(t))}）`, enumerable: true }); });
   TR.BY = {}; TR.LIST.forEach(t => { TR.BY[t.id] = t; });
@@ -38,7 +46,8 @@
     G.trophies = G.trophies || {};
     const got = [];
     for (const t of TR.LIST) {
-      if (!t.finals.includes(race.short) || G.trophies[t.id]) continue;
+      if (!t.finals.includes(race.short)) continue;
+      if (G.trophies[t.id]) { if (t.gf) TR.addHolder(G.trophies[t.id], h, race.year); continue; }
       // legs は「この勝ちより前」で見る（いま足した勝ち鞍は除く）
       const before = Object.assign({}, h, { gradedWins: h.gradedWins.slice(0, -1) });
       if (!t.legs(before, race)) continue;
@@ -49,5 +58,25 @@
       got.push(t);
     }
     return got;
+  };
+  // GF のトロフィーを、2頭目からの勝ち馬にも付ける
+  TR.addHolder = function (rec, h, y) {
+    if (rec.hid === h.id || (rec.more || []).some(m => m.hid === h.id)) return;
+    (rec.more = rec.more || []).push({ y, horse: h.name, hid: h.id });
+  };
+  // 前のセーブ：自分の馬が勝った GF の区分のトロフィーを付ける（ボーナス賞金は無し。前の「中長距離」はクラシック）
+  TR.migrateGF = function (g) {
+    const T = HS.Season;
+    if (!T || !T.gfWins) return;
+    g.trophies = g.trophies || {};
+    for (const h of Object.values(g.horses || {})) {
+      if (h.owner !== 'P') continue;
+      for (const w of T.gfWins(h)) {
+        const id = 'gf:' + T.gfCatOfName(w.short || w.race);
+        if (!TR.BY[id]) continue;
+        if (g.trophies[id]) TR.addHolder(g.trophies[id], h, w.y);
+        else g.trophies[id] = { y: w.y, horse: h.name, hid: h.id, bonus: 0 };
+      }
+    }
   };
 })();

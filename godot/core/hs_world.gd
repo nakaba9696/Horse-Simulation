@@ -54,14 +54,18 @@ static func index() -> void:
 		if FOREIGN_EXTRA.has(h.name) or (re_a.search(note) != null and re_b.search(note) == null): foreignTrained[h.name] = true
 
 # ---------- 便利 ----------
-static func w_idx() -> float: return HSHorse.week_index(G.year, G.month, G.week)
+static func w_idx() -> float: return HSHorse.week_index(G.year, G.month, minf(G.week, 4.0))   # 12月の GF の週（5）は12月4週と同じ
 static func IDX() -> float: return HSU.price_index(G.year)
 static func price_index() -> float: return IDX()
 # 年の見せ方（年代なしのゲームは「n年目」）
 static func y_label(y: float) -> String:
 	if G and G.get("eraless"): return "%s年目" % HSU.num(y - G.startYear + 1.0)
 	return "%s年" % HSU.num(y)
-static func date_label(y: float, m: float, w: float) -> String: return "%s%s月%s週" % [y_label(y), HSU.num(m), HSU.num(w)]
+# 月と週（12月の GF の週は「12月 GF週」）
+static func week_label(m: float, w: float) -> String: return "%s月 GF週" % HSU.num(m) if w > 4 else "%s月%s週" % [HSU.num(m), HSU.num(w)]
+static func date_label(y: float, m: float, w: float) -> String:
+	if w > 4: return "%s%s月 グランドフェスティバル" % [y_label(y), HSU.num(m)]
+	return "%s%s月%s週" % [y_label(y), HSU.num(m), HSU.num(w)]
 static func news(text: String, kind: String = "") -> void:
 	G.news.push_front({ y = G.year, m = G.month, w = G.week, text = text, kind = kind })
 	if G.news.size() > 120: G.news.resize(120)
@@ -109,7 +113,7 @@ static func new_game(opts: Dictionary) -> Dictionary:
 	var eraless: bool = opts.get("mode") == "jockey" and opts.get("eraless") != false
 	HSU.ERA = HSEraless.ERA if eraless else null
 	var year0: float = HSEraless.START if eraless else float(HSU.or_(opts.get("year"), 1995.0))
-	G = { v = SAVE_VERSION, seed = seed, rngState = seed, year = year0, month = 1.0, week = 1.0, eraless = eraless, startYear = year0, lineup = {}, unlocked = [], shopKeys = [], trophies = {}, hallOwn = [], gfShop = 1.0,
+	G = { v = SAVE_VERSION, seed = seed, rngState = seed, year = year0, month = 1.0, week = 1.0, eraless = eraless, startYear = year0, lineup = {}, unlocked = [], shopKeys = [], trophies = {}, hallOwn = [], gfShop = 1.0, gfTrophy = 1.0,
 		player = { name = HSU.or_(opts.get("name"), "プレイヤー"), farm = HSU.or_(opts.get("farm"), "新星牧場"), crown = HSU.or_(opts.get("crown"), ""),
 			silks = HSU.or_(opts.get("silks"), { base = "#1f4fbf", sub = "#ffd23f", pattern = "hoops" }), money = HSMath.round_js(float(HSU.or_(opts.get("money"), 30000.0)) * HSU.price_index(year0) / 10.0) * 10.0 },
 		difficulty = HSU.or_(opts.get("difficulty"), "normal"),
@@ -261,7 +265,7 @@ static var _cache: Variant = null
 static func week_races() -> Array:
 	var key := "%s-%s-%s" % [HSU.num(G.year), HSU.num(G.month), HSU.num(G.week)]
 	if _cache == null or _cache.key != key:
-		var list := HSRaces.of_week(G.seed, G.year, G.month, G.week)
+		var list: Array = [] if G.week > 4 else HSRaces.of_week(G.seed, G.year, G.month, G.week)   # GF の週はグランドフェスティバルだけ
 		for r in list: r.ground = HSRaces.ground(G.seed, G.year, G.month, G.week, r.course)
 		HSSeason.add_special(list, G.year, G.month, G.week)
 		_cache = { key = key, list = list }
@@ -659,13 +663,14 @@ static func finish_week(played: Dictionary = {}) -> Dictionary:
 				if r.get("rider") == "P":
 					if r.horse.get("id"): G.bond[r.horse.id] = float(HSU.or_(G.bond.get(r.horse.id), 0.0)) + 1.0
 					break
-		HSJockey.record(race, sim, runners)
+		if race.get("grade") != "GF": HSJockey.record(race, sim, runners)   # GF は特別枠：リーディングに数えない
 		apply_results(race, sim, runners, wIdx)
 		var rec = note_record(race, sim)
 		report.races.append({ race = race, sim = sim, runners = runners, hasMine = hasMine, watch = watch, ridden = played.has(race.key), ride = card.ride, rec = rec })
 	G.entries = {}; G.rides = {}
-	HSJockey.weekly()
-	weekly_care(wIdx, report)
+	if G.week <= 4:   # GF の週は特別枠：時が進まない
+		HSJockey.weekly()
+		weekly_care(wIdx, report)
 	var y0: float = G.year
 	next_week(report)
 	if G.year != y0: HSJockey.year_end(y0)
@@ -738,10 +743,12 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 		if h.get("filler"):
 			if race.get("graded") and (res.pos == 1 or (race.get("grade") == "G1" and res.pos <= 3)) and race.get("region") == "JRA": promote(h, race, res, wIdx)
 			else: continue
-		h.starts = float(HSU.or_(h.get("starts"), 0.0)) + 1.0
-		if res.pos == 1: h.wins = float(HSU.or_(h.get("wins"), 0.0)) + 1.0
-		if res.pos == 2: h.w2 = float(HSU.or_(h.get("w2"), 0.0)) + 1.0
-		if res.pos == 3: h.w3 = float(HSU.or_(h.get("w3"), 0.0)) + 1.0
+		var gf: bool = race.get("grade") == "GF"   # GF は特別枠：出走数・勝ち数・疲れ・調子・休み・故障に数えない
+		if not gf:
+			h.starts = float(HSU.or_(h.get("starts"), 0.0)) + 1.0
+			if res.pos == 1: h.wins = float(HSU.or_(h.get("wins"), 0.0)) + 1.0
+			if res.pos == 2: h.w2 = float(HSU.or_(h.get("w2"), 0.0)) + 1.0
+			if res.pos == 3: h.w3 = float(HSU.or_(h.get("w3"), 0.0)) + 1.0
 		var money := HSMath.round_js(pr * share[res.pos - 1]) if res.pos <= 5 else 0.0
 		h.prize = float(HSU.or_(h.get("prize"), 0.0)) + money
 		if res.pos == 1: h.earn = float(HSU.or_(h.get("earn"), 0.0)) + pr
@@ -750,7 +757,9 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 		if race.get("graded") and res.pos == 1:
 			var gw := { y = year, race = race.name, short = race.get("short"), grade = race.get("grade"), region = race.get("region") }
 			h.gradedWins.append(gw)
-			if h.get("owner") == "P": HSSeason.on_win(h, race, year)
+			if h.get("owner") == "P":
+				HSSeason.on_win(h, race, year)
+				if gf: HSSeason.on_gf_win(h, race)
 		if race.get("trialFor") and res.pos <= float(HSU.or_(race.get("trialTop"), 2.0)):
 			if not h.get("rights"): h.rights = {}
 			h.rights[race.trialFor] = year
@@ -759,19 +768,21 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 		h.results.append(rr)
 		var keep := 80 if h.get("owner") == "P" else 12
 		while h.results.size() > keep: h.results.pop_front()
-		h.fatigue = HSU.mn(100.0, float(HSU.or_(h.get("fatigue"), 0.0)) + 18.0 + race.dist / 100.0 * 1.2 + (6.0 if race.get("grade") == "G1" else 0.0))
-		h.cond = float(HSU.or_(h.get("cond"), 0.0)) - 15.0
-		h.restUntil = wIdx + (5.0 + rng.int_(0, 4) if race.get("grade") == "G1" else 3.0 + rng.int_(0, 4))
-		h.lastRaceW = wIdx
-		if rng.chance(0.006 * (1.4 - float(HSU.or_(h.get("health"), 70.0)) / 100.0) * (1.0 + float(HSU.or_(h.get("fatigue"), 0.0)) / 60.0)):
-			var inj := HSHorse.injure(h, rng)
-			if h.get("owner") == "P": news("%sが%sのあと%sを発症。全治%s週。" % [h.name, HSRaces.label(race), inj.name, HSU.num(inj.weeks)], "warn")
+		if not gf:
+			h.fatigue = HSU.mn(100.0, float(HSU.or_(h.get("fatigue"), 0.0)) + 18.0 + race.dist / 100.0 * 1.2 + (6.0 if race.get("grade") == "G1" else 0.0))
+			h.cond = float(HSU.or_(h.get("cond"), 0.0)) - 15.0
+			h.restUntil = wIdx + (5.0 + rng.int_(0, 4) if race.get("grade") == "G1" else 3.0 + rng.int_(0, 4))
+			h.lastRaceW = wIdx
+			if rng.chance(0.006 * (1.4 - float(HSU.or_(h.get("health"), 70.0)) / 100.0) * (1.0 + float(HSU.or_(h.get("fatigue"), 0.0)) / 60.0)):
+				var inj := HSHorse.injure(h, rng)
+				if h.get("owner") == "P": news("%sが%sのあと%sを発症。全治%s週。" % [h.name, HSRaces.label(race), inj.name, HSU.num(inj.weeks)], "warn")
 		if h.get("owner") == "P":
 			var owner := HSMath.round_js(money * 0.8 + 30.0 * IDX())
 			G.player.money += owner
-			G.records.player.starts += 1.0; G.records.player.earn += owner
+			if not gf: G.records.player.starts += 1.0
+			G.records.player.earn += owner
 			if res.pos == 1:
-				G.records.player.wins += 1.0
+				if not gf: G.records.player.wins += 1.0
 				if race.get("graded"): G.records.player.g1.append({ y = year, race = HSU.or_(race.get("short"), race.name), grade = race.grade, horse = h.name, region = race.region })
 				news("%sが%s%sを勝利！ 賞金 %s" % [h.name, HSRaces.label(race), "（" + HSRaces.grade_badge(race) + "）" if race.get("grade") else "", HSU.money(owner)], "g1" if race.get("grade") == "G1" else "win")
 		if race.get("graded") or res.pos == 1:
@@ -852,6 +863,9 @@ static func auto_menu(h: Dictionary, wIdx: float) -> String:
 static func next_week(report: Dictionary) -> void:
 	var endOfMonth: bool = G.week == 4
 	if endOfMonth: month_end(report)
+	# 12月4週が終わったら、グランドフェスティバルの招待。GF があれば GF の週（12月の5週め）に入る
+	if G.week == 4 and G.month == 12 and HSSeason.gf_stage():
+		G.week = HSSeason.GF_WEEK; _cache = null; return
 	G.week += 1.0
 	if G.week > 4:
 		G.week = 1.0; G.month += 1.0
@@ -1135,6 +1149,9 @@ static func migrate(g: Dictionary) -> void:
 	if not g.get("edits"): g.edits = {}
 	if not g.get("bond"): g.bond = {}
 	if g.get("dc"): HSSeason.dc_upgrade(g)
+	if g.get("eraless") and not g.get("gfTrophy"):   # 前のセーブ（GF ごとのトロフィーより前）：勝った GF の区分のトロフィーを付ける
+		HSTrophy.migrate_gf(g)
+		g.gfTrophy = 1.0
 	if g.get("eraless") and not g.get("gfShop"):
 		for k in HSEraless.gf_keys(g):
 			if not g.shopKeys.has(k): g.shopKeys.append(k)

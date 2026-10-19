@@ -10,7 +10,7 @@ const REWARDS := [
 	{"key": "t3", "tier": 3, "label": "引退した馬"},
 	{"key": "bond", "tier": 4, "label": "思い出の名馬"},
 ]
-const TIER_JOB := ["条件戦の依頼", "重賞の依頼", "G1の依頼・いちばん強い馬", "グランドフィナーレ・海外の依頼"]
+const TIER_JOB := ["条件戦の依頼", "重賞の依頼", "G1の依頼・いちばん強い馬", "グランドフェスティバル・海外の依頼"]
 
 var rows: Array[Button] = []
 var ids: Array = []

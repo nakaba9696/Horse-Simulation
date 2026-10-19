@@ -35,13 +35,14 @@
   };
 
   // ---------- 便利 ----------
-  W.wIdx = () => H.weekIndex(G.year, G.month, G.week);
+  W.wIdx = () => H.weekIndex(G.year, G.month, Math.min(G.week, 4)); // 12月の GF の週（5）は12月4週と同じ（成長・休みの勘定を変えない）
   // その年の物価（1995年＝1）
   const IDX = () => U.priceIndex(G.year);
   W.priceIndex = IDX;
   // 年の見せ方（年代なしのゲームは「n年目」）
   W.yLabel = y => G && G.eraless ? `${y - G.startYear + 1}年目` : `${y}年`;
-  W.dateLabel = (y, m, w) => `${W.yLabel(y)}${m}月${w}週`;
+  W.weekLabel = (m, w) => w > 4 ? `${m}月 GF週` : `${m}月${w}週`; // 12月の GF の週は「12月 GF週」
+  W.dateLabel = (y, m, w) => w > 4 ? `${W.yLabel(y)}${m}月 グランドフェスティバル` : `${W.yLabel(y)}${m}月${w}週`;
   const news = (text, kind) => { G.news.unshift({ y: G.year, m: G.month, w: G.week, text, kind: kind || '' }); if (G.news.length > 120) G.news.length = 120; };
   W.news = news;
   const newId = () => 'h' + (G.nextId++);
@@ -71,7 +72,7 @@
     U.ERA = eraless ? HS.Eraless.ERA : null;
     const year0 = eraless ? HS.Eraless.START : (opts.year || 1995);
     G = {
-      v: SAVE_VERSION, seed, rngState: seed, year: year0, month: 1, week: 1, eraless, startYear: year0, lineup: {}, unlocked: [], shopKeys: [], trophies: {}, hallOwn: [], gfShop: 1,
+      v: SAVE_VERSION, seed, rngState: seed, year: year0, month: 1, week: 1, eraless, startYear: year0, lineup: {}, unlocked: [], shopKeys: [], trophies: {}, hallOwn: [], gfShop: 1, gfTrophy: 1,
       player: {
         name: opts.name || 'プレイヤー', farm: opts.farm || '新星牧場', crown: opts.crown || '',
         silks: opts.silks || { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, money: Math.round((opts.money || 30000) * U.priceIndex(year0) / 10) * 10,
@@ -218,7 +219,7 @@
   // ---------- 週のレース ----------
   W.weekRaces = function () {
     if (!W._cache || W._cache.key !== `${G.year}-${G.month}-${G.week}`) {
-      const list = R.ofWeek(G.seed, G.year, G.month, G.week);
+      const list = G.week > 4 ? [] : R.ofWeek(G.seed, G.year, G.month, G.week); // GF の週（12月4週のあと）はグランドフェスティバルだけ
       for (const r of list) r.ground = R.ground(G.seed, G.year, G.month, G.week, r.course);
       if (HS.Season) HS.Season.addSpecial(list, G.year, G.month, G.week);
       W._cache = { key: `${G.year}-${G.month}-${G.week}`, list };
@@ -378,7 +379,7 @@
     if (race.region === '海外') return 86;
     if (race.region === '地方') return race.grade === 'G1' ? 74 : 70;
     if (race.graded) {
-      const gr = race.grade === 'GF' ? 'G1' : race.grade; // グランドフィナーレ（GF）は G1 と同じ
+      const gr = race.grade === 'GF' ? 'G1' : race.grade; // グランドフェスティバル（GF）は G1 と同じ
       if (race.age === '2') return { G1: 71, G2: 68, G3: 66 }[gr] || 66;
       if (race.age === '3' && m <= 6) return { G1: 77, G2: 74, G3: 71 }[gr] || 71;
       return { G1: 81, G2: 78, G3: 76 }[gr] || 76;
@@ -421,7 +422,7 @@
       const rc = W.aiChoose(h, races, wIdx, r);
       if (rc && rc.region !== '海外') (field[rc.key] = field[rc.key] || []).push({ horse: h, jockeyName: W.bestFreeJockey(rc.key, h.id), mine: true, auto: true });
     }
-    // 招待のレース（グランドフィナーレ）は招待馬で組む
+    // 招待のレース（グランドフェスティバル）は招待馬で組む
     for (const rc of allRaces) if (rc.invite && HS.Season) field[rc.key] = HS.Season.dcField(rc);
     // 自分の馬がスペシャルホースの条件にリーチをかけて出るレースには、その名馬が出てくる（special.js）
     if (G.eraless && HS.Special) for (const rc of allRaces) { const lg = HS.Special.forRace(rc, field[rc.key] || []); if (lg.length) field[rc.key] = (field[rc.key] || []).concat(lg); }
@@ -543,15 +544,18 @@
       const watch = hasMine || race.grade === 'G1' || !!race.invite;
       const sim = played[race.key] || S.run(race, runners, wIdx, new U.RNG(card.seed), { frames: watch });
       if (played[race.key]) { const me = runners.find(r => r.rider === 'P'); if (me && me.horse.id) { G.bond = G.bond || {}; G.bond[me.horse.id] = (G.bond[me.horse.id] || 0) + 1; } } // 絆：自分で乗った回数
-      if (HS.Jockey) HS.Jockey.record(race, sim, runners);
+      if (HS.Jockey && race.grade !== 'GF') HS.Jockey.record(race, sim, runners); // GF は特別枠：リーディングの勝ち数に数えない
       W.applyResults(race, sim, runners, wIdx);
       const rec = W.noteRecord(race, sim);
       report.races.push({ race, sim, runners, hasMine, watch, ridden: !!played[race.key], ride: card.ride, rec });
     }
     G.entries = {}; G.rides = {};
-    if (HS.Jockey) HS.Jockey.weekly();
-    // 調教と回復
-    W.weeklyCare(wIdx, report);
+    // GF の週は特別枠：時が進まない（調教・回復・評判の下がり無し）
+    if (G.week <= 4) {
+      if (HS.Jockey) HS.Jockey.weekly();
+      // 調教と回復
+      W.weeklyCare(wIdx, report);
+    }
     // 暦を進める
     const y0 = G.year;
     W.nextWeek(report);
@@ -628,37 +632,43 @@
         if (race.graded && (res.pos === 1 || (race.grade === 'G1' && res.pos <= 3)) && race.region === 'JRA') W.promote(h, race, res, wIdx);
         else continue;
       }
-      h.starts = (h.starts || 0) + 1;
-      if (res.pos === 1) h.wins = (h.wins || 0) + 1;
-      if (res.pos === 2) h.w2 = (h.w2 || 0) + 1;
-      if (res.pos === 3) h.w3 = (h.w3 || 0) + 1;
+      const gf = race.grade === 'GF'; // グランドフェスティバルは特別枠：出走数・勝ち数・疲れ・調子・休み・故障に数えない（賞金・勝ち鞍・成績は残る）
+      if (!gf) {
+        h.starts = (h.starts || 0) + 1;
+        if (res.pos === 1) h.wins = (h.wins || 0) + 1;
+        if (res.pos === 2) h.w2 = (h.w2 || 0) + 1;
+        if (res.pos === 3) h.w3 = (h.w3 || 0) + 1;
+      }
       const money = res.pos <= 5 ? Math.round(pr * share[res.pos - 1]) : 0;
       h.prize = (h.prize || 0) + money;
       if (res.pos === 1) h.earn = (h.earn || 0) + pr;
       if (res.pos === 2 && race.graded) h.earn = (h.earn || 0) + Math.round(pr * 0.4);
       if (res.pos === 1 && h.owner === 'P' && G.eraless && HS.Eraless) HS.Eraless.unlockWin(race);
-      if (race.graded && res.pos === 1) { h.gradedWins.push({ y: year, race: race.name, short: race.short, grade: race.grade, region: race.region }); if (h.owner === 'P' && HS.Season) HS.Season.onWin(h, race, year); }
+      if (race.graded && res.pos === 1) { h.gradedWins.push({ y: year, race: race.name, short: race.short, grade: race.grade, region: race.region }); if (h.owner === 'P' && HS.Season) { HS.Season.onWin(h, race, year); if (gf && HS.Season.onGFWin) HS.Season.onGFWin(h, race); } }
       if (race.trialFor && res.pos <= (race.trialTop || 2)) { h.rights = h.rights || {}; h.rights[race.trialFor] = year; }
       h.results.push({ y: year, m: race.month, w: race.week, race: race.short || race.name, grade: R.gradeBadge(race), course: race.course, surface: race.surface, dist: race.dist, ground: race.ground, pos: res.pos, n: sim.results.length, time: Math.round(res.time * 10) / 10, margin: res.margin, last3f: res.last3f ? Math.round(res.last3f * 10) / 10 : null, jockey: res.jockey && res.jockey.name, pop: res.pop });
       // AI の馬は最近の成績だけ残す（セーブを小さく）
       const keep = h.owner === 'P' ? 80 : 12;
       while (h.results.length > keep) h.results.shift();
-      // 疲れ・調子・休み
-      h.fatigue = Math.min(100, (h.fatigue || 0) + 18 + race.dist / 100 * 1.2 + (race.grade === 'G1' ? 6 : 0));
-      h.cond = (h.cond || 0) - 15;
-      h.restUntil = wIdx + (race.grade === 'G1' ? 5 + rng.int(0, 4) : 3 + rng.int(0, 4));
-      h.lastRaceW = wIdx;
-      // レース中の故障
-      if (rng.chance(0.006 * (1.4 - (h.health || 70) / 100) * (1 + (h.fatigue || 0) / 60))) {
-        const inj = H.injure(h, rng);
-        if (h.owner === 'P') news(`${h.name}が${R.label(race)}のあと${inj.name}を発症。全治${inj.weeks}週。`, 'warn');
+      // 疲れ・調子・休み（GF は動かさない）
+      if (!gf) {
+        h.fatigue = Math.min(100, (h.fatigue || 0) + 18 + race.dist / 100 * 1.2 + (race.grade === 'G1' ? 6 : 0));
+        h.cond = (h.cond || 0) - 15;
+        h.restUntil = wIdx + (race.grade === 'G1' ? 5 + rng.int(0, 4) : 3 + rng.int(0, 4));
+        h.lastRaceW = wIdx;
+        // レース中の故障
+        if (rng.chance(0.006 * (1.4 - (h.health || 70) / 100) * (1 + (h.fatigue || 0) / 60))) {
+          const inj = H.injure(h, rng);
+          if (h.owner === 'P') news(`${h.name}が${R.label(race)}のあと${inj.name}を発症。全治${inj.weeks}週。`, 'warn');
+        }
       }
       if (h.owner === 'P') {
         const owner = Math.round(money * 0.8 + 30 * IDX());
         G.player.money += owner;
-        G.records.player.starts++; G.records.player.earn += owner;
+        if (!gf) G.records.player.starts++;
+        G.records.player.earn += owner;
         if (res.pos === 1) {
-          G.records.player.wins++;
+          if (!gf) G.records.player.wins++;
           if (race.graded) G.records.player.g1.push({ y: year, race: race.short || race.name, grade: race.grade, horse: h.name, region: race.region });
           news(`${h.name}が${R.label(race)}${race.grade ? '（' + R.gradeBadge(race) + '）' : ''}を勝利！ 賞金 ${U.money(owner)}`, race.grade === 'G1' ? 'g1' : 'win');
         }
@@ -743,6 +753,8 @@
   W.nextWeek = function (report) {
     const endOfMonth = G.week === 4;
     if (endOfMonth) W.monthEnd(report);
+    // 12月4週が終わったら、グランドフェスティバルの招待。GF があれば GF の週（12月の5週め）に入る
+    if (G.week === 4 && G.month === 12 && HS.Season && HS.Season.gfStage && HS.Season.gfStage()) { G.week = HS.Season.GF_WEEK; W._cache = null; return; }
     G.week++;
     if (G.week > 4) { G.week = 1; G.month++; }
     if (G.month > 12) { G.month = 1; G.year++; W.newYear(report); }
@@ -1119,7 +1131,8 @@
     g.market = g.market || { gen: [], genMares: [], month: 0 };
     g.farmLevel = g.farmLevel || 1;
     g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; g.lineup = g.lineup || {}; g.unlocked = g.unlocked || []; if (g.eraless && !g.shopKeys) g.shopKeys = HS.Eraless ? HS.Eraless.migrateKeys(g) : []; /* 前のセーブは、自分の馬の勝ち鞍で馬の店を開けておく */ g.trophies = g.trophies || {}; g.hallOwn = g.hallOwn || []; if (g.eraless && !g.startYear) g.startYear = 2025; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {}; g.bond = g.bond || {}; /* 絆：馬ごとの、自分で乗った回数 */
-    if (g.dc && HS.Season && HS.Season.dcUpgrade) HS.Season.dcUpgrade(g); // 前の形の招待（GF が1つだった頃）を、距離ごとの GF の形に
+    if (g.dc && HS.Season && HS.Season.dcUpgrade) HS.Season.dcUpgrade(g); // 前の形の招待（12月2〜4週に GF を走っていた頃）を、GF の週の形に
+    if (g.eraless && !g.gfTrophy && HS.Trophy && HS.Trophy.migrateGF) { HS.Trophy.migrateGF(g); g.gfTrophy = 1; } // 前のセーブ（GF ごとのトロフィーより前）：勝った GF の区分のトロフィーを付ける
     if (g.eraless && !g.gfShop && HS.Eraless && HS.Eraless.gfKeys) { for (const k of HS.Eraless.gfKeys(g)) if (!g.shopKeys.includes(k)) g.shopKeys.push(k); g.gfShop = 1; } // 前のセーブ（GF の馬の段より前）：自分の馬が勝った GF の区分を開けておく
     for (const h of Object.values(g.horses)) {
       h.bonus = h.bonus || {}; h.results = h.results || []; h.gradedWins = h.gradedWins || []; h.coat = h.coat || '鹿毛';

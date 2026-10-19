@@ -68,7 +68,7 @@
     const cand = ps && pd ? O.candidates(ps, pd) : [];
     const bonus = ps && pd ? Math.min(O.BONUS_MAX, (ps.parentBonus || 0) + (pd.parentBonus || 0)) : 0;
     return `<h2 class="sec">オリジナルホース<span class="r">お手馬 ${T.ownCount()}/${T.MAX_OWN}</span></h2>
-      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬・グランドフィナーレを勝った馬を親にすると、仔の能力にボーナス。牝馬は1年に1頭。</div>
+      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬・グランドフェスティバルを勝った馬を親にすると、仔の能力にボーナス。牝馬は1年に1頭。</div>
       ${ps && pd ? `<div class="panel gold mt"><b>${e(ps.name)} × ${e(pd.name)}</b>${bonus ? `<span class="chip crown" style="margin-left:6px">ボーナス +${bonus}</span>` : ''}
         <div class="small mt">受け継ぐ特殊能力の候補（${cand.length}つ${cand.length > O.MAX_SKILLS ? '。この中から4つ' : ''}）</div><div class="skills">${cand.map(skillChip).join('') || '<span class="small muted">なし</span>'}</div>
         <div class="row mt"><input id="orig-name" maxlength="12" placeholder="名前（空ならおまかせ）" class="grow"><button class="btn gold" data-act="orig-make">オリジナルホースを作る</button></div></div>`
@@ -176,7 +176,7 @@
       </div>
       ${!W.mine().length && !over ? `<div class="panel gold mt">📌 <a href="#" data-act="tab" data-tab="market">馬の店でデビュー前の史実馬を買おう</a>（2歳の4月から自動で入厩し、レースに出られる）。お手馬は${T.MAX_OWN}頭まで。毎月の費用がかかり、資金がマイナスのまま2か月続くとシーズンが終わる。</div>` : ''}
       ${UI.dcSection ? UI.dcSection() : ''}
-      <h2 class="sec">今週の騎乗<span class="r">${G.month}月${G.week}週</span></h2>
+      <h2 class="sec">今週の騎乗<span class="r">${W.weekLabel(G.month, G.week)}</span></h2>
       ${rides.length ? `<div class="list">${rides.map(({ card, runner }) => rideCard(card, runner, true)).join('')}</div>`
         : `<div class="panel empty">今週は乗るレースがありません。${W.mine('stable').length ? '<br><a href="#" data-act="tab" data-tab="stable">厩舎で出るレースを決める（おまかせなら自動で選ぶ）</a>' : ''}</div>`}
       ${T.reserves().length ? `<h2 class="sec">出走の予約<span class="r">${T.reserves().length}件</span></h2><div class="panel"><table class="t">${T.reserves().map(x => { const h = W.horse(x.id); return h ? `<tr><td class="small muted">${x.m}月${x.w}週</td><td><b>${e(x.label)}</b></td><td>${e(h.name)}</td><td><button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(x.key)}">取消</button></td></tr>` : ''; }).join('')}</table></div>` : ''}
@@ -462,7 +462,7 @@
       }
       const beat = (G1.unlocked || []).filter(n => !un0.includes(n));
       if (beat.length) await UI.celebrate({ kind: 'special', kicker: 'スペシャルホースを破った', title: beat.join('・'), sub: `${beat.join('・')}が馬の店に並ぶようになった` });
-      // 12月1週：グランドフィナーレ（距離ごとに6つ）の招待が届いたら、GF ごとに出るかどうか（出るなら1頭）を決める
+      // 12月4週のあと：グランドフェスティバルの招待が届いたら、GF ごとに出るかどうか（出るなら1頭）を決める
       if (UI.dreamAskAll && T.dcPending()) await UI.dreamAskAll();
       App.weekSummary(report);
       App.render();

@@ -76,8 +76,13 @@
     { id: 'us3', label: '米国の三冠馬', note: 'ケンタッキーダービー・プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['ケンタッキーダービー', 'プリークネスS']), member: d => dn(d, 'ケンタッキーダービー') && dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
     { id: 'us2', label: '米国の名馬', note: 'プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['プリークネスS']), member: d => dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
     { id: 'aus', label: '豪州の英雄', note: 'コックスプレートを勝ってメルボルンカップへ', finals: ['メルボルンカップ'], legs: sameYear(['コックスプレート']), member: d => dn(d, 'コックスプレート') && dn(d, 'メルボルンカップ') },
-    { id: 'gf', label: '伝説級の名馬', note: 'グランドフィナーレを勝って、次の年の同じグランドフィナーレへ', finals: null, top: true, // GF（dream.js）ごとに、担当の名馬（データの gf）だけ出る
-      legs: (h, race) => race.grade === 'GF' && HS.Season.gfWonPrev(h, race), fit: (d, race) => HS.Season.gfLegendFor(d, race), member: () => true },
+    // 伝説級（data/legends.js の tier:'legend'）：グランドフェスティバル（dream.js）ごとに、担当の名馬（データの gf）だけ出る。
+    // GF を勝つと店に並ぶので、並んだあとも条件を満たせば何度でも出てくる（again。自分のお手馬になっている間は出ない）
+    { id: 'gf', label: '伝説級の名馬', note: 'グランドフェスティバルを勝って、次の年の同じグランドフェスティバルへ', finals: null, top: true, again: true,
+      legs: (h, race) => race.grade === 'GF' && HS.Season.gfWonPrev(h, race), fit: (d, race) => d.gf === race.gf, member: d => !!d.gf && d.gf !== 'all' },
+    // GF を全部勝つと、どの GF にも出てくる名馬（data/legends.js の gf:'all'。キンチェム）
+    { id: 'gfall', label: 'グランドフェスティバル全制覇', note: 'グランドフェスティバルを全部勝ったあと、どのグランドフェスティバルへも', finals: null, top: true, again: true,
+      legs: (h, race) => race.grade === 'GF' && HS.Season.gfAllWon(), member: d => d.gf === 'all' },
     { id: 'g1five', label: 'G1を5勝した名馬', note: 'G1を4勝して、次のG1へ', finals: null, legs: (h, race) => race.grade === 'G1' && gw(h).length && (h.gradedWins || []).filter(g => g.grade === 'G1').length === 4, member: d => g1Count(d) >= 5 },
     { id: 'unbeaten', label: '無敗の名馬', note: `デビューから無敗で${SP.STREAK - 1}連勝して、次のレースへ`, finals: null, legs: h => (h.starts || 0) === (h.wins || 0) && (h.wins || 0) === SP.STREAK - 1, member: d => SP.unbeatenOf(d) >= SP.STREAK },
   ];
@@ -106,11 +111,11 @@
     return pool;
   };
   SP.data = name => SP.pool().find(d => d.name === name) || null;
-  SP.isTop = d => d.tier === 'legend'; // 伝説級：グランドフィナーレのグループだけに入る（担当の GF はデータの gf）。固有の能力は伝説級かどうかで決めない（data/uniques.js に名前があるか。js/core/skills.js の K.hasUnique。持ち主の決定 2026-10-17）
+  SP.isTop = d => d.tier === 'legend'; // 伝説級：グランドフェスティバルのグループ（gf・gfall）だけに入る（担当の GF はデータの gf）。固有の能力は伝説級かどうかで決めない（data/uniques.js に名前があるか。js/core/skills.js の K.hasUnique。持ち主の決定 2026-10-17）
   // 1頭が出てくる条件は1つだけ（持ち主の決定 2026-10-16）。グループに優先順を付け、各馬は当てはまるいちばん上のグループに入る
   // スピードシンボリは有馬記念の連覇（春の王者より上）。ミエスクは G1を5勝した名馬のまま：年をまたいで路線の違う G1 を重ねた馬で、
-  // 1つの冠の組み合わせより「G1 を5勝」が史実の顔に合う（ダリア・アレフランスも同じ理由でここにいたが、2026-10-17 に牝馬の GF の伝説級になった）
-  SP.PRIORITY = ['gf', 'triple', 'us3', 'uk3', 'arc2', 'unbeaten', 'ftriple', 'long', 'nikan', 'arima2', 'local', 'allround', 'filly', 'europe', 'autumn', 'spring', 'grandprix', 'tenno', 'mile', 'us2', 'aus', 'g1five'];
+  // 1つの冠の組み合わせより「G1 を5勝」が史実の顔に合う（ダリア・アレフランスも同じ理由でここ）
+  SP.PRIORITY = ['gf', 'gfall', 'triple', 'us3', 'uk3', 'arc2', 'unbeaten', 'ftriple', 'long', 'nikan', 'arima2', 'local', 'allround', 'filly', 'europe', 'autumn', 'spring', 'grandprix', 'tenno', 'mile', 'us2', 'aus', 'g1five'];
   let assign = null;
   const assignAll = function () {
     if (assign) return assign;
@@ -139,12 +144,14 @@
 
   // 自分の馬 h が、このレースでグループ g にリーチをかけているか
   SP.reach = (h, g, race) => h.owner === 'P' && (!g.finals || g.finals.includes(race.short)) && g.legs(h, race);
-  // このレースに出てくるスペシャルホース（まだ店に並んでいない名馬だけ）
+  // 出てこられるか：ふつうはまだ店に並んでいない名馬だけ。伝説級（again）は、自分のお手馬（引退していない）になっていなければ何度でも
+  SP.canAppear = (g, d, un) => g.again ? !W.mine().some(x => x.name === d.name && x.loc !== 'retired') : !un.includes(d.name);
+  // このレースに出てくるスペシャルホース
   SP.pending = function (h, race) {
     const G = W.get(), un = G.unlocked || [];
     const out = [];
     // 条件の組み合わせのグループを先に（強い順）、大レースのグループはそのあと（強い順）
-    for (const g of SP.GROUPS) if (SP.reach(h, g, race)) for (const d of SP.members(g)) if (!un.includes(d.name) && !out.some(x => x.d === d) && (!g.fit || g.fit(d, race))) out.push({ d, g });
+    for (const g of SP.GROUPS) if (SP.reach(h, g, race)) for (const d of SP.members(g)) if (SP.canAppear(g, d, un) && !out.some(x => x.d === d) && (!g.fit || g.fit(d, race))) out.push({ d, g });
     const key = x => (x.g.race ? 1000 : 0) - (x.d.rating || 0);
     return out.sort((a, b) => key(a) - key(b));
   };
@@ -155,7 +162,7 @@
     const out = [];
     const nextRaces = W.upcomingGraded(52).filter(r => r.inWeeks > 0 && !HS.Season.staticIneligible(h, r, r.year));
     for (const g of SP.GROUPS) {
-      if (!SP.members(g).some(d => !un.includes(d.name))) continue;
+      if (!SP.members(g).some(d => SP.canAppear(g, d, un))) continue;
       const r = nextRaces.find(rc => SP.reach(h, g, rc));
       if (r) out.push({ group: g, need: g.finals ? r.short : (['g1five', 'allround', 'local'].includes(g.id) ? '次のG1' : '次のレース') });
     }

@@ -225,7 +225,7 @@
     const ladder = O.TIERS.map((t, i) => {
       const rw = O.REWARDS.find(r => r.tier === i);
       const reached = st.tier >= i;
-      return `<li class="${reached ? 'on' : ''}"><b>${e(t.label)}</b><span>${['条件戦の依頼', '重賞の依頼', 'G1の依頼・いちばん強い馬', 'グランドフィナーレ・海外の依頼'][i]}</span>${rw ? `<em class="${st.got[rw.key] && !st.got[rw.key].pending ? 'got' : ''}">${st.got[rw.key] ? (st.got[rw.key].pending ? '⏳ ' : '✓ ') : '🎁 '}${e(rw.label)}${st.got[rw.key] && st.got[rw.key].pending ? '（引退を待つ）' : ''}</em>` : ''}</li>`;
+      return `<li class="${reached ? 'on' : ''}"><b>${e(t.label)}</b><span>${['条件戦の依頼', '重賞の依頼', 'G1の依頼・いちばん強い馬', 'グランドフェスティバル・海外の依頼'][i]}</span>${rw ? `<em class="${st.got[rw.key] && !st.got[rw.key].pending ? 'got' : ''}">${st.got[rw.key] ? (st.got[rw.key].pending ? '⏳ ' : '✓ ') : '🎁 '}${e(rw.label)}${st.got[rw.key] && st.got[rw.key].pending ? '（引退を待つ）' : ''}</em>` : ''}</li>`;
     }).join('') + `<li class="${st.got.bond ? 'on' : ''}"><b>好感度いっぱい</b><span>思い出の名馬 ${e(o.memory)}</span><em class="${st.got.bond && !st.got.bond.pending ? 'got' : ''}">${st.got.bond && !st.got.bond.pending ? '✓ ' : '🎁 '}思い出の名馬</em></li>`;
     const pending = st.got.bond && st.got.bond.pending;
     const mine = W.mine().filter(h => h.loc === 'stable' || h.loc === 'farm');

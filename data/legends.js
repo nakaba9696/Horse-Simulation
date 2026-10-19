@@ -1,26 +1,29 @@
 // スペシャルホースの補い：史実馬のデータ（1955年生〜）より古い名馬。世界の暦には出さず、条件にリーチがかかったレースと、
 // 倒したあとの馬の店にだけ出る（js/core/special.js）。形は data/historic_world.js と同じ。unbeaten＝無敗のまま重ねた勝ち数（条件に使う）。
-// tier:'legend'＝伝説級（グランドフィナーレを勝った馬が次の年の同じグランドフィナーレに出ると出てくる。ほかのグループには入らない）。
-// gf＝担当のグランドフィナーレ（sprint 短距離・mile マイル・classic 中長距離・long 長距離・dirt ダート・filly 牝馬）。伝説級はその GF にだけ出てくる。
-// 担当は持ち主の決定 2026-10-17「それぞれ担当するスペシャルホースもあわせて設定だして」（配り役の案。持ち主はここを書き換えれば変えられる）。
+// tier:'legend'＝伝説級（グランドフェスティバルの名馬。ほかのグループには入らない）。gf＝担当のグランドフェスティバル（区分は data/gf.js の id）。
+//   担当の GF を前の年に勝った自分の馬が、次の年の同じ GF に出ると出てくる。gf:'all' は、GF を全部勝ったあと、どの GF にも出てくる。
+// 担当は持ち主の仕様書（docs/SPEC.md の「GF」・2026-10-19）：短距離ザテトラーク・マイルセントサイモン・中距離エクリプス・
+//   クラシックグラディアトゥール・長距離ファーラップ・ダートマンノウォー、全部を勝つとキンチェム。
 // 史実馬のデータにいる名馬を伝説級にするときは、いちばん下の legendMarks に名前と担当を書く。
+// 前に伝説級だったバーラム・サイテーション・ウォーアドミラル・ネアルコ・オーモンド・カウントフリート・ドミノは、
+//   2026-10-19 からほかの条件のグループで出てくる（英国・米国の三冠馬など。js/core/special.js）。
 // リボーは伝説級にしない：凱旋門賞の連覇という史実の顔があるので、そのグループ（凱旋門賞の連覇）で出てくる
 (function(){
 const HS = globalThis.HS = globalThis.HS || {}; HS.DATA = HS.DATA || {};
 HS.DATA.legendsExtra = [
-  { name:'エクリプス', tier:'legend', gf:'long', nameEn:'Eclipse', country:'英', born:1764, sex:'牡', coat:'栗毛', sire:'マースク', dam:'スピレッタ', rating:100, surface:'芝', distMin:2000, distMax:4000, style:'逃げ', growth:'普通', retire:1770, wins:[], unbeaten:18, note:'18戦18勝' },
-  { name:'キンチェム', tier:'legend', gf:'filly', nameEn:'Kincsem', country:'ハンガリー', born:1874, sex:'牝', coat:'栗毛', sire:'カンバスカン', dam:'ウォーターニンフ', rating:100, surface:'芝', distMin:1600, distMax:3200, style:'先行', growth:'普通', retire:1879, wins:['1877バーデン大賞','1878バーデン大賞','1879バーデン大賞'], unbeaten:54, note:'54戦54勝' },
-  { name:'セントサイモン', tier:'legend', gf:'long', nameEn:'St. Simon', country:'英', born:1881, sex:'牡', coat:'黒鹿毛', sire:'ガロピン', dam:'セントアンジェラ', rating:100, surface:'芝', distMin:1600, distMax:4000, style:'先行', growth:'普通', retire:1884, wins:['1884アスコットゴールドカップ'], unbeaten:9, note:'9戦9勝' },
-  { name:'オーモンド', tier:'legend', gf:'classic', nameEn:'Ormonde', country:'英', born:1883, sex:'牡', coat:'鹿毛', sire:'ベンドア', dam:'リリーアグネス', rating:100, surface:'芝', distMin:1600, distMax:2900, style:'先行', growth:'普通', retire:1887, wins:['1886英2000ギニー','1886英ダービー','1886英セントレジャー'], unbeaten:16, note:'16戦16勝。英三冠' },
+  { name:'エクリプス', tier:'legend', gf:'distance', nameEn:'Eclipse', country:'英', born:1764, sex:'牡', coat:'栗毛', sire:'マースク', dam:'スピレッタ', rating:100, surface:'芝', distMin:2000, distMax:4000, style:'逃げ', growth:'普通', retire:1770, wins:[], unbeaten:18, note:'18戦18勝' },
+  { name:'キンチェム', tier:'legend', gf:'all', nameEn:'Kincsem', country:'ハンガリー', born:1874, sex:'牝', coat:'栗毛', sire:'カンバスカン', dam:'ウォーターニンフ', rating:100, surface:'芝', distMin:1600, distMax:3200, style:'先行', growth:'普通', retire:1879, wins:['1877バーデン大賞','1878バーデン大賞','1879バーデン大賞'], unbeaten:54, note:'54戦54勝' },
+  { name:'セントサイモン', tier:'legend', gf:'mile', nameEn:'St. Simon', country:'英', born:1881, sex:'牡', coat:'黒鹿毛', sire:'ガロピン', dam:'セントアンジェラ', rating:100, surface:'芝', distMin:1600, distMax:4000, style:'先行', growth:'普通', retire:1884, wins:['1884アスコットゴールドカップ'], unbeaten:9, note:'9戦9勝' },
+  { name:'オーモンド', nameEn:'Ormonde', country:'英', born:1883, sex:'牡', coat:'鹿毛', sire:'ベンドア', dam:'リリーアグネス', rating:100, surface:'芝', distMin:1600, distMax:2900, style:'先行', growth:'普通', retire:1887, wins:['1886英2000ギニー','1886英ダービー','1886英セントレジャー'], unbeaten:16, note:'16戦16勝。英三冠' },
   { name:'マンノウォー', tier:'legend', gf:'dirt', nameEn:"Man o' War", country:'米', born:1917, sex:'牡', coat:'栗毛', sire:'フェアプレイ', dam:'マフバー', rating:100, surface:'ダ', distMin:1200, distMax:2400, style:'逃げ', growth:'早め', retire:1920, wins:['1920プリークネスステークス','1920ベルモントステークス'], note:'21戦20勝' },
   { name:'ファーラップ', tier:'legend', gf:'long', nameEn:'Phar Lap', country:'豪', born:1926, sex:'セ', coat:'栗毛', sire:'ナイトレイド', dam:'エントリーティ', rating:99, surface:'芝', distMin:1600, distMax:3200, style:'先行', growth:'普通', retire:1932, wins:['1930コックスプレート','1930メルボルンカップ','1931コックスプレート'] },
-  { name:'バーラム', tier:'legend', gf:'classic', nameEn:'Bahram', country:'英', born:1932, sex:'牡', coat:'鹿毛', sire:'ブランドフォード', dam:'フライアーズドーター', rating:99, surface:'芝', distMin:1600, distMax:2900, style:'先行', growth:'普通', retire:1935, wins:['1935英2000ギニー','1935英ダービー','1935英セントレジャー'], unbeaten:9, note:'9戦9勝。英三冠' },
-  { name:'ウォーアドミラル', tier:'legend', gf:'dirt', nameEn:'War Admiral', country:'米', born:1934, sex:'牡', coat:'黒鹿毛', sire:'マンノウォー', dam:'ブラッシュアップ', rating:98, surface:'ダ', distMin:1600, distMax:2400, style:'逃げ', growth:'普通', retire:1939, wins:['1937ケンタッキーダービー','1937プリークネスステークス','1937ベルモントステークス'], note:'米三冠' },
-  { name:'ネアルコ', tier:'legend', gf:'mile', nameEn:'Nearco', country:'伊', born:1935, sex:'牡', coat:'黒鹿毛', sire:'ファロス', dam:'ノガラ', rating:99, surface:'芝', distMin:1000, distMax:3000, style:'先行', growth:'普通', retire:1938, wins:['1938パリ大賞'], unbeaten:14, note:'14戦14勝' },
+  { name:'バーラム', nameEn:'Bahram', country:'英', born:1932, sex:'牡', coat:'鹿毛', sire:'ブランドフォード', dam:'フライアーズドーター', rating:99, surface:'芝', distMin:1600, distMax:2900, style:'先行', growth:'普通', retire:1935, wins:['1935英2000ギニー','1935英ダービー','1935英セントレジャー'], unbeaten:9, note:'9戦9勝。英三冠' },
+  { name:'ウォーアドミラル', nameEn:'War Admiral', country:'米', born:1934, sex:'牡', coat:'黒鹿毛', sire:'マンノウォー', dam:'ブラッシュアップ', rating:98, surface:'ダ', distMin:1600, distMax:2400, style:'逃げ', growth:'普通', retire:1939, wins:['1937ケンタッキーダービー','1937プリークネスステークス','1937ベルモントステークス'], note:'米三冠' },
+  { name:'ネアルコ', nameEn:'Nearco', country:'伊', born:1935, sex:'牡', coat:'黒鹿毛', sire:'ファロス', dam:'ノガラ', rating:99, surface:'芝', distMin:1000, distMax:3000, style:'先行', growth:'普通', retire:1938, wins:['1938パリ大賞'], unbeaten:14, note:'14戦14勝' },
   { name:'セントライト', born:1938, sex:'牡', coat:'黒鹿毛', sire:'ダイオライト', dam:'フリッパンシー', rating:96, surface:'芝', distMin:1600, distMax:3200, style:'先行', growth:'普通', retire:1941, wins:['1941皐月賞','1941東京優駿','1941菊花賞'], note:'日本で初めての三冠馬' },
-  { name:'カウントフリート', tier:'legend', gf:'dirt', nameEn:'Count Fleet', country:'米', born:1940, sex:'牡', coat:'黒鹿毛', sire:'レイカウント', dam:'クイックリー', rating:99, surface:'ダ', distMin:1200, distMax:2400, style:'逃げ', growth:'早め', retire:1943, wins:['1943ケンタッキーダービー','1943プリークネスステークス','1943ベルモントステークス'], note:'米三冠' },
+  { name:'カウントフリート', nameEn:'Count Fleet', country:'米', born:1940, sex:'牡', coat:'黒鹿毛', sire:'レイカウント', dam:'クイックリー', rating:99, surface:'ダ', distMin:1200, distMax:2400, style:'逃げ', growth:'早め', retire:1943, wins:['1943ケンタッキーダービー','1943プリークネスステークス','1943ベルモントステークス'], note:'米三冠' },
   { name:'クリフジ', born:1940, sex:'牝', coat:'栗毛', sire:'トウルヌソル', dam:'賢藤', rating:98, surface:'芝', distMin:1600, distMax:3200, style:'先行', growth:'普通', retire:1944, wins:['1943東京優駿','1943優駿牝馬','1943菊花賞'], unbeaten:11, jockey:'前田長吉', note:'11戦11勝。日本ダービー・オークス・菊花賞' },
-  { name:'サイテーション', tier:'legend', gf:'dirt', nameEn:'Citation', country:'米', born:1945, sex:'牡', coat:'鹿毛', sire:'ブルリー', dam:'ハイドロプレーン', rating:100, surface:'ダ', distMin:1200, distMax:3200, style:'先行', growth:'普通', retire:1951, wins:['1948ケンタッキーダービー','1948プリークネスステークス','1948ベルモントステークス'], note:'米三冠' },
+  { name:'サイテーション', nameEn:'Citation', country:'米', born:1945, sex:'牡', coat:'鹿毛', sire:'ブルリー', dam:'ハイドロプレーン', rating:100, surface:'ダ', distMin:1200, distMax:3200, style:'先行', growth:'普通', retire:1951, wins:['1948ケンタッキーダービー','1948プリークネスステークス','1948ベルモントステークス'], note:'米三冠' },
   { name:'トキノミノル', born:1948, sex:'牡', coat:'栗毛', sire:'セフト', dam:'第二タイランツクヰーン', rating:96, surface:'芝', distMin:1200, distMax:2400, style:'逃げ', growth:'早め', retire:1951, wins:['1951皐月賞','1951東京優駿'], unbeaten:10, jockey:'岩下密政', note:'10戦10勝。皐月賞・日本ダービー' },
   { name:'リボー', nameEn:'Ribot', country:'伊', born:1952, sex:'牡', coat:'鹿毛', sire:'テネラニ', dam:'ロマネラ', damsire:'エルグレコ', rating:100, surface:'芝', distMin:1600, distMax:3000, style:'先行', growth:'普通', retire:1956, wins:['1955凱旋門賞','1956キングジョージ6世＆クイーンエリザベスステークス','1956凱旋門賞'], unbeaten:16, jockey:'E.カミーチ', note:'16戦16勝。凱旋門賞連覇' },
   { name:'ハクチカラ', born:1953, sex:'牡', coat:'鹿毛', sire:'トビサクラ', dam:'昇城', rating:93, surface:'芝', distMin:1600, distMax:3200, style:'差し', growth:'普通', retire:1959, wins:['1956東京優駿','1957天皇賞（秋）','1957有馬記念'], jockey:'保田隆芳', note:'日本ダービー・天皇賞（秋）・有馬記念' },
@@ -170,11 +173,12 @@ HS.DATA.legendsExtra = [
  // 勝ったレースは2歳戦だけで、data/races_world.js に無いので wins は空にし note に書いた。最後に走ったのは1913年（1914年に調教中の故障で引退）
  // 出典：https://ja.wikipedia.org/wiki/ザテトラーク
  // 出典：https://en.wikipedia.org/wiki/The_Tetrarch
- { name:'ザテトラーク', nameEn:'The Tetrarch', country:'英', born:1911, sex:'牡', coat:'芦毛', sire:'ロアエロド', dam:'ヴァーレン', damsire:'ボナヴィスタ', rating:86, surface:'芝', distMin:1000, distMax:1200, style:'逃げ', growth:'早め', retire:1913, wins:[], unbeaten:7, tier:'legend', gf:'sprint', note:'7戦7勝（すべて2歳時）。コヴェントリーステークス・ナショナルブリーダーズプロデュースステークス・シャンペンステークスなど。アイルランド生産、英国で調教' },
+ { name:'ザテトラーク', tier:'legend', gf:'sprint', nameEn:'The Tetrarch', country:'英', born:1911, sex:'牡', coat:'芦毛', sire:'ロアエロド', dam:'ヴァーレン', damsire:'ボナヴィスタ', rating:86, surface:'芝', distMin:1000, distMax:1200, style:'逃げ', growth:'早め', retire:1913, wins:[], unbeaten:7, note:'7戦7勝（すべて2歳時）。コヴェントリーステークス・ナショナルブリーダーズプロデュースステークス・シャンペンステークスなど。アイルランド生産、英国で調教' },
  // 勝ったレースが data/races_world.js に無いので wins は空にし note に書いた。2歳時の9戦にはドビンスとのマッチレースの同着を含む
+ // unbeaten:9＝2歳の9戦9勝（ja.wikipedia「9戦無敗で締めくくった」。初の敗戦は3歳のアメリカンダービー）。伝説級から外れたので、無敗の名馬のグループで出てくる
  // 出典：https://ja.wikipedia.org/wiki/ドミノ_(競走馬)
  // 出典：https://en.wikipedia.org/wiki/Domino_(horse)
- { name:'ドミノ', nameEn:'Domino', country:'米', born:1891, sex:'牡', coat:'黒鹿毛', sire:'ヒムヤー', dam:'マニーグレイ', damsire:'エンクワイアラー', rating:86, surface:'ダ', distMin:1000, distMax:1600, style:'逃げ', growth:'普通', retire:1895, wins:[], tier:'legend', gf:'sprint', note:'25戦19勝。フューチュリティステークス・メイトロンステークス・ウィザーズステークスなど。2歳時9戦無敗。1893年年度代表馬（後年の選定）' },
+ { name:'ドミノ', nameEn:'Domino', country:'米', born:1891, sex:'牡', coat:'黒鹿毛', sire:'ヒムヤー', dam:'マニーグレイ', damsire:'エンクワイアラー', rating:86, surface:'ダ', distMin:1000, distMax:1600, style:'逃げ', growth:'普通', retire:1895, wins:[], unbeaten:9, note:'25戦19勝。フューチュリティステークス・メイトロンステークス・ウィザーズステークスなど。2歳時9戦無敗。1893年年度代表馬（後年の選定）' },
  // distMin は推定（2歳時の勝ち鞍の距離を確かめられず、ブリーダーズフューチュリティ＝当時7ハロン184フィートから）。distMax は1959年マンハッタンハンデキャップ（1と5/8マイル）。style も推定
  // damsire のカナ「サーコスモ」は ja.wikipedia に記事が無く、リポジトリの data/stallions_old.js の表記に合わせた
  // 出典：https://ja.wikipedia.org/wiki/ラウンドテーブル_(競走馬)
@@ -185,7 +189,7 @@ HS.DATA.legendsExtra = [
  // '1865ロワイヤルオーク賞' は ja.wikipedia の「プランスアンペアル大賞典（後のロワイヤルオーク賞）」から
  // 出典：https://ja.wikipedia.org/wiki/グラディアトゥール
  // 出典：https://en.wikipedia.org/wiki/Gladiateur
- { name:'グラディアトゥール', nameEn:'Gladiateur', country:'英', born:1862, sex:'牡', coat:'黒鹿毛', sire:'モナルク', dam:'ミスグラディエーター', damsire:'グラディエーター', rating:96, surface:'芝', distMin:1600, distMax:4000, style:'追込', growth:'普通', retire:1866, wins:['1865英2000ギニー','1865英ダービー','1865パリ大賞','1865英セントレジャー','1865ロワイヤルオーク賞','1866アスコットゴールドカップ'], note:'19戦16勝。フランス生産で英国で調教。フランス産馬として初めての英三冠。ロワイヤルオーク賞は当時プランスアンペリアル大賞', uncertain:true },
+ { name:'グラディアトゥール', tier:'legend', gf:'classic', nameEn:'Gladiateur', country:'英', born:1862, sex:'牡', coat:'黒鹿毛', sire:'モナルク', dam:'ミスグラディエーター', damsire:'グラディエーター', rating:96, surface:'芝', distMin:1600, distMax:4000, style:'追込', growth:'普通', retire:1866, wins:['1865英2000ギニー','1865英ダービー','1865パリ大賞','1865英セントレジャー','1865ロワイヤルオーク賞','1866アスコットゴールドカップ'], note:'19戦16勝。フランス生産で英国で調教。フランス産馬として初めての英三冠。ロワイヤルオーク賞は当時プランスアンペリアル大賞', uncertain:true },
  // distMin は推定（2歳時のジュライステークスの当時の距離を確かめられなかった）。style も推定（マッチレースで後ろから差した記録から）
  // 出典：https://ja.wikipedia.org/wiki/ザフライングダッチマン
  // 出典：https://en.wikipedia.org/wiki/The_Flying_Dutchman_(horse)
@@ -193,7 +197,7 @@ HS.DATA.legendsExtra = [
  // style は推定（逃げ切りと追い込みの両方の記録がある）。distMax は1905年ジョッキークラブカップ（18ハロン）から
  // 出典：https://ja.wikipedia.org/wiki/プリティーポリー
  // 出典：https://en.wikipedia.org/wiki/Pretty_Polly_(horse)
- { name:'プリティーポリー', tier:'legend', gf:'filly', nameEn:'Pretty Polly', country:'英', born:1901, sex:'牝', coat:'栗毛', sire:'ガリニュール', dam:'アドミレイション', damsire:'サラバンド', rating:92, surface:'芝', distMin:1000, distMax:3600, style:'先行', growth:'普通', retire:1906, wins:['1904英1000ギニー','1904英オークス','1904ナッソーステークス','1904英セントレジャー','1905コロネーションカップ','1905英チャンピオンステークス','1906コロネーションカップ'], note:'24戦22勝。英牝馬三冠。デビューから15連勝。アイルランド生産、英国で調教', uncertain:true },
+ { name:'プリティーポリー', nameEn:'Pretty Polly', country:'英', born:1901, sex:'牝', coat:'栗毛', sire:'ガリニュール', dam:'アドミレイション', damsire:'サラバンド', rating:92, surface:'芝', distMin:1000, distMax:3600, style:'先行', growth:'普通', retire:1906, wins:['1904英1000ギニー','1904英オークス','1904ナッソーステークス','1904英セントレジャー','1905コロネーションカップ','1905英チャンピオンステークス','1906コロネーションカップ'], note:'24戦22勝。英牝馬三冠。デビューから15連勝。アイルランド生産、英国で調教', uncertain:true },
  // style は推定（記録から脚質が確かめられなかった）。distMin は2歳時のニューステークス（5ハロン）、distMax はアスコットゴールドカップ（2.5マイル）
  // プリンスオブウェールズステークスは当時3歳の競走（en.wikipedia の勝ち鞍の一覧が現在の同名競走の記事につないでいる）
  // 出典：https://ja.wikipedia.org/wiki/バヤルド_(競走馬)
@@ -202,7 +206,7 @@ HS.DATA.legendsExtra = [
  // uncertain：毛色は en.wikipedia が鹿毛（Bay）、Thoroughbred Heritage が黒鹿毛（br.）で食い違う。脚質は記録から決められず推定。
  // 生産はアイルランドの国営牧場、調教は英国（country は調教国の英）。カナ（クラレンス・ディリジェンス）は ja.wikipedia に記事が無く推定。
  // 出典：https://en.wikipedia.org/wiki/Sun_Chariot_(horse) ・ http://www.tbheritage.com/Portraits/Hyperion.html
- { name:'サンチャリオット', tier:'legend', gf:'filly', nameEn:'Sun Chariot', country:'英', born:1939, sex:'牝', coat:'鹿毛', sire:'ハイペリオン', dam:'クラレンス', damsire:'ディリジェンス', rating:92, surface:'芝', distMin:1000, distMax:2900, style:'先行', growth:'早め', retire:1942, wins:['1942英1000ギニー','1942英オークス','1942英セントレジャー'], note:'9戦8勝。英国の牝馬三冠。戦時中で3競走ともニューマーケットで行われた。2歳でクイーンメアリーステークス・ミドルパークステークス', uncertain:true },
+ { name:'サンチャリオット', nameEn:'Sun Chariot', country:'英', born:1939, sex:'牝', coat:'鹿毛', sire:'ハイペリオン', dam:'クラレンス', damsire:'ディリジェンス', rating:92, surface:'芝', distMin:1000, distMax:2900, style:'先行', growth:'早め', retire:1942, wins:['1942英1000ギニー','1942英オークス','1942英セントレジャー'], note:'9戦8勝。英国の牝馬三冠。戦時中で3競走ともニューマーケットで行われた。2歳でクイーンメアリーステークス・ミドルパークステークス', uncertain:true },
  // 母父 Sansovino のカナ「サンソヴィーノ」は推定（ja.wikipedia に記事なし）。data/stallions.js の 'サンソネット':[null,'レディジューラー'] は父が空。
  // 出典：https://ja.wikipedia.org/wiki/テューダーミンストレル ・ https://en.wikipedia.org/wiki/Tudor_Minstrel
  { name:'テューダーミンストレル', nameEn:'Tudor Minstrel', country:'英', born:1944, sex:'牡', coat:'黒鹿毛', sire:'オーエンテューダー', dam:'サンソネット', damsire:'サンソヴィーノ', rating:88, surface:'芝', distMin:1000, distMax:1600, style:'先行', growth:'早め', retire:1947, wins:['1947英2000ギニー','1947セントジェームズパレスステークス','1947クイーンエリザベス2世ステークス'], note:'10戦8勝。英2000ギニーを8馬身差。1947年のクイーンエリザベス2世ステークスは前身のナイツロイヤルステークス。英ダービー4着' },
@@ -287,9 +291,6 @@ HS.DATA.legendsExtra = [
  { name:'ボールドルーラー', nameEn:'Bold Ruler', country:'米', born:1954, sex:'牡', coat:'黒鹿毛', sire:'ナスルーラ', dam:'ミスディスコ', damsire:'ディスカバリー', rating:91, surface:'ダ', distMin:1200, distMax:2000, style:'逃げ', growth:'普通', retire:1958, wins:['1956フューチュリティステークス','1957ウッドメモリアルステークス','1957プリークネスステークス','1957トレントンハンデキャップ','1958サバーバンハンデキャップ'], note:'33戦23勝。1957年の年度代表馬。北米のリーディングサイアー8回、セクレタリアトの父', uncertain:true },
 ];
 // 史実馬のデータ（data/historic_world.js）にいる名馬を伝説級にする印と担当の GF。js/core/datafix.js が tier:'legend' と gf を付ける
-// （史実の値はそのまま。伝説級は能力がひとつ上になり、スペシャルホースはグランドフィナーレのグループだけに入る）
-HS.DATA.legendMarks = {
-  'ブリガディアジェラード': 'mile',
-  'アレフランス': 'filly', 'プティトエトワール': 'filly', 'ダリア': 'filly',
-};
+// （史実の値はそのまま。伝説級は能力がひとつ上になり、スペシャルホースはグランドフェスティバルのグループだけに入る）
+HS.DATA.legendMarks = {};
 })();

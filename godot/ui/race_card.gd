@@ -41,7 +41,9 @@ var flow := false        # 週の流れの中（その週の本当の出走表�
 var btn_auto: Button
 
 func _ready() -> void:
-	if UiFlow.current() == null and UiFlow.demo_arg() >= 0:
+	if UiFlow.current() == null and OS.get_cmdline_user_args().has("--setup=gf"):
+		UiFlow.demo_gf_ride()   # 撮影の見本：グランドフェスティバルの出走表
+	elif UiFlow.current() == null and UiFlow.demo_arg() >= 0:
 		UiFlow.demo_ride(UiFlow.demo_arg())
 	flow = UiFlow.current() != null
 	if flow:

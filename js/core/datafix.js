@@ -52,7 +52,7 @@
   for (const h of out) if (h.jockey && !D.historicJockeys[h.name]) D.historicJockeys[h.name] = h.jockey;
   for (const [n, j] of Object.entries(D.historicJockeysAuto || {})) if (!D.historicJockeys[n]) D.historicJockeys[n] = j;
   D.historic = out;
-  // 伝説級の印（data/legends.js の legendMarks）：史実馬のデータにいる名馬を伝説級にし、担当のグランドフィナーレを付ける
+  // 伝説級の印（data/legends.js の legendMarks）：史実馬のデータにいる名馬を伝説級にし、担当のグランドフェスティバルを付ける
   for (const [n, gf] of Object.entries(D.legendMarks || {})) {
     const h = byName.get(n) || byNorm.get(HS.normName(n)); if (!h) continue;
     h.tier = 'legend'; h.gf = gf;

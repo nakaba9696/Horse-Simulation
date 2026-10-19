@@ -35,7 +35,7 @@
         : x.busy ? '<span class="tag busy">この週は予約あり</span>' : `<span class="why">${e(x.why || '')}</span>`;
       if (x.can) first = false;
       return `${mh}<tr class="${x.state ? 'mine' : ''} ${x.why && !x.state ? 'dim' : ''} ${r.grade === 'G1' ? 'g1' : ''} ${wk.i === 0 ? 'now' : ''}">
-        <td class="wk"><b>${wk.m}月${wk.w}週</b><small>${wk.i === 0 ? '今週' : `${wk.i}週後`}</small></td>
+        <td class="wk"><b>${W.weekLabel(wk.m, wk.w)}</b><small>${wk.i === 0 ? '今週' : `${wk.i}週後`}</small></td>
         <td><div>${clsLabel(r)} <span class="nm">${e(R.label(r))}</span></div><div class="sub">${UI.ageCond(r)}${x.others.length ? `・<span style="color:var(--warn)">${x.others.map(e).join('・')}も予約</span>` : ''}</div></td>
         <td class="w">${e(r.course)} ${UI.surf(r.surface)} ${r.dist}m</td>
         <td class="c" title="距離の向き">${K.mark(x.dist)}</td><td class="c" title="馬場の向き">${K.mark(x.surf)}</td>

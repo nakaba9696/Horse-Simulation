@@ -13,7 +13,8 @@ static func retired(sex: String) -> Array:
 	return HSWorld.mine().filter(func(h): return h.get("loc") == "retired" and ((h.get("sex") == "牝") if sex == "牝" else (h.get("sex") != "牝")))
 static func bonus_of(h: Dictionary) -> Dictionary:
 	var G = HSWorld.G
-	var tr = HSU.or_(G.get("trophies"), {}).values().filter(func(t): return t.horse == h.name).size()
+	var trs: Dictionary = HSU.or_(G.get("trophies"), {})
+	var tr = trs.keys().filter(func(id): return not String(id).begins_with("gf:") and trs[id].horse == h.name).size()   # GF のトロフィーは下の GF の勝ちで数える
 	var dc := HSSeason.gf_wins(h).size()
 	return { trophies = float(tr), dc = float(dc), pts = HSU.mn(BONUS_MAX, (tr + dc) * BONUS_PER) }
 static func retire(id: String) -> Dictionary:

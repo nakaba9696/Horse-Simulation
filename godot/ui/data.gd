@@ -78,7 +78,7 @@ func _note() -> String:
 		"trophy": return "勝ったレースの組み合わせで手にする"
 		"hall": return "トロフィーを2つ以上手にした自分の馬は、引退したときに殿堂入りする"
 		"lead": return "左右で年を替える"
-		"gf": return "行を押すとグランドフィナーレの画面へ（招待への返事もそこで）"
+		"gf": return "行を押すとグランドフェスティバルの画面へ（招待への返事もそこで）"
 		"replay": return "自分で乗ったレースを20本まで残す。決定で見直す・X でお気に入り（消さない）"
 	return ""
 
@@ -176,9 +176,9 @@ func _special() -> void:
 
 func _trophy() -> void:
 	var tr: Dictionary = HSU.or_(HSWorld.G.get("trophies"), {})
-	var n := HSTrophy.LIST.filter(func(t): return tr.has(t.id)).size()
-	list.add_child(UiScreen.section("トロフィー", "%d / %d" % [n, HSTrophy.LIST.size()]))
-	for t in HSTrophy.LIST:
+	var n := HSTrophy.list().filter(func(t): return tr.has(t.id)).size()
+	list.add_child(UiScreen.section("トロフィー", "%d / %d" % [n, HSTrophy.list().size()]))
+	for t in HSTrophy.list():
 		var got = tr.get(t.id)
 		_row([["🏆" if got else "🔒", 40, UiTheme.GOLD_BRIGHT, C], [String(t.label), 220, UiTheme.GOLD_BRIGHT if got else UiTheme.IVORY], [HSTrophy.note_of(t), 0, UiTheme.MUTED],
 			["%s・%s" % [yl(got.y), got.horse] if got else "まだ", 260, UiTheme.IVORY if got else UiTheme.FAINT, R]], got != null, 44)
@@ -312,14 +312,14 @@ func _hist() -> void:
 	_head([["日付", 170], ["格", 60, UiTheme.MUTED, C], ["レース", 0], ["馬", 260], ["人気", 90, UiTheme.MUTED, R], ["着順", 90, UiTheme.MUTED, R]])
 	for r in hs.slice(0, 80):
 		var p := int(r.pos)
-		_row([["%s %s月%s週" % [yl(r.y), HSU.num(r.m), HSU.num(r.w)], 170, UiTheme.MUTED], [String(HSU.or_(r.get("grade"), "")), 60, UiTheme.GOLD_BRIGHT, C], [String(r.race), 0], [String(r.horse), 260],
+		_row([["%s %s" % [yl(r.y), HSWorld.week_label(r.m, r.w)], 170, UiTheme.MUTED], [String(HSU.or_(r.get("grade"), "")), 60, UiTheme.GOLD_BRIGHT, C], [String(r.race), 0], [String(r.horse), 260],
 			[str(int(HSU.or_(r.get("pop"), 0))), 90, UiTheme.MUTED, R], ["%d着" % p, 90, UiTheme.GOLD_BRIGHT if p <= 3 else UiTheme.IVORY, R]], p == 1)
 
-# グランドフィナーレ：区分ごとに、いまの1位と自分の馬のいちばん上の順位
+# グランドフェスティバル：区分ごとに、いまの1位と自分の馬のいちばん上の順位
 func _gf() -> void:
 	list.add_child(UiScreen.section(HSSeason.DC_NAME, "上位%d頭が出られる" % HSSeason.DC_FIELD))
-	for id in HSSeason.GF_ORDER:
-		var C: Dictionary = HSSeason.GF_BY[id]
+	for id in HSSeason.gf_order():
+		var C: Dictionary = HSSeason.gf_by()[id]
 		var st := HSSeason.dc_standing(id, HSWorld.G.year)
 		var top := String(st[0].h.name) if st.size() else "－"
 		var mine := "－"
@@ -327,7 +327,7 @@ func _gf() -> void:
 			if x.h.get("owner") == "P":
 				mine = "%s %d位" % [x.h.name, int(x.rank)]
 				break
-		var b := _row([[String(C.label), 140, UiTheme.GOLD_BRIGHT], ["%s %s%sm・12月%s週" % [C.course, C.surface, HSU.num(C.dist), HSU.num(C.week)], 260, UiTheme.MUTED], ["1位 %s" % top, 0], ["自分の馬：%s" % mine, 360, UiTheme.GOLD_BRIGHT if mine != "－" else UiTheme.FAINT]], mine != "－", 42)
+		var b := _row([[String(C.label), 140, UiTheme.GOLD_BRIGHT], ["%s %s%sm" % [C.course, C.surface, HSU.num(C.dist)], 260, UiTheme.MUTED], ["伝説の名馬 %s" % ("・".join(HSSeason.gf_legends(id).map(func(d): return d.name)) if HSSeason.gf_legends(id).size() else "－"), 260, UiTheme.MUTED], ["1位 %s" % top, 0], ["自分の馬：%s" % mine, 360, UiTheme.GOLD_BRIGHT if mine != "－" else UiTheme.FAINT]], mine != "－", 42)
 		b.pressed.connect(func(): go("gf"))
 
 func focus_first() -> void:

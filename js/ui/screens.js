@@ -102,7 +102,7 @@
     return `
       ${tips.length ? `<div class="panel gold mt">${tips.map(t => `<div>📌 ${t}</div>`).join('')}</div>` : ''}
       <div class="row mt"><span class="small muted grow">おまかせの馬が多いときは、まとめて進めると早い（映像は出ない）。</span><button class="btn sm" data-act="next-many">4週まとめて進める</button></div>
-      <h2 class="sec">今週の出走<span class="r">${G.month}月${G.week}週</span></h2>
+      <h2 class="sec">今週の出走<span class="r">${W.weekLabel(G.month, G.week)}</span></h2>
       ${mineIn.length ? `<div class="list">${mineIn.map(x => `<div class="card" data-act="horse" data-id="${x.h.id}">
           ${UI.thumb(x.h)}
           <div class="grow"><div class="nm">${e(x.h.name)}</div><div class="sub">${UI.gradeTag(x.race)} ${e(R.label(x.race))}　${x.race.course}${x.race.surface}${x.race.dist}m　騎手：${e(x.jockey)}</div></div></div>`).join('')}</div>`
@@ -517,7 +517,7 @@
           <li>馬の店でデビュー前の史実馬を買う。2歳の4月から自動で入厩する。</li>
           <li>厩舎の「番組表」で次に出るレースを選ぶ。今週は出走登録、先の週は予約。選ばなければおまかせで決まる。</li>
           <li>馬主から騎乗依頼が来る。受けると、その馬に乗る。仲良くなるほど大きなレースの依頼が来る。</li>
-          <li>年末は距離ごとと牝馬のグランドフィナーレ。その年に活躍した馬だけが招待される。</li>
+          <li>12月4週のあとはグランドフェスティバル（海外の競馬場で6つ）。その年に活躍した馬だけが招待される。</li>
         </ul></div>` : `<div class="panel"><b>遊び方</b>
         <ul class="small">
           <li>毎週、厩舎の馬の調教と出走レースを決めて「次の週へ」。おまかせにすると自動で決まります。</li>
