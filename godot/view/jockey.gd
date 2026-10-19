@@ -11,7 +11,12 @@ const J := {24: [0.03, 1.705, 0.0], 25: [0.08, 1.73, 0.0], 26: [0.52, 1.88, 0.0]
 # 鐙（足首）・膝の向き・手：馬の胴の中の点（x 前・y 上・z 右）
 const STIR := [0.05, 1.48, 0.215]       # 足首。すねは膝から斜め後ろ下へ寝る
 const KNEE_POLE := [1.0, 0.1, 0.04]    # 膝は前へ、わずかに外へ（き甲の横に付ける）
-const HAND := [0.77, 1.81, 0.08]       # 手綱を持つ手（首の付け根のすぐ上）
+const HAND := [0.81, 1.79, 0.08]       # 手綱を持つ手（首の付け根の少し前。首に沿って前へ伸ばす）
+const HAND_HOLD := [0.62, 1.87, 0.11]  # 抑える手（手綱を胸の方へ引く）
+const PUMP_HAND := 0.1                 # 追うとき手を首に沿って前後に送る幅（m。P[JP]＝±1 で）
+const SHOULDER := [0.55, 1.84]
+# ムチの右手の通り道（馬の胴の座標。u＝振りの進み）：手綱から肩の横へ上げ、腰の横の後ろへ振り下ろして戻す（頭の上へは上げない）
+const WHIP_PATH := [[0.0, 0.81, 1.79, 0.08], [0.25, 0.5, 2.0, 0.24], [0.55, 0.02, 1.74, 0.33], [1.0, 0.81, 1.79, 0.08]]         # 肩の真ん中（腰から見て背が馬の背とほぼ平行になる所）
 const HAND_UP := [0.5, 1.8, 0.1]       # 体を起こしたときの手（き甲の前の低い所。馬の胴の中）
 # 体の起こし（P[JU]＝1）：腰を鞍へ下ろし、上体を起こし、頭と腕は前へ残す
 const UP_HIP := [-0.03, -0.02]         # 腰の動き（前・上）
@@ -35,6 +40,9 @@ var head_parts: Array[Node3D] = []
 # 素材の体
 const JK_SCALE := 0.86        # 背の高さ 1.58m（馬の背 1.59m）
 var _up := 0.0                # 体の起こし（P[JU]）
+var _jp := 0.0                # 追う手の送り（P[JP]）
+var _jh := 0.0                # 抑え（P[JH]）
+var _jw := -1.0               # ムチの振り（P[JW]）
 var body: Node3D              # 素材の体の根（馬の根の子）
 var skel: Skeleton3D
 var bmat: ShaderMaterial
@@ -171,6 +179,9 @@ func setup(info: Dictionary, torso_origin: Vector3) -> void:
 # 手作りの角度で節を回し、脚を IK で合わせる
 func pose(P: PackedFloat32Array) -> void:
 	_up = P[ViewGait.JU]
+	_jp = P[ViewGait.JP]
+	_jh = P[ViewGait.JH]
+	_jw = P[ViewGait.JW]
 	var add := {25: UP_TORSO, 26: UP_HEAD, 27: UP_ARM, 29: UP_ARM, 28: UP_FORE, 30: UP_FORE}
 	for i in nodes:
 		var n: Node3D = nodes[i]
@@ -371,7 +382,8 @@ func _ik() -> void:
 	skel.set_bone_global_pose(pel, Transform3D(gp.basis, hip))
 	_aim(pel, _gp(B.spine_01), hip + _dir(24, lerpf(0.9, 0.35, _up), lerpf(0.42, 0.94, _up), 0.0))
 	# 背骨：肩の真ん中へ
-	var sh := _at(25, 0.53, 1.86, 0.0)
+	# 追うときは肩も手と一緒に前へ送る（首の振りと同じ拍子）
+	var sh := _at(25, SHOULDER[0], SHOULDER[1], 0.0) + _dir(1, 1.0, -0.25, 0.0) * (0.05 * _jp)
 	_aim(B.spine_01, _gp(B.neck_01), sh)
 	_aim(B.spine_03, _gp(B.neck_01), sh)
 	# 首と頭：頭を上げて前を見る
@@ -385,8 +397,15 @@ func _ik() -> void:
 	for arm in [["l", 28, -1.0], ["r", 30, 1.0]]:
 		var s: String = arm[0]
 		var hand := _at(arm[1], HAND[0], HAND[1], arm[2] * HAND[2])
+		# 追う：首に沿って前へ（少し下へ）送り、戻す。抑える：胸の方へ引く
+		hand += _dir(1, 1.0, -0.18, 0.0) * (PUMP_HAND * _jp)
+		if _jh > 0.0:
+			hand = hand.lerp(_at(1, HAND_HOLD[0], HAND_HOLD[1], arm[2] * HAND_HOLD[2]), 0.8 * _jh)
 		if _up > 0.0:
 			hand = hand.lerp(_at(1, HAND_UP[0], HAND_UP[1], arm[2] * HAND_UP[2]), _up)
+		if s == "r" and _jw >= 0.0:
+			var wp := _whip_at(_jw)
+			hand = _at(1, wp.x, wp.y, wp.z)
 		_two(B["upperarm_" + s], B["lowerarm_" + s], B["hand_" + s], hand, _dir(1, -0.5, 0.35, arm[2]))
 	# 脚：短い鐙へ。膝はき甲の横（前・少し外）、つま先は前へ
 	for leg in [["l", -1.0], ["r", 1.0]]:
@@ -401,4 +420,31 @@ func _ik() -> void:
 	var hr := _gp(B.hand_r)
 	var palm := hr + (hr - _gp(B.lowerarm_r)).normalized() * 0.06
 	var axis := (global_transform.basis * Vector3(-1, 0, 0)).normalized()
-	w31.global_transform = Transform3D(Basis(axis, -(UP_TORSO + UP_ARM + UP_FORE) * _up) * w31.global_basis, skel.global_transform * palm)
+	if _jw >= 0.0:
+		# ムチを振っている間：棒の向きを馬の胴に合わせて決める（上げると立て、振り下ろすと後ろ下の尻へ向ける）
+		var e := deg_to_rad(_key_whip(_jw))
+		var tb: Basis = (get_parent() as Node3D).global_transform.basis
+		var d: Vector3 = (tb * hmv([-cos(e), sin(e), 0.12])).normalized()
+		var v0 := (w31.global_basis * Vector3(0.02, 0.32, -0.6)).normalized()
+		w31.global_transform = Transform3D(Basis(Quaternion(v0, d)) * w31.global_basis, skel.global_transform * palm)
+	else:
+		w31.global_transform = Transform3D(Basis(axis, -(UP_TORSO + UP_ARM + UP_FORE) * _up) * w31.global_basis, skel.global_transform * palm)
+
+# ムチの右手の位置（WHIP_PATH をなめらかにつなぐ）
+static func _whip_at(u: float) -> Vector3:
+	var i := 0
+	while i < WHIP_PATH.size() - 2 and float(WHIP_PATH[i + 1][0]) <= u:
+		i += 1
+	var a: Array = WHIP_PATH[i]
+	var b: Array = WHIP_PATH[i + 1]
+	var k := ViewGait.smooth((u - float(a[0])) / (float(b[0]) - float(a[0])))
+	return Vector3(a[1], a[2], a[3]).lerp(Vector3(b[1], b[2], b[3]), k)
+
+# ムチの棒の仰ぎ（度。＋で後ろ上・−で後ろ下）
+static func _key_whip(u: float) -> float:
+	var K := [[0.0, 28.0], [0.25, 62.0], [0.55, -38.0], [1.0, 28.0]]
+	var i := 0
+	while i < K.size() - 2 and float(K[i + 1][0]) <= u:
+		i += 1
+	var k := ViewGait.smooth((u - float(K[i][0])) / (float(K[i + 1][0]) - float(K[i][0])))
+	return lerpf(float(K[i][1]), float(K[i + 1][1]), k)

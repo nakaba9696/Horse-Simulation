@@ -197,7 +197,7 @@ static func fade_setup(m: BaseMaterial3D) -> void:
 	m.distance_fade_max_distance = 4.9
 
 # ---- 1コマの形 ----
-# g＝{ph, sp, push, t, walk_ph, walk_w, whip, pose, head_up, ears, lead_want, ease}
+# g＝{ph, sp, push, t, walk_ph, walk_w, whip, pose, head_up, ears, lead_want, ease, hold, beat, tired, look, hpush}
 func animate(g: Dictionary, dt: float, near: bool) -> void:
 	lead_want = float(g.get("lead_want", lead_want))
 	if dt > 0.0:
@@ -207,7 +207,8 @@ func animate(g: Dictionary, dt: float, near: bool) -> void:
 	else:
 		head_up = float(g.get("head_up", 0.0))
 		ears = float(g.get("ears", 0.4))
-	ViewGait.pose(P, g.ph, g.sp, g.push, g.t, seed, lead, g.walk_ph, g.walk_w, g.whip, g.pose, head_up, float(g.get("ease", 0.0)))
+	ViewGait.pose(P, g.ph, g.sp, g.push, g.t, seed, lead, g.walk_ph, g.walk_w, g.whip, g.pose, head_up, float(g.get("ease", 0.0)),
+		float(g.get("hold", 0.0)), float(g.get("beat", 0.0)), float(g.get("tired", 0.0)), float(g.get("look", 0.0)), float(g.get("hpush", -1.0)))
 	# 胴（手作りの骨 1）：高さ・前後の傾き・左右の揺れ
 	torso.position = Vector3(_j1.x, P[ViewGait.Y], _j1.z)
 	torso.basis = _rot(P[1 * 3], P[1 * 3 + 1], P[1 * 3 + 2])

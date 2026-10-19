@@ -94,6 +94,8 @@ struct Ctl {
 	double evWall = -99, evSand = -99, evCover = -99; bool evWallSet = false, evSandSet = false, evCoverSet = false;
 	std::vector<double> passSeen; // 馬ごと（NaN＝まだ）
 	bool misfit = false, everKakari = false;
+	bool steered = false;          // 進路を自分で動かした
+	int beats = 0; double lastBeat = -9; // 拍子の合ったしごきの続いた数・最後の時刻
 	double push() const { return mx(0.0, gear); }
 	bool hold() const { return gear < -0.05; }
 };

@@ -48,6 +48,7 @@ var f_jp: Font         # 馬名・特殊能力
 
 var _flash = null
 var _up_t := -99.0
+var _up_beat := false       # 拍子の合ったしごき（▲ が金に強く光る。合わないと白く弱く）
 var _down_t := -99.0
 var _whip = null
 var _skill = null
@@ -100,8 +101,9 @@ func queue_redraw() -> void:
 func flash(text: String, kind: String) -> void:
 	_flash = {"text": text, "kind": kind, "t": rv.rt}
 
-func up_fx() -> void:
+func up_fx(on_beat := false) -> void:
 	_up_t = rv.rt
+	_up_beat = on_beat
 
 func down_fx() -> void:
 	_down_t = rv.rt
@@ -733,6 +735,10 @@ func _rein(M: Dictionary, x: float, y: float, h: float) -> void:
 			var col := base if on else Color(1, 1, 1, 0.13)
 			if not on and fl > 0.0 and i == 0:
 				col = Color(1, 1, 1, 0.2 + 0.6 * fl)
+			if up and _up_beat and fl > 0.0:
+				# 拍子が合った：全部の ▲ が金に光ってふくらむ
+				col = base.lerp(Color(1, 0.97, 0.8), 0.5 * fl)
+				fl = minf(1.0, fl * 1.6)
 			var pts: Array
 			if up:
 				pts = [Vector2(x + 8, yy - 5), Vector2(x + 16, yy + 2), Vector2(x + 12, yy + 2), Vector2(x + 8, yy - 1.5), Vector2(x + 4, yy + 2), Vector2(x, yy + 2)]

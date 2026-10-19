@@ -7,6 +7,7 @@
 //   strong … 自分の馬だけ総合力が4上。噛み合わないと強い馬でも負けるか
 //   fight … 競り合いの気合：根性の高い馬・低い馬の、競り合ったあとの伸び
 //   bond … 絆（同じ馬に自分で乗った回数）で、気性の荒い馬の折り合いがどう変わるか
+//   beat … 拍子：追い出してから馬の拍子に合わせてしごき続ける・拍子を見ずに連打する・噛み合った乗り方（段を上げたら手を止める）・おまかせ
 const { load } = require('../tests/load.js');
 const HS = globalThis.HS && globalThis.HS.Sim ? globalThis.HS : load();
 const U = HS.U, H = HS.Horse, S = HS.Sim;
@@ -133,11 +134,26 @@ function fightTable() {
   return rows;
 }
 
+// 拍子：同じ相手・同じ種で、追い出してからの手の動かし方だけを変える
+function beatTable() {
+  const rows = [];
+  const P = ['omakase', 'fit', 'beat', 'mash'];
+  const JA = { omakase: 'おまかせ', fit: '噛み合った', beat: '拍子に合わせる', mash: '連打' };
+  console.log('拍子（14頭・東京芝2000・気性88）。勝率％／平均着順');
+  for (const style of ['先行', '差し']) {
+    const r = {}; for (const p of P) r[p] = bench({ style, mind: 88, policy: p });
+    rows.push({ style, r });
+    console.log(style.padEnd(4, '　') + P.map(p => `${JA[p]} ${pct(r[p].win)}%／${r[p].pos.toFixed(2)}`).join('　'));
+  }
+  return rows;
+}
+
 if (require.main === module) {
+  if (what === 'beat' || what === 'all') beatTable();
   if (what === 'field' || what === 'all') fieldTable();
   if (what === 'upset' || what === 'all') upsetTable();
   if (what === 'strong' || what === 'all') strongTable();
   if (what === 'fight' || what === 'all') fightTable();
   if (what === 'bond' || what === 'all') bondTable();
 }
-module.exports = { bench, fieldTable, upsetTable, strongTable, fightTable, bondTable, setMind, setGuts, FH };
+module.exports = { bench, beatTable, fieldTable, upsetTable, strongTable, fightTable, bondTable, setMind, setGuts, FH };
