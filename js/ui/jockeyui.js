@@ -213,15 +213,17 @@
   const SHOP_STYLE = ['逃げ', '先行', '差し', '追込'];
   const SHOP_COLS = [
     { k: 'name', label: '馬名', val: x => x.it.horse.name, str: true, dir: 1 },
-    { k: 'turf', label: '芝', title: '総合力（芝・伸びきったとき）', val: x => x.fh.turf, dir: -1 },
-    { k: 'dirt', label: 'ダ', title: '総合力（ダート・伸びきったとき）', val: x => x.fh.dirt, dir: -1 },
+    { k: 'turf', label: '芝', title: '総合力（芝・いま）', val: x => x.fh.turf, dir: -1 },
+    { k: 'dirt', label: 'ダ', title: '総合力（ダート・いま）', val: x => x.fh.dirt, dir: -1 },
     { k: 'dist', label: '距離', val: x => x.it.horse.distMin * 10000 + x.it.horse.distMax, dir: 1 },
     { k: 'style', label: '脚質', val: x => SHOP_STYLE.indexOf(x.it.horse.style), dir: 1 },
     { k: 'price', label: '値段', val: x => x.it.price, dir: -1 },
   ];
   const shopItems = () => {
     const all = W.marketHistoric().map((it, i) => ({ it, i, kind: 'hist' })).concat(W.marketForeign().map((it, i) => ({ it, i, kind: 'fhist' })));
-    for (const x of all) { x.fh = T.fhPeak(x.it.horse); x.f = x.it.horse.sex === '牝'; }
+    // 見える評価値はいまの総合力（持ち主の仕様書 2026-10-19「店」。早熟は高く、晩成は低く見える。値段もこの値で決まる）
+    const wi = W.wIdx();
+    for (const x of all) { x.fh = T.fhBoth(x.it.horse, wi); x.f = x.it.horse.sex === '牝'; }
     return all;
   };
   const shopMark = it => { const E = HS.Eraless; return it.legend ? '<i class="sp" title="スペシャルホース">★</i>' : HS.DATA.isForeign(it.data || {}) ? '<i title="外国の馬">外</i>' : E && E.lockOf && it.data && E.lockOf(it.data) === 'local' ? '<i title="地方の馬">地</i>' : '<i class="none"></i>'; };
@@ -248,15 +250,15 @@
         <td class="r">${K.price(it.price, money)}</td></tr>`;
     }).join('');
     const E = HS.Eraless;
-    return K.band({ icon: 'market', title: '馬の店', sub: `デビュー前の2歳を売る。毎月入れ替え（次は${nextM}月）`, right: K.stat('資金', U.money(money), 'money') + K.stat('お手馬', `${T.ownCount()} / ${T.MAX_OWN}`, full ? 'warn' : '') })
+    return K.band({ icon: 'market', title: '馬の店', sub: `${HS.Eraless ? HS.Eraless.shopAge(G.month) : 2}歳を売る（6〜12月は2歳・1〜5月は3歳）。毎月入れ替え（次は${nextM}月）`, right: K.stat('資金', U.money(money), 'money') + K.stat('お手馬', `${T.ownCount()} / ${T.MAX_OWN}`, full ? 'warn' : '') })
       + K.tabs([['m', '牡馬', nM], ['f', '牝馬', nF]], sex, 'msex', 'sex')
       + `<div class="u-split"><div>
         ${items.length ? `<div class="u-tbox"><table class="u-t shop-t">${head}${rows}</table></div>` : `<div class="u-empty">いま並んでいる${sex === 'f' ? '牝馬' : '牡馬'}はいません。${nextM}月に入れ替わります。</div>`}
-        <div class="shop-note">芝・ダは${T.FH_NAME}（伸びきったときの強さ）。見出しを押すと並べ替え。${full ? '<b class="warn">お手馬がいっぱいで買えない（引退させると空く）。</b>' : ''}</div>
+        <div class="shop-note">芝・ダはいまの${T.FH_NAME}（晩成はまだ低く、値段も安い）。見出しを押すと並べ替え。${full ? '<b class="warn">お手馬がいっぱいで買えない（引退させると空く）。</b>' : ''}</div>
         ${E && E.locks ? `<h2 class="sec">品ぞろえの広がり<span class="r">勝つと次の月から選ばれる</span></h2><div class="shop-locks">${E.locks().map(l => `<span class="lk ${l.open ? 'open' : ''}"><b>${l.open ? '' : '🔒 '}${e(l.label)}</b> ${l.n}頭<small>${l.open ? '選ばれる' : `${e(l.hint)}と選ばれる`}</small></span>`).join('')}</div>` : ''}
       </div><aside class="u-side"><div class="u-pv" id="u-pv">${items.length ? UI.previews.shop(items[0].it.horse.id) : '<div class="pv-empty">馬を選ぶと、ここに能力が出ます。</div>'}</div></aside></div>`;
   };
-  // 右の見本：選んでいる馬の能力（伸びきったとき）・距離・脚質・特殊能力と、買うボタン
+  // 右の見本：選んでいる馬のいまの能力・距離・脚質・特殊能力と、買うボタン（買うときは確かめる。App.act.buy）
   UI.previews = UI.previews || {};
   UI.previews.shop = function (id) {
     const x = shopItems().find(z => z.it.horse.id === id); if (!x) return '';
@@ -265,8 +267,8 @@
     return `<canvas class="pv-art" width="640" height="320" data-art="portrait" data-id="${e(h.id)}"></canvas>
       <div class="pv-nm">${e(h.name)}${x.it.legend ? ' <span class="chip legend">スペシャル</span>' : ''}</div>
       <div class="pv-sub">${h.sex === '牝' ? '牝' : '牡'}${G.year - h.born}・${e(h.coat || '')}${h.sire && h.sire !== '?' ? `・父 ${e(h.sire)}` : ''}${h.dam && h.dam !== '?' ? `・母 ${e(h.dam)}` : ''}</div>
-      <div class="pv-row"><span>${T.FH_NAME}（完成）</span>${K.fh(x.fh.turf, x.fh.dirt)}</div>
-      <div class="pv-grid">${['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'].map(k => `<div>${K.num(h.pot[k], H.STAT_LABEL[k], false, 'stat')}${H.STAT_SHORT[k]}</div>`).join('')}<div>${K.num(h.kire || 4, '脚の切れ', false, 'kire')}切れ</div></div>
+      <div class="pv-row"><span>${T.FH_NAME}（いま）</span>${K.fh(x.fh.turf, x.fh.dirt)}</div>
+      <div class="pv-grid">${(c => ['spd', 'sta', 'dspd', 'dsta', 'guts', 'mind', 'slope'].map(k => `<div>${K.num(c[k], H.STAT_LABEL[k], false, 'stat')}${H.STAT_SHORT[k]}</div>`).join(''))(H.cur(h, W.wIdx()))}<div>${K.num(h.kire || 4, '脚の切れ', false, 'kire')}切れ</div></div>
       <div class="pv-row"><span>距離</span><b>${h.distMin}〜${h.distMax}m</b></div>
       <div class="pv-row"><span>脚質・成長</span><b>${e(H.styleText(h))}・${e(h.growth || '')}</b></div>
       ${UI.hasSkills(h) ? `<div class="skills">${UI.skillChips(h)}</div>` : ''}

@@ -94,7 +94,7 @@ func run(t) -> void:
 	# 画面を組めるか（ホーム・番組表・店・週の結果・タイトル・厩舎・生産・データ・馬主・GF）
 	UiFlow.report = HSWorld.finish_week({})
 	UiFlow.program_id = HSWorld.mine()[0].id if HSWorld.mine().size() else ""
-	for n in ["home", "program", "shop", "week_result", "title", "stable", "breed", "data", "owners", "gf"]:
+	for n in ["home", "program", "shop", "week_result", "title", "stable", "horse", "breed", "data", "owners", "gf"]:
 		var sc = load("res://scenes/%s.tscn" % n).instantiate()
 		t.root.add_child(sc)
 		var ok: bool = sc.get_child_count() > 3
@@ -103,6 +103,10 @@ func run(t) -> void:
 		if n == "shop": ok = ok and sc.rows.size() > 0
 		if n == "week_result": ok = ok and sc.b_next != null
 		if n == "stable": ok = ok and sc.rows.size() > 0
+		if n == "horse":
+			for k in sc.TABS.size():
+				sc.on_tab(1)
+			ok = ok and not sc.h.is_empty() and sc.b_prog != null
 		if n == "breed": ok = ok and sc.rows.size() == 2
 		if n == "data":
 			for k in sc.TABS.size():
@@ -112,6 +116,8 @@ func run(t) -> void:
 		if n == "gf": ok = ok and sc.rows.size() > 0
 		t.ok(ok, "flow: 画面を組める（%s）" % n)
 		sc.free()
+	_shop(t)
+	_horse(t)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(UiFlow.save_path))
 	UiFlow.save_path = "user://save.json"
 	for f in DirAccess.get_files_at(UiFlow.replay_dir):
@@ -122,6 +128,63 @@ func run(t) -> void:
 	UiFlow._reset_week()
 	UiFlow.no_save = false
 	print("    flow: %d 週・自分で %d 鞍・おまかせ %d 鞍 %.1f 秒" % [WEEKS, rode, autos, (Time.get_ticks_msec() - t0) / 1000.0])
+
+# 馬の店（持ち主の仕様書「クリックですぐ購入にしない」）：行を押すと詳しい小窓、「買う」で確かめ、確かめの「買う」で買う。
+# 見える総合力はいまの値（HSEraless.shop_fh）
+func _shop(t) -> void:
+	var G = HSWorld.G
+	G.player.money = 1e9
+	var sc = load("res://scenes/shop.tscn").instantiate()
+	t.root.add_child(sc)
+	var wi := HSWorld.w_idx()
+	var cur_ok := true
+	for x in sc.items:
+		var f := HSEraless.shop_fh(x.it.horse, wi)
+		if float(x.fh.turf) != float(f.turf) or float(x.fh.dirt) != float(f.dirt): cur_ok = false
+	t.ok(cur_ok and sc.items.size() > 0, "shop: 一覧の総合力はいまの値")
+	var n0 := HSWorld.mine().size()
+	var m0 := float(G.player.money)
+	sc.rows[0].pressed.emit()
+	t.ok(sc._modal != null and sc.detail_buy != null and HSWorld.mine().size() == n0 and float(G.player.money) == m0, "shop: 行を押してもすぐには買わない（詳しい小窓が開く）")
+	sc.detail_buy.pressed.emit()
+	t.ok(sc._modal != null and sc.confirm_no != null and HSWorld.mine().size() == n0, "shop: 「買う」で確かめが出る（まだ買わない）")
+	sc.confirm_no.pressed.emit()
+	t.ok(sc._modal != null and sc.detail_buy != null and HSWorld.mine().size() == n0, "shop: 確かめで「やめる」と詳しい小窓に戻る（買わない）")
+	var price := float(sc.shown[sc.detail_i].it.price)
+	var name := String(sc.shown[sc.detail_i].it.horse.name)
+	sc.detail_buy.pressed.emit()
+	sc.confirm_ok.pressed.emit()
+	t.ok(HSWorld.mine().size() == n0 + 1 and float(G.player.money) == m0 - price and HSWorld.mine().any(func(h): return h.name == name), "shop: 確かめの「買う」で買う")
+	t.ok(sc._modal == null, "shop: 買うと小窓が閉じる")
+	sc.free()
+
+# お手馬の詳しい画面：戦績の1走から、自分で乗ったレースの出走馬とラップ（リプレイから）を出す
+func _horse(t) -> void:
+	var hit = null
+	var hr = null
+	for h in HSWorld.mine():
+		for r in HSU.or_(h.get("results"), []):
+			if UiHorseScreen.find_replay(String(h.name), r) != "":
+				hit = h; hr = r
+				break
+		if hit: break
+	t.ok(hit != null, "horse: 自分で乗ったレースの戦績からリプレイが見つかる")
+	if hit == null: return
+	t.ok(hr.get("rt") != null and float(hr.rt) >= HSRating.MIN, "horse: 戦績に1走のレーティングが付く")
+	UiFlow.program_id = String(hit.id)
+	var sc = load("res://scenes/horse.tscn").instantiate()
+	t.root.add_child(sc)
+	while sc.TABS[sc.tab][0] != "rec": sc.on_tab(1)
+	t.ok(sc.rows.size() == HSU.or_(hit.get("results"), []).size(), "horse: 戦績が1走1行")
+	sc.race_detail(hr)
+	t.ok(sc._modal != null and sc.detail_replay != "", "horse: レースの詳しい記録（リプレイあり・その1走のもの）")
+	var rep = JSON.parse_string(FileAccess.get_file_as_string(UiFlow.replay_dir.path_join(sc.detail_replay + ".json")))
+	var laps := UiHorseScreen.laps_of(rep)
+	var sum := 0.0
+	for x in laps: sum += float(x)
+	t.ok(laps.size() == ceili(float(rep.race.dist) / 200.0) and absf(sum - float(rep.winnerTime)) < 0.3, "horse: ラップは200mごとで、足すと勝ち時計（%d本・%.1f秒）" % [laps.size(), sum])
+	sc.close_modal()
+	sc.free()
 
 # 決まった乗り方（test_world.gd と同じ型）：出たらすぐしごき、直線の手前から追い、残り 250m でムチ、詰まったら外へ
 func _ride(L: ViewLive) -> Dictionary:

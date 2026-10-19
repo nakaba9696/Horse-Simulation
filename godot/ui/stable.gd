@@ -1,11 +1,11 @@
-# 厩舎（docs/UI.md「厩舎」「馬の画面」）：お手馬を 1頭 1行（性齢・調子・総合力・次走）、右の見本に選んだ馬の中身と操作
+# 厩舎＝お手馬画面（docs/UI.md「厩舎」・持ち主の仕様書 2026-10-19「お手馬画面」）：お手馬を 1頭 1行（性齢・戦績と近走・調子・疲労・総合力・次走）、右の見本に選んだ馬の中身と操作
 # タブ（Q/E・LB/RB）：お手馬 n・牧場 n（引退した馬。オリジナルホースの親）
-# 見本：総合力（いま・完成）・能力・距離と脚質と成長・特殊能力・戦績と重賞の勝ち鞍・トロフィーと冠。
-# 操作：番組表（金）・おまかせの入切・引退させる（確かめは「やめる」から）。牧場の馬は「生産へ」「放す」
+# 見本：総合力（いま・完成）・レーティング・能力・距離と脚質と成長・特殊能力・戦績と重賞の勝ち鞍・トロフィーと冠。
+# 操作：行を押すとお手馬の詳しい画面（horse。能力・戦績とレースの記録・レーティング・血統）。Y で番組表（出走登録）・X で引退（確かめは「やめる」から）。牧場の馬は「生産へ」「放す」
 # 決まりは HSJockey.retire・HSOriginal.release（godot/core）を呼ぶだけ
 extends UiScreen
 
-const COLS := [["馬名", 0], ["性齢", 52], ["調子", 100], ["芝", 50], ["ダ", 50], ["次走", 230]]
+const COLS := [["馬名", 0], ["性齢", 52], ["戦績・近走", 112], ["調子", 84], ["疲労", 56], ["芝", 50], ["ダ", 50], ["次走", 210]]
 
 var tab := 0
 var list_v: VBoxContainer
@@ -17,18 +17,22 @@ var horses: Array = []
 var sel := 0
 
 func hint() -> String:
-	return "行を選ぶと右に中身。引退した馬は牧場に残り、オリジナルホースの親になる"
+	return "行を押すと詳しく（戦績・レーティング）。疲労は 0〜100" if tab == 0 else "引退した馬は牧場に残り、オリジナルホースの親になる"
 
 func keys() -> Array:
-	return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "番組表・生産"], ["X", "X", "引退・放す"], ["Q/E", "LB/RB", "お手馬・牧場"], ["Esc", "B", "もどる"]]
+	if tab == 1:
+		return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "生産"], ["X", "X", "放す"], ["Q/E", "LB/RB", "お手馬・牧場"], ["Esc", "B", "もどる"]]
+	return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "詳しく"], ["Y", "Y", "番組表"], ["X", "X", "引退"], ["Q/E", "LB/RB", "お手馬・牧場"], ["Esc", "B", "もどる"]]
 
 func on_back() -> void:
 	go("home")
 
 func on_tab(d: int) -> void:
+	if _modal != null: return
 	tab = posmod(tab + d, 2)
 	sel = 0
 	_fill()
+	refresh_keybar()
 
 func build() -> void:
 	backdrop("bg_home", 0.84)
@@ -105,11 +109,21 @@ func _fill() -> void:
 			var sa := UiTheme.num_label("%s%d" % ["セ" if h.get("gelding") else h.sex, int(G.year - float(h.born))], 15)
 			sa.custom_minimum_size.x = 52
 			hb.add_child(sa)
+			var rv := VBoxContainer.new()
+			rv.add_theme_constant_override("separation", -4)
+			rv.custom_minimum_size.x = 112
+			rv.alignment = BoxContainer.ALIGNMENT_CENTER
+			rv.add_child(UiTheme.num_label(UiHorseScreen.record_text(h), 14, UiTheme.IVORY))
+			rv.add_child(UiTheme.num_label(UiHorseScreen.recent_text(h, 3), 12, UiTheme.FAINT))
+			hb.add_child(rv)
 			var c: Dictionary = HSSeason.cond(h, wi)
 			var ct := "入厩前" if h.loc == "farm" else ("故障" if h.get("injury") else String(c.label))
 			var cl := UiTheme.label(ct, 13, Color(String(c.color)) if h.loc == "stable" and not h.get("injury") else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
-			cl.custom_minimum_size.x = 100
+			cl.custom_minimum_size.x = 84
 			hb.add_child(cl)
+			var fl := UiHorseScreen.fatigue_label(h, 15)
+			fl.custom_minimum_size.x = 56
+			hb.add_child(fl)
 		else:
 			var sx := UiTheme.label(String(h.sex), 15, UiTheme.IVORY, HORIZONTAL_ALIGNMENT_CENTER)
 			sx.custom_minimum_size.x = 40
@@ -125,11 +139,8 @@ func _fill() -> void:
 		var last: Label
 		if tab == 0:
 			var nx = HSProgram.next(h)
-			var nt := "おまかせ" if h.get("auto") else "未定"
-			if nx != null:
-				nt = "今週 %s" % HSRaces.label(nx.race) if nx.get("entered") else "%s %s" % [nx.label, nx.name]
-			last = UiTheme.label(nt, 14, UiTheme.GOLD_BRIGHT if nx != null else UiTheme.FAINT)
-			last.custom_minimum_size.x = 230
+			last = UiTheme.label(UiHorseScreen.next_text(h), 14, UiTheme.GOLD_BRIGHT if nx != null else UiTheme.FAINT)
+			last.custom_minimum_size.x = 210
 		else:
 			var pbn := float(HSU.or_(h.get("parentBonus"), 0.0))
 			last = UiTheme.label("+%s" % HSU.num(pbn) if pbn > 0 else "－", 14, UiTheme.GOLD_BRIGHT if pbn > 0 else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
@@ -156,7 +167,13 @@ func _fill() -> void:
 func _main(i: int) -> void:
 	if i < 0 or i >= horses.size(): return
 	UiFlow.program_id = horses[i].id
-	go("program" if tab == 0 else "breed")
+	go("horse" if tab == 0 else "breed")
+
+func _program(i: int) -> void:
+	if i < 0 or i >= horses.size(): return
+	UiFlow.program_id = horses[i].id
+	UiFlow.program_back = "stable"
+	go("program")
 
 # ---- 右の見本 ----
 func _preview(i: int) -> void:
@@ -211,7 +228,16 @@ func _preview(i: int) -> void:
 	pv.add_child(grid)
 	pv.add_child(_kv("距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]))
 	pv.add_child(_kv("脚質・成長", "%s・%s" % [HSHorse.style_text(h), HSU.or_(h.get("growth"), "")]))
-	pv.add_child(_kv("戦績", "%d戦%d勝・獲得 %s" % [int(HSU.or_(h.get("starts"), 0.0)), int(HSU.or_(h.get("wins"), 0.0)), HSU.money(float(HSU.or_(h.get("earn"), 0.0)))]))
+	pv.add_child(_kv("戦績", "%s・獲得 %s" % [UiHorseScreen.record_text(h), HSU.money(float(HSU.or_(h.get("earn"), 0.0)))]))
+	var rt = HSRating.of(h)
+	var rh := HBoxContainer.new()
+	rh.add_child(UiTheme.label("レーティング", 13, UiTheme.MUTED))
+	rh.add_child(UiScreen.spacer())
+	rh.add_child(UiHorseScreen.rating_chip(float(rt.v) if rt != null else -1.0))
+	if h.loc != "retired":
+		rh.add_child(UiTheme.label("　疲労", 13, UiTheme.MUTED))
+		rh.add_child(UiHorseScreen.fatigue_label(h, 15))
+	pv.add_child(rh)
 	var sk := HSSkills.of(h, wi)
 	if sk.size():
 		var fl := HFlowContainer.new()
@@ -253,13 +279,21 @@ func _preview(i: int) -> void:
 		br.focus_mode = Control.FOCUS_NONE
 		br.pressed.connect(func(): confirm("%sを引退させますか？%s" % [h.name, "（牧場に残り、オリジナルホースの親にできます）" if keep else "（手もとを離れます）"], "引退させる", func(): _retire(id)))
 		bh.add_child(br)
-		var bp := UiScreen.button("番組表", true, 170, 50, 20)
+		var bp := UiScreen.button("番組表", false, 120, 46, 16)
 		bp.focus_mode = Control.FOCUS_NONE
-		bp.pressed.connect(func(): _main(i))
+		bp.pressed.connect(func(): _program(i))
 		bh.add_child(bp)
+		var bd := UiScreen.button("詳しく", true, 150, 50, 20)
+		bd.focus_mode = Control.FOCUS_NONE
+		bd.pressed.connect(func(): _main(i))
+		bh.add_child(bd)
 	pv.add_child(bh)
 
 func _unhandled_input(ev: InputEvent) -> void:
+	if _modal == null and horses.size() and tab == 0 and ((ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_Y) or (ev is InputEventJoypadButton and ev.pressed and ev.button_index == JOY_BUTTON_Y)):
+		_program(clampi(sel, 0, horses.size() - 1))
+		get_viewport().set_input_as_handled()
+		return
 	if _modal == null and horses.size() and ((ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_X) or (ev is InputEventJoypadButton and ev.pressed and ev.button_index == JOY_BUTTON_X)):
 		var h: Dictionary = horses[clampi(sel, 0, horses.size() - 1)]
 		var id: String = h.id

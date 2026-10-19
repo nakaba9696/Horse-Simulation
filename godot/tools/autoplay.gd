@@ -21,6 +21,7 @@ var counts := {}
 const TOUR := ["stable", "program", "data", "owners", "shop", "breed", "gf"]
 var tour_i := 0
 var tour_week := -1.0
+var horse_week := -1.0     # お手馬の詳しい画面を開いた週（厩舎から1度だけ開く）
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
@@ -75,13 +76,15 @@ func _tick() -> void:
 			acted.buy = true
 			cs.on_tab(1)
 			cs.on_tab(1)
-			# いちばん安い馬を3頭まで（行を選んで「買う」と同じ）
+			# いちばん安い馬を3頭まで（行を押して詳しい小窓 →「買う」→ 確かめの「買う」と同じ）
 			for k in 3:
 				var best := -1
 				for i in cs.shown.size():
 					if float(cs.shown[i].it.price) <= float(HSWorld.G.player.money) and (best < 0 or cs.shown[i].it.price < cs.shown[best].it.price): best = i
 				if best < 0 or not HSSeason.can_buy(): break
-				cs._buy(best)
+				cs.open_detail(best)
+				cs.detail_buy.pressed.emit()
+				cs.confirm_ok.pressed.emit()
 			cs.on_back()
 		"home":
 			if acted.has("go"): return
@@ -114,7 +117,25 @@ func _tick() -> void:
 			acted.gf = true
 			if cs.acts.size(): cs.acts[0].pressed.emit()
 			cs.on_back()
-		"stable", "program", "owners", "breed":
+		"stable":
+			if acted.has("back"): return
+			acted.back = true
+			# 週に1度、お手馬の詳しい画面を開く（タブをめくり、戦績の1走の記録を開いて閉じる）
+			if horse_week != HSWorld.w_idx() and cs.horses.size():
+				horse_week = HSWorld.w_idx()
+				cs._main(0)
+				return
+			cs.on_back()
+		"horse":
+			if acted.has("back"): return
+			acted.back = true
+			for k in cs.TABS.size():
+				cs.on_tab(1)
+				if cs.TABS[cs.tab][0] == "rec" and cs.results.size():
+					cs.race_detail(cs.results[0])
+					cs.close_modal()
+			cs.on_back()
+		"program", "owners", "breed":
 			if acted.has("back"): return
 			acted.back = true
 			if n == "data": pass
