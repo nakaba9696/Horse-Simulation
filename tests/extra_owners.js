@@ -242,7 +242,8 @@ module.exports = function (check, assert, HS) {
       O.state().queue = [];
     }
     const first = Math.min(...Object.values(met));
-    assert(Object.keys(met).length >= 1 && first <= 30, `最初の縁が遅い（${first}週目）`);
+    // 目安は1年目のうち（40週まで）。仕様書「ある程度勝っていると出会いのイベント」。データの直し（2026-10-19）で、この種では 28→33週になった
+    assert(Object.keys(met).length >= 1 && first <= 40, `最初の縁が遅い（${first}週目）`);
     if (QUICK) assert(Object.keys(met).length >= 2, `1年で縁のある馬主 ${Object.keys(met).length}人`);
     else assert(Object.keys(met).length === O.list().length, `${years}年で縁が無い馬主：${O.list().filter(o => met[o.id] == null).map(o => o.name).join('・')}`);
     const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
