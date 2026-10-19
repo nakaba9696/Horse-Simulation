@@ -20,6 +20,11 @@ static const double START_ACC = 7.5, START_SKILL_ACC = 1.35, EASY_START = 0.95, 
 // ゲート（JS の S.GATE）：待つ秒＝wait＋spread×くじ（種の乱数は進めない）・GOOD の幅 buf と good・早押しの出の遅れ fumble・早押しで上がる気分 fret
 static const double G_WAIT = 2.2, G_SPREAD = 1.6, G_BUF = 0.12, G_GOOD = 0.1, G_FUMBLE = 0.35, G_FRET = 4.0;
 static const double LANE_V = 3.0, LANE_DX = 2.0, LANE_GAP = 0.8, LANE_DRIFT = 10.0;
+// ゲートを出た直後：脚質ごとの出だしの加速の倍率（逃げ・先行・差し・追込）。FAN_X m までは内へ寄る速さを 0.2 秒に FAN_V 進路までに
+static const double START_STYLE[4] = { 1.18, 1.07, 0.96, 0.88 };
+static const double FAN_X = 250.0, FAN_V = 0.1;
+// 拍子（JS の S.BEAT）
+static const double BEAT_STRIDE = 7.2, BEAT_LAG = 0.05, BEAT_AT = 0.55, BEAT_WIN = 0.2, BEAT_MINGAP = 0.25, BEAT_VMIN = 8.0, BEAT_GEAR = 1.4, BEAT_CALM = 0.5, BEAT_KEEP = 0.95, BEAT_K = 0.05, BEAT_SAVE = 0.985;
 static const double EARLY_PUSH = 500.0, GEAR_GAP = 18.0, GEAR_COST = 0.05, POS_K = 0.004, POS_MAX = 0.03;
 static const double W_K = 0.4, W_WIND = 0.6, W_COST = 0.96, W_WINDCOST = 0.98, W_EARLY = 0.2, W_EARLYCOST = 1.2;
 static const double CALM_SAVE = 0.97, PACE_HI = 1.006, PACE_LO = 0.994, PACE_K = 25.0, DRAFT = 0.08, PACE_TOP = 50.0, PACE_EARLY = 60.0;
@@ -231,6 +236,13 @@ static int rate_of(Ctl &c, double t) {
 	return (int)keep.size();
 }
 static inline double gear_step(int n) { return mn(0.25, 0.05 + 0.025 * std::min(n, 8)); }
+// 拍子の位相（0〜1）：描画と同じ式
+static double beat_phase(const Runner &s) {
+	double ph = std::fmod((s.x - s.v * BEAT_LAG) / BEAT_STRIDE + (double)s.r.get("num", 0.0) * 0.137, 1.0);
+	if (ph < 0) ph += 1.0;
+	return ph;
+}
+static inline bool on_beat(const Sim &sim, const Ctl &c) { return c.beats >= 2 && sim.t - c.lastBeat < BEAT_KEEP; }
 
 Variant ctl_up(Sim &sim, const Variant &at) {
 	if (!sim.hasCtl || sim.over) return Variant();
@@ -249,13 +261,19 @@ Variant ctl_up(Sim &sim, const Variant &at) {
 		return String("ok");
 	}
 	int n = rate_of(c, sim.t); double d = gear_step(n);
+	// 拍子：首が下がって前へ伸びる所でしごくと、馬が応えて大きく動く（連打は数えない）
+	double off = std::fabs(beat_phase(s) - BEAT_AT);
+	if (off > 0.5) off = 1.0 - off;
+	bool beat = s.v > BEAT_VMIN && off < BEAT_WIN && sim.t - c.lastPush >= BEAT_MINGAP;
+	if (beat) { c.beats = sim.t - c.lastBeat < BEAT_KEEP ? c.beats + 1 : 1; c.lastBeat = sim.t; d *= BEAT_GEAR; }
+	else c.beats = 0;
 	double g0 = c.gear; c.gear = mn(1.0, c.gear + d);
 	if (!s.spurting) {
-		c.tension = clamp(c.tension + (c.gear - g0) * 12.0 * temperF(s), 0.0, 100.0);
+		c.tension = clamp(c.tension + (c.gear - g0) * 12.0 * temperF(s) * (beat ? BEAT_CALM : 1.0), 0.0, 100.0);
 		if (c.surge > 5) c.surge = mn(O_SURGEMAX, c.surge + (c.gear - g0) * O_PUSHSURGE);
 	}
 	c.pushes += 1; c.lastPush = sim.t;
-	return String(n >= 5 ? "fast" : "ok");
+	return String(beat ? "beat" : (n >= 5 ? "fast" : "ok"));
 }
 Variant ctl_down(Sim &sim) {
 	if (!sim.hasCtl || !sim.ctl.started || sim.over) return Variant();
@@ -296,7 +314,7 @@ Variant ctl_whip(Sim &sim, const Variant &side_) {
 Variant ctl_lane(Sim &sim, double d) {
 	if (!sim.hasCtl) return Variant();
 	Ctl &c = sim.ctl;
-	double l0 = c.lane; c.lane = clamp(round_js(c.lane + d), 0.0, 12.0); c.laneT = sim.t;
+	double l0 = c.lane; c.lane = clamp(round_js(c.lane + d), 0.0, 12.0); c.laneT = sim.t; c.steered = true;
 	Runner &s = sim.st[sim.me];
 	if (c.started && c.lane != l0 && !s.spurting && s.x > sim.D * 0.05) c.tension = clamp(c.tension + T_LANE * (temperF(s) - 1.0 + 0.15), 0.0, 100.0);
 	return Variant();
@@ -488,6 +506,8 @@ bool sim_step(Sim &sim) {
 					target *= 1.0 + (inZone ? k * resp : W_EARLY) * s.kickS * whip_eff(*c);
 					costMul *= inZone ? ((c->windmill ? W_WINDCOST : W_COST) * (1.0 + (1.0 - resp) * 0.15)) : W_EARLYCOST;
 				}
+				// 拍子の合ったしごきが続いている間は、馬が気持ちよく伸びる（追い出してから）
+				if (s.spurting && on_beat(sim, *c)) { target *= 1.0 + BEAT_K * s.kickS; costMul *= BEAT_SAVE; }
 				if (kakariNow) { target *= 1.012; costMul *= KAKARI_COST; }
 				else if (c->tension < 35 && !s.spurting) costMul *= CALM_SAVE;
 				else if (c->tension > 50 && !s.spurting) costMul *= 1.0 + (c->tension - 50.0) / 100.0 * TENSE_COST;
@@ -570,7 +590,7 @@ bool sim_step(Sim &sim) {
 			}
 		}
 		if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
-		double accel = s.v < s.vc * 0.9 ? START_ACC * ((s.boost.on && s.boost.free_ && t < s.boost.until) ? START_SKILL_ACC : 1.0) : s.acc + s.slopeP * 0.0015;
+		double accel = s.v < s.vc * 0.9 ? START_ACC * (s.style >= 0 ? START_STYLE[s.style] : 1.0) * ((s.boost.on && s.boost.free_ && t < s.boost.until) ? START_SKILL_ACC : 1.0) : s.acc + s.slopeP * 0.0015;
 		double dv = maxf(-1.4 * DT, minf(accel * DT, target - s.v));
 		double vPrev = s.v;
 		s.v = mx(0.0, s.v + dv);
@@ -617,7 +637,7 @@ bool sim_step(Sim &sim) {
 	Runner *me = c ? &st[sim.me] : nullptr;
 	if (me) {
 		// 馬群さばき：横に動くのが速く、横の馬に止められにくい
-		double lv = LANE_V * (me->sabaki ? SABAKI_V : 1.0), ldx = me->sabaki ? SABAKI_DX : LANE_DX, lgap = me->sabaki ? SABAKI_GAP : LANE_GAP;
+		double lv = me->x < FAN_X && !c->steered ? FAN_V / (2.0 * DT) : LANE_V * (me->sabaki ? SABAKI_V : 1.0), ldx = me->sabaki ? SABAKI_DX : LANE_DX, lgap = me->sabaki ? SABAKI_GAP : LANE_GAP;
 		double want = clamp(c->lane - me->lane, -lv * DT, lv * DT);
 		if (std::fabs(want) > 1e-6) {
 			double nl = me->lane + want, dir = want > 0 ? 1.0 : (want < 0 ? -1.0 : 0.0);
@@ -653,7 +673,8 @@ bool sim_step(Sim &sim) {
 				lane += 1.0;
 			}
 			s.laneT = lane;
-			s.lane += (s.laneT - s.lane) * 0.16;
+			double dl = (s.laneT - s.lane) * 0.16;
+			s.lane += s.x < FAN_X ? clamp(dl, -FAN_V, FAN_V) : dl;
 		}
 	}
 	if (sim.optFrames && sim.step % 5 == 0) commentary(sim);

@@ -105,6 +105,10 @@
   // 気性の荒さ（mind が70より低いほど大きい。45で2倍）
   S.temperF = s => 1 + Math.max(0, 70 - s.mind) / 25;
   S.START_ACC = 7.5; S.START_SKILL_ACC = 1.35; S.EASY_START = 0.95; // スタートの特殊能力が出たときの、出だしの加速の倍率と、距離の22%までの消耗の倍率
+  // ゲートを出た直後（持ち主の指摘 2026-10-17「スタート後の挙動」）：横一線から全馬が一気に出て、数秒で脚質ごとの位置へ分かれる（出だしの加速の倍率）。
+  // そのあと内へ寄りながら縦長の群れになる：スタートから FAN.x m までは、内へ寄る速さを 0.2 秒に FAN.v 進路までにする（前は 2〜3 秒で全馬がラチ沿いに固まっていた）
+  S.START_STYLE = { '逃げ': 1.18, '先行': 1.07, '差し': 0.96, '追込': 0.88 };
+  S.FAN = { x: 250, v: 0.1 };
   S.LATE_E = 0.15; // 出遅れた馬は、位置を取り戻すのに脚を使う（スタミナの減り）
   // ゲート（自分で乗る馬。持ち主の指摘 2026-10-17「スタートのカウントダウンいらない　目押しで」）。秒はレースの秒（画面は実時間の 1.35 倍で進む）
   // wait＋spread×くじ＝ゲートに入ってから開くまで（レースの種で決まる。毎回少し違うので、覚えて押せない）。開く tell 秒前に前触れ（ゲートの上の灯がつき、扉が小さく鳴る）を見せる
@@ -231,7 +235,8 @@
       const s = st[meIdx]; s.me = true;
       if (opts.ride) {
         sim.ctl = { tension: U.clamp(30 + (75 - st[meIdx].mind) * 0.4 * S.bondF(opts.bond) + (st[meIdx].kakariDay ? 15 : 0), 10, 70), started: false, fumble: false, gear: 0, hand: 'R', swapUntil: -1, lastPush: -9, lastPull: -9, pushes: 0, whips: 0, whipUntil: -1, windmill: false, lane: Math.min(3, s.lane), blockedNow: false, wide: false, kakariNow: false, behind: false,
-          surge: 0, shrink: 0, pullT: 0, reinFight: false, bumpT: null, bumpSide: 0, bond: opts.bond, bondF: S.bondF(opts.bond), spurtTension: null, lastEv: null };
+          surge: 0, shrink: 0, pullT: 0, reinFight: false, bumpT: null, bumpSide: 0, bond: opts.bond, bondF: S.bondF(opts.bond), spurtTension: null, lastEv: null,
+          steered: false, beats: 0, lastBeat: -9 };
         Object.defineProperty(sim.ctl, 'push', { get() { return Math.max(0, this.gear); }, enumerable: false });
         Object.defineProperty(sim.ctl, 'hold', { get() { return this.gear < -0.05; }, enumerable: false });
         s.delay = 99; s.late = false; // スタートはプレイヤーの合図で
@@ -257,6 +262,12 @@
   // 手を止めても段はそのまま（押し続けなくてよい）。急に上げ下げすると馬の気分が悪くなる
   // 歩幅の周期（秒）。映像の足の運びに使う
   S.strideOf = v => U.clamp(7.4 / Math.max(10, v || 16), 0.38, 0.7);
+  // 拍子（持ち主の指摘 2026-10-17「操作感は生き物に乗ってる手応えがほしい」）：馬の1完歩（stride m）のうち、首が下がって前へ伸びる所（at）の前後 win に
+  // しごくと拍子が合う。合うと手綱の段が gear 倍動き、気分の上がりは calm 倍。追い出してから拍子の合ったしごきが続く（keep 秒以内に2回目から）間は、
+  // 脚の使い方 ×save・伸び ×(1＋k×終いの伸び)。連打（前のしごきから minGap 秒より短い）は拍子に数えない。位相は描画と同じ式（騎乗の画面は lag 秒ぶん先の模擬を補間して見せる）
+  S.BEAT = { stride: 7.2, lag: 0.05, at: 0.55, win: 0.2, minGap: 0.25, vmin: 8, gear: 1.4, calm: 0.5, keep: 0.95, k: 0.05, save: 0.985 };
+  S.beatPhase = s => { let ph = ((s.x - s.v * S.BEAT.lag) / S.BEAT.stride + s.r.num * 0.137) % 1; if (ph < 0) ph += 1; return ph; };
+  S.onBeat = (sim, s, c) => c.beats >= 2 && sim.t - c.lastBeat < S.BEAT.keep;
   const rateOf = (c, t) => { c.taps = (c.taps || []).filter(x => t - x < 1); c.taps.push(t); return c.taps.length; };
   const gearStep = n => Math.min(0.25, 0.05 + 0.025 * Math.min(n, 8));
   S.ctl = {
@@ -277,11 +288,17 @@
         if (s.delay > 0.5) { s.late = true; s.E -= S.LATE_E; S.say(sim, sim.t, `${s.h.name}、出遅れた！`, 'trouble'); return 'late'; }
         return 'ok';
       }
-      const n = rateOf(c, sim.t), d = gearStep(n);
+      const n = rateOf(c, sim.t);
+      let d = gearStep(n);
+      // 拍子：首が下がって前へ伸びる所でしごくと、馬が応えて大きく動く（連打は数えない）
+      const B = S.BEAT;
+      let off = Math.abs(S.beatPhase(s) - B.at); if (off > 0.5) off = 1 - off;
+      const beat = s.v > B.vmin && off < B.win && sim.t - c.lastPush >= B.minGap;
+      if (beat) { c.beats = sim.t - c.lastBeat < B.keep ? c.beats + 1 : 1; c.lastBeat = sim.t; d *= B.gear; } else c.beats = 0;
       const g0 = c.gear; c.gear = Math.min(1, c.gear + d);
-      if (!s.spurting) { c.tension = U.clamp(c.tension + (c.gear - g0) * 12 * S.temperF(s), 0, 100); if (c.surge > 5) c.surge = Math.min(S.ORIAI.surgeMax, c.surge + (c.gear - g0) * S.ORIAI.pushSurge); } // 高ぶっているときに押すと、さらに行きたがる
+      if (!s.spurting) { c.tension = U.clamp(c.tension + (c.gear - g0) * 12 * S.temperF(s) * (beat ? B.calm : 1), 0, 100); if (c.surge > 5) c.surge = Math.min(S.ORIAI.surgeMax, c.surge + (c.gear - g0) * S.ORIAI.pushSurge); } // 高ぶっているときに押すと、さらに行きたがる
       c.pushes++; c.lastPush = sim.t;
-      return n >= 5 ? 'fast' : 'ok';
+      return beat ? 'beat' : n >= 5 ? 'fast' : 'ok';
     },
     // 引く
     down(sim) {
@@ -319,7 +336,7 @@
     },
     lane(sim, d) {
       const c = sim.ctl; if (!c) return;
-      const l0 = c.lane; c.lane = U.clamp(Math.round(c.lane + d), 0, 12); c.laneT = sim.t;
+      const l0 = c.lane; c.lane = U.clamp(Math.round(c.lane + d), 0, 12); c.laneT = sim.t; c.steered = true;
       const s = sim.st[sim.me];
       if (c.started && c.lane !== l0 && !s.spurting && s.x > sim.D * 0.05) c.tension = U.clamp(c.tension + S.TENSION.lane * (S.temperF(s) - 1 + 0.15), 0, 100);
     },
@@ -507,6 +524,8 @@
             const resp = S.respOf(c);
             target *= 1 + (inZone ? k * resp : W.early) * s.kickS * S.whipEff(c); costMul *= inZone ? (c.windmill ? W.windCost : W.cost) * (1 + (1 - resp) * 0.15) : W.earlyCost;
           }
+          // 拍子の合ったしごきが続いている間は、馬が気持ちよく伸びる（追い出してから）
+          if (s.spurting && S.onBeat(sim, s, c)) { target *= 1 + S.BEAT.k * s.kickS; costMul *= S.BEAT.save; }
           // 掛かると行きたがって脚を使う。落ち着いていれば脚がもつ
           if (kakariNow) { target *= 1.012; costMul *= S.KAKARI_COST; }
           else if (c.tension < 35 && !s.spurting) costMul *= S.CALM_SAVE;
@@ -594,7 +613,7 @@
       // 加減速の上限
       // ゲートを出てすぐは強く加速し、2秒ほどで巡航の速さの9割に乗る（持ち主の指摘「動き出しが遅い」）
       // スタートの特殊能力（脚を使わない速さ）が出ている間は、出だしの加速も速い
-      const acc = s.v < s.vc * 0.9 ? S.START_ACC * (s.boost && s.boost.free && t < s.boost.until ? S.START_SKILL_ACC : 1) : s.acc + s.slopeP * 0.0015;
+      const acc = s.v < s.vc * 0.9 ? S.START_ACC * (S.START_STYLE[s.h.style] || 1) * (s.boost && s.boost.free && t < s.boost.until ? S.START_SKILL_ACC : 1) : s.acc + s.slopeP * 0.0015;
       const dv = U.clamp(target - s.v, -1.4 * DT, acc * DT);
       const vPrev = s.v;
       s.v = Math.max(0, s.v + dv);
@@ -643,7 +662,8 @@
       if (me) {
         // 押したらすぐ動き出し（毎秒 S.LANE.v 進路）、横に馬がいれば止まる（ぶつかった印 c.bumpT・c.bumpSide。振動と揺れに使う）
         // 馬群さばき：横に動くのが速く、横の馬に止められにくい
-        const SB = me.sabaki ? S.SABAKI : null, lv = S.LANE.v * (SB ? SB.v : 1);
+        // 出だしで進路をまだ触っていなければ、ほかの馬と同じようにゆっくり内へ寄る
+        const SB = me.sabaki ? S.SABAKI : null, lv = me.x < S.FAN.x && !c.steered ? S.FAN.v / (2 * DT) : S.LANE.v * (SB ? SB.v : 1);
         const want = U.clamp(c.lane - me.lane, -lv * DT, lv * DT);
         if (Math.abs(want) > 1e-6) {
           const nl = me.lane + want, dir = Math.sign(want);
@@ -676,7 +696,8 @@
           lane += 1;
         }
         s.laneT = lane;
-        s.lane += (s.laneT - s.lane) * 0.16;
+        const dl = (s.laneT - s.lane) * 0.16;
+        s.lane += s.x < S.FAN.x ? U.clamp(dl, -S.FAN.v, S.FAN.v) : dl;
       }
     }
     // 実況（映像を出すときだけ）

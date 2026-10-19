@@ -3,7 +3,7 @@
 # 流れ：ゲート（数えは無い。待つ秒はレースの種で毎回少し違い、開く少し前に枠の上の灯がつく。灯を見て開く瞬間に ↑（目押し）。開く直前の ↑ は開いた瞬間に受け付け、早すぎると馬が煽る）→ 走る（実時間の 1.35 倍）→
 #       ゴール板（白い光と振動。時は止めない・遅くしない。着順はまだ出さない）→ 流す（2.4 秒。馬は映像の側で駈歩の 8.5m/s まで落として走り続ける。カメラは斜め横へ回る）→
 #       着順（英語の序数を叩きつける）→ A で確定の表 → A で出走表へ。流している間に A で着順へ飛ぶ
-# カメラ：JOCKEY CAM（6.4m 後ろ・3.2m 上・横の画角 68°）・HIGH CAM（上へ 0.42rad・1.7 倍引く）・TV CAM。揺れは kick（減衰する正弦。3D のカメラだけ）
+# カメラ：JOCKEY CAM（4.5m 後ろ・2.85m 上・横の画角 52°。着地ごとに小さく沈み、コーナーで内へ傾く）・HIGH CAM（上へ 0.42rad・1.7 倍引く）・TV CAM。揺れは kick（減衰する正弦。3D のカメラだけ）
 # 一時停止：Esc・P・Start。ほかの窓へ移ったら自動で止める
 # 撮影：godot --path godot res://scenes/race.tscn -- --out=DIR --shot=秒:カメラ:名前 … --video=始め:終わり:fps:カメラ:名前 --press=秒:行い …（秒はレースの秒）
 extends Node3D
@@ -21,6 +21,13 @@ const COAST_V := 8.5       # ゴールのあとは駈歩のこの速さまで毎
 const VIEWS := ["jockey", "high", "tv"]
 const VIEW_NAME := {"jockey": "JOCKEY CAM", "high": "HIGH CAM", "tv": "TV CAM"}
 const RACE_CARD := "res://scenes/race_card.tscn"
+# JOCKEY CAM の構図（docs/FEEL.md 2）：自分の馬の真後ろ・少し上。騎手の背と腰が画面の下の真ん中に大きく、地平線は真ん中より少し上
+const CAM_BACK := 4.5      # 馬の根（胴の真ん中の下）から後ろへ（m）
+const CAM_H := 2.85        # 高さ（m）
+const LOOK_AHEAD := 16.0   # 見る所：根から前へ（m）
+const LOOK_H := 0.5       # 見る所の高さ（m）
+const CAM_HFOV := 52.0     # 横の画角（度）。狭めにして、すぐ横の馬を大きく入れず、前の群れを見せる
+const CORNER_ROLL := 0.45  # コーナーでカメラが内へ傾く割合（自分の馬の傾きに対して）。上限 0.05rad
 
 var src   # ViewLive（模擬）か ViewReplay（記録の再生）
 var live := false
@@ -70,6 +77,11 @@ var _bump_seen = null
 var _oriai := {"kakari": false, "fight": false, "high": false}
 var _oriai_bin := -1
 var _last_H: Array = []
+# 生き物に乗る手応え（docs/FEEL.md 8）：馬の側の追いは騎手の手に遅れて付いてくる。引くと首を起こして詰まる。拍子の合ったしごき・ムチには首を伸ばして応える
+var _hpush := 0.0          # 馬の側の追い（騎手の追いに 0.7 秒ほど遅れて寄る）
+var _beat_at := -99.0      # 拍子の合ったしごき（レースの秒）
+var _pull_at := -99.0      # 引いた（レースの秒）
+var _whip_eff := 1.0       # ムチへの応え（使うほど鈍る。HSSim の whip_eff と同じ式）
 
 func _ready() -> void:
 	ViewRideInput.ensure_actions()
@@ -232,6 +244,7 @@ func _on_act(name: String, arg) -> void:
 				return
 			if live:
 				src.ctl("down")
+			_pull_at = T
 			hud.down_fx()
 			input.fx("pull")
 		"lane":
@@ -297,8 +310,12 @@ func _do_up() -> void:
 	var b = src.ctl("up", T)
 	if not was:
 		_start_fx(b)
-	hud.up_fx()
-	input.fx("push")
+	# 拍子が合うと馬が首を伸ばして応え（金の光・はっきりした振動）、合わないと手応えが軽い（空回り）
+	var on_beat: bool = was and b == "beat"
+	if on_beat:
+		_beat_at = T
+	hud.up_fx(on_beat)
+	input.fx("beat" if on_beat else "push")
 
 func _start_fx(b) -> void:
 	if b == "good":
@@ -316,6 +333,8 @@ func _do_whip(side: String) -> void:
 		return
 	input.fx("bad" if b == "yore" else "whip")
 	whip_at = T
+	var c = ctl_obj()
+	_whip_eff = maxf(0.25, 1.0 - 0.07 * maxf(0.0, float(c.whips) - 1.0)) if c != null else 1.0
 	var zone := D - _me_x() < tr.st + 200.0
 	hud.whip_fx(side, zone)
 	kick({"dur": 0.26, "hz": 7.0, "ax": (1.0 if side == "R" else -1.0) * 0.03, "ay": 0.012, "fov": 1.4 if zone else 0.6})
@@ -476,6 +495,13 @@ func _feel(_H: Array) -> void:
 			kick({"dur": 0.38, "hz": 10.0, "ax": -sd * 0.09, "ay": 0.03, "roll": 0.012})
 			input.fx("bump")
 			hud.ping(me, Color("ff5a4d"))
+	# 掛かって手綱を引っぱり返されると、カメラが前へ引かれる（ケンカは強く。拍子の外れた引きで、結果に関わらない）
+	var tug_want := 0.0
+	if c != null and r != null and not r.done and fin == null:
+		tug_want = 1.0 if bool(c.reinFight) else (0.55 if bool(c.kakariNow) else 0.0)
+		if tug_want > 0.0:
+			tug_want *= 0.6 + 0.4 * absf(sin(rt * 5.3)) * absf(sin(rt * 2.1 + 0.7))
+	cam_state["tug"] = lerpf(float(cam_state.get("tug", 0.0)), tug_want, 0.12)
 	# 掛かり：始まりに1回強く、そのあと不規則にガツガツ（拍子の外れた揺れは結果に関わらない）
 	if c != null and r != null and not r.done:
 		var fight_now: bool = bool(c.reinFight)
@@ -539,6 +565,7 @@ func place(H: Array, dt: float) -> void:
 				push = clampf(float(c.gear) + (0.4 if r.spurting else 0.0), 0.0, 1.0)
 			whip = T - whip_at if T - whip_at < 0.5 else -1.0
 			pose = rt - pose_at if pose_at >= 0.0 and rt >= pose_at else -1.0
+			_hpush = lerpf(_hpush, push, 1.0 - exp(-dt / 0.7) if dt > 0.0 else 1.0)
 		var ww := 1.0 - ViewTrack.smooth((v - 4.0) / 3.0) if (not gate_now and v > 0.3) else 0.0
 		# 手前：コーナーでは内の手前、直線は替えたまま
 		var lead_want := h.lead_want
@@ -549,6 +576,8 @@ func place(H: Array, dt: float) -> void:
 		var ease := clampf((T - ft) / 1.6, 0.0, 1.0) if ft >= 0.0 and moving else 0.0
 		var g := {"ph": ph, "sp": sp, "push": push, "t": maxf(T, 0.0) + 3.0, "walk_ph": fposmod(x / ViewGait.WALK_STRIDE + h.num * 0.37, 1.0), "walk_w": ww,
 			"whip": whip, "pose": pose, "head_up": float(st[3]), "ears": float(st[4]), "lead_want": lead_want, "ease": ease}
+		if moving and ft < 0.0:
+			_creature(g, j, H, push, c, r)
 		var cd := cam.global_position.distance_to(p)
 		g["cam_d"] = cd
 		kickups[j].run(v if moving else 0.0, cd < 45.0)
@@ -580,7 +609,9 @@ func update_camera(H: Array, dt: float) -> void:
 	# 動いている間は動く向きへ少し傾く（最大 0.035rad。毎秒 6 の割合でなじむ）
 	var vu: float = (float(cam_state.u) - float(cam_state.u_prev)) / dt if dt > 0.0 else 0.0
 	cam_state.u_prev = cam_state.u
-	cam_state.roll = lerpf(cam_state.roll, clampf(vu * 0.0175, -0.035, 0.035), 1.0 - exp(-dt * 6.0) if dt > 0.0 else 1.0)
+	# コーナーでは自分の馬の傾きの CORNER_ROLL だけ内へ傾く（内の柵が斜めに流れる）
+	var lean_r := clampf(-tr.sign * float(lean[me]) * CORNER_ROLL, -0.05, 0.05) if lean.size() > me else 0.0
+	cam_state.roll = lerpf(cam_state.roll, clampf(vu * 0.0175, -0.035, 0.035) + lean_r, 1.0 - exp(-dt * 6.0) if dt > 0.0 else 1.0)
 	cam_state.look = lerpf(cam_state.look, input.look * PI / 2.0, minf(1.0, dt * 8.0) if dt > 0.0 else 1.0)
 	match mode:
 		"gate":
@@ -595,16 +626,20 @@ func update_camera(H: Array, dt: float) -> void:
 			var res := tv_target(H)
 			cp = res[0]; lk = res[1]; vfov = res[2]
 		_:
-			# JOCKEY CAM：6.4m 後ろ・高さ 3.2m、16m 先の高さ 1.0m を見る。走りの拍子で上下に 5cm
+			# JOCKEY CAM：CAM_BACK 後ろ・高さ CAM_H、LOOK_AHEAD 先の高さ LOOK_H を見る。走りの拍子（着地）で上下に揺れる
 			var qme := mx - BODY
-			var camq := qme - 6.4
+			var camq := qme - CAM_BACK
 			var fc := tr.frame(D - camq)
-			var fl := tr.frame(D - (qme + 16.0))
-			var bob := sin(fposmod(mx / STRIDE, 1.0) * TAU) * 0.05 if (mv > 1.5) else 0.0
-			cp = tr.w3(fc, cam_state.u, fc.e + 3.2 + bob)
-			lk = tr.w3(fl, float(cam_state.u) * 0.55 + u_me * 0.45, fl.e * 0.4 + fc.e * 0.6 + 1.0)
-			# 横の画角 68° 以上
-			vfov = rad_to_deg(2.0 * atan(tan(deg_to_rad(34.0)) / aspect))
+			var fl := tr.frame(D - (qme + LOOK_AHEAD))
+			var bob := _cam_bob(mx, mv)
+			cp = tr.w3(fc, cam_state.u, fc.e + CAM_H + bob)
+			lk = tr.w3(fl, float(cam_state.u) * 0.55 + u_me * 0.45, fl.e * 0.4 + fc.e * 0.6 + LOOK_H + bob * 0.4)
+			# 掛かって手綱を引っぱり返されると、カメラが前へ引かれる（生き物の手応え）
+			var tug: float = float(cam_state.get("tug", 0.0))
+			if tug > 0.0:
+				var fwd_t := (lk - cp).normalized()
+				cp += fwd_t * tug * 0.35
+			vfov = rad_to_deg(2.0 * atan(tan(deg_to_rad(CAM_HFOV / 2.0)) / aspect))
 			var piv := tr.w3(tr.frame(D - qme), u_me, tr.frame(D - qme).e + 1.5)
 			var yaw_o: float = cam_state.look
 			var pitch_o := 0.0
@@ -813,3 +848,55 @@ func _jump_to(t: float) -> void:
 		advance(maxf(1e-4, (nt - T) / (SPEED)))
 		_apply_presses()
 	cam_state.erase("p")
+
+# 騎乗のカメラの上下：馬の1完歩の着地（後・後・前・前）ごとに小さく沈んで戻る（ViewRideInput.STEPS と同じ位相。振動・蹄の音とそろう）
+func _cam_bob(x: float, v: float) -> float:
+	if v <= 1.5:
+		return 0.0
+	var ph := fposmod(x / STRIDE + float(horses[me].num) * 0.137, 1.0)
+	var sp := clampf((v - 8.0) / 9.0, 0.0, 1.0)
+	var y := 0.0
+	for st in ViewRideInput.STEPS:
+		var d := fposmod(ph - float(st[0]), 1.0)
+		y -= float(st[1]) * exp(-d * 22.0) * (1.0 - d)
+	return (0.018 + 0.018 * sp) * (y + 0.9)
+
+# 生き物に乗る手応え（docs/FEEL.md 8）：模擬の「馬の意思」の値を、首・歩幅・騎手の手に結ぶ
+func _creature(g: Dictionary, j: int, H: Array, push: float, c, r) -> void:
+	var sim = src.sim if live else null
+	# 疲れ：脚の残り（E）が 3 割を切ると首が下がり、歩幅が詰まる
+	if sim != null:
+		var e: float = float(sim.st[j].E)
+		g["tired"] = clampf((0.3 - e) / 0.3, 0.0, 1.0)
+	if j != me:
+		# ほかの馬：道中は手綱を抑えて首の振りが小さく、追い出すと大きく
+		g["hold"] = 0.3 * (1.0 - push) if T > 6.0 else 0.0
+		return
+	if c == null:
+		return
+	# 馬の側の追いは遅れて付いてくる（追い出すと数完歩かけて首の振りが大きくなる）。騎手の手はすぐ動く
+	g["hpush"] = _hpush
+	# 引く：段の深さぶん抑え、引いた瞬間はぐっと首を起こす
+	var jolt := maxf(0.0, 1.0 - (T - _pull_at) / 0.45)
+	g["hold"] = maxf(clampf(-float(c.gear), 0.0, 1.0), 0.8 * jolt)
+	# 拍子の合ったしごき・ムチ：一瞬首を伸ばして応える（ムチは使うほど鈍い）
+	var bt := maxf(0.0, 1.0 - (T - _beat_at) / 0.55)
+	var wt := maxf(0.0, 1.0 - (T - whip_at) / 0.6) * _whip_eff
+	g["beat"] = maxf(bt, wt)
+	# 競り合い：すぐ横に並んだ馬の側へ首を向ける
+	var mx: float = H[me][0]
+	var ml: float = H[me][1]
+	var side := 0.0
+	for k in H.size():
+		if k == me:
+			continue
+		var dl: float = float(H[k][1]) - ml
+		if absf(float(H[k][0]) - mx) < 2.4 and absf(dl) > 0.45 and absf(dl) < 1.8:
+			side = signf(dl)
+			break
+	if side != 0.0 and (bool(r.spurting) or float(r.fight) > 10.0):
+		# 進路の外（＋）が馬の右か左か
+		var ou := tr.out3(tr.frame(D - (mx - BODY)))
+		var rgt := -horses[me].global_transform.basis.x
+		var out_r := 1.0 if ou.dot(rgt) > 0.0 else -1.0
+		g["look"] = side * out_r * clampf(0.5 + float(r.fight) / 100.0, 0.0, 1.0)

@@ -2,7 +2,8 @@
 # 手作りの骨（0 根元・1 胴・2/3 首・4 頭・5〜7 尾・8〜23 脚・24〜31 騎手）の角度を出す。素材の骨へは ViewHorse が写す
 #   角度の向き（手作りの馬の座標：x 前・y 上・z 右）：rz＝横の軸のまわり（＋で骨の先が前・上へ）、ry＝縦の軸、rx＝前の軸
 # 出力 P（PackedFloat32Array）：P[i*3]＝rz・P[i*3+1]＝ry・P[i*3+2]＝rx（i＝0〜35）、P[Y]＝胴の高さ、P[JX]・P[JY]＝騎手の腰のずれ、
-#   P[JU]＝騎手の体の起こし（0＝鐙に立って前傾・1＝鞍に座って体を起こす。パドック・常歩は 1、ゲートは 0.45、ゴール後の流しで 0.8 まで）
+#   P[JU]＝騎手の体の起こし（0＝鐙に立って前傾・1＝鞍に座って体を起こす。パドック・常歩は 1、ゲートは 0.45、ゴール後の流しで 0.8 まで）、
+#   P[JW]＝ムチの振りの進み（0〜1。入れていないときは −1）、P[JP]＝追う手の送り（−1〜1 に追いの強さを掛けた値。首が下がって前へ伸びる拍子で ＋）、P[JH]＝抑え（手綱を引く 0〜1）
 class_name ViewGait
 extends RefCounted
 
@@ -11,7 +12,12 @@ const Y := 108
 const JX := 109
 const JY := 110
 const JU := 111
-const SIZE := 112
+const JP := 112
+const JH := 113
+const JW := 114
+const SIZE := 115
+# 首がいちばん下がって前へ伸びる位相（追う手を前へ送る所）。模擬の拍子（HSSim の BEAT）もここに合わせる
+const DRIVE := 0.6
 
 const F_DUTY := 0.25
 const H_DUTY := 0.27
@@ -109,9 +115,13 @@ static func walk_pose(P: PackedFloat32Array, phW: float, t: float, seed: float) 
 # 馬の形。ph＝襲歩の位相、sp＝走りの大きさ（0＝立つ）、push＝騎手の追い 0〜1、lead＝左手前の重み（1＝左・0＝右。間は混ぜる）
 # walk_ph・walk_w＝常歩の位相と重み、whip＝ムチを入れてからの秒（<0 で無し）、pose＝ゴールのあとのガッツポーズの秒（<0 で無し）
 # head_up＝掛かり 0〜1（模擬の kakari。前の名前は headUp）、ease＝ゴールを過ぎてからの流し 0〜1（騎手が体を起こす）
+# hold＝抑え 0〜1（手綱を引く。首の振りが小さくなり、騎手は上体を起こして手を引く）、beat＝拍子の合ったしごき・ムチへの応え 0〜1（首を大きく伸ばす）
+# tired＝疲れ 0〜1（首が下がり、歩幅が詰まる）、look＝首を向ける向き（−1 左〜1 右。競り合う相手の側）、hpush＝馬の側の追い（騎手の追いに遅れて付いてくる。負なら push と同じ）
 static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: float, seed: float, lead: float,
-		walk_ph: float, walk_w: float, whip: float, pose_t: float, head_up: float, ease := 0.0) -> void:
+		walk_ph: float, walk_w: float, whip: float, pose_t: float, head_up: float, ease := 0.0, hold := 0.0, beat := 0.0,
+		tired := 0.0, look := 0.0, hpush := -1.0) -> void:
 	P.fill(0.0)
+	P[JW] = -1.0
 	var wk := clampf(walk_w, 0.0, 1.0)
 	if wk >= 1.0 or (wk > 0.0 and sp <= 0.0):
 		_stand(P, t, seed)
@@ -122,7 +132,9 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 	if sp <= 0.0:
 		_stand(P, t, seed)
 	else:
+		var tk := clampf(tired, 0.0, 1.0)
 		var k := minf(sp, 1.1)
+		var kl := k * (1.0 - 0.14 * tk)   # 疲れると歩幅（脚の振り）が詰まる
 		for b0 in [8, 12, 16, 20]:
 			var front: bool = b0 < 16
 			var K: Array = FK if front else HK
@@ -132,8 +144,14 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 				# 関節ごとに少しずつ遅らせる（肩→肘→膝→球節）。手前の替わりは2つの形を混ぜる
 				var a := cyc(K[i], phl - LEG_LAG[i])
 				var b := cyc(K[i], phr - LEG_LAG[i])
-				P[(b0 + i) * 3] = k * lerpf(b, a, lead)
-		bob = 0.035 * k * cyc(BOB, ph)
+				P[(b0 + i) * 3] = kl * lerpf(b, a, lead)
+		var pk := clampf(push, 0.0, 1.0)
+		var hp := clampf(hpush if hpush >= 0.0 else push, 0.0, 1.0)
+		var hk := clampf(hold, 0.0, 1.0)
+		var bk := clampf(beat, 0.0, 1.0)
+		# 追うほど胴の上下と首の振りが大きく（首を前へ低く伸ばす）、抑えるほど小さく（首を起こして頭を巻き込む）。疲れると振りが小さく重い
+		var amp := clampf(1.0 + 0.55 * hp + 0.45 * bk - 0.45 * hk - 0.25 * tk, 0.45, 2.0)
+		bob = 0.035 * k * (1.0 + 0.25 * hp - 0.2 * hk) * cyc(BOB, ph)
 		pitch = 0.065 * k * cyc(PITCH, ph)
 		P[Y] = 1.25 + bob
 		P[1 * 3] = pitch
@@ -142,11 +160,13 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 		var nod1 := cyc(NOD, ph - 0.035) * k
 		var nod2 := cyc(NOD, ph - 0.07) * k
 		var pitch_lag := 0.065 * k * cyc(PITCH, ph - 0.07)
-		P[2 * 3] = -0.14 * k + 0.13 * nod
-		P[3 * 3] = -0.05 * k + 0.08 * nod1
-		P[4 * 3] = 0.12 * k - 0.15 * nod2 - pitch_lag
-		P[2 * 3 + 1] = 0.03 * k * sin(ph * TAU) * (lead * 2.0 - 1.0)
-		P[4 * 3 + 1] = -0.6 * P[2 * 3 + 1]
+		P[2 * 3] = -0.14 * k - 0.06 * hp - 0.03 * bk + 0.07 * hk - 0.09 * tk + 0.13 * nod * amp
+		P[3 * 3] = -0.05 * k - 0.02 * hp + 0.03 * hk - 0.03 * tk + 0.08 * nod1 * amp
+		P[4 * 3] = 0.12 * k + 0.04 * hp + 0.1 * hk + 0.05 * tk - 0.15 * nod2 * amp - pitch_lag
+		# 競り合う相手の側へ首と頭を少し向ける
+		var lk := clampf(look, -1.0, 1.0)
+		P[2 * 3 + 1] = 0.03 * k * sin(ph * TAU) * (lead * 2.0 - 1.0) - 0.07 * lk
+		P[4 * 3 + 1] = -0.6 * (P[2 * 3 + 1] + 0.07 * lk) - 0.08 * lk
 		# 尾：胴の上下に遅れて波打つ（根元 → 先へ遅れが大きく、振れも大きく）
 		var tb := k * cyc(BOB, ph - 0.1)
 		var tb2 := k * cyc(BOB, ph - 0.2)
@@ -157,19 +177,22 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 		P[5 * 3 + 2] = 0.06 * sin(ph * TAU + seed * 3.0)
 		P[6 * 3 + 2] = 0.05 * sin(ph * TAU + seed * 3.0 - 0.8)
 		P[7 * 3 + 2] = 0.05 * sin(ph * TAU + seed * 3.0 - 1.6)
-		# 騎手：鐙の上で腰を浮かせ、馬の上下を脚で吸う。追うときは首の動きに合わせて体を前後に大きく送り、手は首に沿って前へ押す
-		var pk := clampf(push, 0.0, 1.0)
+		# 騎手：鐙の上で腰を浮かせ、馬の上下を脚で吸う。追うときは首の振りと同じ拍子で、首が下がって前へ伸びる所で
+		# 上体と手を前へ送り、首が上がる所で戻す（手は首に沿って前後に。振り上げない）。抑えるときは上体を起こし、手を胸の方へ引く
 		P[JY] = -bob * 0.75
 		P[24 * 3] = -pitch * 0.8
-		var pump := -cyc(NOD, ph + 0.04)
-		P[JX] = pk * 0.09 * pump
-		P[JY] -= pk * 0.012 * (1.0 + pump) * 0.5
-		P[25 * 3] = -0.04 - pk * (0.02 + 0.03 * pump)
-		P[26 * 3] = 0.04 + pk * (0.08 + 0.1 * pump) + pitch * 0.8
+		var pump := -cyc(NOD, ph + 0.04) / 0.8
+		var drive := pk * (0.8 + 0.2 * bk)
+		P[JX] = drive * 0.1 * pump
+		P[JY] -= drive * 0.014 * (1.0 + pump) * 0.5
+		P[JP] = drive * pump
+		P[JH] = hk
+		P[25 * 3] = -0.04 - drive * (0.03 + 0.05 * pump) + 0.14 * hk
+		P[26 * 3] = 0.04 + drive * (0.06 + 0.06 * pump) + pitch * 0.8 - 0.1 * hk
 		for ua in [27, 29]:
-			P[ua * 3] = pk * (0.04 + 0.14 * pump)
-			P[(ua + 1) * 3] = pk * (0.02 + 0.12 * pump)
-		P[JU] = 0.8 * smooth(ease)
+			P[ua * 3] = drive * (0.03 + 0.05 * pump) - 0.2 * hk
+			P[(ua + 1) * 3] = drive * (0.02 + 0.07 * pump) + 0.1 * hk
+		P[JU] = maxf(0.8 * smooth(ease), 0.14 * hk)
 	_kakari(P, head_up, sp, t, seed)
 	# 襲歩と常歩のあいだ：両方の形を混ぜる
 	if wk > 0.0 and sp > 0.0:
@@ -184,16 +207,20 @@ static func pose(P: PackedFloat32Array, ph: float, sp: float, push: float, t: fl
 				P[i * 3 + c] = R[i * 3 + c]
 		P[JX] = R[JX]
 		P[JY] = R[JY]
+		P[JP] = R[JP] * (1.0 - wk)
+		P[JH] = R[JH]
 		P[JU] = lerpf(R[JU], 1.0, wk)
-	# ムチ：入れてから 0.5 秒。右腕を振り上げ、尻へ振り下ろして戻す
+	# ムチ：入れてから 0.5 秒。右手だけを肩の高さまで上げ（頭の上へは振り上げない）、後ろの尻へ振り下ろして戻す。左手は手綱のまま
 	if whip >= 0.0 and whip < 0.5:
 		var u := whip / 0.5
-		P[29 * 3] = _key([[0, P[29 * 3]], [0.38, 1.7], [0.58, -1.4], [1, 0]], u)
-		P[29 * 3 + 2] = _key([[0, 0], [0.38, -0.25], [0.58, -0.8], [1, 0]], u)
-		P[30 * 3] = _key([[0, P[30 * 3]], [0.38, 0.5], [0.58, 0.17], [1, 0]], u)
-		P[31 * 3] = _key([[0, 0], [0.38, -0.5], [0.58, 2.25], [1, 0]], u)
-		P[31 * 3 + 2] = _key([[0, 0], [0.38, 0], [0.58, 0.6], [1, 0]], u)
-		P[25 * 3] += 0.12 * _key([[0, 0], [0.38, 1], [0.58, -0.3], [1, 0]], u)
+		P[JW] = u
+		P[29 * 3] = _key([[0, P[29 * 3]], [0.25, 0.45], [0.55, -2.45], [1, 0]], u)
+		P[29 * 3 + 2] = _key([[0, 0], [0.25, -0.35], [0.55, -0.45], [1, 0]], u)
+		P[30 * 3] = _key([[0, P[30 * 3]], [0.25, 0.95], [0.55, 0.15], [1, 0]], u)
+		P[31 * 3] = _key([[0, 0], [0.25, -0.6], [0.55, 1.5], [1, 0]], u)
+		P[31 * 3 + 2] = _key([[0, 0], [0.25, 0], [0.55, 0.45], [1, 0]], u)
+		P[25 * 3] += 0.08 * _key([[0, 0], [0.25, 1], [0.55, -0.3], [1, 0]], u)
+		P[JP] *= 1.0 - _key([[0, 0], [0.2, 1], [0.8, 1], [1, 0]], u)
 	# ガッツポーズ：ゴールのあと、上体を起こして右の拳を突き上げる
 	if pose_t >= 0.0 and pose_t < 2.6:
 		var w := clampf(pose_t / 0.25, 0.0, 1.0) * clampf((2.6 - pose_t) / 0.4, 0.0, 1.0)

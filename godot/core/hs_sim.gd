@@ -111,6 +111,9 @@ class Ctl:
 	var passSeen := {}
 	var misfit := false
 	var everKakari := false
+	var steered := false        # 進路を自分で動かした
+	var beats := 0              # 拍子の合ったしごきの続いた数
+	var lastBeat := -9.0        # 最後に拍子の合ったしごきの時刻
 	# しごく・引くの段（JS の getter）
 	var push: float:
 		get: return HSU.mx(0.0, gear)
@@ -159,6 +162,11 @@ static var TENSE_COST := 1.0
 static var KAKARI_COST := 1.6
 static var TENSION := { base = 25.0, hot = 0.5, kakari = 15.0, settle = 0.08, calm = 1.2, lane = 8.0 }
 static var START_ACC := 7.5
+# ゲートを出た直後：脚質ごとの出だしの加速の倍率。FAN.x m までは内へ寄る速さを 0.2 秒に FAN.v 進路までに（JS の S.START_STYLE・S.FAN）
+static var START_STYLE := { "逃げ": 1.18, "先行": 1.07, "差し": 0.96, "追込": 0.88 }
+static var FAN := { x = 250.0, v = 0.1 }
+# 拍子（JS の S.BEAT。説明は js/core/racesim.js）
+static var BEAT := { stride = 7.2, lag = 0.05, at = 0.55, win = 0.2, minGap = 0.25, vmin = 8.0, gear = 1.4, calm = 0.5, keep = 0.95, k = 0.05, save = 0.985 }
 static var START_SKILL_ACC := 1.35
 static var EASY_START := 0.95
 static var LATE_E := 0.15
@@ -332,6 +340,13 @@ static func cowardOf(s) -> float:
 # 歩幅の周期（秒）。映像の足の運びに使う
 static func stride_of(v: Variant) -> float:
 	return HSU.clamp(7.4 / HSU.mx(10.0, HSU.or_(v, 16.0)), 0.38, 0.7)
+# 拍子の位相（0〜1）：描画（ViewGait）と同じ式
+static func beat_phase(s) -> float:
+	var ph := fmod((s.x - s.v * BEAT.lag) / BEAT.stride + float(s.r.num) * 0.137, 1.0)
+	if ph < 0: ph += 1.0
+	return ph
+static func _on_beat(sim, c) -> bool:
+	return c.beats >= 2 and sim.t - c.lastBeat < BEAT.keep
 
 # 道中の位置取り（脚質と自由自在）
 static func run_pos(h: Dictionary, paceF: float) -> Dictionary:
@@ -525,12 +540,20 @@ static func _ctl_up_gd(sim: Sim, at: Variant = null) -> Variant:
 			s.late = true; s.E -= LATE_E; say(sim, sim.t, "%s、出遅れた！" % s.h.name, "trouble"); return "late"
 		return "ok"
 	var n := _rate_of(c, sim.t); var d := _gear_step(n)
+	# 拍子：首が下がって前へ伸びる所でしごくと、馬が応えて大きく動く（連打は数えない）
+	var off := absf(beat_phase(s) - BEAT.at)
+	if off > 0.5: off = 1.0 - off
+	var beat: bool = s.v > BEAT.vmin and off < BEAT.win and sim.t - c.lastPush >= BEAT.minGap
+	if beat:
+		c.beats = c.beats + 1 if sim.t - c.lastBeat < BEAT.keep else 1
+		c.lastBeat = sim.t; d *= BEAT.gear
+	else: c.beats = 0
 	var g0 := c.gear; c.gear = HSU.mn(1.0, c.gear + d)
 	if not s.spurting:
-		c.tension = HSU.clamp(c.tension + (c.gear - g0) * 12.0 * temperF(s), 0.0, 100.0)
+		c.tension = HSU.clamp(c.tension + (c.gear - g0) * 12.0 * temperF(s) * (BEAT.calm if beat else 1.0), 0.0, 100.0)
 		if c.surge > 5: c.surge = HSU.mn(ORIAI.surgeMax, c.surge + (c.gear - g0) * ORIAI.pushSurge)
 	c.pushes += 1; c.lastPush = sim.t
-	return "fast" if n >= 5 else "ok"
+	return "beat" if beat else ("fast" if n >= 5 else "ok")
 # 引く
 static func _ctl_down_gd(sim: Sim) -> Variant:
 	var c := sim.ctl
@@ -570,7 +593,7 @@ static func _ctl_swap_gd(sim: Sim) -> Variant:
 static func _ctl_lane_gd(sim: Sim, d: float) -> Variant:
 	var c := sim.ctl
 	if not c: return null
-	var l0 := c.lane; c.lane = HSU.clamp(HSMath.round_js(c.lane + d), 0.0, 12.0); c.laneT = sim.t
+	var l0 := c.lane; c.lane = HSU.clamp(HSMath.round_js(c.lane + d), 0.0, 12.0); c.laneT = sim.t; c.steered = true
 	var s: Runner = sim.st[sim.me]
 	if c.started and c.lane != l0 and not s.spurting and s.x > sim.D * 0.05: c.tension = HSU.clamp(c.tension + TENSION.lane * (temperF(s) - 1.0 + 0.15), 0.0, 100.0)
 	return null
@@ -756,6 +779,9 @@ static func _step_gd(sim: Sim) -> bool:
 					var resp := respOf(c)
 					target *= 1.0 + (k * resp if inZone else W.early) * s.kickS * whip_eff(c)
 					costMul *= ((W.windCost if c.windmill else W.cost) * (1.0 + (1.0 - resp) * 0.15)) if inZone else W.earlyCost
+				# 拍子の合ったしごきが続いている間は、馬が気持ちよく伸びる（追い出してから）
+				if s.spurting and _on_beat(sim, c):
+					target *= 1.0 + BEAT.k * s.kickS; costMul *= BEAT.save
 				if kakariNow:
 					target *= 1.012; costMul *= KAKARI_COST
 				elif c.tension < 35 and not s.spurting: costMul *= CALM_SAVE
@@ -834,7 +860,7 @@ static func _step_gd(sim: Sim) -> bool:
 				if s.blocked > 0: say(sim, t, "%s、前が壁になった！" % s.h.name, "trouble")
 		if s.blocked > 0:
 			target *= 0.93; s.blocked -= DT
-		var accel: float = START_ACC * (START_SKILL_ACC if (s.boost and s.boost.free and t < s.boost.until) else 1.0) if s.v < s.vc * 0.9 else s.acc + s.slopeP * 0.0015
+		var accel: float = START_ACC * float(START_STYLE.get(s.h.get("style"), 1.0)) * (START_SKILL_ACC if (s.boost and s.boost.free and t < s.boost.until) else 1.0) if s.v < s.vc * 0.9 else s.acc + s.slopeP * 0.0015
 		var dv := maxf(-1.4 * DT, minf(accel * DT, target - s.v))
 		var vPrev := s.v
 		s.v = HSU.mx(0.0, s.v + dv)
@@ -877,7 +903,7 @@ static func _step_gd(sim: Sim) -> bool:
 	if me:
 		# 押したらすぐ動き出し（毎秒 LANE.v 進路）、横に馬がいれば止まる（ぶつかった印 c.bumpT・c.bumpSide。振動と揺れに使う）
 		# 馬群さばき：横に動くのが速く、横の馬に止められにくい
-		var lv: float = LANE.v * (SABAKI.v if me.sabaki else 1.0)
+		var lv: float = FAN.v / (2.0 * DT) if me.x < FAN.x and not c.steered else LANE.v * (SABAKI.v if me.sabaki else 1.0)
 		var ldx: float = SABAKI.dx if me.sabaki else LANE.dx
 		var lgap: float = SABAKI.gap if me.sabaki else LANE.gap
 		var want := HSU.clamp(c.lane - me.lane, -lv * DT, lv * DT)
@@ -914,7 +940,8 @@ static func _step_gd(sim: Sim) -> bool:
 				if not hit: break
 				lane += 1.0
 			s.laneT = lane
-			s.lane += (s.laneT - s.lane) * 0.16
+			var dl := (s.laneT - s.lane) * 0.16
+			s.lane += HSU.clamp(dl, -FAN.v, FAN.v) if s.x < FAN.x else dl
 	if opts.get("frames") and sim.step % 5 == 0: commentary(sim)
 	if opts.get("frames") and sim.step % REC_EVERY == 0:
 		var p: Array = []
