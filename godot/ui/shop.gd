@@ -1,8 +1,9 @@
-# 馬の店（docs/UI.md「馬の店」）：デビュー前の史実馬を売る。毎月入れ替え
+# 馬の店（docs/UI.md「馬の店」・持ち主の仕様書 2026-10-19「店」「ゲームメニュー画面」）：走っていない史実馬を売る。毎月入れ替え
 # 帯：資金・お手馬 n/10（いっぱいなら橙）。タブ：牡馬・牝馬（Q/E・LB/RB）
-# 表（左）：印（★ スペシャル・外・地）・馬名（毛色・父）・性齢・芝・ダ（完成の総合力）・距離・脚質・値段。見出しで並べ替え（R・Y でも回る）
-# 見本（右）：カーソルの馬の総合力・能力・距離・脚質と成長・特殊能力・値段と「買う」（金）
-# 品ぞろえと値段・買う決まりは HSWorld.market_historic・HSWorld.buy（godot/core）
+# 表（左）：印（★ スペシャル・外・地）・馬名（毛色・父）・性齢（6〜12月は2歳・1〜5月は3歳）・芝・ダ（いまの総合力）・距離・脚質・値段。見出しで並べ替え（R・Y でも回る）
+# 見本（右）：カーソルの馬のいまの総合力・能力・距離・脚質と成長・特殊能力・値段と「詳しく見る」（金）
+# 行を押してもすぐには買わない（仕様書「クリックですぐ購入にしない」）：詳しい小窓（3D の馬・能力・血統・名鑑）→「買う」→ 確かめ（カーソルは「やめる」から）→ 買う
+# 品ぞろえと値段・買う決まりは HSWorld.market_historic・HSWorld.buy（godot/core）。値段はいまの総合力で決まる（HSEraless.price_of）
 extends UiScreen
 
 const COLS := [["", 30, ""], ["馬名", 0, "name"], ["性齢", 52, ""], ["芝", 50, "turf"], ["ダ", 50, "dirt"], ["距離", 120, "dist"], ["脚質", 70, "style"], ["値段", 130, "price"]]
@@ -24,24 +25,29 @@ var b_buy: Button
 var stat_own: PanelContainer
 
 func hint() -> String:
-	return "芝・ダは完成の総合力。見出しで並べ替え"
+	return "芝・ダはいまの総合力（晩成はまだ低く、値段も安い）。行を選ぶと詳しく"
 
 func keys() -> Array:
-	return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "買う"], ["Q/E", "LB/RB", "牡馬・牝馬"], ["R", "Y", "並べ替え"], ["Esc", "B", "もどる"]]
+	return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "詳しく"], ["Q/E", "LB/RB", "牡馬・牝馬"], ["R", "Y", "並べ替え"], ["Esc", "B", "もどる"]]
 
 func on_back() -> void:
 	go("home")
 
 func on_tab(d: int) -> void:
+	if _modal != null: return
 	sex = posmod(sex + d, 2)
 	sel = 0
 	_fill()
 
-func build() -> void:
-	backdrop("bg_shop", 0.8)
+# 帯の注記：売っている年齢（6〜12月は2歳・1〜5月は3歳）と次の入れ替え
+static func band_sub() -> String:
 	var G = HSWorld.G
 	var nm := 1 if G.month == 12 else int(G.month) + 1
-	make_band("店", "馬の店", "デビュー前の史実馬を売る。毎月入れ替え（次は%d月）" % nm, [["資金", UiFlow.money_label(), "money"], ["お手馬", "%d/%d" % [HSSeason.own_count(), int(HSSeason.MAX_OWN)], "" if HSSeason.can_buy() else "warn"]])
+	return "%d歳の史実馬を売る（6〜12月は2歳・1〜5月は3歳）。毎月入れ替え（次は%d月）" % [int(HSEraless.shop_age(G.month)), nm]
+
+func build() -> void:
+	backdrop("bg_shop", 0.8)
+	make_band("店", "馬の店", band_sub(), [["資金", UiFlow.money_label(), "money"], ["お手馬", "%d/%d" % [HSSeason.own_count(), int(HSSeason.MAX_OWN)], "" if HSSeason.can_buy() else "warn"]])
 	top_box = VBoxContainer.new()
 	top_box.position = Vector2(PAD_X, TOP + 4)
 	top_box.custom_minimum_size = Vector2(1180, 0)
@@ -64,11 +70,21 @@ func build() -> void:
 	pv = pb[1]
 	_load_items()
 	_fill()
+	# 撮影の見本：詳しい小窓・買う前の確かめ
+	var args := OS.get_cmdline_user_args()
+	if args.has("--setup=shop_detail") and shown.size():
+		open_detail(0)
+	elif args.has("--setup=shop_confirm") and shown.size():
+		for i in shown.size():
+			if float(shown[i].it.price) <= float(HSWorld.G.player.money):
+				ask_buy(i)
+				break
 
 func _load_items() -> void:
 	items.clear()
+	var wi := HSWorld.w_idx()
 	for it in HSWorld.market_historic():
-		items.append({"it": it, "fh": HSSeason.fh_peak(it.horse), "f": it.horse.sex == "牝"})
+		items.append({"it": it, "fh": HSEraless.shop_fh(it.horse, wi), "f": it.horse.sex == "牝"})
 
 func _val(x: Dictionary, k: String):
 	var h: Dictionary = x.it.horse
@@ -172,7 +188,7 @@ func _fill() -> void:
 		UiScreen.pass_mouse(hb)
 		var k2: int = i
 		b.focus_entered.connect(func(): _preview(k2))
-		b.pressed.connect(func(): _buy(k2))
+		b.pressed.connect(func(): open_detail(k2))
 		list.add_child(b)
 		rows.append(b)
 	if shown.is_empty():
@@ -194,7 +210,7 @@ func _sort_by(k: String) -> void:
 
 func _unhandled_input(ev: InputEvent) -> void:
 	super._unhandled_input(ev)
-	var cyc: bool = (ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_R) or (ev is InputEventJoypadButton and ev.pressed and ev.button_index == JOY_BUTTON_Y)
+	var cyc: bool = _modal == null and ((ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_R) or (ev is InputEventJoypadButton and ev.pressed and ev.button_index == JOY_BUTTON_Y))
 	if cyc:
 		var ks := ["", "price", "turf", "dirt", "dist", "style", "name"]
 		var i := ks.find(sort_key)
@@ -236,7 +252,7 @@ func _preview(i: int) -> void:
 	pv.add_child(sl)
 	var fr := HBoxContainer.new()
 	fr.add_theme_constant_override("separation", 8)
-	fr.add_child(UiTheme.label("総合力（完成）", 13, UiTheme.MUTED))
+	fr.add_child(UiTheme.label("総合力（いま）", 13, UiTheme.MUTED))
 	fr.add_child(UiScreen.spacer())
 	fr.add_child(UiTheme.label("芝", 13, UiTheme.MUTED))
 	fr.add_child(UiTheme.stat_chip(float(x.fh.turf), "fh", true))
@@ -247,8 +263,9 @@ func _preview(i: int) -> void:
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 6)
+	var cur := HSHorse.cur(h, HSWorld.w_idx())
 	for k in ["spd", "sta", "dspd", "dsta", "guts", "mind", "slope"]:
-		grid.add_child(_stat_cell(HSHorse.STAT_SHORT[k], float(h.pot[k])))
+		grid.add_child(_stat_cell(HSHorse.STAT_SHORT[k], float(cur[k])))
 	grid.add_child(_stat_cell("切れ", float(HSU.or_(h.get("kire"), 4.0)), "kire"))
 	pv.add_child(grid)
 	pv.add_child(_kv("距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]))
@@ -268,13 +285,12 @@ func _preview(i: int) -> void:
 	var over := float(x.it.price) > money
 	var full := not HSSeason.can_buy()
 	var ph := HBoxContainer.new()
-	ph.add_child(UiTheme.num_label(HSU.money(float(x.it.price)), 26, UiTheme.BAD if over else UiTheme.GOLD_BRIGHT, HORIZONTAL_ALIGNMENT_LEFT))
+	ph.add_child(UiTheme.num_label(HSU.money(float(x.it.price)), 22, UiTheme.BAD if over else UiTheme.GOLD_BRIGHT, HORIZONTAL_ALIGNMENT_LEFT))
 	ph.add_child(UiScreen.spacer())
-	b_buy = UiScreen.button("買う", true, 150, 52, 22)
+	b_buy = UiScreen.button("詳しく見る", true, 150, 52, 19)
 	b_buy.focus_mode = Control.FOCUS_NONE
-	b_buy.disabled = over or full
 	var k2 := i
-	b_buy.pressed.connect(func(): _buy(k2))
+	b_buy.pressed.connect(func(): open_detail(k2))
 	ph.add_child(b_buy)
 	pv.add_child(ph)
 	if over or full:
@@ -294,7 +310,141 @@ func _kv(k: String, v: String) -> HBoxContainer:
 	h.add_child(UiTheme.label(v, 15))
 	return h
 
-func _buy(i: int) -> void:
+# ---- 詳しい小窓（行を押したとき）：3D の馬・いまの総合力と能力・距離・脚質・成長・特殊能力・血統・名鑑、値段と「買う」 ----
+var detail_i := -1
+var detail_buy: Button = null     # 小窓の「買う」（テストが押す）
+var confirm_no: Button = null     # 確かめの「やめる」
+var confirm_ok: Button = null     # 確かめの「買う」
+
+func open_detail(i: int) -> void:
+	if i < 0 or i >= shown.size():
+		return
+	detail_i = i
+	sel = i
+	var x: Dictionary = shown[i]
+	var h: Dictionary = x.it.horse
+	var d: Dictionary = HSU.or_(x.it.get("data"), {})
+	var G = HSWorld.G
+	var wi := HSWorld.w_idx()
+	var pb := UiScreen.panel_box(true, 12)
+	var p: PanelContainer = pb[0]
+	p.custom_minimum_size = Vector2(1240, 800)
+	var root: VBoxContainer = pb[1]
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 26)
+	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(cols)
+	# 左：絵と名前・いまの総合力・能力
+	var lv := VBoxContainer.new()
+	lv.custom_minimum_size.x = 560
+	lv.add_theme_constant_override("separation", 8)
+	cols.add_child(lv)
+	var por := UiHorsePortrait.new()
+	por.custom_minimum_size = Vector2(560, 290)
+	lv.add_child(por)
+	por.set_horse(String(h.name), String(HSU.or_(h.get("coat"), "鹿毛")), G.year - float(h.born))
+	var nh := HBoxContainer.new()
+	nh.add_theme_constant_override("separation", 10)
+	var t := UiTheme.title(String(h.name), 30, UiTheme.GOLD_BRIGHT if x.it.get("legend") else UiTheme.IVORY)
+	nh.add_child(t)
+	if x.it.get("legend"): nh.add_child(UiTheme.chip("スペシャル", UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 12))
+	lv.add_child(nh)
+	lv.add_child(UiTheme.label("%s%d・%s・%s" % ["牝" if x.f else "牡", int(G.year - float(h.born)), HSU.or_(h.get("coat"), ""), "外国の馬" if HSData.is_foreign(d) else "日本の馬"], 14, UiTheme.MUTED))
+	var fr := HBoxContainer.new()
+	fr.add_theme_constant_override("separation", 8)
+	fr.add_child(UiTheme.label("総合力（いま）", 15, UiTheme.MUTED))
+	fr.add_child(UiScreen.spacer())
+	fr.add_child(UiTheme.label("芝", 14, UiTheme.MUTED))
+	fr.add_child(UiTheme.stat_chip(float(x.fh.turf), "fh", true))
+	fr.add_child(UiTheme.label("ダ", 14, UiTheme.MUTED))
+	fr.add_child(UiTheme.stat_chip(float(x.fh.dirt), "fh", true))
+	lv.add_child(fr)
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 6)
+	var cur := HSHorse.cur(h, wi)
+	for k in ["spd", "sta", "dspd", "dsta", "guts", "mind", "slope"]:
+		grid.add_child(_stat_cell(HSHorse.STAT_SHORT[k], float(cur[k])))
+	grid.add_child(_stat_cell("切れ", float(HSU.or_(h.get("kire"), 4.0)), "kire"))
+	lv.add_child(grid)
+	lv.add_child(_kv("距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]))
+	lv.add_child(_kv("脚質", HSHorse.style_text(h)))
+	lv.add_child(_kv("成長型", String(HSU.or_(h.get("growth"), ""))))
+	var sk: Array = HSU.or_(h.get("skills"), [])
+	if sk.size():
+		var fl := HFlowContainer.new()
+		fl.add_theme_constant_override("h_separation", 6)
+		fl.add_theme_constant_override("v_separation", 6)
+		for id in sk:
+			fl.add_child(UiTheme.chip(HSSkills.label(String(id)), UiTheme.SURFACE_3, UiTheme.IVORY, 12))
+		lv.add_child(fl)
+	# 右：血統と名鑑
+	var rv := VBoxContainer.new()
+	rv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rv.add_theme_constant_override("separation", 8)
+	cols.add_child(rv)
+	rv.add_child(UiScreen.section("血統"))
+	rv.add_child(UiHorseScreen.pedigree_box(h.get("sire"), h.get("dam"), d.get("damsire")))
+	var has_prof: bool = d.get("text") != null or d.get("record") != null
+	rv.add_child(UiScreen.section("名鑑", "史実" if has_prof else ""))
+	rv.add_child(UiHorseScreen.profile_box(d, 600, 7))
+	var sp := Control.new()
+	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rv.add_child(sp)
+	# 下：値段と操作
+	var money := float(G.player.money)
+	var over := float(x.it.price) > money
+	var full := not HSSeason.can_buy()
+	var bh := HBoxContainer.new()
+	bh.add_theme_constant_override("separation", 14)
+	bh.add_child(UiTheme.label("値段", 15, UiTheme.MUTED))
+	bh.add_child(UiTheme.num_label(HSU.money(float(x.it.price)), 30, UiTheme.BAD if over else UiTheme.GOLD_BRIGHT, HORIZONTAL_ALIGNMENT_LEFT))
+	if over or full:
+		bh.add_child(UiTheme.label("資金が足りない" if over else "お手馬がいっぱい（引退させると空く）", 14, UiTheme.BAD if over else UiTheme.WARN))
+	bh.add_child(UiScreen.spacer())
+	var no := UiScreen.button("もどる", false, 160, 52, 18)
+	no.pressed.connect(close_modal)
+	bh.add_child(no)
+	detail_buy = UiScreen.button("買う", true, 200, 56, 22)
+	detail_buy.disabled = over or full
+	detail_buy.pressed.connect(func(): ask_buy(i))
+	bh.add_child(detail_buy)
+	root.add_child(bh)
+	open_modal(p, no if detail_buy.disabled else detail_buy)
+
+# 確かめ（買うときだけ）：カーソルは「やめる」から。やめると詳しい小窓に戻る
+func ask_buy(i: int) -> void:
+	if i < 0 or i >= shown.size():
+		return
+	var x: Dictionary = shown[i]
+	var money := float(HSWorld.G.player.money)
+	var price := float(x.it.price)
+	if price > money or not HSSeason.can_buy():
+		toast("資金が足りない" if price > money else "お手馬がいっぱい", "bad")
+		return
+	var pb := UiScreen.panel_box(true, 16)
+	var p: PanelContainer = pb[0]
+	p.custom_minimum_size = Vector2(620, 0)
+	var t := UiTheme.title("%sを%sで買いますか？" % [x.it.horse.name, HSU.money(price)], 22)
+	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	t.custom_minimum_size.x = 580
+	(pb[1] as VBoxContainer).add_child(t)
+	(pb[1] as VBoxContainer).add_child(UiTheme.label("資金 %s → %s" % [HSU.money(money), HSU.money(money - price)], 15, UiTheme.MUTED))
+	var h := HBoxContainer.new()
+	h.alignment = BoxContainer.ALIGNMENT_END
+	h.add_theme_constant_override("separation", 12)
+	confirm_no = UiScreen.button("やめる", false, 160, 50, 17)
+	confirm_no.pressed.connect(func(): open_detail(i))
+	h.add_child(confirm_no)
+	confirm_ok = UiScreen.button("買う", true, 180, 50, 19)
+	confirm_ok.pressed.connect(func(): close_modal(); buy_now(i))
+	h.add_child(confirm_ok)
+	(pb[1] as VBoxContainer).add_child(h)
+	open_modal(p, confirm_no, func(): open_detail(i))
+
+# 買う（確かめのあと）。自動で遊ぶ道具（godot/tools/autoplay.gd）もこれを呼ぶ
+func buy_now(i: int) -> void:
 	if i < 0 or i >= shown.size():
 		return
 	var x: Dictionary = shown[i]
@@ -307,9 +457,7 @@ func _buy(i: int) -> void:
 	# 帯の資金・お手馬と品ぞろえを組み直す
 	for c in get_children():
 		if c == band: c.queue_free()
-	var G = HSWorld.G
-	var nm := 1 if G.month == 12 else int(G.month) + 1
-	make_band("店", "馬の店", "デビュー前の史実馬を売る。毎月入れ替え（次は%d月）" % nm, [["資金", UiFlow.money_label(), "money"], ["お手馬", "%d/%d" % [HSSeason.own_count(), int(HSSeason.MAX_OWN)], "" if HSSeason.can_buy() else "warn"]])
+	make_band("店", "馬の店", band_sub(), [["資金", UiFlow.money_label(), "money"], ["お手馬", "%d/%d" % [HSSeason.own_count(), int(HSSeason.MAX_OWN)], "" if HSSeason.can_buy() else "warn"]])
 	_load_items()
 	_fill()
 

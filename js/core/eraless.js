@@ -62,12 +62,34 @@
     W.news(`今年は${list.length}頭の史実馬がデビューに向けて動き出した。`, 'info');
   };
 
-  // ---------- 馬の店：走っていない馬（と、倒したスペシャルホース）を、デビュー前の2歳として売る ----------
-  // 値段は強さ（評価）で大きく開く：評価が4上がるごとに2倍（持ち主の指摘 2026-10-16「強い馬以外買う価値なくなるから値段差を」）。
-  // 評価80で約2,900万円・90で約1.6億円・96で約4.6億円・100で約9.2億円。安い馬は300万円から。スペシャルホースはその1.6倍
-  // （持ち主の指摘「もっと高くていい。賞金のほかトロフィーのボーナス賞金が入るので」）
-  E.PRICE_BASE = 2000; E.PRICE_DOUBLE = 4;
-  E.priceOf = (d, legend) => Math.round(Math.max(300, E.PRICE_BASE * Math.pow(2, ((d.rating || 80) - 80) / E.PRICE_DOUBLE)) * U.priceIndex() * 1.3 * (legend ? 1.6 : 1) / 10) * 10;
+  // ---------- 馬の店：走っていない馬（と、倒したスペシャルホース）を売る ----------
+  // 店の馬の年齢は月で変える（持ち主の仕様書 2026-10-19「店」：6〜12月は2歳、1〜5月は3歳）。
+  // 2歳の新馬戦が始まる6月から翌年の5月までは、同じ生まれ年の馬を売る（1〜5月はその世代が3歳になっている）
+  E.shopAge = month => month >= 6 ? 2 : 3;
+  E.shopBorn = () => { const G = W.get(); return G.year - E.shopAge(G.month); };
+  // 店で見える評価値は、その馬のいまの総合力（持ち主の仕様書「店」。早熟は高く、晩成は低く見える）
+  E.shopFh = (h, wIdx) => HS.Season.fhBoth(h, wIdx);
+  // 値段もいまの総合力で決める（同じ完成の強さなら、いまは弱い晩成ほど安い。仕様書「早熟より晩成の馬のほうをコスパ良く」）。
+  //   値 v ＝ いまの総合力（芝・ダの良いほう）＋ 時期の補い（「普通」の成長の馬が、この年齢でまだ伸びていない分）
+  //   値段 ＝ 2,000万円 × 2^((v − 52) ÷ 6) × 物価 × 1.3（300万円から）。スペシャルホースはその1.6倍
+  // 時期の補いで、普通の馬の値段は6月でも翌年の5月でも変わらない（6月2歳は＋26・12月は＋13・1月3歳は＋11・5月は＋4ほど）。
+  // 早熟はいま強いので高く、晩成はいま弱いので安い（完成の総合力60の馬のなかほどで、6月の2歳は早熟 約3.7億・普通 約6,600万・晩成 約3,300万円、
+  // 1月の3歳は早熟 約2.3億・普通 約6,500万・晩成 約1,600万円。前はどれも約8,800万円）。
+  // 前の値段は史実の評価（rating）だけで決めていた（評価が4上がると2倍）。強さの開き（総合力が6上がると2倍）はほぼ同じにした
+  E.PRICE_BASE = 2000; E.PRICE_DOUBLE = 6; E.PRICE_FH = 52; E.PRICE_REF = 85;
+  // 総合力の折れ線（HS.Season.fhOf と同じ。丸めない）
+  E.fhLine = function (a) {
+    const K = HS.Season.FH_KNOTS;
+    let i = 0; while (i < K.length - 2 && a > K[i + 1][0]) i++;
+    return K[i][1] + (a - K[i][0]) * (K[i + 1][1] - K[i][1]) / (K[i + 1][0] - K[i][0]);
+  };
+  E.seasonAdj = (born, wIdx) => E.fhLine(E.PRICE_REF) - E.fhLine(E.PRICE_REF * H.growthFactor({ born, growth: '普通' }, wIdx));
+  E.shopValue = function (h, wIdx) { const f = E.shopFh(h, wIdx); return Math.max(f.turf, f.dirt); };
+  E.priceOf = function (h, legend, wIdx) {
+    if (wIdx == null) wIdx = W.wIdx();
+    const v = E.shopValue(h, wIdx) + E.seasonAdj(h.born, wIdx);
+    return Math.round(Math.max(300, E.PRICE_BASE * Math.pow(2, (v - E.PRICE_FH) / E.PRICE_DOUBLE)) * U.priceIndex() * 1.3 * (legend ? 1.6 : 1) / 10) * 10;
+  };
   const priceOf = E.priceOf;
 
   // ---------- 馬の店の解放（持ち主の指摘 2026-10-16「ショップに並ぶ馬は徐々に解放。G1勝ったらG1馬、地方レース勝ったら地方馬、ドイツのレース勝ったらドイツ馬」）----------
@@ -163,18 +185,19 @@
     return [...keys];
   };
   let mk = null;
-  // 店で見せる馬（データ d から）。同じ年のうちは同じ馬を使う（馬の画面を開いても同じ値）
+  // 店で見せる馬（データ d から）。同じ生まれ年を売っている間は同じ馬を使う（馬の画面を開いても同じ値）。値段はその週のいまの値で
   const itemOf = function (d, legend) {
     const G = W.get();
-    if (!mk || mk.year !== G.year) mk = { year: G.year, horses: new Map() };
+    const born = E.shopBorn();
+    if (!mk || mk.born !== born) mk = { born, horses: new Map() };
     let h = mk.horses.get(d.name);
     if (!h) {
-      h = H.fromHistoric(E.shift(d, (G.year - 2) - d.born), 'pool:' + d.name);
+      h = H.fromHistoric(E.shift(d, born - d.born), 'pool:' + d.name);
       if (HS.DATA.isForeign(d)) h.country = d.country || '外';
       h.owner = 'AI'; h.loc = 'shop'; if (legend) h.legendBought = true;
       mk.horses.set(d.name, h);
     }
-    return { kind: 'pool', horse: h, data: d, price: priceOf(d, legend), legend: !!legend };
+    return { kind: 'pool', horse: h, data: d, price: priceOf(h, legend, W.wIdx()), legend: !!legend };
   };
   // 開いている馬の全部（走っていない馬と、倒したスペシャルホース）。品ぞろえの元
   E.market = function () {

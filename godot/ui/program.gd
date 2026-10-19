@@ -17,6 +17,7 @@ var rows: Array[Button] = []
 var top_box: VBoxContainer
 var filt: Array[Button] = []
 var _focus_key := ""
+var back_to := "home"     # もどる画面（UiFlow.program_back。厩舎・お手馬の画面から開くとそこへ）
 
 func hint() -> String:
 	return "今週は出走登録、来週から先は予約（その週の初めに出走登録に変わる）"
@@ -25,7 +26,7 @@ func keys() -> Array:
 	return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "出走・予約"], ["Q/E", "LB/RB", "馬"], ["Esc", "B", "もどる"]]
 
 func on_back() -> void:
-	go("home")
+	go(back_to)
 
 func on_tab(d: int) -> void:
 	if horses.size() < 2:
@@ -36,6 +37,8 @@ func on_tab(d: int) -> void:
 
 func build() -> void:
 	backdrop("bg_home", 0.84)
+	back_to = UiFlow.program_back
+	UiFlow.program_back = "home"
 	horses = HSWorld.mine("stable") + HSWorld.mine("farm")
 	cur = 0
 	for i in horses.size():

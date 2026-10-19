@@ -352,7 +352,9 @@ func _do_ok() -> void:
 	elif phase == "result" and not capturing:
 		if replay:
 			UiFlow.replay_path = ""
-			UiFlow.go(get_tree(), "data")
+			var back := UiFlow.replay_back   # データのリプレイか、お手馬の戦績から開いたか
+			UiFlow.replay_back = "data"
+			UiFlow.go(get_tree(), back)
 		elif flow:
 			src.finish_now()
 			src.result.meRows = src.me_rows   # リプレイの計器用（自分の馬の値とムチ）

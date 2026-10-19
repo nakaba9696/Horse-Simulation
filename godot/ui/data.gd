@@ -275,6 +275,7 @@ func _replay() -> void:
 		var id := String(x.id)
 		b.pressed.connect(func():
 			UiFlow.replay_path = UiFlow.replay_dir.path_join(id + ".json")
+			UiFlow.replay_back = "data"
 			go("race"))
 		b.gui_input.connect(func(ev):
 			if (ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_X) or (ev is InputEventJoypadButton and ev.pressed and ev.button_index == JOY_BUTTON_X):

@@ -622,6 +622,7 @@
     const year = G.year;
     const pr = race.prize || 500;
     const share = [1, 0.4, 0.25, 0.15, 0.1];
+    if (HS.Rating) HS.Rating.annotate(race, sim.results, wIdx); // 1走ごとのレーティング（js/core/rating.js）
     for (const res of sim.results) {
       const h = res.horse;
       const x = runners.find(r => r.horse === h);
@@ -646,7 +647,7 @@
       if (res.pos === 1 && h.owner === 'P' && G.eraless && HS.Eraless) HS.Eraless.unlockWin(race);
       if (race.graded && res.pos === 1) { h.gradedWins.push({ y: year, race: race.name, short: race.short, grade: race.grade, region: race.region }); if (h.owner === 'P' && HS.Season) { HS.Season.onWin(h, race, year); if (gf && HS.Season.onGFWin) HS.Season.onGFWin(h, race); } }
       if (race.trialFor && res.pos <= (race.trialTop || 2)) { h.rights = h.rights || {}; h.rights[race.trialFor] = year; }
-      h.results.push({ y: year, m: race.month, w: race.week, race: race.short || race.name, grade: R.gradeBadge(race), course: race.course, surface: race.surface, dist: race.dist, ground: race.ground, pos: res.pos, n: sim.results.length, time: Math.round(res.time * 10) / 10, margin: res.margin, last3f: res.last3f ? Math.round(res.last3f * 10) / 10 : null, jockey: res.jockey && res.jockey.name, pop: res.pop });
+      h.results.push({ y: year, m: race.month, w: race.week, race: race.short || race.name, grade: R.gradeBadge(race), course: race.course, surface: race.surface, dist: race.dist, ground: race.ground, pos: res.pos, n: sim.results.length, time: Math.round(res.time * 10) / 10, margin: res.margin, last3f: res.last3f ? Math.round(res.last3f * 10) / 10 : null, jockey: res.jockey && res.jockey.name, pop: res.pop, rt: res.rt });
       // AI の馬は最近の成績だけ残す（セーブを小さく）
       const keep = h.owner === 'P' ? 80 : 12;
       while (h.results.length > keep) h.results.shift();

@@ -733,6 +733,7 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 	var year: float = G.year
 	var pr: float = HSU.or_(race.get("prize"), 500.0)
 	var share := [1.0, 0.4, 0.25, 0.15, 0.1]
+	HSRating.annotate(race, sim.results, wIdx)   # 1走ごとのレーティング（hs_rating.gd）
 	for res in sim.results:
 		var h: Dictionary = res.horse
 		var x = null
@@ -764,7 +765,7 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 			if not h.get("rights"): h.rights = {}
 			h.rights[race.trialFor] = year
 		var rr := { y = year, m = race.month, w = race.week, race = HSU.or_(race.get("short"), race.name), grade = HSRaces.grade_badge(race), course = race.course, surface = race.surface, dist = race.dist, ground = race.get("ground"), pos = float(res.pos), n = float(sim.results.size()),
-			time = HSMath.round_js(res.time * 10.0) / 10.0, margin = res.margin, last3f = HSMath.round_js(res.last3f * 10.0) / 10.0 if HSU.truthy(res.last3f) else null, jockey = res.jockey.name if res.get("jockey") else null, pop = res.pop }
+			time = HSMath.round_js(res.time * 10.0) / 10.0, margin = res.margin, last3f = HSMath.round_js(res.last3f * 10.0) / 10.0 if HSU.truthy(res.last3f) else null, jockey = res.jockey.name if res.get("jockey") else null, pop = res.pop, rt = res.get("rt") }
 		h.results.append(rr)
 		var keep := 80 if h.get("owner") == "P" else 12
 		while h.results.size() > keep: h.results.pop_front()

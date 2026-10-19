@@ -1,5 +1,5 @@
 # 年代なしのゲーム（js/core/eraless.js の HS.Eraless と同じ）：番組・物価・騎手は ERA の年で固定。1989〜2026年に走った史実馬を毎年ランダムにデビューさせる（生年をずらす）。
-# 馬の店（走っていない馬を、デビュー前の2歳として売る。品ぞろえは月ごと・鍵で少しずつ開く）
+# 馬の店（走っていない馬を売る。6〜12月は2歳・1〜5月は3歳。品ぞろえは月ごと・鍵で少しずつ開く）
 class_name HSEraless
 
 const ERA := 2025.0
@@ -63,10 +63,32 @@ static func crop() -> void:
 	HSWorld.news("今年は%d頭の史実馬がデビューに向けて動き出した。" % list.size(), "info")
 
 # ---------- 馬の店 ----------
+# 店の馬の年齢は月で変える（持ち主の仕様書 2026-10-19「店」：6〜12月は2歳、1〜5月は3歳）。6月から翌年の5月までは同じ生まれ年の馬を売る
+static func shop_age(month: float) -> float: return 2.0 if month >= 6.0 else 3.0
+static func shop_born() -> float: return HSWorld.G.year - shop_age(HSWorld.G.month)
+# 店で見える評価値は、その馬のいまの総合力（早熟は高く、晩成は低く見える）
+static func shop_fh(h: Dictionary, wIdx: float) -> Dictionary: return HSSeason.fh_both(h, wIdx)
+# 値段もいまの総合力で決める（js/core/eraless.js の E.priceOf と同じ式）：
+#   値 v ＝ いまの総合力（芝・ダの良いほう）＋ 時期の補い（「普通」の成長の馬が、この年齢でまだ伸びていない分）
+#   値段 ＝ 2,000万円 × 2^((v − 52) ÷ 6) × 物価 × 1.3（300万円から）。スペシャルホースはその1.6倍。同じ完成の強さなら晩成ほど安い
 const PRICE_BASE := 2000.0
-const PRICE_DOUBLE := 4.0
-static func price_of(d: Dictionary, legend: bool) -> float:
-	return HSMath.round_js(HSU.mx(300.0, PRICE_BASE * HSMath.pow_(2.0, (float(HSU.or_(d.get("rating"), 80.0)) - 80.0) / PRICE_DOUBLE)) * HSU.price_index() * 1.3 * (1.6 if legend else 1.0) / 10.0) * 10.0
+const PRICE_DOUBLE := 6.0
+const PRICE_FH := 52.0
+const PRICE_REF := 85.0
+static func fh_line(a: float) -> float:
+	var K := HSSeason.FH_KNOTS
+	var i := 0
+	while i < K.size() - 2 and a > K[i + 1][0]: i += 1
+	return K[i][1] + (a - K[i][0]) * (K[i + 1][1] - K[i][1]) / (K[i + 1][0] - K[i][0])
+static func season_adj(born: float, wIdx: float) -> float:
+	return fh_line(PRICE_REF) - fh_line(PRICE_REF * HSHorse.growth_factor({ born = born, growth = "普通" }, wIdx))
+static func shop_value(h: Dictionary, wIdx: float) -> float:
+	var f := shop_fh(h, wIdx)
+	return HSU.mx(float(f.turf), float(f.dirt))
+static func price_of(h: Dictionary, legend: bool, wIdx: Variant = null) -> float:
+	var w: float = HSWorld.w_idx() if wIdx == null else float(wIdx)
+	var v := shop_value(h, w) + season_adj(float(h.born), w)
+	return HSMath.round_js(HSU.mx(300.0, PRICE_BASE * HSMath.pow_(2.0, (v - PRICE_FH) / PRICE_DOUBLE)) * HSU.price_index() * 1.3 * (1.6 if legend else 1.0) / 10.0) * 10.0
 
 const COUNTRY_NEAR := { "新": "豪", "伊": "仏" }
 const COUNTRY_NAME := { "英": "イギリス", "仏": "フランス", "米": "アメリカ", "愛": "アイルランド", "独": "ドイツ", "豪": "オーストラリア", "香港": "香港", "UAE": "UAE", "サウジ": "サウジアラビア", "加": "カナダ", "星": "シンガポール", "海外": "そのほかの国" }
@@ -167,16 +189,16 @@ static func gf_keys(g: Dictionary) -> Array:
 	return keys.keys()
 static var _mk: Variant = null
 static func _item_of(d: Dictionary, legend: bool) -> Dictionary:
-	var G = HSWorld.G
-	if _mk == null or _mk.year != G.year: _mk = { year = G.year, horses = {} }
+	var born := shop_born()
+	if _mk == null or _mk.born != born: _mk = { born = born, horses = {} }
 	var h = _mk.horses.get(d.name)
 	if h == null:
-		h = HSHorse.from_historic(shift(d, (G.year - 2.0) - d.born), "pool:" + d.name)
+		h = HSHorse.from_historic(shift(d, born - d.born), "pool:" + d.name)
 		if HSData.is_foreign(d): h.country = HSU.or_(d.get("country"), "外")
 		h.owner = "AI"; h.loc = "shop"
 		if legend: h.legendBought = true
 		_mk.horses[d.name] = h
-	return { kind = "pool", horse = h, data = d, price = price_of(d, legend), legend = legend }
+	return { kind = "pool", horse = h, data = d, price = price_of(h, legend, HSWorld.w_idx()), legend = legend }
 static func market() -> Array:
 	var G = HSWorld.G
 	var act := active_names()

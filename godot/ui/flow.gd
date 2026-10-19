@@ -15,6 +15,7 @@ const SCENES := {
 	"race": "res://scenes/race.tscn",
 	"result": "res://scenes/week_result.tscn",
 	"stable": "res://scenes/stable.tscn",
+	"horse": "res://scenes/horse.tscn",
 	"breed": "res://scenes/breed.tscn",
 	"data": "res://scenes/data.tscn",
 	"owners": "res://scenes/owners.tscn",
@@ -28,6 +29,8 @@ static var ridden := {}             # { raceKey: "ride"｜"auto" }
 static var report = null            # 最後に締めた週（HSWorld.finish_week の戻り値）
 static var money0 := 0.0            # 週の初めの資金（週の結果で増減を出す）
 static var in_week := false         # 騎乗の列を回している間
+static var program_back := "home"   # 番組表からもどる画面（厩舎・お手馬の画面から開くとそこへ）
+static var replay_back := "data"    # リプレイを見終えてもどる画面（お手馬の戦績から開くと horse）
 static var focus := {}              # 画面ごとのカーソルの記憶 { 画面: 札の名前 }
 static var program_id := ""         # 番組表で見ている馬
 static var desc = null              # いま走るレースの見た目の一式（desc_of）
@@ -349,6 +352,12 @@ static func save_replay(d: Dictionary, res: Dictionary) -> void:
 	for r in results:
 		if r.num == int(d.horses[d.me].num): me_pos = r.pos
 	var id := "%d" % Time.get_unix_time_from_system()
+	# 同じ秒に2本残すとき（自動で乗る見本・テスト）は名前を分ける（前は上書きになり、索引の2行が同じ中身を指していた）
+	var base_id := id
+	var dup := 1
+	while FileAccess.file_exists(replay_dir.path_join(id + ".json")):
+		id = "%s_%d" % [base_id, dup]
+		dup += 1
 	var rep := {"about": "ターフの系譜：リプレイ", "race": d.race, "track": d.track, "horses": horses, "me": d.me, "dt": REPLAY_DT,
 		"frames": frames, "results": results, "winnerTime": float(res.winnerTime), "events": events, "whips": res.get("whips", []), "record": d.get("record")}
 	DirAccess.make_dir_recursive_absolute(replay_dir)

@@ -666,6 +666,7 @@ check('season: デビュー前の馬も、新馬戦と重賞を1年先まで予�
   const T = HS.Season;
   W.newGame({ year: 2004, seed: 8, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get(); G.player.money = 1e9;
+  G.month = 6; // 店が2歳（デビュー前）を売るのは6〜12月（1〜5月は3歳。持ち主の仕様書「店」）
   const it = W.marketHistoric().find(x => G.year - x.horse.born === 2);
   assert(!W.buy(it), '買えない');
   const h = W.horse(it.horse.id);
@@ -805,10 +806,10 @@ check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデ�
   const shop = E.market();
   const act = E.activeNames();
   assert(shop.length > 1000 && !shop.some(it => act.has(it.horse.name)), '走っている馬が店に並んでいる');
-  assert(shop.every(it => G.year - it.horse.born === 2), '店の馬が2歳でない');
-  // 値段は強さで大きく開く（評価が4上がると2倍）。始めの資金で、いちばん強い馬は買えない
-  const pr = r => E.priceOf({ rating: r });
-  assert(pr(100) >= pr(80) * 20 && pr(90) > pr(86) * 1.8, `値段の差が小さい（80: ${pr(80)}・100: ${pr(100)}）`);
+  assert(shop.every(it => G.year - it.horse.born === E.shopAge(G.month)) && E.shopAge(1) === 3 && E.shopAge(5) === 3 && E.shopAge(6) === 2 && E.shopAge(12) === 2, '店の馬の年齢が月の決まり（6〜12月は2歳・1〜5月は3歳）でない');
+  // 値段は強さで大きく開く（いまの総合力が6上がると2倍）。始めの資金で、いちばん強い馬は買えない
+  const strong = shop.slice().sort((a, b) => E.shopValue(b.horse, W.wIdx()) - E.shopValue(a.horse, W.wIdx()));
+  assert(strong[0].price >= strong[strong.length - 1].price * 20, `値段の差が小さい（${strong[strong.length - 1].price}〜${strong[0].price}）`);
   assert(Math.max(...shop.map(x => x.price)) > G.player.money * 3, 'いちばん強い馬が始めの資金で買える');
   // 買うと店から消える
   G.player.money = 1e9;
@@ -1016,9 +1017,9 @@ check('jockey: 史実馬を買って自分で乗り、成績と賞金とリー�
   const G = W.get();
   assert(G.mode === 'jockey' && G.jockey && W.mine().length === 0, '騎手のゲームになっていない');
   assert(J.offers().length === 0, '騎乗依頼は使わない');
-  // デビュー前の史実馬を、買えるだけ（2歳を優先）
+  // 店の史実馬を、買えるだけ（店が売っている年齢の馬。1〜5月は3歳・6〜12月は2歳）
   const m0 = G.player.money;
-  const market = W.marketHistoric().filter(it => G.year - it.horse.born === 2).sort((a, b) => a.price - b.price);
+  const market = W.marketHistoric().filter(it => G.year - it.horse.born === HS.Eraless.shopAge(G.month)).sort((a, b) => a.price - b.price);
   for (const it of market) if (it.price <= G.player.money && W.mine().length < 2) assert(!W.buy(it), '買えない');
   assert(W.mine().length >= 1 && G.player.money < m0, `買えていない（資金 ${m0}・いちばん安い ${market[0] && market[0].price}）`);
   let ridden = 0;
@@ -1309,6 +1310,7 @@ require('./extra_ui.js')(check, assert, HS); // 画面の仕組み：並べ替�
 require('./extra_feel.js')(check, assert, HS); // 騎乗の手ざわり（パッドの向き・状態の文字を出さない）
 require('./extra_gate.js')(check, assert, HS); // スタートの目押し（数えを出さない・待つ秒は種から・GOOD の幅）と、騎手のゲームに放牧が無い
 require('./extra_skills2.js')(check, assert, HS); // 逃げ・追込の能力・道悪○・外枠○・伝説級の固有の能力
+require('./extra_shop.js')(check, assert, HS); // 馬の店の年齢・値段（いまの総合力・晩成が安い）とレーティング
 require('./extra_gf.js')(check, assert, HS); // グランドフェスティバル（6つ・GF の週・連戦・伝説級の担当・店と牧場・トロフィー・キンチェム）
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
 require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
