@@ -1,6 +1,6 @@
 # 3D のレース（騎乗）。docs/FEEL.md（騎乗の手ざわり）に合わせる
 # レースの入れ口（ViewLive＝gdcore の模擬。無いときは ViewReplay＝記録の再生）から各馬の状態を読み、競馬場・馬・騎手・カメラ・計器を動かす
-# 流れ：ゲート（3・2・1。開く 150ms 前からの ↑ は覚えて開いた瞬間に受け付ける）→ 走る（実時間の 1.35 倍）→
+# 流れ：ゲート（数えは無い。待つ秒はレースの種で毎回少し違い、開く少し前に枠の上の灯がつく。灯を見て開く瞬間に ↑（目押し）。開く直前の ↑ は開いた瞬間に受け付け、早すぎると馬が煽る）→ 走る（実時間の 1.35 倍）→
 #       ゴール板（白い光と振動。時は止めない・遅くしない。着順はまだ出さない）→ 流す（2.4 秒。馬は映像の側で駈歩の 8.5m/s まで落として走り続ける。カメラは斜め横へ回る）→
 #       着順（英語の序数を叩きつける）→ A で確定の表 → A で出走表へ。流している間に A で着順へ飛ぶ
 # カメラ：JOCKEY CAM（6.4m 後ろ・3.2m 上・横の画角 68°）・HIGH CAM（上へ 0.42rad・1.7 倍引く）・TV CAM。揺れは kick（減衰する正弦。3D のカメラだけ）
@@ -14,11 +14,10 @@ const GATE_P := 1.25
 const GATE_OPEN := 2.5
 const STRIDE := 7.2
 const BODY := 1.2
-const COUNT := 3.0
+const WAIT0 := 3.0         # 記録の再生のときにゲートで待つ秒（模擬のときは sim.gateWait：レースの種で決まり、毎回少し違う）
 const SPEED := 1.35        # 進む速さの倍率（JS の RD.speed。走破タイムの表示は本当の秒）
 const COOL := 2.4          # ゴール板から着順を出すまでの実時間（秒）
 const COAST_V := 8.5       # ゴールのあとは駈歩のこの速さまで毎秒 0.8m/s ずつ落とし、止めずに走り続ける（持ち主の指摘「ゴールしたあと止まらないで」）
-const BUFFER := 0.15       # ゲートの先行入力（開く何秒前からの ↑ を覚えるか）
 const VIEWS := ["jockey", "high", "tv"]
 const VIEW_NAME := {"jockey": "JOCKEY CAM", "high": "HIGH CAM", "tv": "TV CAM"}
 const RACE_CARD := "res://scenes/race_card.tscn"
@@ -40,12 +39,14 @@ var hud: UiRideHud
 var input: ViewRideInput
 var D := 2400.0
 var me := 0
-var T := -COUNT            # レースの秒（負はゲートの中）
+var wait := WAIT0          # ゲートで待つ秒（レースの秒）
+var T := -WAIT0            # レースの秒（負はゲートの中）
 var rt := 0.0              # 実時間の秒（揺れ・光・ゴールのあとの流れ）
 var phase := "gate"        # gate / run / after（ゴールのあと）/ result（確定の表）
 var view := "jockey"
 var paused := false
-var buffered := false
+var start_pending = null   # ゲートの中で受け付けたスタート（合図は開いた瞬間に出す）
+var fret_at := -99.0       # 早押しで馬が煽った（実時間）
 var target := 0            # 照準（レーダーで見る馬）
 var fin = null             # ゴール板を過ぎた：{at（実時間）, pos, shown（着順を出した実時間。-1 はまだ）}
 var pose_at := -1.0        # ガッツポーズ（実時間）
@@ -68,7 +69,6 @@ var _fx_seen := 0
 var _bump_seen = null
 var _oriai := {"kakari": false, "fight": false, "high": false}
 var _oriai_bin := -1
-var _count_shown := 0
 var _last_H: Array = []
 
 func _ready() -> void:
@@ -95,6 +95,9 @@ func _ready() -> void:
 	race = src.race
 	D = src.D
 	me = src.me
+	if live and src.sim.gateWait != null and float(src.sim.gateWait) > 0.0:
+		wait = float(src.sim.gateWait)
+	T = -wait
 	target = me
 	tr = ViewTrack.new(race.track)
 	build_env()
@@ -275,14 +278,23 @@ func _do_up() -> void:
 	if fin != null:
 		return
 	if T < 0.0:
-		if T > -BUFFER:
-			buffered = true
+		# 目押し（持ち主の指摘 2026-10-17「スタートのカウントダウンいらない　目押しで」）：押した時刻を模擬に渡す。
+		# 開く直前（HSSim.GATE.buf）の押しは開いた瞬間に受け付け、それより前は馬が煽る（GOOD にならない）
+		if not live or src.started():
+			return
+		var b0 = src.ctl("up", T)
+		if b0 == "fumble":
+			fret_at = rt
+			kick({"dur": 0.32, "hz": 9.0, "ax": 0.02, "ay": 0.015})
+			input.fx("bad")
+		elif b0 != null:
+			start_pending = b0
 		return
 	if not live:
 		hud.up_fx()
 		return
 	var was: bool = src.started()
-	var b = src.ctl("up")
+	var b = src.ctl("up", T)
 	if not was:
 		_start_fx(b)
 	hud.up_fx()
@@ -341,7 +353,7 @@ func _toggle_pause() -> void:
 		Input.stop_joy_vibration(d)
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and not paused and fin == null and not capturing and T > -COUNT:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and not paused and fin == null and not capturing and T > -wait:
 		_toggle_pause()
 
 # ---- 1コマ進める（遊ぶときも撮るときも同じ。dt は実時間の秒） ----
@@ -354,18 +366,17 @@ func advance(dt_real: float) -> void:
 	var t0 := T
 	T += dt
 	if t0 < 0.0:
-		# 数え（3・2・1）
-		var n := int(ceil(-T))
-		if T < 0.0 and n != _count_shown and n <= 3:
-			_count_shown = n
+		# 数えは出さない・鳴らさない。開く HSSim.GATE.tell 秒前にゲートの上の灯がつき、扉が小さく鳴る（下の set_lamps・set_doors）
 		if T >= 0.0:
 			phase = "run"
 			input.fx("gate")
 			hud.flash("START", "go")
 			kick({"dur": 0.45, "hz": 6.0, "ay": 0.04, "fov": 2.0})
-			if buffered:
-				buffered = false
-				_do_up()
+			if start_pending != null:
+				_start_fx(start_pending)
+				start_pending = null
+				hud.up_fx()
+				input.fx("push")
 	var was_started: bool = src.started() if live else true
 	var H: Array = src.horses_at(maxf(T, 0.0)) if T > 0.0 else src.horses_at(0.0)
 	if live and not was_started and src.started():
@@ -390,6 +401,11 @@ func advance(dt_real: float) -> void:
 				c.v = maxf(COAST_V, float(c.v) - 0.8 * dt)
 			c.x = float(c.x) + float(c.v) * dt
 			H[j] = [c.x, H[j][1], c.v, 0.2, 0.5]
+	# 早押しで煽った馬は、ゲートの中で頭を上げる（0.5 秒）
+	if T < 0.0 and rt - fret_at < 0.5:
+		var hm: Array = H[me].duplicate()
+		hm[3] = maxf(float(hm[3]), 1.0 - (rt - fret_at) / 0.5)
+		H[me] = hm
 	_last_H = H
 	_feel(H)
 	place(H, dt)
@@ -406,7 +422,11 @@ func advance(dt_real: float) -> void:
 		input.gallop(float(m[0]), int(race.horses[me].num), float(m[2]), push)
 	course.gate.visible = T < 12.0
 	if course.gate.visible:
-		course.set_doors(0.0 if T <= 0.0 else clampf(T / 0.35, 0.0, 1.0) * 1.35)
+		# 前触れ：開く HSSim.GATE.tell 秒前に灯がつき、扉が 0.3 秒だけ小さく鳴る。灯は扉が開ききるころ消える
+		var tl: float = T + float(HSSim.GATE.tell)
+		var rattle := 0.035 * sin(tl * 70.0) * (1.0 - tl / 0.3) if tl >= 0.0 and tl < 0.3 else 0.0
+		course.set_doors(rattle if T <= 0.0 else clampf(T / 0.35, 0.0, 1.0) * 1.35)
+		course.set_lamps(tl >= 0.0 and T < 0.4)
 
 # 着順を出す：模擬を最後まで進めて結果を作る
 func _reveal() -> void:

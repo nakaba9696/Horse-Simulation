@@ -111,9 +111,20 @@ function makeHorse(spec, id) {
 // ---------- 操作の打ち手 ----------
 // でたらめに操作する打ち手（引きすぎ・急な進路の変更・早いムチも混ぜる）
 function chaos(m) {
+  let gate = true;
   return sim => {
     const c = sim.ctl; if (!c) return;
-    if (!c.started) { if (sim.t >= 0.02 + m.int(0, 6) * 0.1) S.ctl.up(sim); return; }
+    if (!c.started) {
+      // ゲートの中（目押し）：0 押さない・1 早押し（馬が煽る）・2 開く直前（開いた瞬間に受け付ける）・3 早押しのあと開く直前
+      if (gate) {
+        gate = false;
+        const g = m.int(0, 3);
+        if (g === 1 || g === 3) S.ctl.up(sim, -(5 + m.int(0, 10)) / 10);
+        if (g >= 2) S.ctl.up(sim, -m.int(0, 11) / 100);
+      }
+      if (!c.started && sim.t >= 0.02 + m.int(0, 6) * 0.1) S.ctl.up(sim);
+      return;
+    }
     const r = m.next();
     if (r < 0.05) S.ctl.up(sim); else if (r < 0.1) S.ctl.down(sim);
     else if (r < 0.12) S.ctl.lane(sim, m.chance(0.5) ? 1 : -1);
@@ -171,7 +182,7 @@ function runCase(race, k) {
   return {
     name: `${race.course}${race.surface}${race.dist}m ${race.ground} ${race.year}年 ${runners.length}頭`,
     race, wIdx, seed, opts, card, horseDigest, actions,
-    paceF: hex(sim.paceF), steps: sim.step, bumps, final: sha(stateStr(sim)), hashes, checkpoints,
+    paceF: hex(sim.paceF), gateWait: hex(sim.gateWait), steps: sim.step, bumps, final: sha(stateStr(sim)), hashes, checkpoints,
     results: res.results.map(x => ({ pos: x.pos, num: x.num, time: hex(x.time), margin: x.margin, lengths: hex(x.lengths), last3f: x.last3f == null ? null : hex(x.last3f), endE: hex(x.endE), power: hex(x.power), late: x.late, blocked: x.blocked })),
     winnerTime: U.time(res.winnerTime),
     events: res.events.map(e => [hex(e.t), e.text, e.kind]),

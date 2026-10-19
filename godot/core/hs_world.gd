@@ -1150,6 +1150,8 @@ static func migrate(g: Dictionary) -> void:
 				if h.pot.get(k) == null: h.pot[k] = HSU.or_(h.pot.get("spd"), 60.0)
 		if h.get("kire") == null: h.kire = float({ "逃げ": 3.0, "先行": 4.0, "差し": 6.0, "追込": 6.0 }.get(h.get("style"), 4.0))
 		if not h.get("skills"): h.skills = []
+		# 騎手のゲームに放牧は無い（world.js と同じ）：前のセーブで放牧に出した馬は、次の週の頭に自動で入厩に戻す
+		if g.mode == "jockey" and h.get("parked"): h.erase("parked")
 	for rc in HSU.or_(g.records.get("course"), {}).values():
 		if rc.get("rode") == null: rc.rode = HSU.truthy(rc.get("mine")) and g.mode == "jockey"
 	g.v = SAVE_VERSION

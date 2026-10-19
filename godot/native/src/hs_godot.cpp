@@ -75,7 +75,7 @@ public:
 
 	bool advance() { return hs::sim_step(*sim); }
 	Dictionary finish() { return hs::sim_finish(*sim); }
-	Variant ctl_up() { return hs::ctl_up(*sim); }
+	Variant ctl_up(const Variant &at) { return hs::ctl_up(*sim, at); }
 	Variant ctl_down() { return hs::ctl_down(*sim); }
 	Variant ctl_whip(const Variant &side) { return hs::ctl_whip(*sim, side); }
 	Variant ctl_swap() { return hs::ctl_swap(*sim); }
@@ -103,7 +103,7 @@ protected:
 		ClassDB::bind_static_method("HSNativeSim", D_METHOD("rng_seq", "state", "n"), &HSNativeSim::rng_seq);
 		ClassDB::bind_method(D_METHOD("advance"), &HSNativeSim::advance);
 		ClassDB::bind_method(D_METHOD("finish"), &HSNativeSim::finish);
-		ClassDB::bind_method(D_METHOD("ctl_up"), &HSNativeSim::ctl_up);
+		ClassDB::bind_method(D_METHOD("ctl_up", "at"), &HSNativeSim::ctl_up, DEFVAL(Variant()));
 		ClassDB::bind_method(D_METHOD("ctl_down"), &HSNativeSim::ctl_down);
 		ClassDB::bind_method(D_METHOD("ctl_whip", "side"), &HSNativeSim::ctl_whip);
 		ClassDB::bind_method(D_METHOD("ctl_swap"), &HSNativeSim::ctl_swap);
@@ -185,7 +185,7 @@ void HSNativeRunner::_get_property_list(List<PropertyInfo> *p_list) const {
 
 static const char *CTL_KEYS[] = { "tension", "started", "gear", "hand", "swapUntil", "lastPush", "lastPull", "pushes", "whips", "whipUntil", "windmill", "lane",
 	"blockedNow", "wide", "kakariNow", "behind", "surge", "shrink", "pullT", "reinFight", "bumpT", "bumpSide", "bond", "bondF", "spurtTension", "lastEv",
-	"startGood", "taps", "whipT", "lastWhip", "laneT", "driftT", "evT", "passSeen", "misfit", "everKakari", "push", "hold" };
+	"startGood", "taps", "whipT", "lastWhip", "laneT", "driftT", "evT", "passSeen", "misfit", "everKakari", "push", "hold", "fumble" };
 static const int N_CTL_KEYS = sizeof(CTL_KEYS) / sizeof(CTL_KEYS[0]);
 
 bool HSNativeCtl::_get(const StringName &name, Variant &r) const {
@@ -209,7 +209,7 @@ bool HSNativeCtl::_get(const StringName &name, Variant &r) const {
 		case 30: r = c.laneT; break; case 31: r = c.driftT; break;
 		case 32: { Dictionary d; if (c.evWallSet) d["wall"] = c.evWall; if (c.evSandSet) d["sand"] = c.evSand; if (c.evCoverSet) d["cover"] = c.evCover; r = d; } break;
 		case 33: { Dictionary d; for (size_t i = 0; i < c.passSeen.size(); i++) if (!std::isnan(c.passSeen[i])) d[(int64_t)i] = c.passSeen[i]; r = d; } break;
-		case 34: r = c.misfit; break; case 35: r = c.everKakari; break; case 36: r = c.push(); break; case 37: r = c.hold(); break;
+		case 34: r = c.misfit; break; case 35: r = c.everKakari; break; case 36: r = c.push(); break; case 37: r = c.hold(); break; case 38: r = c.fumble; break;
 		default: return false;
 	}
 	return true;
@@ -219,7 +219,7 @@ void HSNativeCtl::_get_property_list(List<PropertyInfo> *p_list) const {
 }
 
 static const char *SIM_KEYS[] = { "race", "runners", "wIdx", "opts", "geo", "D", "straight", "slope", "paceF", "pace", "st", "events", "frames", "t", "step",
-	"finished", "winnerT", "over", "talk", "track", "me", "ctl", "checkAt", "check", "skillFx", "top" };
+	"finished", "winnerT", "over", "talk", "track", "me", "ctl", "checkAt", "check", "skillFx", "top", "gateWait" };
 static const int N_SIM_KEYS = sizeof(SIM_KEYS) / sizeof(SIM_KEYS[0]);
 
 bool HSNativeSim::_get(const StringName &name, Variant &r) const {
@@ -236,7 +236,7 @@ bool HSNativeSim::_get(const StringName &name, Variant &r) const {
 			d["f400"] = s.talk.f400; d["f200"] = s.talk.f200; r = d; } break;
 		case 19: r = trackObj; break; case 20: r = s.me; break; case 21: r = ctlObj; break; case 22: r = s.checkAt; break;
 		case 23: if (s.hasCheck) { Dictionary d; d["t"] = s.checkT; d["at"] = s.checkAt; d["verdict"] = s.checkVerdict; d["lead"] = s.checkLead; r = d; } else r = Variant(); break;
-		case 24: r = s.skillFx; break; case 25: r = s.top; break;
+		case 24: r = s.skillFx; break; case 25: r = s.top; break; case 26: r = s.gateWait; break;
 		default: return false;
 	}
 	return true;

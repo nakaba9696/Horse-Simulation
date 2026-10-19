@@ -1,8 +1,8 @@
 // 騎乗の画面の手ざわり（計器・ムチ・ゴールのあと）を Playwright（/opt/pw-browsers の Chromium）で撮る道具
-//   NODE_PATH=$(npm root -g) node tools/shot_feel.js [出力先] [名前の頭] [--video]
+//   NODE_PATH=$(npm root -g) node tools/shot_feel.js [出力先] [名前の頭] [--video] [--gate]
 // 東京・芝1600・12頭。自分の馬は差し。画面の時計（performance.now・requestAnimationFrame）を道具の側で進めるので、
 // 遅い描画（ソフトウェアの WebGL）でも、撮った絵は 30fps で遊んだときと同じ時の流れになる。撮る絵（1600×1000）：
-//   <頭>_gate.jpg（ゲートの中）・<頭>_mid.jpg（向こう正面で引いている）・<頭>_whip.jpg（直線でムチを入れた直後）・
+//   <頭>_gate.jpg（ゲートの中）・<頭>_tell.jpg（前触れの灯）・<頭>_open.jpg（灯を見て押し、開いた直後）・<頭>_mid.jpg（向こう正面で引いている）・<頭>_whip.jpg（直線でムチを入れた直後）・
 //   <頭>_cool.jpg（ゴールを過ぎて流している所）・<頭>_rank.jpg（着順の表示）
 // --video を付けると、ムチから着順の表示までを 800×500・20fps の <頭>_finish.webm にする（ffmpeg を使う）
 const path = require('path');
@@ -14,6 +14,7 @@ const ROOT = path.join(__dirname, '..');
 async function main() {
   const args = process.argv.slice(2);
   const video = args.includes('--video');
+  const gateOnly = args.includes('--gate'); // ゲートの3枚（gate・tell・open）だけ撮る
   const pos = args.filter(a => !a.startsWith('--'));
   const out = path.resolve(pos[0] || 'docs/shots/feel');
   const pre = pos[1] || 'after';
@@ -63,10 +64,18 @@ async function main() {
   const shot = name => page.screenshot({ path: path.join(out, `${pre}_${name}.jpg`), type: 'jpeg', quality: 86, timeout: 180000 });
   const key = async k => { await page.keyboard.press(k); await step(); };
 
-  // ゲートの中
+  // ゲートの中（数えは出さない）と、前触れ（開く少し前にゲートの上の灯がつく）・開いた直後。待つ秒はレースの種で決まる（sim.gateWait。レースの秒＝実時間の 1.35 倍）
   await start(0);
-  await wait(1.2);
+  await wait(0.6);
   await shot('gate');
+  const gw = await page.evaluate(() => HS.Ride.cur.gateWait), tell = await page.evaluate(() => HS.Sim.GATE.tell);
+  await wait(Math.max(0, (gw - tell + 0.35) / 1.35 - 0.6));
+  await shot('tell');
+  await wait(0.4 / 1.35); // 灯を見て、開く瞬間に合わせて押す（開く 0.05 秒前。開く直前の押しは開いた瞬間に受け付ける）
+  await key('ArrowUp');
+  await wait(0.3);
+  await shot('open');
+  if (gateOnly) { await browser.close(); if (errors.length) { console.log('エラー：\n' + errors.join('\n')); process.exitCode = 1; } console.log('撮った：' + out + '（スタート：' + gw.toFixed(2) + ' 秒待つ）'); return; }
   // 向こう正面：少し引いてためる
   await start(1100);
   await wait(3.2, 100);

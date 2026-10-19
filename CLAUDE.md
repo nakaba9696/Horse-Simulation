@@ -2,6 +2,7 @@
 
 実在の名馬と実在のレースで遊ぶ、騎手が主役の3D競馬ゲーム。素の HTML・CSS・JavaScript（ビルド無し）で、ブラウザで遊ぶ。3D は Three.js（`lib/three.min.js`、r128、MIT）をグローバルの `THREE` として読む。
 ゲームの方向性は [docs/VISION.md](docs/VISION.md)、並行作業の分け方は [docs/ROADMAP.md](docs/ROADMAP.md)。
+**持ち主の仕様書 [docs/SPEC.md](docs/SPEC.md)（2026-10-19）が遊びの決まりの正本。** ここや VISION と食い違う所は仕様書に合わせる（目標：12月1日に Steam で売る）。
 
 ## 仕事を始める前に（知恵袋）
 - **仕事を始める前に、知恵袋（`nakaba9696/KnowledgeBase`）の skill を開く。** どの仕事でも `session-ops`、ほかは仕事の分野のもの（遊びの設計なら `game-design`、テストなら `testing-ci` など。一覧は KnowledgeBase の README.md）。

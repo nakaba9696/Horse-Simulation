@@ -2160,7 +2160,8 @@
 
     // ---- ゲート（スタート地点 x=0。発走前は全頭が収まる。t が 0 を過ぎたら扉が開く） ----
     const gate = new THREE.Group();
-    let doors = null;
+    let doors = null, lamps = null, glows = [];
+    const LAMP_OFF = 0x24150f, LAMP_ON = 0xffb070;
     const GQ0 = -2.6, GQ1 = 0.6; // 枠の奥行き（前が +）
     const gZ = u => -sign * u;   // ゲートの中の横の位置（外へ u m）
     {
@@ -2213,7 +2214,27 @@
       doors.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       doors.userData = { n, uD };
       gate.add(doors);
+      // 前触れの灯（後ろの梁の上、枠ごとに1つ。発走を待つ騎乗の視点から見える側）：開く少し前（S.GATE.tell 秒前）につき、光がにじむ。目押しの合図（数・文字は出さない）
+      lamps = new THREE.InstancedMesh(G(new THREE.BoxGeometry(0.16, 0.3, 0.62)), M(new THREE.MeshBasicMaterial({ color: LAMP_OFF })), n);
+      const lc = canvasOf(64, 64), lg = lc.getContext('2d'), rg = lg.createRadialGradient(32, 32, 0, 32, 32, 31);
+      rg.addColorStop(0, 'rgba(255,236,200,1)'); rg.addColorStop(0.25, 'rgba(255,140,70,0.85)'); rg.addColorStop(1, 'rgba(255,80,30,0)');
+      lg.fillStyle = rg; lg.fillRect(0, 0, 64, 64);
+      const glowMat = M(new THREE.SpriteMaterial({ map: T(texOf(lc, false, 1)), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+      glows = [];
+      { const o = new THREE.Object3D(); for (let j = 0; j < n; j++) {
+        const z = gZ(LANE0 + j * GATE_P);
+        o.position.set(GQ0 - 0.12, 3.74, z); o.updateMatrix(); lamps.setMatrixAt(j, o.matrix);
+        const sp = new THREE.Sprite(glowMat); sp.position.set(GQ0 - 0.3, 3.74, z); sp.scale.set(1.5, 1.5, 1); sp.visible = false; gate.add(sp); glows.push(sp);
+      } }
+      gate.add(lamps);
       scene.add(gate);
+    }
+    let lampOn = false;
+    function setLamps(on) {
+      if (on === lampOn || !lamps) return;
+      lampOn = on;
+      lamps.material.color.setHex(on ? LAMP_ON : LAMP_OFF);
+      for (const sp of glows) sp.visible = on;
     }
     let doorOpen = -1;
     function setDoors(open) {
@@ -2523,8 +2544,14 @@
       }
       shadows.instanceMatrix.needsUpdate = true;
       // ゲート：発走前は閉じ、t が 0 を過ぎたら開く。少し経ったら片づける
+      // 前触れ（view.tell＝灯がついてからの秒。負はまだ）：灯がつき、扉が小さく鳴る（0.3 秒）。灯は扉が開ききるころ消える
       gate.visible = t < 12;
-      if (gate.visible) setDoors(gateNow ? 0 : clamp(t / 0.35, 0, 1) * 1.35);
+      if (gate.visible) {
+        const tl = view.tell;
+        const rattle = gateNow && tl != null && tl >= 0 && tl < 0.3 ? 0.035 * Math.sin(tl * 70) * (1 - tl / 0.3) : 0;
+        setDoors(gateNow ? rattle : clamp(t / 0.35, 0, 1) * 1.35);
+        setLamps(tl != null && tl >= 0 && t < 0.4);
+      }
 
       // カメラ
       if (camMode !== mem.camMode) { mem.cam = null; mem.camMode = camMode; }
