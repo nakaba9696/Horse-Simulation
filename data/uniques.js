@@ -80,7 +80,7 @@ HS.DATA.uniques = [
   { horse:'シンボリルドルフ', id:'u_rudolf', label:'皇帝', at:'st', when:'front3', fx:{ spd:0.04, sec:4, free:true, E:0.03 },
     note:'残り400mで3番手以内にいると、脚が戻って抜け出す',
     why:'史上初めて無敗で三冠を果たし、G1を7勝して「皇帝」「七冠馬」と呼ばれた' },
-  { horse:'ディープインパクト', id:'u_deepimpact', label:'英雄', at:'st', when:'fromLast', fx:{ spd:0.08, sec:5, free:true, top:0.3, E:0.03 },
+  { horse:'ディープインパクト', id:'u_deepimpact', label:'衝撃の飛翔', at:'st', when:'fromLast', fx:{ spd:0.08, sec:5, free:true, top:0.3, E:0.03 },
     note:'直線で後ろから3頭以内にいると、一気に追い込む',
     why:'若駒ステークスで最後方から一気に追い込んで圧勝した。無敗の三冠馬で、天皇賞（春）は3分13秒4の世界レコード' },
   { horse:'テイエムオペラオー', id:'u_operao', label:'世紀末覇王', at:'st', when:'boxed', fx:{ spd:0.05, sec:3, free:true },
