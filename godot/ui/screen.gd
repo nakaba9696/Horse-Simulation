@@ -42,6 +42,10 @@ func _ready() -> void:
 						if h.get("loc") != "retired" and (h.sex == "牝") == (sx == "牝"):
 							HSJockey.retire(h.id)
 							break
+			if OS.get_cmdline_user_args().has("--setup=met2"):
+				# 撮影の見本：縁があるのは2人だけ（馬主の一覧で、縁のある馬主とまだの馬主が並ぶ）
+				for o in HSOwners.LIST():
+					HSOwners.of(String(o.id)).known = String(o.id) in ["sengoku", "makino"]
 		else:
 			UiFlow.go.call_deferred(get_tree(), "title")
 			return
@@ -59,6 +63,9 @@ func _ready() -> void:
 		celebrate("トロフィーを手にした", "三冠", "サンプルホース・ボーナス賞金 5億円")
 	elif args.has("--setup=scene"):
 		owner_scene({"oid": "makino", "kind": "up1", "reward": "祝いの品 100万円"})
+	elif args.has("--setup=meet"):
+		# 縁ができたときの場面（初めて声をかけてくる）
+		owner_scene({"oid": "sengoku", "kind": "meet", "horse": "サンプルホース", "race": "2歳未勝利", "reward": ""})
 	if shots.size() > 0:
 		_capture()
 	else:
@@ -343,8 +350,34 @@ func celebrate(kicker: String, title: String, sub: String, on_done := Callable()
 	open_modal(box, b, done, 0.88)
 	create_tween().tween_property(t, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
+# 馬主の看板の特徴の札（短距離好きなど。js/ui/ownersui.js の signChip と同じ）：勝負服の2色のうち暗いほうをさらに暗くした地に白い字、縁は明るいほう
+static func owner_sign_chip(o: Dictionary, size := 12) -> PanelContainer:
+	var a := Color(String(o.silks.base))
+	var b := Color(String(o.silks.sub))
+	if a.get_luminance() > b.get_luminance():
+		var t := a; a = b; b = t
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiTheme.box(a.darkened(0.3), b, 1, 999, Vector4(9, 1, 9, 2)))
+	p.add_child(UiTheme.label(HSOwners.sign_label(o), size, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	return p
+
+# まだ縁の無い馬主の顔（伏せて「？」）
+static func owner_q_face(w: float, h: float) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.SUNK, UiTheme.LINE_STRONG, 2, 10, Vector4(0, 0, 0, 0)))
+	p.custom_minimum_size = Vector2(w, h)
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var q := UiTheme.title("？", int(minf(w, h) * 0.5), UiTheme.GOLD_DIM)
+	q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	q.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	p.add_child(q)
+	return p
+
 # 馬主のご褒美の場面（js/ui/ownersui.js の ownerScene）：胸から上の顔・何が起きたか・名前と立場・台詞・ご褒美・「ありがとうございます」
-const OWNER_KICK := {"up1": "間柄が「信頼」になった", "up2": "間柄が「主戦」になった", "up3": "間柄が「相棒」になった", "bond": "好感度がいっぱいになった", "gift": "引退した馬を譲ってもらった", "award": "名コンビ賞"}
+# 縁ができたとき（kind "meet"）は、初めて声をかけてくる場面（看板の特徴・次の週から依頼が来る・「よろしくお願いします」）
+const OWNER_KICK := {"meet": "新しい馬主から声がかかった", "up1": "間柄が「信頼」になった", "up2": "間柄が「主戦」になった", "up3": "間柄が「相棒」になった", "bond": "好感度がいっぱいになった", "gift": "引退した馬を譲ってもらった", "award": "名コンビ賞"}
 func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	var o = HSOwners.by(String(q.oid))
 	if o == null:
@@ -359,7 +392,8 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 28)
 	p.add_child(hb)
-	var fp := "res://assets/owners/%s_joy.webp" % q.oid
+	var meet: bool = q.get("kind") == "meet"
+	var fp := "res://assets/owners/%s_%s.webp" % [q.oid, "smile" if meet else "joy"]
 	if ResourceLoader.exists(fp):
 		var tr := TextureRect.new()
 		tr.texture = load(fp)
@@ -377,8 +411,9 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	nh.add_theme_constant_override("separation", 12)
 	nh.add_child(UiTheme.title(String(o.name), 34))
 	nh.add_child(UiTheme.label(String(o.get("title", "")), 14, UiTheme.MUTED))
+	nh.add_child(owner_sign_chip(o, 14))
 	v.add_child(nh)
-	var lines := HSOwners.scene_lines(String(q.oid), String(q.kind), {"horse": q.get("horse", "")})
+	var lines := HSOwners.scene_lines(String(q.oid), String(q.kind), {"horse": q.get("horse", ""), "race": q.get("race", "")})
 	var labs: Array = []
 	for t in lines:
 		var l := UiTheme.label("「%s」" % t, 17)
@@ -392,7 +427,18 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 		rl.modulate.a = 0.0
 		v.add_child(rl)
 		labs.append(rl)
-	var b := UiScreen.button("ありがとうございます", true, 300, 54, 20)
+	if meet:
+		var ml := UiTheme.label("次の週から騎乗依頼が来る", 18, UiTheme.GOLD_BRIGHT)
+		ml.modulate.a = 0.0
+		v.add_child(ml)
+		labs.append(ml)
+		var nl := UiTheme.label("%sの馬主。%s" % [HSOwners.sign_label(o), o.get("note", "")], 13, UiTheme.MUTED)
+		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		nl.custom_minimum_size.x = 520
+		nl.modulate.a = 0.0
+		v.add_child(nl)
+		labs.append(nl)
+	var b := UiScreen.button("よろしくお願いします" if meet else "ありがとうございます", true, 300, 54, 20)
 	var done := func():
 		close_modal()
 		if on_done.is_valid(): on_done.call()

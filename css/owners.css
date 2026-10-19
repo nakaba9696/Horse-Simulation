@@ -83,3 +83,13 @@ button.own-face:hover .oface { transform: translateY(-2px); transition: transfor
 .oport:not(.big) { border-radius: 50%; }
 .oport.big { border-radius: var(--r-xl); }
 .oport.big img { position: absolute; left: -20%; top: 0; width: 140%; height: auto; }
+/* 看板の特徴の札（短距離好きなど）と補いの好み */
+.own-sign { display: inline-block; padding: 1px 9px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 800; letter-spacing: .04em; vertical-align: 2px;
+  background: var(--sb, #24402f); color: #fff; border: 1px solid var(--sl, var(--accent)); }
+.own-sub { font-size: var(--fs-xs); color: var(--text-2, #b9c4bd); }
+/* まだ縁の無い馬主：顔を伏せて「？」、条件のヒント */
+.oface.own-q { display: grid; place-items: center; background: radial-gradient(circle at 50% 38%, #2b3a33, #0d1512); color: var(--accent-hi); font-weight: 900; font-family: var(--ff-serif); }
+.own-card.locked { cursor: default; filter: saturate(.55); border-style: dashed; }
+.own-card.locked:hover { transform: none; }
+.own-hint { color: var(--accent-hi); font-size: var(--fs-sm); }
+.own-meet-note { margin-top: var(--sp-2); color: var(--text-2, #b9c4bd); font-size: var(--fs-sm); }

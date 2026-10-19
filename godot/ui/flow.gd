@@ -94,6 +94,9 @@ static func demo(weeks := 0, seed := 7.0) -> void:
 	replay_dir = "user://demo_replays"   # 見本のリプレイは遊ぶときのものと混ぜない
 	HSWorld.new_game({"mode": "jockey", "seed": seed, "jockeyName": "新人騎手", "region": "美浦"})
 	_reset_week()
+	# 見本は、はじめから全員と縁がある形にする（依頼の札・出走表・騎乗の場面を撮れるように。ふだんの遊びでは条件を満たすと縁ができる）
+	for o in HSOwners.LIST():
+		HSOwners.of(String(o.id)).known = true
 	buy_cheapest(3)
 	for i in weeks + 1:
 		var offers := HSOwners.offers()

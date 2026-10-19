@@ -93,7 +93,7 @@ func build() -> void:
 	side.add_child(nb[0])
 
 const MOOD := {"win": "joy", "bigwin": "joy", "good": "smile", "lose": "sad", "decline": "sad"}
-const KICK := {"up1": "間柄が「信頼」になった", "up2": "間柄が「主戦」になった", "up3": "間柄が「相棒」になった", "bond": "好感度がいっぱいになった", "gift": "引退した馬を譲ってもらった", "award": "名コンビ賞"}
+const KICK := {"meet": "新しい馬主から声がかかった", "up1": "間柄が「信頼」になった", "up2": "間柄が「主戦」になった", "up3": "間柄が「相棒」になった", "bond": "好感度がいっぱいになった", "gift": "引退した馬を譲ってもらった", "award": "名コンビ賞"}
 
 static func _face(oid: String, mood: String, w: float, h: float) -> Control:
 	var o = HSOwners.by(oid)
@@ -150,13 +150,20 @@ func _gift_card(q: Dictionary) -> PanelContainer:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 12)
 	(pb[1] as VBoxContainer).add_child(hb)
-	hb.add_child(_face(q.oid, "joy", 96, 120))
+	var meet: bool = q.get("kind") == "meet"
+	hb.add_child(_face(q.oid, "smile" if meet else "joy", 96, 120))
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hb.add_child(v)
 	v.add_child(UiTheme.label(String(KICK.get(q.kind, "")), 13, UiTheme.GOLD_BRIGHT))
-	v.add_child(UiTheme.title(String(o.name), 20))
-	var lines := HSOwners.scene_lines(q.oid, q.kind, {"horse": q.get("horse", "")})
+	var nh := HBoxContainer.new()
+	nh.add_theme_constant_override("separation", 8)
+	nh.add_child(UiTheme.title(String(o.name), 20))
+	nh.add_child(UiScreen.owner_sign_chip(o, 11))
+	v.add_child(nh)
+	if meet:
+		v.add_child(UiTheme.label("次の週から騎乗依頼が来る", 14, UiTheme.GOLD_BRIGHT))
+	var lines := HSOwners.scene_lines(q.oid, q.kind, {"horse": q.get("horse", ""), "race": q.get("race", "")})
 	if lines.size():
 		var l := UiTheme.label("「%s」" % lines[0], 14)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

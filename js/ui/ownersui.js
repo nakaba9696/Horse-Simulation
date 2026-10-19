@@ -141,6 +141,17 @@
   // ---------- 小物 ----------
   const MOOD = { win: 'happy', bigwin: 'happy', good: 'smile', lose: 'sad', decline: 'sad' };
   const tierChip = oid => { const st = O.of(oid); return `<span class="own-tier t${st.tier}">${e(O.TIERS[st.tier].label)}</span>`; };
+  // 看板の特徴の札（短距離好きなど）と、補いの好み
+  //   地は勝負服の2色のうち暗いほうをさらに暗く（白い字が読める）、縁は明るいほう
+  const lum = hex => { const n = parseInt(String(hex).slice(1), 16) || 0; return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255); };
+  const signChip = o => {
+    const s = O.signLabel(o); if (!s) return '';
+    const [a, b] = lum(o.silks.base) <= lum(o.silks.sub) ? [o.silks.base, o.silks.sub] : [o.silks.sub, o.silks.base];
+    return `<span class="own-sign" style="--sb:${shade(a, -0.3)};--sl:${b}">${e(s)}</span>`;
+  };
+  const subLine = o => { const l = O.subLabels(o); return l.length ? `<span class="own-sub">ほかに ${l.map(e).join('・')}</span>` : ''; };
+  // まだ縁の無い馬主の顔（伏せて「？」）
+  const qFace = size => `<span class="oface own-q" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.5)}px" role="img" aria-label="まだ会っていない馬主">？</span>`;
   // 次の段階までの帯（数は出さず、帯の長さで見せる）
   const gauge = oid => {
     const st = O.of(oid), cur = O.TIERS[st.tier], nx = O.TIERS[st.tier + 1];
@@ -174,7 +185,7 @@
     return `<div class="own-offer ${acc ? 'on' : ''}" style="--oc:${ow.silks.base};--oc2:${ow.silks.sub}">
       <button class="own-face" data-act="owner" data-id="${e(ow.id)}" aria-label="${e(ow.name)}">${UI.ownerFace(ow, acc ? 'smile' : 'normal', 72)}</button>
       <div class="grow">
-        <div class="own-who"><b>${e(ow.name)}</b>${tierChip(ow.id)}<span class="small muted">${e(ow.title)}</span>${o.best ? '<span class="chip hist">いちばんの馬</span>' : ''}</div>
+        <div class="own-who"><b>${e(ow.name)}</b>${signChip(ow)}${tierChip(ow.id)}<span class="small muted">${e(ow.title)}</span>${o.best ? '<span class="chip hist">いちばんの馬</span>' : ''}</div>
         <div class="own-say">「${e(line)}」</div>
         <div class="own-race">${raceLine(race, x)}</div>
         <div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark ? UI.histMark(h) : ''}<span class="small muted">${h.gelding ? 'セ' : h.sex}${W.get().year - h.born}・${e(h.style)}・${x.pop ? `${x.pop}番人気（${x.odds}倍）` : ''}・騎乗料 ${U.money(fee)}</span></div>
@@ -188,8 +199,11 @@
   UI.ownerOffersSection = function () {
     const offers = O.offers();
     const G = W.get();
+    const none = !O.knownList().length;
     return `<h2 class="sec">騎乗依頼<span class="r">${offers.length}件・<a href="#" data-act="owners">馬主の一覧 ▶</a></span></h2>
-      ${offers.length ? `<div class="list own-offers">${offers.map(UI.ownerOfferCard).join('')}</div>` : `<div class="panel empty">今週の騎乗依頼はありません。${G.month}月${G.week}週</div>`}`;
+      ${offers.length ? `<div class="list own-offers">${offers.map(UI.ownerOfferCard).join('')}</div>`
+        : none ? '<div class="panel empty">まだ騎乗依頼をくれる馬主はいない。自分の馬で結果を出すと、馬主から声がかかる（条件は馬主の一覧）。</div>'
+        : `<div class="panel empty">今週の騎乗依頼はありません。${G.month}月${G.week}週</div>`}`;
   };
   const home0 = S.home;
   S.home = function (st) {
@@ -204,24 +218,33 @@
   S.owners = function () {
     const rows = O.list().map(o => {
       const st = O.of(o.id), best = O.horsesOf(o.id).slice(0, 3);
+      // まだ縁の無い馬主：顔と名前を伏せ、看板の特徴と、条件のヒントだけ
+      if (!st.known) return `<div class="own-card locked" style="--oc:#3a4a42;--oc2:#7d8f84">
+        <div class="own-face">${qFace(84)}</div>
+        <div class="grow">
+          <div class="own-who"><b>まだ会っていない馬主</b>${signChip(o)}</div>
+          <div class="own-hint">${e(O.hint(o.id))}</div>
+          <div class="small muted">条件を満たすと声がかかり、次の週から騎乗依頼が来る。</div>
+        </div></div>`;
       return `<div class="own-card" data-act="owner" data-id="${e(o.id)}" style="--oc:${o.silks.base};--oc2:${o.silks.sub}">
         <div class="own-face">${UI.ownerFace(o, st.tier >= 2 ? 'smile' : 'normal', 84)}</div>
         <div class="grow">
-          <div class="own-who"><b>${e(o.name)}</b>${tierChip(o.id)}${silksCv(o.id)}</div>
-          <div class="small muted">${e(o.title)}・${o.age}歳</div>
+          <div class="own-who"><b>${e(o.name)}</b>${signChip(o)}${tierChip(o.id)}${silksCv(o.id)}</div>
+          <div class="small muted">${e(o.title)}・${o.age}歳 ${subLine(o)}</div>
           ${gauge(o.id)}
           <div class="small">次のご褒美：${e(nextReward(o.id))}</div>
           <div class="small muted">一緒に ${st.rides}戦${st.wins}勝${best.length ? `・持ち馬 ${best.map(h => e(h.name)).join('・')}ほか` : ''}</div>
         </div></div>`;
     }).join('');
-    return `<h2 class="sec">馬主<span class="r">${O.list().length}人</span></h2>
-      <div class="small muted">騎乗依頼をくれる馬主たち。依頼を受けて結果を出すと好感度が上がり、大きなレースで強い馬の依頼が来るようになる。断ると少し下がる。</div>
+    return `<h2 class="sec">馬主<span class="r">縁のある馬主 ${O.knownList().length}/${O.list().length}人</span></h2>
+      <div class="small muted">騎乗依頼をくれる馬主たち。はじめは縁が無く、馬主ごとの条件を満たすと声がかかる。依頼を受けて結果を出すと好感度が上がり、大きなレースで強い馬の依頼が来るようになる。断ると少し下がる。</div>
       <div class="own-grid mt">${rows}</div>`;
   };
   // ---------- 馬主の詳しい画面 ----------
   S.owner = function (v) {
     const o = O.by(v.id); if (!o) return '<div class="panel empty">馬主が見つからない</div>';
     const G = W.get(), st = O.of(o.id), s = O.state();
+    if (!st.known) return `<div class="panel empty">まだ会っていない馬主。${e(O.hint(o.id))}</div>`;
     const ladder = O.TIERS.map((t, i) => {
       const rw = O.REWARDS.find(r => r.tier === i);
       const reached = st.tier >= i;
@@ -238,8 +261,9 @@
         <div class="own-face big">${UI.ownerFace(o, st.tier >= 2 ? 'happy' : 'smile', 180, { big: true })}</div>
         <div class="grow">
           <div class="small muted">${e(o.kana)}・${o.age}歳</div>
-          <div class="own-name">${e(o.name)} ${tierChip(o.id)}</div>
+          <div class="own-name">${e(o.name)} ${signChip(o)} ${tierChip(o.id)}</div>
           <div class="own-title">${e(o.title)}</div>
+          <div class="small">${subLine(o)}${o.unlock && o.unlock.text ? `<span class="small muted">　依頼が始まる条件：${e(o.unlock.text)}</span>` : ''}</div>
           <div class="small">${e(o.note)}</div>
           <div class="own-say mt">「${e(O.fill_(o.intro))}」</div>
           ${gauge(o.id)}
@@ -272,20 +296,22 @@
   act['own-claim'] = async d => { const err = O.claim(d.id); if (err) return App.toast(err); App.save(); await UI.ownersScenes(); App.render(); };
 
   // ---------- ご褒美の場面 ----------
-  const KICK = { up1: '間柄が「信頼」になった', up2: '間柄が「主戦」になった', up3: '間柄が「相棒」になった', bond: '好感度がいっぱいになった', gift: '引退した馬を譲ってもらった', award: '名コンビ賞' };
+  const KICK = { meet: '新しい馬主から声がかかった', up1: '間柄が「信頼」になった', up2: '間柄が「主戦」になった', up3: '間柄が「相棒」になった', bond: '好感度がいっぱいになった', gift: '引退した馬を譲ってもらった', award: '名コンビ賞' };
   UI.ownerScene = function (q) {
     return new Promise(res => {
       const o = O.by(q.oid); if (!o) return res();
-      const lines = O.sceneLines(q.oid, q.kind, { horse: q.horse || '' });
+      const lines = O.sceneLines(q.oid, q.kind, { horse: q.horse || '', race: q.race || '' });
+      const meet = q.kind === 'meet';
       if (HS.Audio && HS.Audio.se) HS.Audio.se('coin');
       const bg = App.modal(`<div class="own-scene" style="--oc:${o.silks.base};--oc2:${o.silks.sub}">
-          <div class="own-scene-face">${UI.ownerFace(o, 'happy', 220, { big: true })}</div>
+          <div class="own-scene-face">${UI.ownerFace(o, meet ? 'smile' : 'happy', 220, { big: true })}</div>
           <div class="own-scene-body">
             <div class="own-kicker">${e(KICK[q.kind] || '')}</div>
-            <div class="own-name">${e(o.name)}<small>${e(o.title)}</small></div>
+            <div class="own-name">${e(o.name)}<small>${e(o.title)}</small> ${signChip(o)}</div>
             <div class="own-talk">${lines.map((t, i) => `<p style="--d:${i}">「${e(t)}」</p>`).join('')}</div>
             ${q.reward ? `<div class="own-reward" style="--d:${lines.length}">🎁 ${e(q.reward)}</div>` : ''}
-            <div class="btns mt"><button class="btn gold" data-x="ok">ありがとうございます</button></div>
+            ${meet ? `<div class="own-reward" style="--d:${lines.length}">次の週から騎乗依頼が来る</div><div class="own-meet-note">${e(O.signLabel(o))}の馬主。${e(o.note)}</div>` : ''}
+            <div class="btns mt"><button class="btn gold" data-x="ok">${meet ? 'よろしくお願いします' : 'ありがとうございます'}</button></div>
           </div></div>`, { noClose: true, scene: 'home' });
       bg.querySelector('[data-x=ok]').onclick = () => { App.closeModal(); res(); };
     });

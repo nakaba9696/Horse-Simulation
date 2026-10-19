@@ -1,6 +1,10 @@
 // 馬主と騎乗依頼（持ち主の決定 2026-10-16「プレイヤーに騎乗依頼をしてくる人にします。仲良くなるほど大きなレースで強い馬の依頼がきます。仲良くなったときのご褒美はほしい」）
-// 世界の AI の馬の一部を、架空の馬主（data/owners.js）が持つ。毎週、馬主から「この馬でこのレースに」と依頼が来る。
+// 世界の AI の馬の一部を、架空の馬主（data/owners.js）が持つ。縁のある馬主から、毎週「この馬でこのレースに」と依頼が来る。
 // 受けると出走表で自分が乗る（G.rides。おまかせも可）。騎手の取り分は賞金の5%（jockey.js）と、ここで払う騎乗料。
+// はじめはだれからも依頼が来ない。馬主ごとの「依頼が始まる条件」（data/owners.js の unlock。看板の特徴に合わせた結果）を満たすと
+// その馬主との縁ができ（known）、次の週から依頼が来る（持ち主の指摘 2026-10-17「最初から騎乗依頼ださないで　それぞれ条件があって依頼始まる感じで」）。
+// 馬主には看板の特徴が1つある（likes の先頭。短距離好き・ダート好きなど）。持つ馬と依頼のレースが、はっきりそこに寄る
+// （持ち主の指摘 2026-10-17「騎乗依頼主の特徴つけれるといい　短距離好きとかアメリカ好きとかダート好きとか」）。
 // 好感度（pts）で段階が上がる：顔見知り → 信頼 → 主戦 → 相棒。段階が上がるほど格の高いレース・強い馬の依頼が来る。
 // 段階が上がるとご褒美（祝いの品・勝負服・引退した馬・思い出の名馬）。年末には「名コンビ賞」。
 // 乱数は U.hashRng（週と馬の名前から決まる）だけで、世界の乱数は使わない。セーブは G.owners（W.migrate で既定値）。
@@ -27,6 +31,8 @@
   O.GIFT = 1000;           // 信頼の祝いの品（万円・1995年の物価）
   O.AWARD = 500;           // 名コンビ賞の賞金（万円・1995年の物価）
   O.AWARD_MIN = 3;         // 名コンビ賞に要る、その年の勝ち数
+  O.SIGN_RATE = 0.9;       // 看板の特徴に合う候補があるとき、その中から選ぶ割合（仮）
+  O.OFF_SIGN = 0.25;       // 看板の特徴に合う候補が無い週に、それでも依頼を出す割合（仮）
   O.REWARDS = [
     { key: 't1', tier: 1, label: '祝いの品', note: '賞金のお祝い' },
     { key: 't2', tier: 2, label: '勝負服', note: 'その馬主の勝負服を自分の馬に着せられる。いちばん強い馬に乗り続けられる' },
@@ -35,7 +41,8 @@
   ];
 
   O.on = () => !!(J && J.isMode && J.isMode());
-  const blank = () => ({ pts: 0, tier: 0, met: false, rides: 0, wins: 0, big: 0, dec: 0, streak: 0, fees: 0, got: {}, years: {} });
+  // known：縁がある（依頼が来る）。knownAt：縁ができた日（{ y, m, w }）
+  const blank = () => ({ pts: 0, tier: 0, met: false, known: false, rides: 0, wins: 0, big: 0, dec: 0, streak: 0, fees: 0, got: {}, years: {} });
   O.init = function () {
     const st = {}; for (const o of LIST()) st[o.id] = blank();
     return { st, week: null, log: [], queue: [], react: [], awards: {}, wear: {} };
@@ -43,7 +50,13 @@
   // 古いセーブ・足りない項目を埋める
   O.fill = function (s) {
     s = s || O.init();
-    s.st = s.st || {}; for (const o of LIST()) s.st[o.id] = Object.assign(blank(), s.st[o.id] || {});
+    s.st = s.st || {};
+    for (const o of LIST()) {
+      const old = s.st[o.id];
+      // 縁の項目が無い前のセーブ：依頼を受けた・断った・乗った・好感度がある馬主は、縁がある扱い
+      if (old && old.known === undefined) old.known = !!(old.met || old.rides || old.pts || old.tier);
+      s.st[o.id] = Object.assign(blank(), old || {});
+    }
     for (const k of ['log', 'queue', 'react']) s[k] = s[k] || [];
     s.awards = s.awards || {}; s.wear = s.wear || {}; if (s.week === undefined) s.week = null;
     return s;
@@ -56,6 +69,13 @@
   const yen = v => Math.round(v * IDX() / 10) * 10;
 
   // ---------- 好み ----------
+  // 国の好み（usa・europe）：その国で生まれた馬・その国の種牡馬の仔、その国のレース
+  const EU = ['英', '愛', '仏', '独', '伊'];
+  let sireC = null;
+  const sireCountry = h => {
+    if (!sireC) { sireC = new Map(); for (const s of (HS.DATA && HS.DATA.stallions) || []) sireC.set(s.name, s.country || ''); }
+    return (h.sire && sireC.get(h.sire)) || '';
+  };
   const fitH = {
     sprint: h => (h.distMax || 2000) <= 1600 ? 1 : (h.distMin || 1600) <= 1400 ? 0.5 : 0,
     mile: h => (h.distMin || 1600) <= 1600 && (h.distMax || 2000) >= 1600 ? 1 : 0,
@@ -68,15 +88,80 @@
     foreign: h => h.foreign || h.foreignTrained || (h.country && h.country !== '日') ? 1 : 0,
     blood: h => h.hist ? 1 : 0,
     local: h => h.local ? 1 : 0,
+    classic: h => (!h.apt || h.apt.turf >= h.apt.dirt) && (h.distMin || 1600) <= 2000 && (h.distMax || 2000) >= 2000 ? 1 : 0,
+    usa: h => h.country === '米' ? 1 : sireCountry(h) === '米' ? 0.5 : 0,
+    europe: h => EU.includes(h.country) ? 1 : EU.includes(sireCountry(h)) ? 0.5 : 0,
   };
   const fitR = {
     sprint: r => r.dist <= 1400 ? 1 : 0, mile: r => r.dist > 1400 && r.dist <= 1800 ? 1 : 0, long: r => r.dist >= 2400 ? 1 : 0,
     dirt: r => r.surface === 'ダ' ? 1 : 0, turf: r => r.surface === '芝' ? 1 : 0, filly: r => r.sex === '牝' ? 1 : 0,
     overseas: r => r.region === '海外' ? 1 : 0, foreign: r => r.region === '海外' ? 1 : 0, local: r => r.region === '地方' ? 1 : 0,
     classic: r => r.age === '3' && r.graded ? 1 : 0, young: r => r.age === '2' ? 1 : 0, veteran: r => r.age === '3+' || r.age === '4+' ? 1 : 0,
+    usa: r => r.region === '海外' && r.country === '米' ? 1 : 0, europe: r => r.region === '海外' && EU.includes(r.country) ? 1 : 0,
   };
   O.fitHorse = (o, h) => o.likes.length ? U.sum(o.likes.map(k => fitH[k] ? fitH[k](h) : 0)) / o.likes.length : 0;
   O.fitRace = (o, r) => o.likes.length ? U.sum(o.likes.map(k => fitR[k] ? fitR[k](r) : 0)) / o.likes.length : 0;
+
+  // ---------- 看板の特徴（likes の先頭） ----------
+  O.LIKE_LABEL = {
+    sprint: '短距離好き', mile: 'マイル好き', long: '長距離好き', dirt: 'ダート好き', turf: '芝好き', filly: '牝馬好き', front: '逃げ馬好き',
+    closer: '差し馬好き', foreign: '外国の馬好き', overseas: '海外好き', local: '地方好き', classic: 'クラシック好き', young: '2歳馬好き',
+    veteran: '古馬好き', blood: '血統好き', usa: 'アメリカ好き', europe: '欧州好き',
+  };
+  O.signOf = o => (o && o.likes && o.likes[0]) || '';
+  O.signLabel = o => O.LIKE_LABEL[O.signOf(o)] || '';
+  O.subLabels = o => ((o && o.likes) || []).slice(1).map(k => O.LIKE_LABEL[k]).filter(Boolean);
+  // 依頼（レースと馬）が看板の特徴に合うか
+  const SIGN = {
+    sprint: (r, h) => r.dist <= 1400,
+    dirt: (r, h) => r.surface === 'ダ',
+    long: (r, h) => r.dist >= 2000,
+    classic: (r, h) => r.age === '2' || r.age === '3' || G().year - h.born <= 3,   // 2歳・3歳のレースか、3歳までの若い馬
+    front: (r, h) => h.style === '逃げ',
+    closer: (r, h) => h.style === '差し' || h.style === '追込',
+    filly: (r, h) => h.sex === '牝',
+    usa: (r, h) => fitR.usa(r) > 0 || fitH.usa(h) > 0,
+    europe: (r, h) => fitR.europe(r) > 0 || fitH.europe(h) > 0,
+  };
+  O.signFits = (o, race, h) => { const f = SIGN[O.signOf(o)]; return f ? !!f(race, h) : true; };
+  // 馬を持つときの重み：看板の特徴に合う馬を強く好む
+  const ownW = (o, h) => { const f = fitH[O.signOf(o)]; return 0.2 + (f ? f(h) : 0) * 3 + O.fitHorse(o, h); };
+
+  // ---------- 縁（依頼が始まる条件） ----------
+  O.known = id => !!O.of(id).known;
+  O.knownList = () => LIST().filter(o => O.known(o.id));
+  // 条件（data/owners.js の unlock）：pos 着以内・距離・芝ダ・馬の性・脚質・重賞・レースの年齢・地域。書いていない項目は問わない
+  O.unlockOk = function (u, race, me) {
+    if (!u) return true;
+    const h = me.horse || {};
+    if (u.pos && !(me.pos <= u.pos)) return false;
+    if (u.minDist && race.dist < u.minDist) return false;
+    if (u.maxDist && race.dist > u.maxDist) return false;
+    if (u.surface && race.surface !== u.surface) return false;
+    if (u.sex && h.sex !== u.sex) return false;
+    if (u.style && !u.style.includes(h.style)) return false;
+    if (u.graded && !race.graded) return false;
+    if (u.age && !u.age.includes(race.age)) return false;
+    if (u.region && race.region !== u.region) return false;
+    return true;
+  };
+  // 縁ができる：次の週から依頼が来る。出会いの場面（kind 'meet'）を積む
+  O.meet = function (oid, ctx) {
+    const o = O.by(oid), st = O.of(oid);
+    if (!o || st.known) return false;
+    const g = G(), s = O.state();
+    ctx = ctx || {};
+    st.known = true; st.knownAt = { y: g.year, m: g.month, w: g.week };
+    W.news(`${o.name}さん（${O.signLabel(o)}）から声がかかった。これから騎乗依頼が来る。`, 'good');
+    s.queue.push({ oid, kind: 'meet', horse: ctx.horse || '', race: ctx.race || '', reward: '', y: g.year });
+    return true;
+  };
+  // 自分が乗ったレースの結果で、まだ縁のない馬主の条件を見る
+  O.meetCheck = function (race, me) {
+    for (const o of LIST()) if (!O.of(o.id).known && O.unlockOk(o.unlock, race, me)) O.meet(o.id, { horse: me.horse.name, race: R.label(race) });
+  };
+  // 縁がまだ無い馬主の、条件のヒント（ぼかした一言）
+  O.hint = oid => { const o = O.by(oid); return (o && o.unlock && o.unlock.hint) || ''; };
 
   // ---------- 馬主の馬 ----------
   // 馬の名前と種から決まる（セーブに持たない）。自分の馬・スペシャルホースはだれの馬でもない
@@ -93,7 +178,7 @@
     let res = null;
     if (r.chance(h.filler ? O.OWNED_FILLER : O.OWNED)) {
       const ok = LIST().filter(o => !o.only || (fitH[o.only] && fitH[o.only](h)));
-      if (ok.length) res = r.weighted(ok, o => 0.35 + O.fitHorse(o, h) * 2).id;
+      if (ok.length) res = r.weighted(ok, o => ownW(o, h)).id;
     }
     own.map.set(key, res);
     return res;
@@ -124,7 +209,8 @@
   };
 
   // ---------- 今週の依頼 ----------
-  // cards：W.cards() の出走表。opts.tier で段階を決め打ちにできる（テスト用）
+  // cards：W.cards() の出走表。opts.tier で段階を決め打ちにできる・opts.all で縁の無い馬主も（テスト用）
+  // 縁のある馬主だけが依頼を出す。看板の特徴に合う候補があればたいていその中から、無い週はたまにだけ合わない依頼を出す
   O.generate = function (cards, key, opts) {
     opts = opts || {};
     const g = G();
@@ -138,6 +224,7 @@
       ranked.forEach((x, k) => {
         if (x.mine || x.horse.owner === 'P' || x.horse.legend) return;
         const oid = O.ownerOf(x.horse); if (!oid) return;
+        if (!opts.all && !O.of(oid).known) return;
         const strength = 1 - k / Math.max(1, ranked.length - 1); // 1＝いちばん強い
         if (!O.allowed(tierOf(oid), race, x.horse, strength)) return;
         (per[oid] = per[oid] || []).push({ c, x, strength });
@@ -155,14 +242,18 @@
       const bestPick = best && cand.find(y => y.x.horse.id === best.id);
       if (bestPick) { push(o, bestPick, true); continue; }
       if (!r.chance(0.4 + 0.1 * tier)) continue;
+      const fit = cand.filter(y => O.signFits(o, y.c.race, y.x.horse));
+      let pool = cand;
+      if (fit.length) { if (r.chance(O.SIGN_RATE)) pool = fit; }
+      else if (!r.chance(O.OFF_SIGN)) continue;
       const want = 0.3 + 0.17 * tier;
-      const pick = r.weighted(cand, y => (Math.exp(-Math.pow((y.strength - want) / 0.3, 2)) + 0.02) * (1 + O.classOf(y.c.race) * tier * 0.6) * (1 + O.fitRace(o, y.c.race) + O.fitHorse(o, y.x.horse)));
+      const pick = r.weighted(pool, y => (Math.exp(-Math.pow((y.strength - want) / 0.3, 2)) + 0.02) * (1 + O.classOf(y.c.race) * tier * 0.6) * (1 + O.fitRace(o, y.c.race) + O.fitHorse(o, y.x.horse)));
       push(o, pick);
     }
-    // 毎週、少なくとも1件は来る（だれも出さなかった週は、候補のいちばん多い馬主から）
+    // 縁のある馬主がいれば、毎週少なくとも1件は来る（だれも出さなかった週は、候補のいちばん多い馬主から。看板の特徴に合う候補を先に）
     if (!out.length) {
       const o = owners.filter(o => (per[o.id] || []).length).sort((a, b) => per[b.id].length - per[a.id].length)[0];
-      if (o) push(o, r.pick(per[o.id]));
+      if (o) { const fit = per[o.id].filter(y => O.signFits(o, y.c.race, y.x.horse)); push(o, r.pick(fit.length ? fit : per[o.id])); }
     }
     return out;
   };
@@ -418,6 +509,8 @@
     J.record = function (race, sim, runners) {
       record0.apply(this, arguments);
       if (!O.on()) return;
+      const meP = sim.results.find(x => x.rider === 'P');
+      if (meP) O.meetCheck(race, meP);
       const s = O.state(), a = s.week && s.week.acc[race.key];
       if (!a) return;
       const me = sim.results.find(x => x.rider === 'P');
