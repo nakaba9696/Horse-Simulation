@@ -77,7 +77,7 @@ HS.DATA.uniques = [
   { horse:'シンザン', id:'u_shinzan', label:'ナタの切れ味', at:'st', when:'top2', fx:{ spd:0.05, sec:3, free:true },
     note:'残り200mで2〜3番手にいると、もうひと伸びする',
     why:'19戦すべてで連対を外さず、八大競走を5つ勝って「五冠馬」と呼ばれた' },
-  { horse:'シンボリルドルフ', id:'u_rudolf', label:'皇帝', at:'st', when:'front3', fx:{ spd:0.04, sec:4, free:true, E:0.03 },
+  { horse:'シンボリルドルフ', id:'u_rudolf', label:'絶対皇帝', at:'st', when:'front3', fx:{ spd:0.04, sec:4, free:true, E:0.03 },
     note:'残り400mで3番手以内にいると、脚が戻って抜け出す',
     why:'史上初めて無敗で三冠を果たし、G1を7勝して「皇帝」「七冠馬」と呼ばれた' },
   { horse:'ディープインパクト', id:'u_deepimpact', label:'衝撃の飛翔', at:'st', when:'fromLast', fx:{ spd:0.08, sec:5, free:true, top:0.3, E:0.03 },
