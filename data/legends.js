@@ -94,7 +94,7 @@ HS.DATA.legendsExtra = [
  // 脚質は推定。ダートの勝ちは札幌Sダ1200m・中京記念（砂1800m）。distMin はデビュー戦（芝800m）から。
  // 出典：https://ja.wikipedia.org/wiki/レダ_(競走馬)
  // 出典：https://www.jbis.or.jp/horse/0000000877/
- { name:'レダ', born:1949, sex:'牝', coat:'鹿毛', sire:'ステーツマン', dam:'第弐パラダイスロスト', damsire:'ハクリユウ', rating:88, surface:'芝ダ', distMin:800, distMax:3200, style:'先行', growth:'普通', retire:1953, wins:['1953天皇賞（春）','1953中京記念','1953京都記念（秋）'], note:'29戦17勝。天皇賞（春）を勝った唯一の牝馬。中京記念は当時「中京開設記念」', uncertain:true },
+ { name:'レダ', born:1949, sex:'牝', coat:'鹿毛', sire:'ステーツマン', dam:'第弐パラダイスロスト', damsire:'ハクリユウ', rating:88, surface:'芝ダ', turf:90, dirt:85, pot:{ spd:93 }, distMin:800, distMax:3200, style:'先行', growth:'普通', retire:1953, wins:['1953天皇賞（春）','1953中京記念','1953京都記念（秋）'], note:'29戦17勝。天皇賞（春）を勝った唯一の牝馬。中京記念は当時「中京開設記念」', uncertain:true },
  // ja.wikipedia に記事が無い。生年・毛色・血統・戦績・勝ち鞍は JBIS と netkeiba、各競走の歴代優勝馬表による。脚質は推定。
  // 出典：https://www.jbis.or.jp/horse/0000000749/
  // 出典：https://db.netkeiba.com/horse/000a00293d/
@@ -117,7 +117,7 @@ HS.DATA.legendsExtra = [
  // ja.wikipedia に記事が無い。生年・毛色・血統・戦績は JBIS と netkeiba。脚質と distMin・distMax（重賞の勝ち鞍とJBISの特別戦）は推定を含む。
  // 出典：https://www.jbis.or.jp/horse/0000001593/
  // 出典：https://ja.wikipedia.org/wiki/メイヂヒカリ （オールカマーの記述）
- { name:'ヤマイチ', born:1951, sex:'牝', coat:'栗毛', sire:'トシシロ', dam:'年藤', damsire:'トウルヌソル', rating:90, surface:'芝', distMin:1600, distMax:2400, style:'先行', growth:'普通', retire:1955, wins:['1954桜花賞','1954優駿牝馬'], note:'29戦5勝。桜花賞・優駿牝馬の二冠', uncertain:true },
+ { name:'ヤマイチ', born:1951, sex:'牝', coat:'栗毛', sire:'トシシロ', dam:'クリフジ', damsire:'トウルヌソル', rating:90, surface:'芝', distMin:1600, distMax:2400, style:'先行', growth:'普通', retire:1955, wins:['1954桜花賞','1954優駿牝馬'], note:'29戦5勝。桜花賞・優駿牝馬の二冠', uncertain:true },
  // 脚質・distMin は推定（重賞以外の勝ち鞍の距離が確かめられない）。
  // 出典：https://ja.wikipedia.org/wiki/オートキツ
  // 出典：https://www.jbis.or.jp/horse/0000002030/
@@ -227,7 +227,7 @@ HS.DATA.legendsExtra = [
  // distMin は5ハロン（ナンソープステークス・キングジョージステークス）、distMax は2着の英2000ギニー（1マイル）から。style は推定（en.wikipedia の「先頭から」の記録と、ja.wikipedia の「前から進める競馬に専念した」から逃げ）
  // 出典：https://ja.wikipedia.org/wiki/アバーナント
  // 出典：https://en.wikipedia.org/wiki/Abernant_(horse)
- { name:'アバーナント', nameEn:'Abernant', country:'英', born:1946, sex:'牡', coat:'芦毛', sire:'オーエンテューダー', dam:'ルストムマハル', damsire:'ルストムパシャ', rating:88, surface:'芝', distMin:1000, distMax:1600, style:'逃げ', growth:'早め', retire:1950, wins:['1949ジュライカップ','1949ナンソープステークス','1950ジュライカップ','1950ナンソープステークス'], note:'17戦14勝。2歳はミドルパークステークスなど5連勝、3歳の英2000ギニーはハナ差の2着。キングズスタンドステークス・キングジョージステークスも勝った短距離の名馬', uncertain:true },
+ { name:'アバーナント', nameEn:'Abernant', country:'英', born:1946, sex:'牡', coat:'芦毛', sire:'オーエンテューダー', dam:'ルストムマハル', damsire:'ルストムパシャ', rating:88, surface:'芝', pot:{ spd:95, sta:72 }, distMin:1000, distMax:1600, style:'逃げ', growth:'早め', retire:1950, wins:['1949ジュライカップ','1949ナンソープステークス','1950ジュライカップ','1950ナンソープステークス'], note:'17戦14勝。2歳はミドルパークステークスなど5連勝、3歳の英2000ギニーはハナ差の2着。キングズスタンドステークス・キングジョージステークスも勝った短距離の名馬', uncertain:true },
  // style は推定（英2000ギニーとニューマーケットSは中間で先頭、ランカシャープレートは逃げ、英ダービーは出遅れて後方から）。distMin はニューステークス（5ハロン）、distMax はアスコットゴールドカップ（2.5マイル）
  // 母はデッドロック（en.wikipedia は Deadlock、表の中は Dead Lock）。相手の馬名のカナ（レイヴンズベリー・レイバーン・ラダス）は推定。獲得賞金は ja.wikipedia と en.wikipedia で数が食い違うので書かない
  // 出典：https://ja.wikipedia.org/wiki/アイシングラス_(競走馬)
@@ -238,7 +238,7 @@ HS.DATA.legendsExtra = [
  // style は推定（2000ギニーは2ハロンから先頭、セントレジャーは半マイルから先頭）。distMin は2歳の5ハロン戦、distMax はセントレジャー
  // 出典：https://ja.wikipedia.org/wiki/ダイヤモンドジュビリー_(競走馬)
  // 出典：https://en.wikipedia.org/wiki/Diamond_Jubilee_(horse)
- { name:'ダイヤモンドジュビリー', nameEn:'Diamond Jubilee', country:'英', born:1897, sex:'牡', coat:'鹿毛', sire:'セントサイモン', dam:'パーディタ', damsire:'ハンプトン', rating:89, surface:'芝', distMin:1000, distMax:2900, style:'先行', growth:'普通', retire:1901, wins:['1900英2000ギニー','1900ニューマーケットステークス','1900英ダービー','1900エクリプスステークス','1900英セントレジャー'], note:'16戦6勝。英国で9頭目の三冠馬。全兄にダービー馬パーシモン。気性の激しさで知られた', uncertain:true },
+ { name:'ダイヤモンドジュビリー', nameEn:'Diamond Jubilee', country:'英', born:1897, sex:'牡', coat:'鹿毛', sire:'セントサイモン', dam:'パーディタ', damsire:'ハンプトン', rating:89, surface:'芝', pot:{ mind:68 }, distMin:1000, distMax:2900, style:'先行', growth:'普通', retire:1901, wins:['1900英2000ギニー','1900ニューマーケットステークス','1900英ダービー','1900エクリプスステークス','1900英セントレジャー'], note:'16戦6勝。英国で9頭目の三冠馬。全兄にダービー馬パーシモン。気性の激しさで知られた', uncertain:true },
  // 毛色は ja.wikipedia の青鹿毛（en.wikipedia は Brown）。父 Disguise・母 Biturica・母父 Hamburg のカナは推定（ja.wikipedia では英字のまま）。
  // 勝ち鞍はどれも data/races_world.js に無い（フューチュリティステークス・アラバマステークスなど）。距離の幅（2歳の5ハロン〜）と脚質は推定
  // 出典：https://ja.wikipedia.org/wiki/マスケット_(1906年生の競走馬) ・ https://en.wikipedia.org/wiki/Maskette
@@ -261,7 +261,7 @@ HS.DATA.legendsExtra = [
  { name:'テディ', nameEn:'Teddy', country:'仏', born:1913, sex:'牡', coat:'鹿毛', sire:'アジャックス', dam:'ロンド', damsire:'ベイロナルド', rating:82, surface:'芝', distMin:1700, distMax:2800, style:'先行', growth:'普通', retire:1917, wins:['1916サンセバスティアン大賞','1916ビリャメホル賞'], note:'8戦6勝。スペインのセントレジャー（ビリャメホル賞）を勝った。種牡馬としてサーギャラハッド・ブルドッグ・ラトロワンヌの父', uncertain:true },
  // 芦毛（ja.wikipedia はベンドア斑の芦毛）。style は推定（「空飛ぶ牝馬」と呼ばれた先行力から逃げ）。distMax は2着の英1000ギニー（1マイル）
  // 出典：https://ja.wikipedia.org/wiki/ムムタズマハル_(競走馬) ・ https://en.wikipedia.org/wiki/Mumtaz_Mahal_(horse)
- { name:'ムムタズマハル', nameEn:'Mumtaz Mahal', country:'英', born:1921, sex:'牝', coat:'芦毛', sire:'ザテトラーク', dam:'レディジョセフィン', damsire:'サンドリッジ', rating:87, surface:'芝', distMin:1000, distMax:1600, style:'逃げ', growth:'早め', retire:1924, wins:['1923クイーンメアリーステークス','1923シャンペンステークス','1924キングジョージステークス','1924ナンソープステークス'], note:'10戦7勝。2歳で5勝し、3歳の英1000ギニーは2着。孫にナスルーラ', uncertain:true },
+ { name:'ムムタズマハル', nameEn:'Mumtaz Mahal', country:'英', born:1921, sex:'牝', coat:'芦毛', sire:'ザテトラーク', dam:'レディジョセフィン', damsire:'サンドリッジ', rating:87, surface:'芝', pot:{ spd:95, sta:70 }, distMin:1000, distMax:1600, style:'逃げ', growth:'早め', retire:1924, wins:['1923クイーンメアリーステークス','1923シャンペンステークス','1924キングジョージステークス','1924ナンソープステークス'], note:'10戦7勝。2歳で5勝し、3歳の英1000ギニーは2着。孫にナスルーラ', uncertain:true },
  // 毛色は en.wikipedia の Bay or brown から黒鹿毛（ja.wikipedia に記事なし）。父 Laland・母 Nella da Gubbio のカナは推定。
  // style はドイツダービーの見立て（速い逃げ馬を直線でとらえた）。distMin は推定、distMax はドイツダービー
  // 出典：https://en.wikipedia.org/wiki/Nereide_(horse)
