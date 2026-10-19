@@ -1,4 +1,4 @@
-// 年末のドリームレース（グランドフィナーレ・距離ごとに5つ）の画面：
+// 年末のドリームレース（グランドフィナーレ・距離ごとの5つと牝馬の1つ）の画面：
 // ホームの「グランドフィナーレへの道」（自分の馬 × GF の資格の表）と、12月の招待（GF ごとに、出るなら自分の馬から1頭を選ぶ・出ない）
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
@@ -6,13 +6,13 @@
   if (!UI || !App || !T || !T.dcStatus || !T.GF_CATS) return;
   const e = U.esc;
   const isJ = () => J && J.isMode();
-  const RULE = '距離ごとに5つ。その距離のG1を勝った自分の馬と、前の年のその GF の勝ち馬は必ず招待。残りはその距離のレースで集めたファンの票（大きいレースほど・上の着ほど多い）の上位16頭。外国の馬は4頭まで。1つの GF に出られるのは自分の馬から1頭。同じ馬が2つに出るのは間が2週あるときだけ。';
+  const RULE = '距離ごとの5つと、牝馬の1つ。その距離のG1を勝った自分の馬と、前の年のその GF の勝ち馬は必ず招待。残りはその距離のレースで集めたファンの票（大きいレースほど・上の着ほど多い）の上位16頭。牝馬の GF は牝馬だけで、どの G1・どのレースの票でもよい。外国の馬は4頭まで。1つの GF に出られるのは自分の馬から1頭。同じ馬が2つに出るのは間が2週あるときだけ。';
   const place = c => `12月${c.week}週・${c.course}${c.surface === 'ダ' ? 'ダ' : '芝'}${c.dist}m`;
   // 招待の決まった12月か
   const open = () => { const G = W.get(); return G.dc && G.dc.y === G.year && G.dc.gf && G.month === 12; };
 
   // 状態の札
-  const BADGE = { sure: ['ok', '資格あり'], in: ['in', '圏内'], out: ['out', '圏外'], young: ['', '3歳から'], off: ['', '休み'], invited: ['ok', '招待'], notInvited: ['out', '招待なし'] };
+  const BADGE = { sure: ['ok', '資格あり'], in: ['in', '圏内'], out: ['out', '圏外'], young: ['', '3歳から'], off: ['', '休み'], invited: ['ok', '招待'], notInvited: ['out', '招待なし'], sex: ['', '牝馬限定'] };
   UI.dcBadge = st => { const b = BADGE[st.state] || ['', st.text]; return `<span class="dc-badge ${b[0]}">${b[1]}</span>`; };
   // お手馬の札に付ける小さな印（資格がある・圏内の GF の名前）
   UI.dcChip = function (h) {
@@ -72,7 +72,7 @@
         ${lineup.length ? `<div class="small dc-lineup">${lineup.map(h => h.owner === 'P' ? `<b class="dc-me">★${e(h.name)}</b>` : e(h.name)).join('・')}</div>` : ''}
       </div>`;
     }).join('');
-    return `<h2 class="sec">${T.DC_NAME}<span class="r">距離ごとに5つ・各16頭</span></h2><div class="panel dc-road">${rows}</div>`;
+    return `<h2 class="sec">${T.DC_NAME}<span class="r">距離ごとの5つと牝馬・各16頭</span></h2><div class="panel dc-road">${rows}</div>`;
   }
 
   // ---------- 招待の画面（GF ひとつ）：出るなら1頭を選ぶ。出ないなら AI の馬だけで走る（結果は週のまとめから観戦できる） ----------
@@ -105,7 +105,7 @@
       const bg = App.modal(`<div class="dc-ask">
           <div class="dc-kicker">招待状</div>
           <h3 class="dc-title">${e(T.gfName(cat))}</h3>
-          <div class="small center muted">${W.yLabel(G.year)} ${place(C)}・16頭。その年に${e(C.label)}で活躍した馬だけが走る、年末のドリームレース。</div>
+          <div class="small center muted">${W.yLabel(G.year)} ${place(C)}・16頭。その年に${C.sex ? '活躍した牝馬' : `${e(C.label)}で活躍した馬`}だけが走る、年末のドリームレース。</div>
           <div class="small center mt">出るなら、招待された自分の馬から<b>1頭</b>を選ぶ。出ない年は、ほかの馬だけで走る（結果は観戦できる）。</div>
           <div class="dc-cards mt">${list.map(card).join('')}</div>
           <div class="btns mt"><button class="btn" data-x="no">この GF には出ない</button>${x.ans ? '<button class="btn" data-x="keep">このまま</button>' : ''}</div>

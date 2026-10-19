@@ -690,12 +690,12 @@ function fakeG1(G, h, name, surface, dist) {
   W.dirty();
 }
 
-check('season: 年末にグランドフィナーレが距離ごとに5つ開かれ、招待馬が12月2〜4週に走る', () => {
+check('season: 年末にグランドフィナーレが距離ごとの5つと牝馬の1つ開かれ、招待馬が12月2〜4週に走る', () => {
   const T = HS.Season;
   // 種：長距離の GF の招待馬が12頭以上いる世界（長距離の馬は少なく、種しだいで11頭前後になる。史実馬のデータが変わったら選び直す）
   W.newGame({ year: 2005, seed: 14, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
-  assert(T.GF_CATS.length === 5 && T.GF_CATS.map(c => `${c.surface}${c.dist}`).join() === '芝1000,ダ2000,芝1600,芝3200,芝2400', '5つの GF（芝1000・芝1600・芝2400・芝3200・ダ2000）が無い');
+  assert(T.GF_CATS.length === 6 && T.GF_CATS.map(c => `${c.surface}${c.dist}`).join() === '芝1000,ダ2000,芝2200,芝1600,芝3200,芝2400', '6つの GF（芝1000・芝1600・芝2400・芝3200・ダ2000・牝馬の芝2200）が無い');
   for (const w of [2, 3, 4]) assert(new Set(T.GF_CATS.filter(c => c.week === w).map(c => c.course)).size === T.GF_CATS.filter(c => c.week === w).length, `${w}週に同じ競馬場の GF が重なる`);
   // 強い現役馬を1頭、自分の馬にする（中長距離の G1 を勝った扱い）
   const star = W.all().filter(h => h.loc === 'stable' && G.year - h.born >= 3 && h.hist).sort((a, b) => b.gradedWins.length - a.gradedWins.length)[0];
@@ -706,7 +706,7 @@ check('season: 年末にグランドフィナーレが距離ごとに5つ開か�
   fakeG1(G, star, 'ジャパンC', '芝', 2400);
   assert(T.dcStatus(star, 'classic').state === 'sure', `中長距離の G1 を勝った自分の馬が「資格あり」にならない（${T.dcStatus(star, 'classic').state}）`);
   while (!(G.month === 12 && G.week === 1) && guard++ < 60) W.finishWeek({});
-  assert(G.dc && G.dc.y === G.year && G.dc.gf && Object.keys(G.dc.gf).length === 5, '5つの招待が決まらない');
+  assert(G.dc && G.dc.y === G.year && G.dc.gf && Object.keys(G.dc.gf).length === 6, '6つの招待が決まらない');
   for (const c of T.GF_CATS) assert(G.dc.gf[c.id].ai.length >= 12, `${c.label}の招待馬が少ない（${G.dc.gf[c.id].ai.length}）`);
   const ok = !star.injury;
   assert(G.dc.gf.classic.elig.some(x => x.id === star.id) || !ok, 'G1を勝った自分の馬が中長距離に招待されない');
@@ -723,11 +723,12 @@ check('season: 年末にグランドフィナーレが距離ごとに5つ開か�
       assert(card.runners.filter(x => x.horse.foreignTrained).length <= T.DC_FOREIGN, '外国の馬が多すぎる');
       assert(card.race.name === T.gfName(card.race.gf) && card.race.week === T.GF_BY[card.race.gf].week, 'GF の名前・週が違う');
       if (card.race.gf === 'classic' && ok && !star.injury) assert(card.ride && card.runners.filter(x => x.mine).length === 1, '返事が無いとき、おすすめの1頭で出ない');
+      if (card.race.gf === 'filly') assert(G.week === 2 && card.race.sex === '牝' && card.runners.every(x => x.horse.sex === '牝'), `牝馬の GF に牡馬・せん馬がいる（${card.runners.filter(x => x.horse.sex !== '牝').map(x => x.horse.name)}）か、2週でない`);
     }
     const rep = W.finishWeek({});
     for (const r of rep.races.filter(x => x.race.invite)) { assert(r.watch && r.sim.results[0].horse.gradedWins.some(g => g.short === r.race.name), '勝ち鞍に残らない'); ran.push(r.race.gf + ':' + r.sim.results[0].horse.name); }
   }
-  assert(ran.length === 5, `走った GF が5つでない（${ran.length}）`);
+  assert(ran.length === 6, `走った GF が6つでない（${ran.length}）`);
   const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
   return ran.join('・');
 });
@@ -790,13 +791,13 @@ check('dream: GF ごとの資格（G1・前年の勝ち馬・その距離の票�
   G2.dc = null; W.dirty();
   assert(T.dcStatus(champ, 'sprint').state === 'sure' && T.dcStatus(champ, 'classic').state === 'sure', '前の年の勝ち馬が確定にならない');
   assert(T.titles(champ).some(t => t.id === 'dc') && T.gfWins(champ).length >= 2, 'どの GF の勝ちも冠に数えない');
-  // スペシャルホース（伝説級）：前の年のその GF を勝った馬が出ると、距離の合う名馬だけ出てくる
+  // スペシャルホース（伝説級）：前の年のその GF を勝った馬が出ると、その GF の担当の名馬（データの gf）だけ出てくる
   const SP = HS.Special;
   const sprintRace = T.dcRace(G2.year, 'sprint');
   const lg = SP.pending(champ, sprintRace).filter(x => x.g.id === 'gf').map(x => x.d);
-  assert(lg.length && lg.every(d => T.gfFits(d, sprintRace)), `スプリントの GF の伝説級が距離に合わない（${lg.map(d => d.name)}）`);
+  assert(lg.length && lg.every(d => d.gf === 'sprint'), `短距離の GF の伝説級が担当でない（${lg.map(d => d.name)}）`);
   assert(!SP.pending(champ, T.dcRace(G2.year, 'mile')).some(x => x.g.id === 'gf'), '勝っていない GF にも伝説級が出る');
-  return `16位の票 ${T.GF_CATS.map(c => c.label + T.dcCut(c.id).votes).join(' ')}・伝説級（スプリント）${lg.map(d => d.name).join('・')}`;
+  return `16位の票 ${T.GF_CATS.map(c => c.label + T.dcCut(c.id).votes).join(' ')}・伝説級（短距離）${lg.map(d => d.name).join('・')}`;
 });
 
 check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデビューし、走っている間は馬の店に並ばない', () => {

@@ -1,31 +1,36 @@
-// 年末のドリームレース（グランドフィナーレ・GF）：距離ごとに5つ。出られる条件と、出るかどうかの選択（騎手のゲーム）
-// 持ち主の声 2026-10-16「GFはそれぞれの距離で開かれます」
-// 選ばれ方（GF ごとに16頭。入厩している3歳以上で、故障していない馬）：
-//   1. 確定：前の年のその GF の勝ち馬（連覇に挑む）と、その年にその区分の距離の G1 を勝った自分の馬
-//   2. 残り：その区分のレース（距離・馬場）で集めたファンの票の多い順。票はその年の成績で集まる（大きいレースほど・上の着ほど多い。1番人気で走るとファンが増える）。
+// 年末のドリームレース（グランドフィナーレ・GF）：距離ごとに5つと、牝馬の1つ。出られる条件と、出るかどうかの選択（騎手のゲーム）
+// 持ち主の声 2026-10-16「GFはそれぞれの距離で開かれます」・2026-10-17「GF　牝馬部門も追加して」
+// 選ばれ方（GF ごとに16頭。入厩している3歳以上で、故障していない馬。牝馬の GF は牝馬だけ）：
+//   1. 確定：前の年のその GF の勝ち馬（連覇に挑む）と、その年にその区分の距離の G1 を勝った自分の馬（牝馬の GF はどの G1 でも）
+//   2. 残り：その区分のレース（距離・馬場。牝馬の GF は全部のレース）で集めたファンの票の多い順。票はその年の成績で集まる（大きいレースほど・上の着ほど多い。1番人気で走るとファンが増える）。
 //      G1を1つ勝てば100票なので、その区分の G1 の勝ち馬はたいてい入る。票が同じなら総合力の順
 //   3. 票のある馬が16頭に足りなければ、その距離に向くほかの馬（総合力の順）で埋める（自分の馬は票が要る）
 //   外国で調教された馬は1つの GF に4頭まで（多いと日本の年末の大一番に見えない）。
-// 招待は12月1週。12月は4週しかないので、2・3週に2つずつ、4週に1つ開く。同じ馬が2つの GF に出るのは、間が2週あるときだけ（2週と4週）。
+// 招待は12月1週。12月は4週しかないので、2週に3つ（短距離・ダート・牝馬）、3週に2つ、4週に1つ開く。同じ馬が2つの GF に出るのは、間が2週あるときだけ（2週と4週）。
 // 自分の馬が何頭招待されても、1つの GF に出られるのは1頭だけ（プレイヤーが選ぶ）。出ないこともできる。空いた枠はほかの馬の次の順位から埋める。
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const T = HS.Season;
   if (!T) return;
 
-  // ---------- 5つの GF ----------
+  // ---------- 6つの GF（距離ごとの5つと牝馬） ----------
   const turf = (lo, hi) => r => r.surface !== 'ダ' && r.dist >= lo && r.dist <= hi;
   // 持ち主の決定 2026-10-16：芝1000・芝1600・芝2400・芝3200・ダート2000 の5つ。区分の境目（票・GF の馬の鍵）は数を見て決めた
   T.GF_CATS = [
     { id: 'sprint', label: '短距離', course: '新潟', surface: '芝', dist: 1000, week: 2, fit: turf(0, 1400) },       // 新潟の直線1000m（data/layouts.js の line）
     { id: 'dirt', label: 'ダート', course: '大井', surface: 'ダ', dist: 2000, week: 2, fit: r => r.surface === 'ダ' },
+    // 牝馬の GF（持ち主の声 2026-10-17）：牝馬だけ。票はその年の全部のレース（距離・馬場を問わない）から数える
+    { id: 'filly', label: '牝馬', course: '京都', surface: '芝', dist: 2200, week: 2, sex: '牝', fit: () => true },
     { id: 'mile', label: 'マイル', course: '東京', surface: '芝', dist: 1600, week: 3, fit: turf(1401, 2000) },
     { id: 'long', label: '長距離', course: '京都', surface: '芝', dist: 3200, week: 3, fit: turf(2801, 9999) },
     { id: 'classic', label: '中長距離', course: '東京', surface: '芝', dist: 2400, week: 4, fit: turf(2001, 2800) }, // 前からの GF（東京芝2400）
   ];
   T.GF_BY = {}; for (const c of T.GF_CATS) T.GF_BY[c.id] = c;
-  // AI の馬を割り振る順（1頭が2つに招待されるときは、この順で先の GF に出る）
-  T.GF_ORDER = ['classic', 'mile', 'sprint', 'long', 'dirt'];
+  // AI の馬を割り振る順（1頭が2つに招待されるときは、この順で先の GF に出る）。
+  // 牝馬の GF は中長距離の次：強い牝馬は牝馬の GF（2週）に出て、中長距離（4週）にも出られる。短距離・ダート（同じ2週）とマイル・長距離（3週）とは片方だけ
+  T.GF_ORDER = ['classic', 'filly', 'mile', 'sprint', 'long', 'dirt'];
+  // その GF に出られる性か（牝馬の GF は牝馬だけ）
+  T.gfSexOk = (h, cat) => { const C = T.GF_BY[cat]; return !C || !C.sex || h.sex === C.sex; };
   T.DC_PREV = ['ドリームクラシック']; // 前の名前
   T.DC_RESERVE = 6;                    // 招待のあとに故障した馬の代わり
   T.DC_FOREIGN = 4;                    // 外国で調教された馬の枠
@@ -40,18 +45,16 @@
     return c ? c.id : 'classic';
   };
   T.gfWins = h => (h.gradedWins || []).filter(g => T.isGF(g.short || g.race));
-  // 馬のデータ（史実馬）の得意な区分。馬の店の「GF の馬」の鍵に使う
+  // 馬のデータ（史実馬）の得意な区分。馬の店の「GF の馬」の鍵に使う。ダートの馬はダート、芝の牝馬は牝馬の GF
   T.gfCatOfData = function (d, peak) {
     if (d.surface === 'ダ' || (d.surface === '芝ダ' && peak && peak.dirt > peak.turf)) return 'dirt';
+    if (d.sex === '牝') return 'filly';
     if ((d.distMin || 0) >= 2000 && (d.distMax || 0) >= 3000) return 'long';
     const m = ((d.distMin || 1600) + (d.distMax || 2400)) / 2;
     return m <= 1400 ? 'sprint' : m <= 2000 ? 'mile' : 'classic';
   };
-  // スペシャルホース（伝説級）がこの GF の距離に合うか
-  T.gfFits = function (d, race) {
-    if (race.surface === 'ダ' ? d.surface === '芝' : d.surface === 'ダ') return false;
-    return race.dist >= (d.distMin || 1600) - 200 && race.dist <= (d.distMax || 2400) + 200;
-  };
+  // スペシャルホース（伝説級）がこの GF の担当か。担当はデータに書く（data/legends.js の gf と legendMarks。距離では合わせない）
+  T.gfLegendFor = (d, race) => !!d.gf && d.gf === race.gf;
   // 自分の馬が、前の年のこの GF を勝っているか（スペシャルホースの「伝説級」のリーチ）
   T.gfWonPrev = (h, race) => T.gfWins(h).some(g => g.y === race.year - 1 && T.gfCatOfName(g.short || g.race) === race.gf);
 
@@ -96,7 +99,7 @@
     const C = T.GF_BY[cat], wIdx = W.wIdx(), sf = C.surface === 'ダ' ? 'ダ' : '芝';
     const list = [], fill = [];
     for (const h of W.all()) {
-      if (h.loc !== 'stable' || h.injury || year - h.born < 3 || h.legend) continue;
+      if (h.loc !== 'stable' || h.injury || year - h.born < 3 || h.legend || !T.gfSexOk(h, cat)) continue;
       const g1 = T.g1Wins(h, year, cat), champ = T.dcChamp(h, year, cat), votes = T.votesOf(h, year, cat);
       const mine = h.owner === 'P';
       const fh = T.fh(h, wIdx, sf);
@@ -140,7 +143,11 @@
     const G = HS.World.get(), year = G.year;
     cat = cat || 'classic';
     if (!h || h.owner !== 'P' || h.loc === 'retired') return null;
-    const inv = G.dc && G.dc.y === year && G.dc.gf ? G.dc.gf[cat] : null;
+    if (!T.gfSexOk(h, cat)) return { ok: false, state: 'sex', text: '牝馬限定', need: `${T.gfName(cat)}は牝馬だけが出られる` };
+    const thisYear = G.dc && G.dc.y === year && G.dc.gf;
+    const inv = thisYear ? G.dc.gf[cat] : null;
+    // 牝馬の GF が無かった版のセーブで、招待が済んだ年：その GF はその年は開かれない
+    if (thisYear && !inv) return { ok: false, state: 'notInvited', text: '今年はなし' };
     if (inv) {
       const e = (inv.elig || []).find(x => x.id === h.id);
       if (e) return { ok: true, state: 'invited', text: inv.pick === h.id ? '出る' : '招待', why: e.why };
@@ -155,8 +162,8 @@
     if (x && x.in) return { ok: true, state: 'in', text: '圏内', why: `ファンの票 ${x.rank}位`, votes: x.votes, rank: x.rank, need: '12月1週まで圏内に残ること' };
     const v = x ? x.votes : 0;
     const gap = cut.tier < 2 ? null : Math.max(1, cut.votes - v + (cut.tier === 3 ? 0 : 1));
-    const where = T.GF_BY[cat].label;
-    return { ok: false, state: 'out', text: '圏外', votes: v, rank: x ? x.rank : null, need: gap ? `${where}のG1を1勝、または${where}のレースでファンの票をあと${gap}票` : `${where}のG1を1勝` };
+    const where = T.GF_BY[cat].sex ? '' : T.GF_BY[cat].label + 'の'; // 牝馬の GF は、どの G1・どのレースの票でもよい
+    return { ok: false, state: 'out', text: '圏外', votes: v, rank: x ? x.rank : null, need: gap ? `${where}G1を1勝、または${where}レースでファンの票をあと${gap}票` : `${where}G1を1勝` };
   };
 
   // ---------- 12月1週：招待 ----------
@@ -183,7 +190,7 @@
       gf[id] = { ai, elig, pick: null, ans: null };
     }
     G.dc = { y: G.year, gf };
-    W.news(`${T.DC_NAME}（12月2〜4週・距離ごとに5つ）の招待馬が決まった。`, 'g1');
+    W.news(`${T.DC_NAME}（12月2〜4週・距離ごとの5つと牝馬）の招待馬が決まった。`, 'g1');
     const mine = new Set(); for (const id in gf) for (const x of gf[id].elig) mine.add(x.id);
     if (mine.size) W.news(`${[...mine].map(id => W.horse(id).name).join('・')}に${T.DC_NAME}の招待が届いた！ 出るかどうかを決めてください。`, 'g1');
   };
@@ -255,11 +262,13 @@
     const G = HS.World.get(), R = HS.Races, C = T.GF_BY[cat || 'classic'];
     const arima = R.gradedOf(year, 12, 4).find(r => r.name === '有馬記念');
     // 大井の GF も、番組の上は JRA のレースとして扱う（地方の格付け Jpn にしない）
-    return {
+    const race = {
       name: T.gfName(C.id), short: T.gfName(C.id), gf: C.id, grade: 'GF', region: 'JRA', course: C.course, surface: C.surface, dist: C.dist, month: 12, week: C.week, age: '3+', weight: '定量',
       key: `${year}-12-${C.week}-GF-${C.id}`, graded: true, invite: true, year, prize: arima ? arima.prize : 20000,
       ground: R.ground(G.seed, year, 12, C.week, C.course),
     };
+    if (C.sex) race.sex = C.sex; // 牝馬の GF は牝馬限定
+    return race;
   };
   // その週の GF を足す（W.weekRaces から呼ぶ）。招待の決まった GF だけ
   T.addSpecial = function (list, year, month, week) {

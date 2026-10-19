@@ -76,8 +76,8 @@
     { id: 'us3', label: '米国の三冠馬', note: 'ケンタッキーダービー・プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['ケンタッキーダービー', 'プリークネスS']), member: d => dn(d, 'ケンタッキーダービー') && dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
     { id: 'us2', label: '米国の名馬', note: 'プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['プリークネスS']), member: d => dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
     { id: 'aus', label: '豪州の英雄', note: 'コックスプレートを勝ってメルボルンカップへ', finals: ['メルボルンカップ'], legs: sameYear(['コックスプレート']), member: d => dn(d, 'コックスプレート') && dn(d, 'メルボルンカップ') },
-    { id: 'gf', label: '伝説級の名馬', note: 'グランドフィナーレを勝って、次の年の同じ距離のグランドフィナーレへ', finals: null, top: true, // 距離ごとの GF（dream.js）。距離の合う名馬だけ出る
-      legs: (h, race) => race.grade === 'GF' && HS.Season.gfWonPrev(h, race), fit: (d, race) => HS.Season.gfFits(d, race), member: () => true },
+    { id: 'gf', label: '伝説級の名馬', note: 'グランドフィナーレを勝って、次の年の同じグランドフィナーレへ', finals: null, top: true, // GF（dream.js）ごとに、担当の名馬（データの gf）だけ出る
+      legs: (h, race) => race.grade === 'GF' && HS.Season.gfWonPrev(h, race), fit: (d, race) => HS.Season.gfLegendFor(d, race), member: () => true },
     { id: 'g1five', label: 'G1を5勝した名馬', note: 'G1を4勝して、次のG1へ', finals: null, legs: (h, race) => race.grade === 'G1' && gw(h).length && (h.gradedWins || []).filter(g => g.grade === 'G1').length === 4, member: d => g1Count(d) >= 5 },
     { id: 'unbeaten', label: '無敗の名馬', note: `デビューから無敗で${SP.STREAK - 1}連勝して、次のレースへ`, finals: null, legs: h => (h.starts || 0) === (h.wins || 0) && (h.wins || 0) === SP.STREAK - 1, member: d => SP.unbeatenOf(d) >= SP.STREAK },
   ];
@@ -106,10 +106,10 @@
     return pool;
   };
   SP.data = name => SP.pool().find(d => d.name === name) || null;
-  SP.isTop = d => d.tier === 'legend'; // 伝説級：グランドフィナーレのグループだけに入る。固有の能力は伝説級かどうかで決めない（data/uniques.js に名前があるか。js/core/skills.js の K.hasUnique。持ち主の決定 2026-10-17）
+  SP.isTop = d => d.tier === 'legend'; // 伝説級：グランドフィナーレのグループだけに入る（担当の GF はデータの gf）。固有の能力は伝説級かどうかで決めない（data/uniques.js に名前があるか。js/core/skills.js の K.hasUnique。持ち主の決定 2026-10-17）
   // 1頭が出てくる条件は1つだけ（持ち主の決定 2026-10-16）。グループに優先順を付け、各馬は当てはまるいちばん上のグループに入る
-  // スピードシンボリは有馬記念の連覇（春の王者より上）。ダリア・アレフランス・ミエスクは G1を5勝した名馬のまま：
-  // 3頭とも年をまたいで路線の違う G1 を重ねた馬で、1つの冠の組み合わせより「G1 を5勝」が史実の顔に合う
+  // スピードシンボリは有馬記念の連覇（春の王者より上）。ミエスクは G1を5勝した名馬のまま：年をまたいで路線の違う G1 を重ねた馬で、
+  // 1つの冠の組み合わせより「G1 を5勝」が史実の顔に合う（ダリア・アレフランスも同じ理由でここにいたが、2026-10-17 に牝馬の GF の伝説級になった）
   SP.PRIORITY = ['gf', 'triple', 'us3', 'uk3', 'arc2', 'unbeaten', 'ftriple', 'long', 'nikan', 'arima2', 'local', 'allround', 'filly', 'europe', 'autumn', 'spring', 'grandprix', 'tenno', 'mile', 'us2', 'aus', 'g1five'];
   let assign = null;
   const assignAll = function () {
