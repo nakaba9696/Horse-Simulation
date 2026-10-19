@@ -293,7 +293,10 @@ func _build_right() -> void:
 	var offers := HSOwners.offers()
 	right.add_child(UiScreen.section("騎乗依頼", "%d件" % offers.size()))
 	if offers.is_empty():
-		right.add_child(_note_panel("今週の騎乗依頼はありません"))
+		if HSOwners.known_list().is_empty():
+			right.add_child(_note_panel("まだ騎乗依頼をくれる馬主はいない。自分の馬で結果を出すと声がかかる（条件は馬主の画面）"))
+		else:
+			right.add_child(_note_panel("今週の騎乗依頼はありません"))
 	for o in offers.slice(0, 3):
 		var c = _offer_card(o)
 		if c: right.add_child(c)
@@ -334,7 +337,10 @@ func _build_right() -> void:
 func _note_panel(text: String) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.SURFACE, UiTheme.LINE, 1, 10, Vector4(14, 8, 14, 8)))
-	p.add_child(UiTheme.label(text, 14, UiTheme.FAINT))
+	var l := UiTheme.label(text, 14, UiTheme.FAINT)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = 100
+	p.add_child(l)
 	return p
 
 static func face_tex(oid: String, mood := "base") -> Texture2D:
@@ -383,6 +389,7 @@ func _offer_card(o: Dictionary) -> Variant:
 	var who := HBoxContainer.new()
 	who.add_theme_constant_override("separation", 8)
 	who.add_child(UiTheme.label(String(ow.name), 16))
+	who.add_child(UiScreen.owner_sign_chip(ow, 11))
 	who.add_child(UiTheme.chip(String(HSOwners.tier_of(o.oid).label), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
 	if o.get("best"):
 		who.add_child(UiTheme.chip("いちばんの馬", UiTheme.SURFACE_3, UiTheme.WARN, 11))

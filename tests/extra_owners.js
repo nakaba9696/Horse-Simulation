@@ -5,6 +5,8 @@ module.exports = function (check, assert, HS) {
   const PATTERNS = ['plain', 'hoops', 'stripes', 'sash', 'cross', 'diamonds', 'stars', 'halves', 'yoke'];
   const SCENES = ['offer', 'paddock', 'win', 'bigwin', 'good', 'lose', 'decline'];
   const newGame = seed => { W.newGame({ seed, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' }); return W.get(); };
+  // 全員と縁を作る（依頼の仕組みだけを見るテスト用。出会いの場面は見たことにする）
+  const meetAll = () => { for (const o of O.list()) O.meet(o.id, { horse: 'テストホース', race: 'テストのレース' }); O.state().queue = []; };
 
   check('owners: 馬主は6〜8人・架空・勝負服・好み・思い出の名馬・場面ごとの台詞（印の無い文が必ずある）・避ける癖', () => {
     const L = D.owners;
@@ -27,7 +29,7 @@ module.exports = function (check, assert, HS) {
       const af = require('path').join(__dirname, '..', 'assets', `owners_${o.id}.js`);
       const at = require('fs').existsSync(af) ? require('fs').readFileSync(af, 'utf8') : '';
       for (const m of ['base', 'smile', 'joy', 'sad']) assert(at.includes(`owner_${o.id}_${m}`), `${o.name} の絵 owner_${o.id}_${m} が無い`);
-      for (const k of ['up1', 'up2', 'up3', 'gift', 'bond', 'award']) assert((o.scenes[k] || []).length >= 2, `${o.name} の場面 ${k} が無い`);
+      for (const k of ['meet', 'up1', 'up2', 'up3', 'gift', 'bond', 'award']) assert((o.scenes[k] || []).length >= 2, `${o.name} の場面 ${k} が無い`);
       const all = JSON.stringify([o.lines, o.scenes, o.intro]);
       for (const m of all.matchAll(/\{(\w+)\}/g)) assert(['me', 'horse', 'race'].includes(m[1]), `${o.name} の文に知らない差し込み {${m[1]}}`);
       assert(!/どこか|少しだけ|そっと|ふと|まるで|気がした|胸が温かく/.test(all), `${o.name} の文に避ける癖の語`);
@@ -36,8 +38,77 @@ module.exports = function (check, assert, HS) {
     return `${L.length}人`;
   });
 
+  check('owners: 看板の特徴は7人で重ならない・補いは2つまで・依頼が始まる条件とヒントがある（避ける癖）', () => {
+    const signs = new Set();
+    for (const o of D.owners) {
+      const s = O.signOf(o);
+      assert(O.LIKE_LABEL[s], `${o.name} の看板の特徴 ${s} に名前が無い`);
+      assert(!signs.has(s), `${o.name} の看板の特徴 ${O.signLabel(o)} がほかと同じ`); signs.add(s);
+      assert(o.likes.length <= 3 && o.likes.every(k => O.LIKE_LABEL[k]), `${o.name} の好みが多いか、名前の無い好みがある（${o.likes}）`);
+      const u = o.unlock;
+      assert(u && u.text && u.hint && Object.keys(u).length > 2, `${o.name} の依頼が始まる条件が無い`);
+      assert(!/どこか|少しだけ|そっと|ふと|まるで|気がした|……/.test(u.hint + u.text), `${o.name} の条件の文に避ける癖の語`);
+      assert(!u.hint.includes(o.name.split(' ')[0]), `${o.name} のヒントに名前が出ている`);
+    }
+    const usa = D.owners.filter(o => o.likes.includes('usa')).map(o => o.name);
+    assert(usa.length >= 1, 'アメリカ好きの馬主がいない');
+    return D.owners.map(o => `${o.name.split(' ')[0]}＝${O.signLabel(o)}`).join('・') + `（アメリカ好き：${usa.join('・')}）`;
+  });
+
+  check('owners: はじめは依頼が来ない・条件を満たすと縁ができ、出会いの場面が積まれ、次の週からその馬主の依頼が来る', () => {
+    const G = newGame(31);
+    for (let i = 0; i < 3; i++) {
+      assert(O.offers().length === 0, `はじめの${i + 1}週目に依頼が来た`);
+      assert(O.knownList().length === 0, '縁のある馬主がいる');
+      W.finishWeek({});
+    }
+    // 条件を満たさない結果では縁ができない（1400m 以下の3着以内 → 千石。1600m では違う）
+    const o = O.by('sengoku');
+    const horse = { name: 'テストホース', sex: '牡', style: '先行' };
+    O.meetCheck({ dist: 1600, surface: '芝', region: 'JRA', name: 'テスト', graded: false }, { pos: 1, horse });
+    assert(!O.known('sengoku'), '1600m で千石さんと縁ができた');
+    O.meetCheck({ dist: 1200, surface: '芝', region: 'JRA', name: '2歳未勝利', graded: false, age: '2' }, { pos: 3, horse });
+    assert(O.known('sengoku') && O.of('sengoku').knownAt.y === G.year, '1200m の3着で千石さんと縁ができない');
+    assert(!O.known('takarada') && !O.known('kirishima'), 'ほかの馬主とも縁ができた');
+    const q = O.state().queue.find(x => x.oid === 'sengoku' && x.kind === 'meet');
+    assert(q && O.sceneLines('sengoku', 'meet', { horse: q.horse, race: q.race }).length >= 2, '出会いの場面が無い');
+    assert(G.news.some(n => n.text.includes(o.name) && n.text.includes('声がかかった')), '縁のニュースが無い');
+    O.state().queue = [];
+    W.finishWeek({});
+    let n = 0;
+    for (let i = 0; i < 6; i++) {
+      const offs = O.offers();
+      assert(offs.every(x => x.oid === 'sengoku'), `縁の無い馬主から依頼（${offs.map(x => x.oid)}）`);
+      n += offs.length;
+      W.finishWeek({});
+    }
+    assert(n > 0, '縁ができたあと6週、千石さんの依頼が来ない');
+    return `縁のあと6週で依頼 ${n}件`;
+  });
+
+  check('owners: 看板の特徴に合う依頼が7割以上（段階 顔見知り・信頼）', () => {
+    newGame(47);
+    const t = {};
+    for (let i = 0; i < (QUICK ? 16 : 40); i++) {
+      const cards = W.cards();
+      for (const tier of [0, 1]) for (const ofr of O.generate(cards, `s${i}`, { tier, all: true })) {
+        const c = cards.find(c => c.race.key === ofr.raceKey), h = c.runners.find(x => x.horse.id === ofr.horseId).horse;
+        const x = t[ofr.oid] = t[ofr.oid] || { n: 0, fit: 0 };
+        x.n++; if (O.signFits(O.by(ofr.oid), c.race, h)) x.fit++;
+      }
+      W.finishWeek({});
+    }
+    const rows = O.list().map(o => ({ o, x: t[o.id] || { n: 0, fit: 0 } }));
+    for (const { o, x } of rows) {
+      assert(x.n >= (QUICK ? 4 : 10), `${o.name} の依頼が少ない（${x.n}件）`);
+      assert(x.fit / x.n >= 0.7, `${o.name}（${O.signLabel(o)}）の依頼で看板の特徴に合うのが ${x.fit}/${x.n}`);
+    }
+    return rows.map(({ o, x }) => `${O.signLabel(o)} ${Math.round(x.fit / x.n * 100)}%（${x.n}件）`).join('・');
+  });
+
   check('owners: 依頼は毎週来る・受けると乗り、結果で好感度と騎乗料が動く・断ると下がる（段階の入口より下がらない）', () => {
     const G = newGame(31);
+    meetAll();
     let weeks = 0, rides = 0, minN = 99;
     const money0 = G.player.money;
     for (let i = 0; i < (QUICK ? 10 : 20); i++) {
@@ -77,7 +148,7 @@ module.exports = function (check, assert, HS) {
     const stat = { 0: { cls: [], fh: [], max: 0 }, 3: { cls: [], fh: [], max: 0 } };
     for (let i = 0; i < (QUICK ? 16 : 30); i++) {
       const cards = W.cards(), key = `t${i}`;
-      for (const t of [0, 3]) for (const o of O.generate(cards, key, { tier: t })) {
+      for (const t of [0, 3]) for (const o of O.generate(cards, key, { tier: t, all: true })) {
         const c = cards.find(c => c.race.key === o.raceKey), h = c.runners.find(x => x.horse.id === o.horseId).horse;
         const cls = O.classOf(c.race);
         stat[t].cls.push(cls); stat[t].fh.push(O.peak(h)); stat[t].max = Math.max(stat[t].max, cls);
@@ -131,14 +202,56 @@ module.exports = function (check, assert, HS) {
     W.load(JSON.stringify(old));
     const g = W.get();
     assert(g.owners && O.list().every(o => g.owners.st[o.id]), '古いセーブに馬主の既定値が入らない');
-    assert(O.offers().length >= 1, '古いセーブで依頼が来ない');
+    assert(O.knownList().length === 0 && O.offers().length === 0, '馬主の項目が無いセーブで、縁のある馬主がいる');
     const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
     void G;
     return '';
   });
 
+  check('owners: 縁の項目が無い前のセーブ：依頼を受けた・好感度がある馬主は縁がある扱い、ほかは無い', () => {
+    newGame(67);
+    W.finishWeek({});
+    const old = JSON.parse(W.serialize());
+    for (const st of Object.values(old.owners.st)) delete st.known;
+    Object.assign(old.owners.st.takenouchi, { met: true, rides: 3, pts: 40 });
+    Object.assign(old.owners.st.hanabusa, { pts: 12 });
+    Object.assign(old.owners.st.kirishima, { met: true });   // 断っただけ
+    W.load(JSON.stringify(old));
+    const known = O.list().filter(o => O.known(o.id)).map(o => o.id).sort();
+    assert(known.join() === ['hanabusa', 'kirishima', 'takenouchi'].join(), `縁のある馬主 ${known}`);
+    let n = 0, bad = 0;
+    for (let i = 0; i < 6; i++) { const offs = O.offers(); n += offs.length; bad += offs.filter(x => !known.includes(x.oid)).length; W.finishWeek({}); }
+    assert(n > 0 && bad === 0, `前のセーブの依頼 ${n}件（縁の無い馬主から ${bad}件）`);
+    return `縁 ${known.join('・')}・6週の依頼 ${n}件`;
+  });
+
+  check('owners: 自動で遊ぶと、序盤に最初の縁ができ、数年で全員と縁ができる（重い条件でも届く）', () => {
+    // 遊び方：お手馬が5頭より少なければ買えるいちばん安い馬を買い、来た依頼は受ける（おまかせ騎乗）
+    const G = newGame(5);
+    const y0 = G.year, years = QUICK ? 1 : 4;
+    let wk = 0;
+    const met = {};
+    while (G.year < y0 + years && Object.keys(met).length < O.list().length) {
+      if (W.mine().filter(h => h.loc !== 'retired').length < 5) {
+        const it = W.marketHistoric().slice().sort((a, b) => a.price - b.price).find(x => x.price <= G.player.money);
+        if (it) W.buy(it);
+      }
+      for (const o of O.offers()) if (!O.clash(o)) O.accept(o.raceKey, o.horseId);
+      W.finishWeek({}); wk++;
+      for (const o of O.list()) if (O.known(o.id) && met[o.id] == null) met[o.id] = wk;
+      O.state().queue = [];
+    }
+    const first = Math.min(...Object.values(met));
+    assert(Object.keys(met).length >= 1 && first <= 30, `最初の縁が遅い（${first}週目）`);
+    if (QUICK) assert(Object.keys(met).length >= 2, `1年で縁のある馬主 ${Object.keys(met).length}人`);
+    else assert(Object.keys(met).length === O.list().length, `${years}年で縁が無い馬主：${O.list().filter(o => met[o.id] == null).map(o => o.name).join('・')}`);
+    const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
+    return `最初の縁 ${first}週目・` + Object.entries(met).sort((a, b) => a[1] - b[1]).map(([k, w]) => `${O.by(k).name.split(' ')[0]} ${w}週`).join('・');
+  });
+
   check('owners: 依頼を受け続けて自動で何年か遊んでも壊れない', () => {
     const G = newGame(73);
+    meetAll();
     const years = QUICK ? 1 : 2;
     const y0 = G.year;
     let acc = 0, dec = 0, n = 0;

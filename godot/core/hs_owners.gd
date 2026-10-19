@@ -1,5 +1,7 @@
 # 馬主と騎乗依頼（js/core/owners.js の HS.Owners と同じ）：AI の馬の一部を架空の馬主が持ち、毎週「この馬でこのレースに」と依頼が来る。
 # 好感度の段階・ご褒美・名コンビ賞。乱数は週と馬の名前から決まるもの（U.hashRng）だけで、世界の乱数は使わない。セーブは G.owners
+# はじめはだれからも依頼が来ない。馬主ごとの条件（data の unlock）を満たすと縁ができ（known）、次の週から依頼が来る。
+# 看板の特徴（likes の先頭）に合う馬を持ち、合うレースの依頼を出す
 class_name HSOwners
 
 static func LIST() -> Array: return HSData.d().get("owners", [])
@@ -21,9 +23,11 @@ const FEE := [10.0, 30.0, 50.0, 100.0, 200.0]
 const GIFT := 1000.0
 const AWARD := 500.0
 const AWARD_MIN := 3.0
+const SIGN_RATE := 0.9
+const OFF_SIGN := 0.25
 
 static func on() -> bool: return HSJockey.is_mode()
-static func _blank() -> Dictionary: return { pts = 0.0, tier = 0.0, met = false, rides = 0.0, wins = 0.0, big = 0.0, dec = 0.0, streak = 0.0, fees = 0.0, got = {}, years = {} }
+static func _blank() -> Dictionary: return { pts = 0.0, tier = 0.0, met = false, known = false, rides = 0.0, wins = 0.0, big = 0.0, dec = 0.0, streak = 0.0, fees = 0.0, got = {}, years = {} }
 static func init() -> Dictionary:
 	var st := {}
 	for o in LIST(): st[o.id] = _blank()
@@ -32,7 +36,11 @@ static func fill(s: Variant) -> Dictionary:
 	if not s: s = init()
 	if not s.get("st"): s.st = {}
 	for o in LIST():
-		var b := _blank(); b.merge(HSU.or_(s.st.get(o.id), {}), true); s.st[o.id] = b
+		var old = s.st.get(o.id)
+		# 縁の項目が無い前のセーブ：依頼を受けた・断った・乗った・好感度がある馬主は、縁がある扱い
+		if old and not old.has("known"):
+			old.known = bool(HSU.truthy(old.get("met")) or HSU.truthy(old.get("rides")) or HSU.truthy(old.get("pts")) or HSU.truthy(old.get("tier")))
+		var b := _blank(); b.merge(HSU.or_(old, {}), true); s.st[o.id] = b
 	for k in ["log", "queue", "react"]:
 		if not s.get(k): s[k] = []
 	if not s.get("awards"): s.awards = {}
@@ -52,6 +60,15 @@ static func next_tier(id: String) -> Variant: return TIERS[int(of(id).tier) + 1]
 static func _yen(v: float) -> float: return HSMath.round_js(v * HSU.price_index(HSWorld.G.year) / 10.0) * 10.0
 
 # ---------- 好み ----------
+# 国の好み（usa・europe）：その国で生まれた馬・その国の種牡馬の仔、その国のレース
+const EU := ["英", "愛", "仏", "独", "伊"]
+static var _sire_c: Variant = null
+static func _sire_country(h: Dictionary) -> String:
+	if _sire_c == null:
+		_sire_c = {}
+		for s in HSData.d().get("stallions", []): _sire_c[s.name] = String(HSU.or_(s.get("country"), ""))
+	var sr = h.get("sire")
+	return String(_sire_c.get(sr, "")) if sr else ""
 static func _fit_h(k: String, h: Dictionary) -> float:
 	match k:
 		"sprint": return 1.0 if float(HSU.or_(h.get("distMax"), 2000.0)) <= 1600 else (0.5 if float(HSU.or_(h.get("distMin"), 1600.0)) <= 1400 else 0.0)
@@ -65,8 +82,11 @@ static func _fit_h(k: String, h: Dictionary) -> float:
 		"foreign": return 1.0 if (h.get("foreign") or h.get("foreignTrained") or (h.get("country") and h.country != "日")) else 0.0
 		"blood": return 1.0 if h.get("hist") else 0.0
 		"local": return 1.0 if h.get("local") else 0.0
+		"classic": return 1.0 if ((not h.get("apt") or h.apt.turf >= h.apt.dirt) and float(HSU.or_(h.get("distMin"), 1600.0)) <= 2000 and float(HSU.or_(h.get("distMax"), 2000.0)) >= 2000) else 0.0
+		"usa": return 1.0 if h.get("country") == "米" else (0.5 if _sire_country(h) == "米" else 0.0)
+		"europe": return 1.0 if EU.has(h.get("country")) else (0.5 if EU.has(_sire_country(h)) else 0.0)
 	return 0.0
-const _FIT_H := ["sprint", "mile", "long", "dirt", "turf", "filly", "front", "closer", "foreign", "blood", "local"]
+const _FIT_H := ["sprint", "mile", "long", "dirt", "turf", "filly", "front", "closer", "foreign", "blood", "local", "classic", "usa", "europe"]
 static func _fit_r(k: String, r: Dictionary) -> float:
 	match k:
 		"sprint": return 1.0 if r.dist <= 1400 else 0.0
@@ -80,6 +100,8 @@ static func _fit_r(k: String, r: Dictionary) -> float:
 		"classic": return 1.0 if (r.get("age") == "3" and r.get("graded")) else 0.0
 		"young": return 1.0 if r.get("age") == "2" else 0.0
 		"veteran": return 1.0 if (r.get("age") == "3+" or r.get("age") == "4+") else 0.0
+		"usa": return 1.0 if (r.get("region") == "海外" and r.get("country") == "米") else 0.0
+		"europe": return 1.0 if (r.get("region") == "海外" and EU.has(r.get("country"))) else 0.0
 	return 0.0
 static func fit_horse(o: Dictionary, h: Dictionary) -> float:
 	if not o.likes.size(): return 0.0
@@ -91,6 +113,73 @@ static func fit_race(o: Dictionary, r: Dictionary) -> float:
 	var s := 0.0
 	for k in o.likes: s += _fit_r(k, r)
 	return s / o.likes.size()
+
+# ---------- 看板の特徴（likes の先頭） ----------
+const LIKE_LABEL := {
+	"sprint": "短距離好き", "mile": "マイル好き", "long": "長距離好き", "dirt": "ダート好き", "turf": "芝好き", "filly": "牝馬好き", "front": "逃げ馬好き",
+	"closer": "差し馬好き", "foreign": "外国の馬好き", "overseas": "海外好き", "local": "地方好き", "classic": "クラシック好き", "young": "2歳馬好き",
+	"veteran": "古馬好き", "blood": "血統好き", "usa": "アメリカ好き", "europe": "欧州好き",
+}
+static func sign_of(o: Variant) -> String:
+	return String(o.likes[0]) if o and o.get("likes") and o.likes.size() else ""
+static func sign_label(o: Variant) -> String: return String(LIKE_LABEL.get(sign_of(o), ""))
+static func sub_labels(o: Variant) -> Array:
+	var out: Array = []
+	if o and o.get("likes"):
+		for k in o.likes.slice(1):
+			if LIKE_LABEL.has(k): out.append(LIKE_LABEL[k])
+	return out
+# 依頼（レースと馬）が看板の特徴に合うか
+static func sign_fits(o: Dictionary, race: Dictionary, h: Dictionary) -> bool:
+	match sign_of(o):
+		"sprint": return race.dist <= 1400
+		"dirt": return race.surface == "ダ"
+		"long": return race.dist >= 2000
+		"classic": return race.get("age") == "2" or race.get("age") == "3" or HSWorld.G.year - float(h.born) <= 3
+		"front": return h.get("style") == "逃げ"
+		"closer": return h.get("style") == "差し" or h.get("style") == "追込"
+		"filly": return h.get("sex") == "牝"
+		"usa": return _fit_r("usa", race) > 0 or _fit_h("usa", h) > 0
+		"europe": return _fit_r("europe", race) > 0 or _fit_h("europe", h) > 0
+	return true
+# 馬を持つときの重み：看板の特徴に合う馬を強く好む
+static func _own_w(o: Dictionary, h: Dictionary) -> float:
+	var k := sign_of(o)
+	return 0.2 + (_fit_h(k, h) if _FIT_H.has(k) else 0.0) * 3.0 + fit_horse(o, h)
+
+# ---------- 縁（依頼が始まる条件） ----------
+static func known(id: String) -> bool: return bool(of(id).known)
+static func known_list() -> Array: return LIST().filter(func(o): return known(o.id))
+static func unlock_ok(u: Variant, race: Dictionary, me: Dictionary) -> bool:
+	if not u: return true
+	var h: Dictionary = HSU.or_(me.get("horse"), {})
+	if u.get("pos") and not (float(me.pos) <= float(u.pos)): return false
+	if u.get("minDist") and race.dist < u.minDist: return false
+	if u.get("maxDist") and race.dist > u.maxDist: return false
+	if u.get("surface") and race.surface != u.surface: return false
+	if u.get("sex") and h.get("sex") != u.sex: return false
+	if u.get("style") and not u.style.has(h.get("style")): return false
+	if u.get("graded") and not race.get("graded"): return false
+	if u.get("age") and not u.age.has(race.get("age")): return false
+	if u.get("region") and race.get("region") != u.region: return false
+	return true
+# 縁ができる：次の週から依頼が来る。出会いの場面（kind "meet"）を積む
+static func meet(oid: String, ctx: Dictionary = {}) -> bool:
+	var o = by(oid); var st := of(oid)
+	if not o or st.known: return false
+	var g = HSWorld.G; var s := state()
+	st.known = true; st.knownAt = { y = g.year, m = g.month, w = g.week }
+	HSWorld.news("%sさん（%s）から声がかかった。これから騎乗依頼が来る。" % [o.name, sign_label(o)], "good")
+	s.queue.append({ oid = oid, kind = "meet", horse = String(ctx.get("horse", "")), race = String(ctx.get("race", "")), reward = "", y = g.year })
+	return true
+# 自分が乗ったレースの結果で、まだ縁のない馬主の条件を見る
+static func meet_check(race: Dictionary, me: Dictionary) -> void:
+	for o in LIST():
+		if not of(o.id).known and unlock_ok(o.get("unlock"), race, me): meet(o.id, { horse = me.horse.name, race = HSRaces.label(race) })
+# 縁がまだ無い馬主の、条件のヒント
+static func hint(oid: String) -> String:
+	var o = by(oid)
+	return String(o.unlock.get("hint", "")) if o and o.get("unlock") else ""
 
 # ---------- 馬主の馬（馬の名前と種から決まる） ----------
 static var _own: Variant = null
@@ -109,7 +198,7 @@ static func owner_of(h: Variant) -> Variant:
 	var res = null
 	if r.chance(OWNED_FILLER if h.get("filler") else OWNED):
 		var ok: Array = LIST().filter(func(o): return not o.get("only") or (_FIT_H.has(o.only) and _fit_h(o.only, h)))
-		if ok.size(): res = r.weighted(ok, func(o): return 0.35 + fit_horse(o, h) * 2.0).id
+		if ok.size(): res = r.weighted(ok, func(o): return _own_w(o, h)).id
 	_own.map[key] = res
 	return res
 static func peak(h: Dictionary) -> float:
@@ -156,6 +245,7 @@ static func generate(cs: Array, key: String, opts: Dictionary = {}) -> Array:
 			if x.get("mine") or x.horse.get("owner") == "P" or x.horse.get("legend"): continue
 			var oid = owner_of(x.horse)
 			if not oid: continue
+			if not opts.get("all") and not of(oid).known: continue
 			var strength := 1.0 - k / HSU.mx(1.0, ranked.size() - 1.0)
 			if not allowed(tierOf.call(oid), race, x.horse, strength): continue
 			if not per.has(oid): per[oid] = []
@@ -177,12 +267,20 @@ static func generate(cs: Array, key: String, opts: Dictionary = {}) -> Array:
 		if bestPick:
 			push.call(o, bestPick, true); continue
 		if not r.chance(0.4 + 0.1 * tier): continue
+		var fit: Array = cand.filter(func(y): return sign_fits(o, y.c.race, y.x.horse))
+		var pool: Array = cand
+		if fit.size():
+			if r.chance(SIGN_RATE): pool = fit
+		elif not r.chance(OFF_SIGN): continue
 		var want := 0.3 + 0.17 * tier
-		var pick = r.weighted(cand, func(y): return (HSMath.exp_(-HSMath.pow_((y.strength - want) / 0.3, 2.0)) + 0.02) * (1.0 + class_of(y.c.race) * tier * 0.6) * (1.0 + fit_race(o, y.c.race) + fit_horse(o, y.x.horse)))
+		var pick = r.weighted(pool, func(y): return (HSMath.exp_(-HSMath.pow_((y.strength - want) / 0.3, 2.0)) + 0.02) * (1.0 + class_of(y.c.race) * tier * 0.6) * (1.0 + fit_race(o, y.c.race) + fit_horse(o, y.x.horse)))
 		push.call(o, pick, false)
 	if not out.size():
 		var cands: Array = HSU.stable_sort(owners.filter(func(o): return per.get(o.id, []).size()), func(a, b): return per[a.id].size() > per[b.id].size())
-		if cands.size(): push.call(cands[0], r.pick(per[cands[0].id]), false)
+		if cands.size():
+			var o0: Dictionary = cands[0]
+			var fit0: Array = per[o0.id].filter(func(y): return sign_fits(o0, y.c.race, y.x.horse))
+			push.call(o0, r.pick(fit0 if fit0.size() else per[o0.id]), false)
 	return out
 static func _wk_key() -> String:
 	var g = HSWorld.G; return "%s-%s-%s" % [HSU.num(g.year), HSU.num(g.month), HSU.num(g.week)]

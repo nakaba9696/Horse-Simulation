@@ -18,14 +18,14 @@ var pv: VBoxContainer
 var sel := 0
 
 func hint() -> String:
-	return "依頼を受けて結果を出すと好感度が上がり、大きなレースで強い馬の依頼が来る。断ると少し下がる"
+	return "はじめは縁が無く、条件を満たすと声がかかる。依頼を受けて結果を出すと好感度が上がり、大きなレースで強い馬の依頼が来る"
 
 func on_back() -> void:
 	go("home")
 
 func build() -> void:
 	backdrop("bg_home", 0.84)
-	make_band("主", "馬主", "騎乗依頼をくれる人たち", [["馬主", "%d人" % HSOwners.LIST().size()], ["暦", UiFlow.date_label()]])
+	make_band("主", "馬主", "騎乗依頼をくれる人たち", [["縁のある馬主", "%d/%d人" % [HSOwners.known_list().size(), HSOwners.LIST().size()]], ["暦", UiFlow.date_label()]])
 	var v := VBoxContainer.new()
 	v.position = Vector2(PAD_X, TOP + 4)
 	v.custom_minimum_size = Vector2(760, 0)
@@ -36,19 +36,32 @@ func build() -> void:
 		var rb := UiScreen.row_button(112, st.tier >= 2)
 		var b: Button = rb[0]
 		var hb: HBoxContainer = rb[1]
-		hb.add_child(_face(String(o.id), "smile" if st.tier >= 2 else "base", 80, 98))
 		var cv := VBoxContainer.new()
 		cv.add_theme_constant_override("separation", 2)
 		cv.alignment = BoxContainer.ALIGNMENT_CENTER
 		cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var who := HBoxContainer.new()
 		who.add_theme_constant_override("separation", 8)
-		who.add_child(UiTheme.label(String(o.name), 17))
-		who.add_child(UiTheme.chip(String(HSOwners.tier_of(String(o.id)).label), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
-		who.add_child(UiTheme.label("%s・%d歳" % [o.title, int(o.age)], 12, UiTheme.MUTED))
-		cv.add_child(who)
-		cv.add_child(_gauge(String(o.id), 420))
-		cv.add_child(UiTheme.label("次のご褒美：%s　一緒に %d戦%d勝" % [_next_reward(String(o.id)), int(st.rides), int(st.wins)], 12, UiTheme.MUTED))
+		if not st.known:
+			# まだ縁の無い馬主：顔と名前を伏せ、看板の特徴と条件のヒントだけ
+			hb.add_child(UiScreen.owner_q_face(80, 98))
+			who.add_child(UiTheme.label("まだ会っていない馬主", 17, UiTheme.MUTED))
+			who.add_child(UiScreen.owner_sign_chip(o, 12))
+			cv.add_child(who)
+			var hl := UiTheme.label(HSOwners.hint(String(o.id)), 14, UiTheme.GOLD_BRIGHT)
+			hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			hl.custom_minimum_size.x = 100
+			cv.add_child(hl)
+			cv.add_child(UiTheme.label("条件を満たすと声がかかり、次の週から騎乗依頼が来る", 12, UiTheme.FAINT))
+		else:
+			hb.add_child(_face(String(o.id), "smile" if st.tier >= 2 else "base", 80, 98))
+			who.add_child(UiTheme.label(String(o.name), 17))
+			who.add_child(UiScreen.owner_sign_chip(o, 12))
+			who.add_child(UiTheme.chip(String(HSOwners.tier_of(String(o.id)).label), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
+			who.add_child(UiTheme.label("%s・%d歳" % [o.title, int(o.age)], 12, UiTheme.MUTED))
+			cv.add_child(who)
+			cv.add_child(_gauge(String(o.id), 420))
+			cv.add_child(UiTheme.label("次のご褒美：%s　一緒に %d戦%d勝" % [_next_reward(String(o.id)), int(st.rides), int(st.wins)], 12, UiTheme.MUTED))
 		hb.add_child(cv)
 		UiScreen.pass_mouse(hb)
 		var k := ids.size()
@@ -119,6 +132,9 @@ func _preview(i: int) -> void:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 18)
 	pv.add_child(top)
+	if not st.known:
+		_preview_locked(o, top)
+		return
 	top.add_child(_face(oid, "joy" if st.tier >= 2 else "smile", 200, 250))
 	var tv := VBoxContainer.new()
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -131,6 +147,15 @@ func _preview(i: int) -> void:
 	nh.add_child(UiTheme.chip(String(HSOwners.tier_of(oid).label), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
 	tv.add_child(nh)
 	tv.add_child(UiTheme.label(String(o.title), 15, UiTheme.GOLD_BRIGHT))
+	var sh := HBoxContainer.new()
+	sh.add_theme_constant_override("separation", 8)
+	sh.add_child(UiScreen.owner_sign_chip(o, 14))
+	var subs := HSOwners.sub_labels(o)
+	if subs.size():
+		sh.add_child(UiTheme.label("ほかに %s" % "・".join(subs), 12, UiTheme.MUTED))
+	tv.add_child(sh)
+	if o.get("unlock") and o.unlock.get("text"):
+		tv.add_child(UiTheme.label("依頼が始まる条件：%s" % o.unlock.text, 12, UiTheme.FAINT))
 	var note := UiTheme.label(String(o.get("note", "")), 13, UiTheme.MUTED)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size.x = 100
@@ -180,6 +205,27 @@ func _preview(i: int) -> void:
 				UiFlow.save()
 				_preview(sel))
 			pv.add_child(bw)
+
+# まだ縁の無い馬主の右の見本：伏せた顔・看板の特徴・条件のヒント
+func _preview_locked(o: Dictionary, top: HBoxContainer) -> void:
+	top.add_child(UiScreen.owner_q_face(200, 250))
+	var tv := VBoxContainer.new()
+	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tv.add_theme_constant_override("separation", 8)
+	top.add_child(tv)
+	tv.add_child(UiTheme.title("まだ会っていない馬主", 28, UiTheme.MUTED))
+	tv.add_child(UiScreen.owner_sign_chip(o, 14))
+	var hl := UiTheme.label(HSOwners.hint(String(o.id)), 17, UiTheme.GOLD_BRIGHT)
+	hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hl.custom_minimum_size.x = 100
+	tv.add_child(hl)
+	var nl := UiTheme.label("自分が乗ったレースで条件を満たすと、この馬主から声がかかる。縁ができると、次の週から騎乗依頼が来る。", 13, UiTheme.MUTED)
+	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	nl.custom_minimum_size.x = 100
+	tv.add_child(nl)
+	pv.add_child(UiScreen.section("間柄とご褒美"))
+	for t in HSOwners.TIERS.size():
+		pv.add_child(_ladder(String(HSOwners.TIERS[t].label), TIER_JOB[t], "", false))
 
 func _ladder(name: String, job: String, reward: String, on: bool) -> PanelContainer:
 	var p := PanelContainer.new()
