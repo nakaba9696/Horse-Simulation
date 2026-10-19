@@ -889,7 +889,7 @@
     },
     'エプソム': {
       turf: [
-        { id: 'ダービー', lap: 2400, straight: 805, open: true, use: [2400],
+        { id: 'ダービー', lap: 2400, straight: 805, open: true, use: [2000, 2400], // 2000m（グランドフェスティバルの中距離）はダービーコースの途中から発走する形で借りる（10ハロンの発走地点は出典で確かめていない）
           segs: [['S', 805], ['C', 169, 169, 100, 3], ['C', 150, 150, 100, 2], ['S', 400], ['C', 600, 600, -20, 1], ['S', 428.8]],
           elev: [[0, 13], [100, 12], [805, 22], [1100, 36], [1300, 42], [2400, 0]],
           src: ['https://ja.wikipedia.org/wiki/%E3%82%A8%E3%83%97%E3%82%BD%E3%83%A0%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://en.wikipedia.org/wiki/Epsom_Downs_Racecourse', 'https://www.geegeez.co.uk/epsom/', 'https://www.racingpost.com/guide-to-racing/epsom-racecourse/'],
@@ -1005,6 +1005,11 @@
           elev: [[0, 3], [400, 0], [1600, 0]],
           src: ['https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%A9%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.attheraces.com/course-guides/Curragh'],
           note: '直線コースの1300m付近から分かれる1マイル（ドッグレッグ）。最後の2ハロンがゆるい上り。折れの角度・向きは出典に無い', approx: true },
+        { id: '直線', lap: 1200, straight: 1200, line: true, use: [1200],
+          segs: [['S', 1200]],
+          elev: [[0, 3], [400, 0], [1200, 0]],
+          src: ['https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%A9%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.attheraces.com/course-guides/Curragh'],
+          note: '直線コース（グランドフェスティバルの短距離・芝1200m のために足した。1マイルのシュート（直線）を借りた形。マイルが分かれる直線と同じ向きで、最後の2ハロンがゆるい上り）。直線の全長は出典で確かめていない', approx: true },
       ],
     },
     'フェニックスパーク': {

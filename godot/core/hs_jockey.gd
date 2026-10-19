@@ -125,7 +125,7 @@ static func week_start() -> void:
 			if h.get("auto") == null: h.auto = true
 			HSWorld.news("%sが入厩した。" % h.name, "info")
 	HSSeason.apply_reserves()
-	if g.month == 12 and g.week == 1: HSSeason.dc_invite()
+	# グランドフェスティバルの招待は12月4週のあと（HSWorld.next_week → HSSeason.gf_stage）
 # 引退：年代なしのゲームは牧場に残してオリジナルホースの親にする
 static func retire(id: String) -> Dictionary:
 	if HSOriginal.on(): return HSOriginal.retire(id)

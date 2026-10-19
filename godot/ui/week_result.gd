@@ -25,7 +25,7 @@ func build() -> void:
 	var rep = UiFlow.report
 	var G = HSWorld.G
 	var y0 := float(HSU.or_(G.get("startYear"), G.year))
-	var title_date := "%d年目 %s月%s週" % [int(float(rep.y) - y0) + 1, HSU.num(rep.m), HSU.num(rep.w)] if rep else UiFlow.date_label()
+	var title_date := "%d年目 %s" % [int(float(rep.y) - y0) + 1, HSWorld.week_label(rep.m, rep.w)] if rep else UiFlow.date_label()
 	var diff := float(G.player.money) - UiFlow.money0
 	make_band("結", "週の結果", title_date, [["増減", ("+" if diff >= 0 else "－") + HSU.money(absf(diff)), "money" if diff >= 0 else "warn"], ["資金", UiFlow.money_label(), "money"]])
 	var main := VBoxContainer.new()
@@ -318,7 +318,7 @@ func _show_moments() -> void:
 			if not r.get("ride"): continue
 			var me = _me_of(r)
 			if me and int(me.pos) == 1 and r.race.get("graded") and r.race.get("grade") in ["G1", "GF"]:
-				q.append(["celebrate", "%sを勝った" % ("グランドフィナーレ" if r.race.get("grade") == "GF" else "G1"), HSRaces.label(r.race), "%s・%s" % [me.horse.name, HSU.time(float(me.time))]])
+				q.append(["celebrate", "%sを勝った" % ("グランドフェスティバル" if r.race.get("grade") == "GF" else "G1"), HSRaces.label(r.race), "%s・%s" % [me.horse.name, HSU.time(float(me.time))]])
 	for t in UiFlow.week_trophies():
 		q.append(["celebrate", "トロフィーを手にした", t.label, "%s%s" % [t.horse, "・ボーナス賞金 %s" % HSU.money(t.bonus) if t.bonus > 0 else ""]])
 	var beat := UiFlow.week_beaten()

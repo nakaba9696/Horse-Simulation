@@ -1,6 +1,6 @@
-# グランドフィナーレ（js/core/dream.js・js/ui の dreamAskAll と同じ中身）：12月2〜4週の距離ごとの5つの大一番
-# タブ（Q/E・LB/RB）：区分（中長距離・マイル・短距離・長距離・ダート）
-# 上：その区分の招待（12月1週に届く）と出す馬・辞退。下：その年のファンの票の順位（上位16頭が出られる。自分の馬は金の線）
+# グランドフェスティバル（js/core/dream.js・js/ui の dreamAskAll と同じ中身）：12月4週のあとの GF の週に、海外の競馬場で6つの大一番
+# タブ（Q/E・LB/RB）：区分（data/gf.js の並び：短距離・マイル・中距離・クラシック・長距離・ダート）
+# 上：その区分の招待（12月4週のあとに届く）と出す馬・辞退（同じ馬でいくつの GF にも出られる）。下：その年のファンの票の順位（上位16頭が出られる。自分の馬は金の線）
 # 決まりは HSSeason（dc_standing・dc_eligible・dc_choose・dc_decline・dc_runners）を呼ぶだけ
 extends UiScreen
 
@@ -12,7 +12,7 @@ var rows: Array[Control] = []
 var acts: Array[Button] = []
 
 func hint() -> String:
-	return "その年の G1 の勝ち馬とファンの票の上位16頭が出られる。招待は12月1週に届く"
+	return "その年の G1 の勝ち馬とファンの票の上位16頭が出られる。招待は12月4週のあとに届く。同じ馬でいくつの GF にも出られる（疲れはたまらない）"
 
 func keys() -> Array:
 	return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "決定"], ["Q/E", "LB/RB", "区分"], ["Esc", "B", "もどる"]]
@@ -21,14 +21,14 @@ func on_back() -> void:
 	go("home")
 
 func on_tab(d: int) -> void:
-	cat = posmod(cat + d, HSSeason.GF_ORDER.size())
+	cat = posmod(cat + d, HSSeason.gf_order().size())
 	_fill()
 
 func build() -> void:
 	backdrop("bg_result", 0.8)
-	make_band("終", HSSeason.DC_NAME, "12月2〜4週・距離ごとに5つ", [["暦", UiFlow.date_label()], ["資金", UiFlow.money_label(), "money"]])
+	make_band("終", HSSeason.DC_NAME, "12月4週のあと・海外の競馬場で%dつ" % HSSeason.gf_cats().size(), [["暦", UiFlow.date_label()], ["資金", UiFlow.money_label(), "money"]])
 	var pend := HSSeason.dc_pending_list()
-	if pend.size(): cat = maxi(0, HSSeason.GF_ORDER.find(pend[0]))
+	if pend.size(): cat = maxi(0, HSSeason.gf_order().find(pend[0]))
 	tab_box = VBoxContainer.new()
 	tab_box.position = Vector2(PAD_X, TOP + 4)
 	add_child(tab_box)
@@ -56,9 +56,9 @@ func _fill() -> void:
 	rows.clear()
 	acts.clear()
 	var G = HSWorld.G
-	var id: String = HSSeason.GF_ORDER[cat]
-	var C: Dictionary = HSSeason.GF_BY[id]
-	tab_box.add_child(UiTheme.tabs(HSSeason.GF_ORDER.map(func(k): return HSSeason.GF_BY[k].label), cat, pad, func(k): cat = k; _fill()))
+	var id: String = HSSeason.gf_order()[cat]
+	var C: Dictionary = HSSeason.gf_by()[id]
+	tab_box.add_child(UiTheme.tabs(HSSeason.gf_order().map(func(k): return HSSeason.gf_by()[k].label), cat, pad, func(k): cat = k; _fill()))
 	# 招待
 	var pb := UiScreen.panel_box(true, 8)
 	inv_box.add_child(pb[0])
@@ -66,20 +66,23 @@ func _fill() -> void:
 	var hh := HBoxContainer.new()
 	hh.add_theme_constant_override("separation", 14)
 	hh.add_child(UiTheme.title(HSSeason.gf_name(id), 24, UiTheme.GOLD_BRIGHT))
-	hh.add_child(UiTheme.label("%s %s%sm・12月%s週" % [C.course, C.surface, HSU.num(C.dist), HSU.num(C.week)], 15, UiTheme.MUTED))
+	hh.add_child(UiTheme.label("%s %s%sm" % [C.course, C.surface, HSU.num(C.dist)], 15, UiTheme.MUTED))
+	var lgs: Array = HSSeason.gf_legends(id).map(func(d): return d.name)
+	hh.add_child(UiTheme.label("伝説の名馬：%s" % ("・".join(lgs) if lgs.size() else "まだいない"), 15, UiTheme.GOLD if lgs.size() else UiTheme.FAINT))
+	hh.add_child(UiTheme.label("トロフィー：%s" % C.trophy, 15, UiTheme.MUTED))
 	v.add_child(hh)
 	var inv = HSSeason._inv(id)
 	var bh := HBoxContainer.new()
 	bh.add_theme_constant_override("separation", 10)
-	if inv == null:
-		v.add_child(UiTheme.label("招待は12月1週に届く。いまのファンの票の順位は下のとおり", 15, UiTheme.MUTED))
+	if inv == null and G.get("dc") and G.dc.y == G.year:
+		v.add_child(UiTheme.label("今年はこの GF は開かれない", 15, UiTheme.MUTED))
+	elif inv == null:
+		v.add_child(UiTheme.label("招待は12月4週のあとに届く。いまのファンの票の順位は下のとおり", 15, UiTheme.MUTED))
 	elif inv.ans == "yes" and inv.pick:
 		var h = HSWorld.horse(inv.pick)
 		v.add_child(UiTheme.label("出る：%s" % (h.name if h else ""), 18, UiTheme.GOLD_BRIGHT))
 	elif inv.ans == "no":
 		v.add_child(UiTheme.label("辞退した", 16, UiTheme.MUTED))
-	elif HSSeason._over(id):
-		v.add_child(UiTheme.label("もう終わった", 16, UiTheme.MUTED))
 	else:
 		var el := HSSeason.dc_eligible(id)
 		if el.is_empty():

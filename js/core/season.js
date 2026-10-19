@@ -82,7 +82,7 @@
     { id: 'tenno', label: '天皇賞の春秋制覇', test: ws => has(ws, '天皇賞・春') && has(ws, '天皇賞・秋') },
     { id: 'world', label: '海外G1制覇', test: ws => ws.some(w => w.region === '海外' && w.grade === 'G1') },
     { id: 'g1five', label: 'G1五勝', test: ws => ws.filter(w => w.grade === 'G1').length >= 5 },
-    { id: 'dc', label: 'グランドフィナーレ制覇', test: ws => ws.some(w => T.isGF(w.r)) }, // どの距離の GF でも、前の名前の勝ちも数える（T.isGF は dream.js）
+    { id: 'dc', label: 'グランドフェスティバル制覇', test: ws => ws.some(w => T.isGF(w.r)) }, // js/core/dream.js が GF ごとの冠（GF クラシック覇者など）に置き換える
   ];
   T.titles = function (h) {
     const ws = won(h), got = {};
@@ -202,12 +202,12 @@
     G.reserve = keep;
   };
 
-  // ---------- グランドフィナーレ（GF）：年末のドリームレース。その年に活躍した馬だけが招待されて走る ----------
-  // 距離ごとに5つ（芝1000・芝1600・芝2400・芝3200・ダート2000）。12月1週に招待し、2〜4週に走る。
+  // ---------- グランドフェスティバル（GF）：年末のドリームレース。その年に活躍した馬だけが招待されて走る ----------
+  // 距離ごとに5つ（芝1000・芝1600・芝2400・芝3200・ダート2000）と牝馬の1つ（芝2200）。12月1週に招待し、2〜4週に走る。
   // 出られる条件・自分の馬を1頭選ぶか出ないか・出走表は js/core/dream.js
-  T.DC_NAME = 'グランドフィナーレ';
+  T.DC_NAME = 'グランドフェスティバル';
   T.DC_FIELD = 16;
-  // 5つの GF（距離ごと）・レースの形・招待・出走表は js/core/dream.js
+  // 6つの GF（距離ごとと牝馬）・レースの形・招待・出走表は js/core/dream.js
 
   // ---------- 天気（馬場から決まる。週と競馬場ごと） ----------
   T.weather = function (seed, year, month, week, course, ground) {

@@ -1,7 +1,7 @@
 // オリジナルホース（騎手のゲーム・年代なし。持ち主の決定 2026-10-16）
 // 自分の馬を引退させると、牧場に残る（牡・牝それぞれ5頭まで）。引退した牡馬と牝馬を組み合わせて、オリジナルホース（仔）を作る。
 // 能力は両親の値をもとにばらつき、特殊能力は両親のもの（それぞれ最大4つ、合わせて最大8つ）から4つまで受け継ぐ（名馬の固有の能力も）。
-// トロフィーを手にした馬・グランドフィナーレを勝った馬を親にすると、仔の能力にボーナスが付く
+// トロフィーを手にした馬・グランドフェスティバルを勝った馬を親にすると、仔の能力にボーナスが付く
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const U = HS.U, H = HS.Horse, W = HS.World;
@@ -14,10 +14,10 @@
   O.on = () => { const G = W.get(); return !!(G && G.eraless); };
   O.retired = sex => W.mine().filter(h => h.loc === 'retired' && (sex === '牝' ? h.sex === '牝' : h.sex !== '牝'));
 
-  // 親としてのボーナス：その馬で手にしたトロフィーと、グランドフィナーレの勝ち（どの距離でも。前の名前ドリームクラシックも）
+  // 親としてのボーナス：その馬で手にしたトロフィーと、グランドフェスティバルの勝ち（どの距離でも。前の名前ドリームクラシックも）
   O.bonusOf = function (h) {
     const G = W.get();
-    const tr = Object.values(G.trophies || {}).filter(t => t.horse === h.name).length;
+    const tr = Object.entries(G.trophies || {}).filter(([id, t]) => !id.startsWith('gf:') && t.horse === h.name).length; // GF のトロフィーは下の GF の勝ちで数える（二重に数えない）
     const dc = HS.Season.gfWins(h).length; // どの距離の GF でも数える
     return { trophies: tr, dc, pts: Math.min(O.BONUS_MAX, (tr + dc) * O.BONUS_PER) };
   };

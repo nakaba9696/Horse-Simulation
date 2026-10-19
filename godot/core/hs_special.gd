@@ -84,7 +84,8 @@ static func _groups() -> Array:
 		{ id = "us3", label = "米国の三冠馬", finals = ["ベルモントS"] },
 		{ id = "us2", label = "米国の名馬", finals = ["ベルモントS"] },
 		{ id = "aus", label = "豪州の英雄", finals = ["メルボルンカップ"] },
-		{ id = "gf", label = "伝説級の名馬", finals = null, top = true, fit = true },
+		{ id = "gf", label = "伝説級の名馬", finals = null, top = true, fit = true, again = true },
+		{ id = "gfall", label = "グランドフェスティバル全制覇", finals = null, top = true, again = true },
 		{ id = "g1five", label = "G1を5勝した名馬", finals = null },
 		{ id = "unbeaten", label = "無敗の名馬", finals = null },
 	]
@@ -129,6 +130,7 @@ static func legs(g: Dictionary, h: Dictionary, race: Dictionary) -> bool:
 		"us2": return _same_year(h, race, ["プリークネスS"])
 		"aus": return _same_year(h, race, ["コックスプレート"])
 		"gf": return race.get("grade") == "GF" and HSSeason.gf_won_prev(h, race)
+		"gfall": return race.get("grade") == "GF" and HSSeason.gf_all_won()
 		"g1five": return race.get("grade") == "G1" and _gw(h).size() and gwins.filter(func(x): return x.get("grade") == "G1").size() == 4
 		"unbeaten": return float(HSU.or_(h.get("starts"), 0.0)) == float(HSU.or_(h.get("wins"), 0.0)) and float(HSU.or_(h.get("wins"), 0.0)) == STREAK - 1
 	if g.get("race"):
@@ -155,7 +157,8 @@ static func member(g: Dictionary, d: Dictionary) -> bool:
 		"us3": return _dn(d, "ケンタッキーダービー") > 0 and _dn(d, "プリークネスステークス") > 0 and _dn(d, "ベルモントステークス") > 0
 		"us2": return _dn(d, "プリークネスステークス") > 0 and _dn(d, "ベルモントステークス") > 0
 		"aus": return _dn(d, "コックスプレート") > 0 and _dn(d, "メルボルンカップ") > 0
-		"gf": return true
+		"gf": return HSU.truthy(d.get("gf")) and d.gf != "all"
+		"gfall": return d.get("gf") == "all"
 		"g1five": return _g1_count(d) >= 5
 		"unbeaten": return unbeaten_of(d) >= STREAK
 	if g.get("race"):
@@ -177,7 +180,7 @@ static func data(name: String) -> Variant:
 		if d.name == name: return d
 	return null
 static func is_top(d: Dictionary) -> bool: return d.get("tier") == "legend"
-const PRIORITY := ["gf", "triple", "us3", "uk3", "arc2", "unbeaten", "ftriple", "long", "nikan", "arima2", "local", "allround", "filly", "europe", "autumn", "spring", "grandprix", "tenno", "mile", "us2", "aus", "g1five"]
+const PRIORITY := ["gf", "gfall", "triple", "us3", "uk3", "arc2", "unbeaten", "ftriple", "long", "nikan", "arima2", "local", "allround", "filly", "europe", "autumn", "spring", "grandprix", "tenno", "mile", "us2", "aus", "g1five"]
 static var _assign: Variant = null
 static func _assign_all() -> Dictionary:
 	if _assign != null: return _assign
@@ -206,13 +209,17 @@ static func list() -> Array:
 
 static func reach(h: Dictionary, g: Dictionary, race: Dictionary) -> bool:
 	return h.get("owner") == "P" and (g.finals == null or g.finals.has(race.get("short"))) and legs(g, h, race)
+# 出てこられるか：ふつうはまだ店に並んでいない名馬だけ。伝説級（again）は、自分のお手馬（引退していない）になっていなければ何度でも
+static func can_appear(g: Dictionary, d: Dictionary, un: Array) -> bool:
+	if g.get("again"): return not HSWorld.mine().any(func(x): return x.name == d.name and x.get("loc") != "retired")
+	return not un.has(d.name)
 static func pending(h: Dictionary, race: Dictionary) -> Array:
 	var un: Array = HSU.or_(HSWorld.G.get("unlocked"), [])
 	var out: Array = []
 	for g in groups():
 		if reach(h, g, race):
 			for d in members(g):
-				if not un.has(d.name) and not out.any(func(x): return is_same(x.d, d)) and (not g.get("fit") or HSSeason.gf_fits(d, race)): out.append({ d = d, g = g })
+				if can_appear(g, d, un) and not out.any(func(x): return is_same(x.d, d)) and (not g.get("fit") or d.get("gf") == race.get("gf")): out.append({ d = d, g = g })
 	var key := func(x): return (1000.0 if x.g.get("race") else 0.0) - float(HSU.or_(x.d.get("rating"), 0.0))
 	return HSU.stable_sort(out, func(a, b): return key.call(a) < key.call(b))
 static func reach_info(h: Dictionary) -> Array:
@@ -221,7 +228,7 @@ static func reach_info(h: Dictionary) -> Array:
 	var out: Array = []
 	var nextRaces: Array = HSWorld.upcoming_graded(52).filter(func(r): return r.inWeeks > 0 and not HSSeason.static_ineligible(h, r, r.year))
 	for g in groups():
-		if not members(g).any(func(d): return not un.has(d.name)): continue
+		if not members(g).any(func(d): return can_appear(g, d, un)): continue
 		var r = null
 		for rc in nextRaces:
 			if reach(h, g, rc): r = rc; break

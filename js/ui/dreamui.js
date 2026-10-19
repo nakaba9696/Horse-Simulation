@@ -1,13 +1,13 @@
-// 年末のドリームレース（グランドフィナーレ・距離ごとに5つ）の画面：
-// ホームの「グランドフィナーレへの道」（自分の馬 × GF の資格の表）と、12月の招待（GF ごとに、出るなら自分の馬から1頭を選ぶ・出ない）
+// 年末のドリームレース（グランドフェスティバル・海外の競馬場で6つ。区分は data/gf.js）の画面：
+// ホームの「グランドフェスティバルへの道」（自分の馬 × GF の資格の表）と、12月の招待（GF ごとに、出るなら自分の馬から1頭を選ぶ・出ない）
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const U = HS.U, W = HS.World, UI = HS.UI, App = HS.App, J = HS.Jockey, T = HS.Season;
   if (!UI || !App || !T || !T.dcStatus || !T.GF_CATS) return;
   const e = U.esc;
   const isJ = () => J && J.isMode();
-  const RULE = '距離ごとに5つ。その距離のG1を勝った自分の馬と、前の年のその GF の勝ち馬は必ず招待。残りはその距離のレースで集めたファンの票（大きいレースほど・上の着ほど多い）の上位16頭。外国の馬は4頭まで。1つの GF に出られるのは自分の馬から1頭。同じ馬が2つに出るのは間が2週あるときだけ。';
-  const place = c => `12月${c.week}週・${c.course}${c.surface === 'ダ' ? 'ダ' : '芝'}${c.dist}m`;
+  const RULE = '12月4週のあと、海外の競馬場で6つ。その距離のG1を勝った自分の馬と、前の年のその GF の勝ち馬は必ず招待。残りはその距離のレースで集めたファンの票（大きいレースほど・上の着ほど多い）の上位16頭。外国の馬は4頭まで。1つの GF に出られるのは自分の馬から1頭。同じ馬でいくつの GF にも続けて出られる（疲れはたまらず、勝ち数にも数えない）。勝つと、その GF の伝説の名馬が馬の店に並ぶ。';
+  const place = c => `${c.course}${c.surface === 'ダ' ? 'ダ' : '芝'}${c.dist}m`;
   // 招待の決まった12月か
   const open = () => { const G = W.get(); return G.dc && G.dc.y === G.year && G.dc.gf && G.month === 12; };
 
@@ -42,11 +42,11 @@
       const o = sts.filter(x => x.st.state === 'out').sort((a, b) => (b.st.votes || 0) - (a.st.votes || 0))[0];
       return o ? o.st.need : (sts[0] && sts[0].st.need) || '';
     };
-    return `<h2 class="sec">${T.DC_NAME}への道<span class="r">招待は12月1週・走るのは12月2〜4週</span></h2>
+    return `<h2 class="sec">${T.DC_NAME}への道<span class="r">招待と本番は12月4週のあと</span></h2>
       <div class="panel dc-road">
         <div class="small muted">${RULE}</div>
         <div class="tblwrap mt"><table class="t dc-mx">
-          <tr><th></th>${T.GF_CATS.map(c => `<th><b>${c.label}</b><small>${c.week}週・${c.course}${c.surface === 'ダ' ? 'ダ' : '芝'}${c.dist}</small><small>16位 ${T.dcCut(c.id).votes}票</small></th>`).join('')}</tr>
+          <tr><th></th>${T.GF_CATS.map(c => `<th><b>${c.label}</b><small>${c.course}${c.surface === 'ダ' ? 'ダ' : '芝'}${c.dist}</small><small>16位 ${T.dcCut(c.id).votes}票</small></th>`).join('')}</tr>
           ${mine.map(h => `<tr><td class="dc-h"><a href="#" data-act="horse" data-id="${e(h.id)}"><b>${e(h.name)}</b></a> <span class="small muted">${UI.age(h)}</span><div class="small muted">${e(near(h))}</div></td>${T.GF_CATS.map(c => cell(h, c)).join('')}</tr>`).join('')}
         </table></div>
       </div>`;
@@ -57,7 +57,7 @@
     const rows = T.GF_CATS.map(c => {
       const x = G.dc.gf[c.id];
       if (!x) return '';
-      const done = G.week > c.week;
+      const done = false; // GF は同じ週に全部走る
       const elig = T.dcEligible(c.id);
       const me = run[c.id];
       let my;
@@ -72,7 +72,7 @@
         ${lineup.length ? `<div class="small dc-lineup">${lineup.map(h => h.owner === 'P' ? `<b class="dc-me">★${e(h.name)}</b>` : e(h.name)).join('・')}</div>` : ''}
       </div>`;
     }).join('');
-    return `<h2 class="sec">${T.DC_NAME}<span class="r">距離ごとに5つ・各16頭</span></h2><div class="panel dc-road">${rows}</div>`;
+    return `<h2 class="sec">${T.DC_NAME}<span class="r">${T.GF_CATS.length}つ・各16頭</span></h2><div class="panel dc-road">${rows}</div>`;
   }
 
   // ---------- 招待の画面（GF ひとつ）：出るなら1頭を選ぶ。出ないなら AI の馬だけで走る（結果は週のまとめから観戦できる） ----------
@@ -87,8 +87,8 @@
       const explicit = T.dcRunners({ explicitOnly: true });
       const card = ({ h, why }) => {
         const fh = T.fhBoth(h, wIdx);
-        const clash = T.dcClash(h.id, cat, explicit);
-        return `<div class="dc-card ${cur === h.id ? 'on' : ''} ${clash.length ? 'off' : ''}">
+        const also = T.GF_CATS.filter(c => c.id !== cat && explicit[c.id] === h).map(c => c.label); // 連戦：ほかに出ると決めた GF
+        return `<div class="dc-card ${cur === h.id ? 'on' : ''}">
           ${UI.thumb(h)}
           <div class="grow">
             <div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${!cur && h === best ? '<span class="chip mine">おすすめ</span>' : ''}<span class="small muted">${UI.age(h)}・${e(h.style)}・${h.distMin || '?'}〜${h.distMax || '?'}m</span></div>
@@ -97,9 +97,9 @@
             ${UI.numStats(h, wIdx, { surface: sf })}
             ${UI.hasSkills(h) ? `<div class="skills">${UI.skillChips(h)}</div>` : '<div class="small muted">特殊能力なし</div>'}
             <div class="small muted">近走：${e(UI.recentRuns(h))}</div>
-            ${clash.length ? `<div class="small warn">${e(T.gfName(clash[0]))}に出るので、間が${T.GF_GAP}週ない</div>` : ''}
+            ${also.length ? `<div class="small muted">ほかに出る GF：${e(also.join('・'))}（連戦。疲れはたまらない）</div>` : ''}
           </div>
-          <button class="btn ${cur === h.id || (!cur && h === best) ? 'gold' : ''}" data-x="pick" data-id="${e(h.id)}" ${clash.length ? 'disabled' : ''}>この馬で出る</button>
+          <button class="btn ${cur === h.id || (!cur && h === best) ? 'gold' : ''}" data-x="pick" data-id="${e(h.id)}">この馬で出る</button>
         </div>`;
       };
       const bg = App.modal(`<div class="dc-ask">

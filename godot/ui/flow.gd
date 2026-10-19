@@ -69,7 +69,7 @@ static func save_info() -> Dictionary:
 	if not (g is Dictionary) or not g.get("jockey"):
 		return {}
 	var y := float(g.year) - float(HSU.or_(g.get("startYear"), g.year)) + 1.0
-	return {"name": String(g.jockey.name), "label": "%s年目 %s月%s週" % [HSU.num(y), HSU.num(g.month), HSU.num(g.week)], "money": float(g.player.money)}
+	return {"name": String(g.jockey.name), "label": "%s年目 %s" % [HSU.num(y), HSWorld.week_label(g.month, g.week)], "money": float(g.player.money)}
 
 static func new_game(name: String, region: String, seed := -1.0) -> void:
 	if seed < 0.0:
@@ -109,6 +109,30 @@ static func demo(weeks := 0, seed := 7.0) -> void:
 # 撮影の見本：demo のあと今週の騎乗の列を作り、最初の鞍の一式を用意する（出走表・騎乗の場面を --demo で開く）
 static func demo_ride(weeks := 1) -> bool:
 	demo(weeks)
+	rides = HSJockey.my_rides()
+	ride_i = 0
+	played = {}
+	ridden = {}
+	money0 = float(HSWorld.G.player.money)
+	in_week = rides.size() > 0
+	mark_news()
+	if in_week:
+		desc = desc_of(rides[0].card)
+	return in_week
+
+# 撮影の見本：グランドフェスティバルの週（--setup=gf）。一致テストの「GF の場面」のセーブ（11月4週・前の年のクラシックの GF の勝ち馬がいる）から GF の週まで進める
+static func demo_gf() -> void:
+	no_save = true
+	replay_dir = "user://demo_replays"
+	HSWorld.load_save(FileAccess.get_file_as_string("res://tests/golden/world_gf.json"))
+	_reset_week()
+	var guard := 0
+	while not (HSWorld.G.month == 12 and HSWorld.G.week == HSSeason.GF_WEEK) and guard < 8:
+		HSWorld.finish_week({})
+		guard += 1
+# 撮影の見本：GF の週の騎乗の列（GF の出走表を --setup=gf で開く）
+static func demo_gf_ride() -> bool:
+	demo_gf()
 	rides = HSJockey.my_rides()
 	ride_i = 0
 	played = {}
@@ -172,7 +196,7 @@ static func year_n() -> int:
 
 static func date_label() -> String:
 	var G = HSWorld.G
-	return "%d年目 %s月%s週" % [year_n(), HSU.num(G.month), HSU.num(G.week)]
+	return "%d年目 %s" % [year_n(), HSWorld.week_label(G.month, G.week)]
 
 static func money_label(v = null) -> String:
 	return HSU.money(float(HSWorld.G.player.money if v == null else v))
@@ -223,7 +247,7 @@ static func week_trophies() -> Array:
 	var tr: Dictionary = HSU.or_(HSWorld.G.get("trophies"), {})
 	for id in tr:
 		if not trophies0.has(id):
-			out.append({"id": id, "label": HSTrophy.BY[id].label if HSTrophy.BY.has(id) else id, "horse": tr[id].horse, "bonus": float(HSU.or_(tr[id].get("bonus"), 0.0))})
+			out.append({"id": id, "label": HSTrophy.by()[id].label if HSTrophy.by().has(id) else id, "horse": tr[id].horse, "bonus": float(HSU.or_(tr[id].get("bonus"), 0.0))})
 	return out
 
 static func week_beaten() -> Array:

@@ -1,5 +1,5 @@
 # シーズンの決まり（js/core/season.js と js/core/dream.js の HS.Season と同じ）：お手馬の上限・資金切れ・調子の8段階・総合力・冠と殿堂・出走の予約・
-# 年末のグランドフィナーレ（GF。距離ごとに5つ。招待・出るかの選択・出走表）・天気
+# 年末のグランドフェスティバル（GF。12月4週のあとに海外の競馬場で6つ。招待・出るかの選択・出走表）・天気
 class_name HSSeason
 
 const MAX_OWN := 10.0
@@ -79,18 +79,20 @@ static func _title_test(id: String, ws: Array, t: Dictionary) -> bool:
 		"tenno": return _has_w(ws, "天皇賞・春") and _has_w(ws, "天皇賞・秋")
 		"world": return ws.any(func(w): return w.region == "海外" and w.grade == "G1")
 		"g1five": return ws.filter(func(w): return w.grade == "G1").size() >= 5
-		"dc": return ws.any(func(w): return is_gf(w.r))
 	return false
 const TITLES := [
 	{ id = "triple", label = "三冠" }, { id = "ftriple", label = "牝馬三冠" }, { id = "double", label = "二冠" }, { id = "fdouble", label = "牝馬二冠" },
 	{ id = "henso", label = "変則二冠" }, { id = "autumn", label = "秋の古馬三冠" }, { id = "spring", label = "春の古馬三冠" }, { id = "grandprix", label = "グランプリ制覇" },
-	{ id = "tenno", label = "天皇賞の春秋制覇" }, { id = "world", label = "海外G1制覇" }, { id = "g1five", label = "G1五勝" }, { id = "dc", label = "グランドフィナーレ制覇" },
-]
+	{ id = "tenno", label = "天皇賞の春秋制覇" }, { id = "world", label = "海外G1制覇" }, { id = "g1five", label = "G1五勝" },
+]   # 前の「グランドフェスティバル制覇」は、GF ごとの冠（GF クラシック覇者など。titles で足す）に置き換えた
 static func titles(h: Dictionary) -> Array:
 	var ws := _won(h); var got := {}
 	for t in TITLES:
 		if _title_test(t.id, ws, got): got[t.id] = true
-	return TITLES.filter(func(t): return got.has(t.id))
+	var out: Array = TITLES.filter(func(t): return got.has(t.id))
+	for c in gf_cats():
+		if ws.any(func(w): return gf_cat_of_name(w.r) == c.id): out.append({ id = "gf:" + c.id, label = c.trophy })
+	return out
 
 # 自分の馬が重賞を勝ったとき：新しい冠を知らせ、冠のある馬は殿堂へ
 static func on_win(h: Dictionary, race: Dictionary, year: float) -> Array:
@@ -226,52 +228,59 @@ static func weather(seed: float, year: float, month: float, week: float, course:
 	return "晴" if rng.chance(0.7) else "曇"
 static func weather_icon(w: String) -> String: return { "晴": "☀", "曇": "☁", "雨": "☂", "雪": "❄" }.get(w, "")
 
-# ================= グランドフィナーレ（js/core/dream.js） =================
-const DC_NAME := "グランドフィナーレ"
+# ================= グランドフェスティバル（js/core/dream.js） =================
+# 区分は data/gf.js（godot/data/gf.json）。12月4週のあとの「GF の週」（G.week＝5）に全部を走る。
+# GF は特別枠（疲れ・調子・休み・故障・出走数・勝ち数・リーディングに数えない）。同じ馬でいくつの GF にも出られる（連戦）
+const DC_NAME := "グランドフェスティバル"
 const DC_FIELD := 16
+const GF_WEEK := 5.0
+const GF_GIFT_AGE := 6.0
 static func _fit(id: String, r: Dictionary) -> bool:
-	match id:
-		"sprint": return r.surface != "ダ" and r.dist >= 0 and r.dist <= 1400
-		"dirt": return r.surface == "ダ"
-		"mile": return r.surface != "ダ" and r.dist >= 1401 and r.dist <= 2000
-		"long": return r.surface != "ダ" and r.dist >= 2801 and r.dist <= 9999
-		"classic": return r.surface != "ダ" and r.dist >= 2001 and r.dist <= 2800
-	return false
-const GF_CATS := [
-	{ id = "sprint", label = "短距離", course = "新潟", surface = "芝", dist = 1000.0, week = 2.0 },
-	{ id = "dirt", label = "ダート", course = "大井", surface = "ダ", dist = 2000.0, week = 2.0 },
-	{ id = "mile", label = "マイル", course = "東京", surface = "芝", dist = 1600.0, week = 3.0 },
-	{ id = "long", label = "長距離", course = "京都", surface = "芝", dist = 3200.0, week = 3.0 },
-	{ id = "classic", label = "中長距離", course = "東京", surface = "芝", dist = 2400.0, week = 4.0 },
-]
-static var GF_BY: Dictionary = _gf_by()
-static func _gf_by() -> Dictionary:
-	var o := {}
-	for c in GF_CATS: o[c.id] = c
-	return o
-const GF_ORDER := ["classic", "mile", "sprint", "long", "dirt"]
-const DC_PREV := ["ドリームクラシック"]
+	var v: Dictionary = HSU.or_(gf_by()[id].get("votes"), {})
+	if v.get("surface") != null and ((r.surface != "ダ") if v.surface == "ダ" else (r.surface == "ダ")): return false
+	if v.get("min") != null and r.dist < v.min: return false
+	if v.get("max") != null and r.dist > v.max: return false
+	return true
+static var _gf_cats: Variant = null
+static func gf_cats() -> Array:
+	if _gf_cats == null:
+		_gf_cats = []
+		for c in HSData.d().get("gf", []):
+			var x: Dictionary = c.duplicate(true); x.week = GF_WEEK
+			_gf_cats.append(x)
+	return _gf_cats
+static var _gf_by_v: Variant = null
+static func gf_by() -> Dictionary:
+	if _gf_by_v == null:
+		_gf_by_v = {}
+		for c in gf_cats(): _gf_by_v[c.id] = c
+	return _gf_by_v
+static func gf_order() -> Array: return gf_cats().map(func(c): return c.id)
+const DC_PREV := ["ドリームクラシック", "グランドフィナーレ"]   # 前の名前（前のセーブの勝ち鞍も GF として数える）
 const DC_RESERVE := 6
 const DC_FOREIGN := 4
-const GF_GAP := 2.0
-static func gf_name(id: String) -> String: return "%s（%s）" % [DC_NAME, GF_BY[id].label]
-static func is_gf(n: Variant) -> bool: return n != null and n != "" and (String(n).begins_with(DC_NAME) or DC_PREV.has(n))
+static func gf_name(id: String) -> String: return "%s（%s）" % [DC_NAME, gf_by()[id].label]
+static func is_gf(n: Variant) -> bool:
+	if n == null or n == "": return false
+	if String(n).begins_with(DC_NAME): return true
+	return DC_PREV.any(func(p): return String(n).begins_with(p))
 static func gf_cat_of_name(n: Variant) -> Variant:
 	if not is_gf(n): return null
-	for x in GF_CATS:
-		if n == gf_name(x.id): return x.id
+	for x in gf_cats():
+		if String(n).ends_with("（%s）" % x.label): return x.id
 	return "classic"
 static func gf_wins(h: Dictionary) -> Array: return HSU.or_(h.get("gradedWins"), []).filter(func(g): return is_gf(HSU.or_(g.get("short"), g.race)))
 static func gf_cat_of_data(d: Dictionary, peak: Variant) -> String:
 	if d.get("surface") == "ダ" or (d.get("surface") == "芝ダ" and peak and peak.dirt > peak.turf): return "dirt"
 	if float(HSU.or_(d.get("distMin"), 0.0)) >= 2000 and float(HSU.or_(d.get("distMax"), 0.0)) >= 3000: return "long"
 	var m: float = (float(HSU.or_(d.get("distMin"), 1600.0)) + float(HSU.or_(d.get("distMax"), 2400.0))) / 2.0
-	return "sprint" if m <= 1400 else ("mile" if m <= 2000 else "classic")
-static func gf_fits(d: Dictionary, race: Dictionary) -> bool:
-	if (d.get("surface") == "芝") if race.surface == "ダ" else (d.get("surface") == "ダ"): return false
-	return race.dist >= float(HSU.or_(d.get("distMin"), 1600.0)) - 200 and race.dist <= float(HSU.or_(d.get("distMax"), 2400.0)) + 200
+	return "sprint" if m <= 1400 else ("mile" if m <= 1800 else ("distance" if m <= 2200 else "classic"))
 static func gf_won_prev(h: Dictionary, race: Dictionary) -> bool:
 	return gf_wins(h).any(func(g): return g.y == race.year - 1 and gf_cat_of_name(HSU.or_(g.get("short"), g.race)) == race.get("gf"))
+static func gf_legends(cat: String) -> Array: return HSSpecial.pool().filter(func(d): return d.get("tier") == "legend" and d.get("gf") == cat)
+static func gf_all_won() -> bool:
+	var tr: Dictionary = HSU.or_(HSWorld.G.get("trophies"), {}) if HSWorld.G else {}
+	return gf_cats().size() > 0 and gf_cats().all(func(c): return HSU.truthy(tr.get("gf:" + c.id)))
 
 const VOTES := { "G1": [100.0, 40.0, 25.0, 15.0, 10.0], "G2": [50.0, 20.0, 12.0, 6.0, 4.0], "G3": [30.0, 12.0, 8.0, 4.0, 2.0], "Jpn1": [50.0, 20.0, 12.0, 6.0, 4.0], "Jpn2": [30.0, 12.0, 8.0, 4.0, 2.0], "Jpn3": [30.0, 12.0, 8.0, 4.0, 2.0], "OP": [8.0, 3.0, 2.0], "": [4.0, 1.0] }
 const VOTE_FAV := 5.0
@@ -297,7 +306,7 @@ static func dc_standing(cat: Variant = null, year: Variant = null) -> Array:
 	if not c.has("dcStand"): c.dcStand = {}
 	var ck := "%s:%s" % [cat, HSU.num(year)]
 	if c.dcStand.has(ck): return c.dcStand[ck]
-	var C: Dictionary = GF_BY[cat]; var wIdx := HSWorld.w_idx(); var sf := "ダ" if C.surface == "ダ" else "芝"
+	var C: Dictionary = gf_by()[cat]; var wIdx := HSWorld.w_idx(); var sf := "ダ" if C.surface == "ダ" else "芝"
 	var list: Array = []; var fill: Array = []
 	for h in HSWorld.all():
 		if h.get("loc") != "stable" or h.get("injury") or year - h.born < 3 or h.get("legend"): continue
@@ -337,15 +346,19 @@ static func dc_cut(cat: Variant, year: Variant) -> Dictionary:
 	var x = l[DC_FIELD - 1] if l.size() >= DC_FIELD else null
 	return { votes = 1.0 if x.tier == 3 else x.votes, tier = x.tier } if x else { votes = 1.0, tier = 3.0 }
 
-# ---------- 12月1週：招待 ----------
+# ---------- 12月4週が終わったら：招待（HSWorld.next_week から。GF が1つでもあれば GF の週に入る） ----------
+static func gf_stage() -> bool:
+	var G = HSWorld.G
+	if G.mode != "jockey" or G.month != 12 or G.week != 4: return false
+	HSWorld.wc().dcStand = {}
+	dc_invite()
+	return G.get("dc") != null and G.dc.y == G.year and G.dc.get("gf") != null and G.dc.gf.size() > 0
 static func dc_invite() -> void:
 	var G = HSWorld.G
 	if G.mode != "jockey" or (G.get("dc") and G.dc.y == G.year): return
 	HSWorld.dirty()
 	var gf := {}
-	var aiWeeks := {}
-	for id in GF_ORDER:
-		var C: Dictionary = GF_BY[id]
+	for id in gf_order():
 		var l := dc_standing(id, G.year)
 		var top: Array = l.slice(0, DC_FIELD)
 		var elig: Array = []
@@ -354,13 +367,10 @@ static func dc_invite() -> void:
 		var ai: Array = []
 		for x in top + l.slice(DC_FIELD).filter(func(y): return not y.h.get("foreignTrained")):
 			if x.h.get("owner") == "P" or ai.size() >= DC_FIELD + DC_RESERVE: continue
-			var ws: Array = aiWeeks.get(x.h.id, [])
-			if ws.any(func(w): return absf(w - C.week) < GF_GAP): continue
 			ai.append(x.h.id)
-			if ai.size() <= DC_FIELD: aiWeeks[x.h.id] = ws + [C.week]
 		gf[id] = { ai = ai, elig = elig, pick = null, ans = null }
-	G.dc = { y = G.year, gf = gf }
-	HSWorld.news("%s（12月2〜4週・距離ごとに5つ）の招待馬が決まった。" % DC_NAME, "g1")
+	G.dc = { y = G.year, v = 2.0, gf = gf }
+	HSWorld.news("%s（%dつ）の招待馬が決まった。" % [DC_NAME, gf_cats().size()], "g1")
 	var mineIds := {}
 	for id in gf:
 		for x in gf[id].elig: mineIds[x.id] = true
@@ -368,16 +378,13 @@ static func dc_invite() -> void:
 static func _inv(cat: String) -> Variant:
 	var G = HSWorld.G
 	return G.dc.gf.get(cat) if (G.get("dc") and G.dc.y == G.year and G.dc.get("gf")) else null
-static func _over(cat: String) -> bool:
-	var G = HSWorld.G
-	return G.month == 12 and G.week > GF_BY[cat].week
 static func dc_pending_list() -> Array:
 	var G = HSWorld.G
 	if G.mode != "jockey": return []
 	var out: Array = []
-	for c in GF_CATS:
+	for c in gf_cats():
 		var x = _inv(c.id)
-		if x and x.elig.size() and not x.ans and not _over(c.id) and dc_eligible(c.id).size(): out.append(c.id)
+		if x and x.elig.size() and not x.ans and dc_eligible(c.id).size(): out.append(c.id)
 	return out
 static func dc_pending() -> bool: return dc_pending_list().size() > 0
 static func dc_eligible(cat: Variant = null) -> Array:
@@ -388,20 +395,10 @@ static func dc_eligible(cat: Variant = null) -> Array:
 		var h = HSWorld.horse(e.id)
 		if h and h.get("owner") == "P" and h.get("loc") == "stable" and not h.get("injury"): out.append({ h = h, why = e.why })
 	return out
-static func dc_clash(id: String, cat: String, runners: Variant = null) -> Array:
-	if runners == null: runners = dc_runners()
-	var w: float = GF_BY[cat].week
-	var out: Array = []
-	for c in GF_CATS:
-		if c.id != cat and runners.get(c.id) and runners[c.id].id == id and absf(c.week - w) < GF_GAP: out.append(c.id)
-	return out
 static func dc_choose(cat: String, id: String) -> Variant:
 	var x = _inv(cat)
 	if not x: return "招待が来ていない"
-	if _over(cat): return "もう終わった"
 	if not dc_eligible(cat).any(func(e): return e.h.id == id): return "この馬は出られない"
-	var clash := dc_clash(id, cat, dc_runners({ explicitOnly = true }))
-	if clash.size(): return "%sと間が%s週ない" % [gf_name(clash[0]), HSU.num(GF_GAP)]
 	x.pick = id; x.ans = "yes"
 	HSWorld._week = null
 	return null
@@ -414,38 +411,37 @@ static func dc_decline(cat: String) -> Variant:
 static func dc_runners(opts: Variant = null) -> Dictionary:
 	var wIdx := HSWorld.w_idx(); var out := {}
 	var ok := func(h): return h != null and h.get("owner") == "P" and h.get("loc") == "stable" and not h.get("injury")
-	for c in GF_CATS:
+	for c in gf_cats():
 		var x = _inv(c.id)
 		if x and x.ans == "yes" and ok.call(HSWorld.horse(x.pick)): out[c.id] = HSWorld.horse(x.pick)
 	if opts and opts.get("explicitOnly"): return out
-	for c in GF_CATS:
+	for c in gf_cats():
 		var x = _inv(c.id)
 		if not x or x.ans: continue
 		var sf := "ダ" if c.surface == "ダ" else "芝"
-		var free: Array = dc_eligible(c.id).map(func(e): return e.h).filter(func(h): return not dc_clash(h.id, c.id, out).size())
+		var free: Array = dc_eligible(c.id).map(func(e): return e.h)
 		free = HSU.stable_sort(free, func(a, b): return fh(a, wIdx, sf) > fh(b, wIdx, sf))
 		if free.size(): out[c.id] = free[0]
 	return out
 static func dc_runner(cat: Variant = null) -> Variant: return dc_runners().get(HSU.or_(cat, "classic"))
 
 static func dc_race(year: float, cat: Variant = null) -> Dictionary:
-	var G = HSWorld.G; var C: Dictionary = GF_BY[HSU.or_(cat, "classic")]
+	var G = HSWorld.G; var C: Dictionary = gf_by()[HSU.or_(cat, "classic")]
 	var arima = null
 	for r in HSRaces.graded_of(year, 12.0, 4.0):
 		if r.name == "有馬記念": arima = r; break
-	return { name = gf_name(C.id), short = gf_name(C.id), gf = C.id, grade = "GF", region = "JRA", course = C.course, surface = C.surface, dist = C.dist, month = 12.0, week = C.week, age = "3+", weight = "定量",
-		key = "%s-12-%s-GF-%s" % [HSU.num(year), HSU.num(C.week), C.id], graded = true, invite = true, year = year, prize = arima.prize if arima else 20000.0,
-		ground = HSRaces.ground(G.seed, year, 12.0, C.week, C.course) }
+	var race := { name = gf_name(C.id), short = gf_name(C.id), gf = C.id, grade = "GF", region = "JRA", course = C.course, surface = C.surface, dist = C.dist, month = 12.0, week = GF_WEEK, age = "3+", weight = "定量",
+		key = "%s-12-%s-GF-%s" % [HSU.num(year), HSU.num(GF_WEEK), C.id], graded = true, invite = true, year = year, prize = arima.prize if arima else 20000.0,
+		ground = HSRaces.ground(G.seed, year, 12.0, GF_WEEK, C.course) }
+	return race
 static func add_special(list: Array, year: float, month: float, week: float) -> void:
 	var G = HSWorld.G
-	if G.mode != "jockey" or month != 12 or not G.get("dc") or G.dc.y != year: return
-	if not G.dc.get("gf"): dc_upgrade(G)
-	for c in GF_CATS:
-		if c.week == week and G.dc.gf.get(c.id): list.append(dc_race(year, c.id))
+	if G.mode != "jockey" or month != 12 or week != GF_WEEK or not G.get("dc") or G.dc.y != year or not G.dc.get("gf"): return
+	for c in gf_cats():
+		if G.dc.gf.get(c.id): list.append(dc_race(year, c.id))
 static func dc_field(race: Dictionary) -> Array:
 	var G = HSWorld.G
-	if not G.get("dc") or G.dc.y != race.year: return []
-	if not G.dc.get("gf"): dc_upgrade(G)
+	if not G.get("dc") or G.dc.y != race.year or not G.dc.get("gf"): return []
 	var cat: String = HSU.or_(race.get("gf"), "classic"); var x = G.dc.gf.get(cat)
 	if not x: return []
 	var me = dc_runners().get(cat)
@@ -459,14 +455,33 @@ static func dc_field(race: Dictionary) -> Array:
 		if h.get("foreignTrained"): nf += 1
 		out.append({ horse = h })
 	return out
+
+# 自分の馬が GF を勝ったとき（HSWorld.apply_results から）：担当の伝説級が店に並び、初めての区分なら1頭を牧場に
+static func on_gf_win(h: Dictionary, race: Dictionary) -> void:
+	var G = HSWorld.G
+	if not G.get("eraless") or h.get("owner") != "P" or not race.get("gf"): return
+	var legends := gf_legends(race.gf)
+	if legends.is_empty(): return
+	if G.get("unlocked") == null: G.unlocked = []
+	var fresh: Array = legends.filter(func(d): return not G.unlocked.has(d.name))
+	for d in fresh: G.unlocked.append(d.name)
+	if fresh.size(): HSWorld.news("%sを勝った。伝説の名馬 %sが馬の店に並ぶようになった。" % [gf_name(race.gf), "・".join(fresh.map(func(d): return d.name))], "g1")
+	if not G.get("gfGift"): G.gfGift = {}
+	if G.gfGift.get(race.gf): return
+	var d: Dictionary = legends[0]
+	var g := HSHorse.from_historic(HSEraless.shift(d, (G.year - GF_GIFT_AGE) - d.born), "gift:" + d.name)
+	g.id = HSWorld.new_id(); g.owner = "P"; g.loc = "retired"; g.retiredY = G.year; g.auto = false; g.parentBonus = 0.0; g.legendBought = true; g.gfGift = race.gf
+	if HSData.is_foreign(d):
+		g.imported = true; g.country = HSU.or_(d.get("country"), "外")
+	G.lineup[g.name] = g.born - d.born
+	G.horses[g.id] = g
+	G.gfGift[race.gf] = d.name
+	HSWorld.dirty()
+	HSWorld.news("初めての%sの勝利の記念に、%sを牧場に迎えた。オリジナルホースの%sにできる。" % [gf_name(race.gf), d.name, "母" if d.get("sex") == "牝" else "父"], "g1")
+
+# 前の形のセーブ（12月2〜4週に GF を走っていた版。v が無い）を今の形に（js/core/dream.js の dcUpgrade と同じ）
 static func dc_upgrade(g: Dictionary) -> void:
-	if not g.get("dc") or g.dc.get("gf"): return
-	var d: Dictionary = g.dc
-	var x
-	if d.get("ai"): x = { ai = d.ai, elig = HSU.or_(d.get("elig"), []), pick = HSU.or_(d.get("pick"), null), ans = HSU.or_(d.get("ans"), null) }
-	else:
-		var ids: Array = HSU.or_(d.get("ids"), [])
-		var own := func(id): return g.horses.get(id) != null and g.horses[id].get("owner") == "P"
-		var elig: Array = ids.filter(own).map(func(id): return { id = id, why = "招待" })
-		x = { ai = ids.filter(func(id): return not own.call(id)), elig = elig, pick = elig[0].id if elig.size() else null, ans = "yes" if elig.size() else null }
-	g.dc = { y = d.y, gf = { classic = x } }
+	if not g.get("dc") or g.dc.get("v") == 2: return
+	if g.dc.y != g.year:
+		g.dc = null; return
+	g.dc = { y = g.dc.y, v = 2.0, gf = {} } if (g.month == 12 and g.week >= 3) else null

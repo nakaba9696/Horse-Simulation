@@ -2,7 +2,7 @@
 # 1. 今週することの札：「レースへ（n鞍に騎乗）」か「次の週へ」。金で大きく、最初のカーソル
 # 2. 帯：騎手名・所属と減量・評判／暦・リーディング・今年の勝ち・資金
 # 3. コマンドの札：番組表・馬の店・セーブ・タイトルへ（よく使うものほど左）
-# 4. 右：騎乗依頼（馬主の顔・ひと言・レース・馬・受ける／断る）→ 12月のグランドフィナーレの招待 → 今週の騎乗 → ニュース。左下：お手馬
+# 4. 右：騎乗依頼（馬主の顔・ひと言・レース・馬・受ける／断る）→ 12月のグランドフェスティバルの招待 → 今週の騎乗 → ニュース。左下：お手馬
 extends UiScreen
 
 var b_main: Button
@@ -61,7 +61,7 @@ func _build_hero() -> void:
 	var mm := UiTheme.title("%s月" % HSU.num(G.month), 46, UiTheme.ON_GOLD)
 	mm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cv.add_child(mm)
-	cv.add_child(UiTheme.label("第%s週" % HSU.num(G.week), 17, UiTheme.ON_GOLD, HORIZONTAL_ALIGNMENT_CENTER))
+	cv.add_child(UiTheme.label("GF週" if G.week > 4 else "第%s週" % HSU.num(G.week), 17, UiTheme.ON_GOLD, HORIZONTAL_ALIGNMENT_CENTER))
 	h.add_child(cal)
 	# 今週すること
 	var mv := VBoxContainer.new()
@@ -326,7 +326,7 @@ func _build_right() -> void:
 	var nb := UiScreen.panel_box(false, 3)
 	var G = HSWorld.G
 	for nw in G.news.slice(0, 6):
-		var l := UiTheme.label("%s月%s週　%s" % [HSU.num(nw.m), HSU.num(nw.w), nw.text], 13, UiTheme.GOLD_BRIGHT if nw.get("kind") in ["g1", "good"] else UiTheme.MUTED)
+		var l := UiTheme.label("%s　%s" % [HSWorld.week_label(nw.m, nw.w), nw.text], 13, UiTheme.GOLD_BRIGHT if nw.get("kind") in ["g1", "good"] else UiTheme.MUTED)
 		l.autowrap_mode = TextServer.AUTOWRAP_OFF
 		l.clip_text = true
 		l.custom_minimum_size.x = 100
@@ -443,12 +443,12 @@ func _offer_card(o: Dictionary) -> Variant:
 		bh.add_child(bd)
 	return p
 
-# 12月1週：グランドフィナーレの招待（GF の画面で出す馬を選ぶ）
+# 12月1週：グランドフェスティバルの招待（GF の画面で出す馬を選ぶ）
 func _gf_card(cats: Array) -> PanelContainer:
 	var pb := UiScreen.panel_box(true, 6)
 	var v: VBoxContainer = pb[1]
 	v.add_child(UiTheme.title("%sの招待が届いた" % HSSeason.DC_NAME, 18, UiTheme.GOLD_BRIGHT))
-	v.add_child(UiTheme.label("・".join(cats.map(func(c): return HSSeason.GF_BY[c].label)), 14, UiTheme.MUTED))
+	v.add_child(UiTheme.label("・".join(cats.map(func(c): return HSSeason.gf_by()[c].label)), 14, UiTheme.MUTED))
 	var b := UiScreen.button("出る馬を決める", false, 220, 40, 16)
 	b.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT)
 	b.pressed.connect(func(): go("gf"))

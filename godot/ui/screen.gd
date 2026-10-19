@@ -33,6 +33,8 @@ func _ready() -> void:
 		if demo >= 0:
 			if demo_week():
 				UiFlow.demo_week(demo)
+			elif OS.get_cmdline_user_args().has("--setup=gf"):
+				UiFlow.demo_gf()   # 撮影の見本：グランドフェスティバルの週
 			else:
 				UiFlow.demo(demo)
 			if OS.get_cmdline_user_args().has("--setup=retire"):

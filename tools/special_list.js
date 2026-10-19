@@ -18,6 +18,8 @@ lines.push('## 条件の組み合わせのグループ', '');
 for (const g of combos) {
   const ms = SP.members(g);
   lines.push(`### ${g.label}（${ms.length}頭）`, '', `条件：${g.note}`, '', ms.map(row).join('、'), '');
+  // 伝説級は GF ごとの担当（data/legends.js の gf・data/gf.js）
+  if (g.id === 'gf') lines.push('担当：' + HS.Season.GF_CATS.map(c => `${c.label}（${c.course}${c.surface}${c.dist}m）${HS.Season.gfLegends(c.id).map(d => d.name).join('・') || 'なし'}`).join('・'), '');
 }
 lines.push('## 大レースのグループ（歴代の勝ち馬）', '', '条件：G1を勝った馬でそのレースに出る（2歳のG1は、重賞を勝った馬で）。出てくるのは、まだ倒していない勝ち馬のうち強い順に2頭。', '');
 for (const g of races) {

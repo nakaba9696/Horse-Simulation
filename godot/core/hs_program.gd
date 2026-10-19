@@ -24,7 +24,7 @@ static func weeks(n: int) -> Array:
 			if m > 12:
 				m = 1.0; y += 1.0
 	return out
-# その週のレース。今週は世界の一覧（グランドフィナーレなども入る）、先の週は重賞と条件戦（種と日付で決まる）
+# その週のレース。今週は世界の一覧（グランドフェスティバルなども入る）、先の週は重賞と条件戦（種と日付で決まる）
 static func races_of(wk: Dictionary) -> Array:
 	if wk.i == 0: return HSWorld.week_races()
 	return HSRaces.of_week(HSWorld.G.seed, wk.y, wk.m, wk.w)

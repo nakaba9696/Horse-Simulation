@@ -177,4 +177,4 @@ sh godot/tools/export_windows.sh     # build/windows/TurfLineage.exe ＋ libhsna
 - 書き出しの設定は `godot/export_presets.cfg`（「Windows Desktop」。中身の pck は exe に埋める。tests・tools・C++ の元は入れない）。
 - 書き出し部品（export templates）は Godot 4.7.2 のものから `windows_release_x86_64.exe` だけを `~/.local/share/godot/export_templates/4.7.2.stable/` に置けばよい（全部で 1.3GB あるので、要るものだけ取り出す）。
 - 配るときは exe と DLL を同じフォルダに入れて zip にする。DLL が無くても動く（GDScript の模擬になり遅い）。`build/` はリポジトリに入れない。
-- 遊べる範囲：タイトル（はじめから・つづきから）→ ホーム → 番組表（出走・予約）・馬の店・馬主の騎乗依頼 → 出走表 → 騎乗（その週の本当のレースを C++ の模擬で走る）→ 週の結果（見せ場・馬主のご褒美の場面）→ 次の週。ほかに厩舎（引退）・生産（オリジナルホース）・データ（成績・スペシャルホース・トロフィー・リーディング・表彰・殿堂・コースレコード）・馬主・グランドフィナーレ（招待と出す馬・ファンの票の順位）。セーブは週を締めるたびに自動で `user://save.json`（Windows では `%APPDATA%/Godot/app_userdata/ターフの系譜/`）。画面と週の流れは `godot/README.md`。
+- 遊べる範囲：タイトル（はじめから・つづきから）→ ホーム → 番組表（出走・予約）・馬の店・馬主の騎乗依頼 → 出走表 → 騎乗（その週の本当のレースを C++ の模擬で走る）→ 週の結果（見せ場・馬主のご褒美の場面）→ 次の週。ほかに厩舎（引退）・生産（オリジナルホース）・データ（成績・スペシャルホース・トロフィー・リーディング・表彰・殿堂・コースレコード）・馬主・グランドフェスティバル（招待と出す馬・ファンの票の順位）。セーブは週を締めるたびに自動で `user://save.json`（Windows では `%APPDATA%/Godot/app_userdata/ターフの系譜/`）。画面と週の流れは `godot/README.md`。

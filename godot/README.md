@@ -55,7 +55,7 @@
 | リプレイ（`UiFlow.save_replay`） | 自分で乗ったレースの描画のコマを 0.2 秒ごとに `user://replays/<id>.json` へ（セーブとは別。20本まで・お気に入りは消さない）。騎乗の画面が記録の再生（`ViewReplay`）で開く |
 | `ui/horse_portrait.gd`（`UiHorsePortrait`） | 見本の馬の絵：3D の馬を小さな窓に立たせる（店・厩舎） |
 | `scenes/owners.tscn`・`ui/owners.gd` | 馬主（7人の好感度・間柄とご褒美・勝負服を着せる・思い出の名馬を受け取る） |
-| `scenes/gf.tscn`・`ui/gf.gd` | グランドフィナーレ（区分のタブ・招待と出す馬・ファンの票の順位） |
+| `scenes/gf.tscn`・`ui/gf.gd` | グランドフェスティバル（区分のタブ・招待と出す馬・ファンの票の順位） |
 | `ui/celebrate.gd` | 見せ場の後ろの絵（金の光の筋と紙吹雪）。`UiScreen.celebrate`・`owner_scene`（馬主のご褒美の場面）・`confirm`（確かめ）は `ui/screen.gd` |
 | `scenes/race_card.tscn`・`ui/race_card.gd` | 出走表（全頭を1画面に。パドック・ゲートイン・おまかせで乗る）。週の流れではその週の出走表。後ろはパドック（`view/paddock.gd`） |
 | `scenes/race.tscn`・`view/race_view.gd` | 3D のレース（騎乗）。ゲート → 走る → ゴールのあと流す → 着順 → 確定の表。カメラ・振動・撮影 |

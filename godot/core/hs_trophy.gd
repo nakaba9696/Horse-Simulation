@@ -1,7 +1,7 @@
 # トロフィー（js/core/trophy.js の HS.Trophy と同じ）：三冠など、勝ったレースの組み合わせ。手にするとボーナス賞金
 class_name HSTrophy
 
-const LIST := [
+const BASE := [
 	{ id = "triple", label = "三冠", note = "皐月賞・日本ダービー・菊花賞を同じ年に", finals = ["菊花賞"] },
 	{ id = "ftriple", label = "牝馬三冠", note = "桜花賞・オークス・秋華賞を同じ年に", finals = ["秋華賞"] },
 	{ id = "autumn", label = "秋の古馬三冠", note = "天皇賞・秋・ジャパンC・有馬記念を同じ年に", finals = ["有馬記念"] },
@@ -14,13 +14,25 @@ const LIST := [
 	{ id = "uk3", label = "英三冠", note = "英2000ギニー・英ダービー・英セントレジャーを同じ年に", finals = ["英セントレジャー"] },
 ]
 const BONUS := { triple = 50000.0, ftriple = 30000.0, autumn = 30000.0, spring = 30000.0, grandprix = 10000.0, tenno = 10000.0, arima2 = 10000.0, arc2 = 30000.0, us3 = 50000.0, uk3 = 50000.0 }
-static func bonus_of(t: Dictionary) -> float: return HSMath.round_js(float(BONUS.get(t.id, 0.0)) * HSU.price_index() / 10.0) * 10.0
+# グランドフェスティバル（data/gf.js）ごとのトロフィー（js/core/trophy.js と同じ）。勝ったお手馬それぞれに付く（2頭目からは more に足す）
+const GF_BONUS := 30000.0
+static func bonus_of(t: Dictionary) -> float: return HSMath.round_js(float(GF_BONUS if t.get("gf") else BONUS.get(t.id, 0.0)) * HSU.price_index() / 10.0) * 10.0
 static func note_of(t: Dictionary) -> String: return "%s（ボーナス賞金 %s）" % [t.note, HSU.money(bonus_of(t))]
-static var BY: Dictionary = _by()
-static func _by() -> Dictionary:
-	var o := {}
-	for t in LIST: o[t.id] = t
-	return o
+# 一覧（三冠などと、GF ごとのもの）。GF はデータから作るので、初めて使うときに作る
+static var _list: Variant = null
+static func list() -> Array:
+	if _list == null:
+		_list = BASE.duplicate(true)
+		for c in HSData.d().get("gf", []):
+			var name := "%s（%s）" % [HSSeason.DC_NAME, c.label]
+			_list.append({ id = "gf:" + c.id, label = c.trophy, note = "%sを勝つ" % name, finals = [name], gf = c.id })
+	return _list
+static var _by_v: Variant = null
+static func by() -> Dictionary:
+	if _by_v == null:
+		_by_v = {}
+		for t in list(): _by_v[t.id] = t
+	return _by_v
 
 static func _won(h: Dictionary, name: String, pred: Variant = null) -> bool:
 	for g in HSU.or_(h.get("gradedWins"), []):
@@ -50,8 +62,18 @@ static func on_win(h: Dictionary, race: Dictionary) -> Array:
 	if not G.get("eraless"): return []
 	if not G.get("trophies"): G.trophies = {}
 	var got: Array = []
-	for t in LIST:
-		if not t.finals.has(race.get("short")) or G.trophies.get(t.id): continue
+	for t in list():
+		if not t.finals.has(race.get("short")): continue
+		if G.trophies.get(t.id):
+			if t.get("gf"): add_holder(G.trophies[t.id], h, race.year)
+			continue
+		if t.get("gf"):
+			var b := bonus_of(t)
+			G.trophies[t.id] = { y = race.year, horse = h.name, hid = h.id, bonus = b }
+			G.player.money += b
+			HSWorld.news("トロフィー「%s」を手にした！（%s）ボーナス賞金 %s" % [t.label, h.name, HSU.money(b)], "g1")
+			got.append(t)
+			continue
 		var before := h.duplicate(); before.gradedWins = h.gradedWins.slice(0, h.gradedWins.size() - 1)
 		if not _legs(t.id, before, race): continue
 		var bonus := bonus_of(t)
@@ -60,3 +82,21 @@ static func on_win(h: Dictionary, race: Dictionary) -> Array:
 		HSWorld.news("トロフィー「%s」を手にした！（%s）ボーナス賞金 %s" % [t.label, h.name, HSU.money(bonus)], "g1")
 		got.append(t)
 	return got
+
+# GF のトロフィーを、2頭目からの勝ち馬にも付ける
+static func add_holder(rec: Dictionary, h: Dictionary, y: float) -> void:
+	if rec.get("hid") == h.id: return
+	for m in HSU.or_(rec.get("more"), []):
+		if m.hid == h.id: return
+	if not rec.get("more"): rec.more = []
+	rec.more.append({ y = y, horse = h.name, hid = h.id })
+# 前のセーブ：自分の馬が勝った GF の区分のトロフィーを付ける（ボーナス賞金は無し。前の「中長距離」はクラシック）
+static func migrate_gf(g: Dictionary) -> void:
+	if not g.get("trophies"): g.trophies = {}
+	for h in HSU.or_(g.get("horses"), {}).values():
+		if h.get("owner") != "P": continue
+		for w in HSSeason.gf_wins(h):
+			var id: String = "gf:" + String(HSSeason.gf_cat_of_name(HSU.or_(w.get("short"), w.race)))
+			if not by().has(id): continue
+			if g.trophies.get(id): add_holder(g.trophies[id], h, w.y)
+			else: g.trophies[id] = { y = w.y, horse = h.name, hid = h.id, bonus = 0.0 }

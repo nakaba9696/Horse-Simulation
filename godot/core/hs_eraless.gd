@@ -103,7 +103,7 @@ static func lock_of(d: Dictionary) -> String:
 			key = "g1" if b >= 3 else ("g2" if b == 2 else "")
 	_lockCache[d.name] = key
 	return key
-static func _gf_label(k: String) -> String: return HSSeason.GF_BY.get(k.substr(3), {}).get("label", k.substr(3))
+static func _gf_label(k: String) -> String: return HSSeason.gf_by().get(k.substr(3), {}).get("label", k.substr(3))
 static func lock_label(k: String) -> String:
 	if k.begins_with("gf:"): return "GFの馬（%s）" % _gf_label(k)
 	if k == "g1": return "G1馬"
