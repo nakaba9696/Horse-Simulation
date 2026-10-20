@@ -98,8 +98,10 @@
     return geo && geo.lap < 1700 ? 16 : 18;
   };
 
-  // 出走できるか。理由の文字列（できないとき）か null を返す
-  R.ineligible = function (horse, race, year) {
+  // 出走できるか。理由の文字列（できないとき）か null を返す。
+  // ほかの条件を満たしていても、連闘で別の国へは行けない（中1週から。js/core/fatigue.js）
+  R.ineligible = (horse, race, year) => R.ineligibleBase(horse, race, year) || (HS.Fatigue ? HS.Fatigue.travelWhy(horse, race) : null);
+  R.ineligibleBase = function (horse, race, year) {
     if (race.invite) return '招待馬だけ';
     const age = year - horse.born;
     if (race.age === '2' && age !== 2) return '年齢';
@@ -109,7 +111,6 @@
     if (age < 2) return '年齢';
     if (race.sex === '牝' && horse.sex !== '牝') return '牝馬限定';
     if (race.noGelding && horse.gelding) return 'せん馬は出られない';
-    if (horse.injury) return '故障中';
     // 外国で調教されている馬は、向こうでの実績で出てくるのでクラスを問わない
     if (horse.foreignTrained) return race.graded ? null : '外国調教馬';
     const cls = H.classOf(horse), rank = H.CLASS_RANK[cls];

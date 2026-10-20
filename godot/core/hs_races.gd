@@ -117,7 +117,12 @@ static func max_field(race: Dictionary) -> int:
 	return 16 if (geo and geo.lap < 1700) else 18
 
 # 出走できるか。理由の文字列（できないとき）か null を返す
+# ほかの条件を満たしていても、連闘で別の国へは行けない（中1週から。HSFatigue）
 static func ineligible(horse: Dictionary, race: Dictionary, year: float) -> Variant:
+	var why = ineligible_base(horse, race, year)
+	if why: return why
+	return HSFatigue.travel_why(horse, race)
+static func ineligible_base(horse: Dictionary, race: Dictionary, year: float) -> Variant:
 	if race.get("invite"): return "招待馬だけ"
 	var age: float = year - horse.born
 	var ra = race.get("age")
@@ -128,7 +133,6 @@ static func ineligible(horse: Dictionary, race: Dictionary, year: float) -> Vari
 	if age < 2: return "年齢"
 	if race.get("sex") == "牝" and horse.get("sex") != "牝": return "牝馬限定"
 	if race.get("noGelding") and horse.get("gelding"): return "せん馬は出られない"
-	if horse.get("injury"): return "故障中"
 	if horse.get("foreignTrained"): return null if race.get("graded") else "外国調教馬"
 	var cls := HSHorse.class_of(horse); var rank: int = HSHorse.CLASS_RANK[cls]
 	if not race.get("graded"):

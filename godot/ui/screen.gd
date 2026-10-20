@@ -44,6 +44,8 @@ func _ready() -> void:
 						if h.get("loc") != "retired" and (h.sex == "牝") == (sx == "牝"):
 							HSJockey.retire(h.id)
 							break
+			if OS.get_cmdline_user_args().has("--setup=fatigue"):
+				UiFlow.demo_fatigue()   # 撮影の見本：疲労の段階が並ぶように
 			if OS.get_cmdline_user_args().has("--setup=met2"):
 				# 撮影の見本：縁があるのは2人だけ（馬主の一覧で、縁のある馬主とまだの馬主が並ぶ）
 				for o in HSOwners.LIST():

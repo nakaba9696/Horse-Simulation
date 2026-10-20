@@ -26,7 +26,7 @@
     if (wk.i === 0) return W().weekRaces();
     return R.ofWeek(W().get().seed, wk.y, wk.m, wk.w);
   };
-  // 出られない理由（出られるなら null）。今週は入厩・故障まで、先の週は年齢・性と、いまの勝ち星で見る
+  // 出られない理由（出られるなら null）。今週は入厩まで、先の週は年齢・性と、いまの勝ち星・移動（連闘で別の国へは行けない）で見る
   P.why = function (h, race, wk) {
     const G = W().get();
     if (wk.i === 0) {
@@ -36,7 +36,7 @@
     }
     const st = T().staticIneligible(h, race, race.year);
     if (st) return st;
-    return R.ineligible(Object.assign({}, h, { injury: null }), race, race.year);
+    return R.ineligible(h, race, race.year);
   };
 
   // o：{ weeks（既定は予約できる52週）, show: 'ok'（出られるものだけ）|'all', kind: 'all'|'graded', surf: ''|'芝'|'ダ' }
@@ -56,7 +56,7 @@
         if (!state) {
           if (o.kind === 'graded' && !race.graded) continue;
           if (o.surf && race.surface !== o.surf) continue;
-          if (why && (o.show !== 'all' || !race.graded)) continue; // 条件戦は「すべて」でも出られないものは出さない（年齢違いで埋まる）
+          if (why && why !== HS.Fatigue.WHY && (o.show !== 'all' || !race.graded)) continue; // 条件戦は「すべて」でも出られないものは出さない（年齢違いで埋まる）。移動が間に合わないものは理由を見せる
         }
         const dist = P.fitDist(h, race.dist), surf = P.fitSurf(h, race.surface);
         const can = why || state ? null : wk.i === 0 ? 'enter' : busyKey ? null : 'reserve';

@@ -631,7 +631,7 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・調子の
   assert(tl.includes('三冠') && tl.includes('グランプリ制覇') && !tl.includes('二冠') && tl.includes('G1五勝'), tl.join('・'));
   // 調子と総合力
   const x = W.mine()[0];
-  x.fatigue = 70; assert(T.condLevel(x, W.wIdx()) === 7, '使いすぎにならない');
+  x.fatigue = 80; assert(T.condLevel(x, W.wIdx()) === 7, "使いすぎにならない");
   x.fatigue = 0; x.cond = 30; x.lastRaceW = W.wIdx() - 3; assert(T.condLevel(x, W.wIdx()) === 2, '絶好調にならない');
   x.lastRaceW = W.wIdx() - 30; assert(T.condLevel(x, W.wIdx()) === 0, '休みすぎにならない');
   const fh = T.fhBoth(x, W.wIdx());
@@ -701,7 +701,7 @@ check('season: 12月4週のあとの GF の週に、グランドフェスティ�
   star.owner = 'P'; star.auto = false;
   let guard = 0;
   while (!(G.month === 12 && G.week === 4) && guard++ < 60) W.finishWeek({});
-  star.injury = null; star.loc = 'stable';
+  star.loc = "stable";
   fakeG1(G, star, 'ジャパンC', '芝', 2400);
   assert(T.dcStatus(star, 'classic').state === 'sure', `クラシックの G1 を勝った自分の馬が「資格あり」にならない（${T.dcStatus(star, 'classic').state}）`);
   W.finishWeek({});
@@ -752,7 +752,7 @@ check('dream: GF ごとの資格（G1・前年の勝ち馬・その距離の票�
   const young = W.all().find(h => h.loc === 'stable' && G.year - h.born === 2);
   if (young) { const o = young.owner; young.owner = 'P'; assert(s(young, 'mile').state === 'young', '2歳が3歳からにならない'); young.owner = o; }
   for (const h of [inside, outside, g1]) { h.auto = false; }
-  while (!(G.month === 12 && G.week === T.GF_WEEK) && guard++ < 70) { for (const h of [g1, outside]) { h.injury = null; h.loc = 'stable'; } W.finishWeek({}); }
+  while (!(G.month === 12 && G.week === T.GF_WEEK) && guard++ < 70) { for (const h of [g1, outside]) { h.loc = "stable"; } W.finishWeek({}); }
   assert(G.month === 12 && G.week === T.GF_WEEK && G.dc && G.dc.gf, '12月4週のあとに招待が来ない');
   const elig = c => T.dcEligible(c).map(x => x.h.id);
   assert(elig('mile').includes(g1.id) && elig('classic').includes(g1.id) && !elig('classic').includes(outside.id), '招待された自分の馬が違う');
@@ -949,7 +949,7 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   // 皐月賞と日本ダービーを勝った馬が菊花賞に出ると、歴代の三冠馬が出てくる
   const kk = R.gradedYear(G.year).find(r => r.short === '菊花賞');
   const h = W.all().find(x => x.hist && x.sex !== '牝' && !x.gelding && G.year - x.born === 3 && x.loc === 'stable' && !x.injury);
-  h.owner = 'P'; h.auto = false; h.fatigue = 0; h.injury = null; h.earn = 30000; h.wins = 4; h.starts = 5;
+  h.owner = 'P'; h.auto = false; h.fatigue = 0; h.earn = 30000; h.wins = 4; h.starts = 5;
   h.gradedWins.push({ y: G.year, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year, race: '東京優駿', short: '日本ダービー', grade: 'G1' });
   assert(SP.reachInfo(h).some(r => r.group.id === 'triple' && r.need === '菊花賞'), 'リーチが出ない');
   for (const k of H.STATS) h.pot[k] = 150;
@@ -1307,6 +1307,7 @@ require('./extra_balance.js')(check, assert, HS); // 立ち回りの噛み合い
 require('./extra_beat.js')(check, assert, HS); // 拍子（しごく手が馬の1完歩に合うと少し得）・ゲートを出たあとの隊列
 require('./extra_ui.js')(check, assert, HS); // 画面の仕組み：並べ替え・絞り込み・番組表と予約
 require('./extra_feel.js')(check, assert, HS); // 騎乗の手ざわり（パッドの向き・状態の文字を出さない）
+require('./extra_fatigue.js')(check, assert, HS); // 疲労（格・激戦・回復・移動・連闘で別の国へ行けない）と、故障が無いこと
 require('./extra_gate.js')(check, assert, HS); // スタートの目押し（数えを出さない・待つ秒は種から・GOOD の幅）と、騎手のゲームに放牧が無い
 require('./extra_skills2.js')(check, assert, HS); // 逃げ・追込の能力・道悪○・外枠○・伝説級の固有の能力
 require('./extra_gf.js')(check, assert, HS); // グランドフェスティバル（6つ・GF の週・連戦・伝説級の担当・店と牧場・トロフィー・キンチェム）

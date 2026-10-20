@@ -242,6 +242,18 @@ static func base_speed(dist: float, surface: Variant, ground: Variant, course_ad
 	v *= 1.0 + float(HSU.or_(course_adj, 0.0))
 	return dist / (dist / v + 2.4)
 
+# 疲労の段階と下げ（js/core/racesim.js の S.FATIGUE・S.fatigueStage・S.fatiguePen と同じ。C++ は hs_horse.cpp の fatigue_pen）
+const FATIGUE := { at = [15.0, 35.0, 55.0, 75.0], pen = [0.0, 1.5, 4.0, 8.0, 13.0], strong = 86.0, top = 104.3, keep = 0.2 }
+static func fatigue_stage(fat: float) -> int:
+	var at: Array = FATIGUE.at
+	var st := 0
+	while st < at.size() and fat >= at[st]: st += 1
+	return st
+static func fatigue_pen(fat: float, a: float) -> float:
+	var p: float = FATIGUE.pen[fatigue_stage(fat)]
+	if not p: return 0.0
+	return p * HSU.clamp(1.0 - (a - FATIGUE.strong) / (FATIGUE.top - FATIGUE.strong) * (1.0 - FATIGUE.keep), FATIGUE.keep, 1.0)
+
 # 1頭の、このレースでの強さ（点）と内訳
 static func power(horse: Dictionary, race: Dictionary, w_idx: Variant, ctx: Variant) -> Dictionary:
 	if use_native(): return ClassDB.class_call_static(&"HSNativeSim", &"power", horse, race, w_idx, ctx if ctx else {})
@@ -261,7 +273,8 @@ static func _power_gd(horse: Dictionary, race: Dictionary, w_idx: Variant, ctx: 
 	var gl: int = _GROUND.get(race.get("ground"), 0)
 	var groundAdj: float = gl * (float(HSU.or_(horse.apt.get("heavy"), 50.0)) - 55.0) / 45.0 * 1.3
 	var layoff := 1.2 if (horse.get("lastRaceW") != null and w_idx != null and w_idx - horse.lastRaceW >= 12) else 0.0
-	var condAdj: float = float(HSU.or_(horse.get("cond"), 0.0)) / 100.0 * 3.0 - float(HSU.or_(horse.get("fatigue"), 0.0)) * 0.05 - layoff
+	var trav: float = float(HSU.or_(ctx.get("travel"), 0.0)) if ctx else 0.0   # このレースへの移動の疲れ（HSFatigue.travel）
+	var condAdj: float = float(HSU.or_(horse.get("cond"), 0.0)) / 100.0 * 3.0 - fatigue_pen(float(HSU.or_(horse.get("fatigue"), 0.0)) + trav, a) - layoff
 	var jockAdj := 0.0
 	if ctx and ctx.get("jockey"): jockAdj = (ctx.jockey.skill - 75.0) * 0.06
 	var wtAdj := 0.0

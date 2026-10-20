@@ -413,7 +413,7 @@
       if (!(st.got.t3 && st.got.t3.pending)) continue;
       const leaving = W.all().filter(h => h.owner !== 'P' && (h.loc === 'stable' || h.loc === 'farm') && !h.gelding && h.sex !== 'セ' && O.ownerOf(h) === o.id && (() => {
         const age = g.year - h.born;
-        return (h.retireYear && h.retireYear < g.year && age >= 2) || age >= 9 || (h.injury && h.injury.severe && age >= 4);
+        return (h.retireYear && h.retireYear < g.year && age >= 2) || age >= 9;
       })());
       if (!leaving.length) continue;
       const mt = (J.me() && J.me().mounts) || {};

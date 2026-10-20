@@ -1,11 +1,11 @@
-# 厩舎（docs/UI.md「厩舎」「馬の画面」）：お手馬を 1頭 1行（性齢・調子・総合力・次走）、右の見本に選んだ馬の中身と操作
+# 厩舎（docs/UI.md「厩舎」「馬の画面」）：お手馬を 1頭 1行（性齢・調子・疲労の段階・総合力・次走）、右の見本に選んだ馬の中身と操作
 # タブ（Q/E・LB/RB）：お手馬 n・牧場 n（引退した馬。オリジナルホースの親）
 # 見本：総合力（いま・完成）・能力・距離と脚質と成長・特殊能力・戦績と重賞の勝ち鞍・トロフィーと冠。
 # 操作：番組表（金）・おまかせの入切・引退させる（確かめは「やめる」から）。牧場の馬は「生産へ」「放す」
 # 決まりは HSJockey.retire・HSOriginal.release（godot/core）を呼ぶだけ
 extends UiScreen
 
-const COLS := [["馬名", 0], ["性齢", 52], ["調子", 100], ["芝", 50], ["ダ", 50], ["次走", 230]]
+const COLS := [["馬名", 0], ["性齢", 52], ["調子", 100], ["疲労", 96], ["芝", 50], ["ダ", 50], ["次走", 230]]
 
 var tab := 0
 var list_v: VBoxContainer
@@ -106,10 +106,15 @@ func _fill() -> void:
 			sa.custom_minimum_size.x = 52
 			hb.add_child(sa)
 			var c: Dictionary = HSSeason.cond(h, wi)
-			var ct := "入厩前" if h.loc == "farm" else ("故障" if h.get("injury") else String(c.label))
-			var cl := UiTheme.label(ct, 13, Color(String(c.color)) if h.loc == "stable" and not h.get("injury") else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
+			var ct := "入厩前" if h.loc == "farm" else String(c.label)
+			var cl := UiTheme.label(ct, 13, Color(String(c.color)) if h.loc == "stable" else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
 			cl.custom_minimum_size.x = 100
 			hb.add_child(cl)
+			# 疲労の段階（HSFatigue。万全・軽い疲れ・疲れ・疲れが濃い・使いすぎ）
+			var fv := HSFatigue.view(h)
+			var fl := UiTheme.label(String(fv.label) if h.loc == "stable" else "－", 13, Color(String(fv.color)) if h.loc == "stable" else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
+			fl.custom_minimum_size.x = 96
+			hb.add_child(fl)
 		else:
 			var sx := UiTheme.label(String(h.sex), 15, UiTheme.IVORY, HORIZONTAL_ALIGNMENT_CENTER)
 			sx.custom_minimum_size.x = 40

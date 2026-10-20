@@ -184,8 +184,8 @@ func _build_stable() -> void:
 		var sa := UiTheme.num_label("%s%d" % ["セ" if h.get("gelding") else h.sex, int(G.year - float(h.born))], 15)
 		sa.custom_minimum_size.x = HCOLS[1][1]
 		hb.add_child(sa)
-		var cond_txt := "入厩前" if h.loc == "farm" else ("故障" if h.get("injury") else String(HSSeason.cond(h, wi).label))
-		var cc := Color(String(HSSeason.cond(h, wi).color)) if h.loc == "stable" and not h.get("injury") else UiTheme.FAINT
+		var cond_txt := "入厩前" if h.loc == "farm" else String(HSSeason.cond(h, wi).label)
+		var cc := Color(String(HSSeason.cond(h, wi).color)) if h.loc == "stable" else UiTheme.FAINT
 		var cl := HBoxContainer.new()
 		cl.custom_minimum_size.x = HCOLS[2][1]
 		cl.add_theme_constant_override("separation", 6)

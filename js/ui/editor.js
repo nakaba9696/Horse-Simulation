@@ -52,7 +52,7 @@
     { k: 'fh', label: HS.Season.FH_NAME, val: d => fhOf(d).v, dir: -1, title: '伸びきったときの総合力（芝とダートの高いほう）', show: d => `${fhOf(d).v} ${fhOf(d).s}` },
     ...H.STATS.map(k => ({ k, label: H.STAT_SHORT[k], val: d => Math.round(info(d).pot[k]), dir: -1, tier: 'stat', title: H.STAT_LABEL[k] })),
     { k: 'heavy', label: '道悪', val: d => Math.round(info(d).heavy), dir: -1, heat: true, title: '大きいほど重い馬場が得意' },
-    { k: 'health', label: '健康', val: d => Math.round(info(d).health), dir: -1, heat: true, title: '大きいほど故障しにくく、疲れが早く取れる' },
+    { k: 'health', label: '健康', val: d => Math.round(info(d).health), dir: -1, heat: true, title: '大きいほど疲れが早く取れる' },
     { k: 'kire', label: '切れ', val: d => info(d).kire, dir: -1, title: '脚の切れ（1＝ズブい〜8＝切れる）' },
     { k: 'skills', label: '特殊能力', val: d => info(d).skills.filter(x => !H.SKILLS[x].bad).length - info(d).skills.filter(x => H.SKILLS[x].bad).length * 0.5, dir: -1, show: d => info(d).skills.map(x => H.SKILLS[x].label).join('・') },
     { k: 'dist', label: '距離', val: d => d.distMin * 10000 + d.distMax, dir: 1, show: d => `${d.distMin}〜${d.distMax}` },
@@ -192,7 +192,7 @@
         </div>
         <div class="row wrap">
           <div class="field grow"><label for="ed-kire">脚の切れ（1＝ズブい〜8＝切れる）</label>${sel('ed-kire', [1, 2, 3, 4, 5, 6, 7, 8], kire)}</div>
-          <div class="field grow"><label for="ed-health">健康（故障しにくさ・疲れの取れ方）<b id="ed-hv">${Math.round(health)}</b></label><input type="range" id="ed-health" min="10" max="100" value="${Math.round(health)}"></div>
+          <div class="field grow"><label for="ed-health">健康（疲れの取れ方）<b id="ed-hv">${Math.round(health)}</b></label><input type="range" id="ed-health" min="10" max="100" value="${Math.round(health)}"></div>
         </div>
         <div class="row wrap">
           ${['turf', 'dirt', 'heavy'].map(k => `<div class="field grow"><label for="ed-a-${k}">${{ turf: '芝の向き', dirt: 'ダートの向き', heavy: '道悪' }[k]}<b id="ed-av-${k}">${Math.round(now.apt[k])}</b></label><input type="range" id="ed-a-${k}" min="10" max="100" value="${Math.round(now.apt[k])}"></div>`).join('')}

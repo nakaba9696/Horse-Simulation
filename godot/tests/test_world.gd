@@ -57,6 +57,18 @@ func _ops(ops: Array) -> Array:
 				for r in HSProgram.rows(HSWorld.horse(op[1])):
 					if r.can == "reserve" and not r.race.get("graded"): found = r; break
 				out.append("%s:%s" % [found.race.key, HSU.or_(HSProgram.reserve(op[1], found.race.key), "ok")] if found else "no race")
+			"away":
+				var h = HSWorld.horse(op[1]); h.at = op[2]; h.lastRaceW = HSWorld.w_idx() - 1.0; HSWorld.dirty()
+				out.append(HSFatigue.where(h))
+			"fat":
+				var h = HSWorld.horse(op[1])
+				var res := [{ lengths = 0.0, endE = 0.3 }, { lengths = 0.2, endE = 0.05 }, { lengths = 1.5, endE = -0.1 }, { lengths = 3.0, endE = 0.12 }]
+				var rl: Array = []
+				for r in HSWorld.week_races():
+					var gs: Array = []
+					for k in res.size(): gs.append(HSFatigue.gain(r, res, k))
+					rl.append([r.key, HSFatigue.country_of(r), HSFatigue.travel(h, r), HSU.or_(HSFatigue.travel_why(h, r), ""), gs])
+				out.append(HSData.digest_save([float(HSFatigue.stage(h)), HSFatigue.recover(h), float(HSU.or_(h.get("fatigue"), 0.0)), HSU.or_(HSFatigue.where(h), ""), rl]))
 			"make":
 				var r := HSOriginal.make(op[1], op[2], op[3])
 				out.append(r.err if r.has("err") else "%s:%s" % [r.horse.name, ",".join(r.skills)])

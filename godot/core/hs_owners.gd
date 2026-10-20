@@ -449,7 +449,7 @@ static func retire_gifts() -> void:
 		var leaving: Array = HSWorld.all().filter(func(h):
 			if not (h.get("owner") != "P" and (h.get("loc") == "stable" or h.get("loc") == "farm") and not h.get("gelding") and h.get("sex") != "セ" and owner_of(h) == o.id): return false
 			var age: float = g.year - h.born
-			return (h.get("retireYear") and h.retireYear < g.year and age >= 2) or age >= 9 or (h.get("injury") and h.injury.get("severe") and age >= 4))
+			return (h.get("retireYear") and h.retireYear < g.year and age >= 2) or age >= 9)
 		if not leaving.size(): continue
 		var mt: Dictionary = HSU.or_(HSJockey.me().get("mounts") if HSJockey.me() else null, {})
 		HSSort.sort(leaving, func(a, b):

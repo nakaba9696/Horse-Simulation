@@ -13,11 +13,10 @@ const COND := [
 static func gap(h: Dictionary, wIdx: Variant) -> Variant:
 	return wIdx - h.lastRaceW if (h.get("lastRaceW") != null and wIdx != null) else null
 static func cond_level(h: Dictionary, wIdx: Variant) -> int:
-	var f: float = HSU.or_(h.get("fatigue"), 0.0); var c: float = HSU.or_(h.get("cond"), 0.0); var g = gap(h, wIdx)
-	if f >= 60: return 7
-	if f >= 45: return 6
-	if f >= 32: return 5
-	if f >= 20: return 4
+	# 疲労の段階（HSFatigue）：疲れ・疲れが濃い・使いすぎはそのまま、軽い疲れは「普通」まで
+	var st := HSFatigue.stage(h); var c: float = HSU.or_(h.get("cond"), 0.0); var g = gap(h, wIdx)
+	if st >= 2: return st + 3
+	if st == 1: return 4
 	if g != null and g >= 24: return 0
 	if g != null and g >= 12: return 1
 	if c >= 15: return 2
@@ -145,9 +144,9 @@ static func reserve(id: String, race: Dictionary) -> Variant:
 	if not h or h.get("owner") != "P": return "持ち馬ではない"
 	if not race.get("graded") and not (race.get("cls") and race.get("region") == "JRA"): return "予約できるのは重賞と条件戦だけ"
 	var why = static_ineligible(h, race, race.year)
+	if not why: why = HSFatigue.travel_why(h, race)   # 連闘で別の国へは予約できない
 	if not why and not race.get("graded"): # 条件戦は勝ち星の条件もいまの成績で見る（番組表 hs_program.gd）
-		var h2: Dictionary = h.duplicate(); h2.injury = null
-		why = HSRaces.ineligible(h2, race, race.year)
+		why = HSRaces.ineligible(h, race, race.year)
 	if why: return why
 	if not G.get("reserve"): G.reserve = []
 	if G.reserve.any(func(x): return x.id == id and x.y == race.year and x.m == race.month and x.w == race.week): return "その週はもう予約している"
@@ -230,7 +229,7 @@ static func weather_icon(w: String) -> String: return { "晴": "☀", "曇": "�
 
 # ================= グランドフェスティバル（js/core/dream.js） =================
 # 区分は data/gf.js（godot/data/gf.json）。12月4週のあとの「GF の週」（G.week＝5）に全部を走る。
-# GF は特別枠（疲れ・調子・休み・故障・出走数・勝ち数・リーディングに数えない）。同じ馬でいくつの GF にも出られる（連戦）
+# GF は特別枠（疲れ・調子・休み（移動の疲れも無い）・出走数・勝ち数・リーディングに数えない）。同じ馬でいくつの GF にも出られる（連戦）
 const DC_NAME := "グランドフェスティバル"
 const DC_FIELD := 16
 const GF_WEEK := 5.0
@@ -309,7 +308,7 @@ static func dc_standing(cat: Variant = null, year: Variant = null) -> Array:
 	var C: Dictionary = gf_by()[cat]; var wIdx := HSWorld.w_idx(); var sf := "ダ" if C.surface == "ダ" else "芝"
 	var list: Array = []; var fill: Array = []
 	for h in HSWorld.all():
-		if h.get("loc") != "stable" or h.get("injury") or year - h.born < 3 or h.get("legend"): continue
+		if h.get("loc") != "stable" or year - h.born < 3 or h.get("legend"): continue
 		var g1 := g1_wins(h, year, cat); var champ := dc_champ(h, year, cat); var votes := votes_of(h, year, cat)
 		var mine: bool = h.get("owner") == "P"
 		var fhv := fh(h, wIdx, sf)
@@ -393,7 +392,7 @@ static func dc_eligible(cat: Variant = null) -> Array:
 	var out: Array = []
 	for e in HSU.or_(x.get("elig"), []):
 		var h = HSWorld.horse(e.id)
-		if h and h.get("owner") == "P" and h.get("loc") == "stable" and not h.get("injury"): out.append({ h = h, why = e.why })
+		if h and h.get("owner") == "P" and h.get("loc") == "stable": out.append({ h = h, why = e.why })
 	return out
 static func dc_choose(cat: String, id: String) -> Variant:
 	var x = _inv(cat)
@@ -410,7 +409,7 @@ static func dc_decline(cat: String) -> Variant:
 	return null
 static func dc_runners(opts: Variant = null) -> Dictionary:
 	var wIdx := HSWorld.w_idx(); var out := {}
-	var ok := func(h): return h != null and h.get("owner") == "P" and h.get("loc") == "stable" and not h.get("injury")
+	var ok := func(h): return h != null and h.get("owner") == "P" and h.get("loc") == "stable"
 	for c in gf_cats():
 		var x = _inv(c.id)
 		if x and x.ans == "yes" and ok.call(HSWorld.horse(x.pick)): out[c.id] = HSWorld.horse(x.pick)
@@ -450,7 +449,7 @@ static func dc_field(race: Dictionary) -> Array:
 	for id in x.ai:
 		if out.size() >= DC_FIELD: break
 		var h = HSWorld.horse(id)
-		if not h or h.get("owner") == "P" or h.get("loc") != "stable" or h.get("injury"): continue
+		if not h or h.get("owner") == "P" or h.get("loc") != "stable": continue
 		if h.get("foreignTrained") and nf >= DC_FOREIGN: continue
 		if h.get("foreignTrained"): nf += 1
 		out.append({ horse = h })

@@ -13,7 +13,8 @@ JS 版は遊べる見本として残し、遊びの決まり・データ・模�
 | `godot/core/hs_u.gd`（`HSU`） | `U` の小物（`hash32`＝U.hash・clamp・JS と同じ max/min・物価・走りの速さ・着差・金額・タイムの書式・安定な並べ替え・`or_`＝JS の `||`） |
 | `godot/core/hs_data.gd`（`HSData`） | データ（JS の `HS.DATA` と同じ形）。`HSData.d()` で `godot/data/*.json` を全部読む |
 | `godot/core/hs_track.gd`（`HSTrack`） | コースの形（`HS.Track`。forRace・fromLayout・make・at・h_at・g_at） |
-| `godot/core/hs_horse.gd`（`HSHorse`） | 馬（`HS.Horse`。史実馬から作る・頭数合わせの馬・成長・能力・調教・故障） |
+| `godot/core/hs_horse.gd`（`HSHorse`） | 馬（`HS.Horse`。史実馬から作る・頭数合わせの馬・成長・能力・調教） |
+| `godot/core/hs_fatigue.gd`（`HSFatigue`） | 疲労（`HS.Fatigue`。レースでたまる量・毎週の回復・段階・移動の疲れ・連闘で別の国へ行けない。故障は無い。段階ごとの強さの下げは `hs_sim.gd` の `FATIGUE` と C++ の `hs_horse.cpp`） |
 | `godot/core/hs_skills.gd`（`HSSkills`） | 発動する特殊能力（`HS.Skills`） |
 | `godot/core/hs_sim.gd`（`HSSim`） | レースの模擬（`HS.Sim`。create・step・finish・操作・折り合い・競り合いの気合・実況）。C++ が読めれば C++ に渡す窓口（切り替えはこのファイルの `use_native` の 1 か所） |
 | `godot/native/`（`HSNativeSim`） | C++ の模擬（GDExtension）。`src/hs_math.cpp`（fdlibm）・`hs_rng.h`・`hs_track.cpp`・`hs_horse.cpp`（能力・強さ）・`hs_skills.cpp`・`hs_sim.cpp`（create・step・finish・操作・実況）・`hs_godot.cpp`（Godot に見せる窓口）。下の「C++ の模擬」 |
@@ -157,7 +158,8 @@ sh godot/native/build.sh      # godot-cpp（版を固定）を取り、Linux 向
 | V8 の Math（cos・sin・log・exp・cbrt・pow・hypot・round・toFixed・imul） | `hs_math.gd` | ○ 各 1500 件 |
 | データ（data/*.js → datafix・fictional のあと） | `godot/data/*.json`・`hs_data.gd` | ○ 全ファイルの指紋 |
 | `js/core/track.js` | `hs_track.gd` | ○（レースの中で） |
-| `js/core/horse.js` | `hs_horse.gd` | ○ 史実馬・伝説級・頭数合わせの馬・エディットの馬（調教・故障・回復は移したが、まだ一致テストが無い） |
+| `js/core/horse.js` | `hs_horse.gd` | ○ 史実馬・伝説級・頭数合わせの馬・エディットの馬（調教は世界の進行の中で） |
+| `js/core/fatigue.js` | `hs_fatigue.gd` | ○ 世界の進行（毎週のセーブ）と、craft の週の操作 `away`・`fat`（段階・回復・移動の疲れ・出られるか・たまる量） |
 | `js/core/skills.js` | `hs_skills.gd` | ○ |
 | `js/core/racesim.js` | `hs_sim.gd`・`godot/native/src/hs_sim.cpp`（C++） | ○ 54 本（C++ と GDScript の両方） |
 | `js/core/races.js`・`world.js`（騎手のゲームの道すじ）・`season.js`・`dream.js`・`eraless.js`・`special.js`・`owners.js`・`jockey.js`・`hall.js`・`trophy.js`・`pedigree.js`・`edits.js`（当てる所） | `hs_races.gd` ほか | ○ 新しいゲームから 4 週・JS のセーブから 4 週（GF・年明け） |

@@ -1,12 +1,12 @@
 // 年末のドリームレース（グランドフェスティバル・GF）：海外の競馬場で6つ（区分は data/gf.js）。出られる条件と、出るかどうかの選択（騎手のゲーム）
 // 持ち主の仕様書（docs/SPEC.md の「GF」・2026-10-19）：
 //   ・GF への誘いは12月4週が終わってから。12月4週のあとに「GF の週」（G.week＝5。T.GF_WEEK）を置き、6つの GF をその週に走る
-//   ・GF は特別枠：疲れ・調子・休み・故障は動かず、出走数・勝ち数・リーディングにも数えない（賞金・勝ち鞍・トロフィーは残る）
+//   ・GF は特別枠：疲れ・調子・休みは動かず（移動の疲れも無い）、出走数・勝ち数・リーディングにも数えない（賞金・勝ち鞍・トロフィーは残る）
 //   ・複数の GF に招待されて、続けて出られる（連戦。同じ週なので間の決まりは無い）
 //   ・前の年の同じ GF を勝った自分の馬が出ると、担当の伝説級（data/legends.js の gf）が出てくる。GF を全部勝つと、どの GF にもキンチェム（gf:'all'）
 //   ・GF を勝つと、担当の伝説級が店に並ぶ。その区分を初めて勝ったときは、担当の伝説級を1頭、牧場（引退馬）にもらえる（オリジナルホースの親にできる）
 //   ・GF ごとに違うトロフィー（data/gf.js の trophy。js/core/trophy.js）
-// 選ばれ方（GF ごとに16頭。入厩している3歳以上で、故障していない馬）：招待の条件は持ち主が検討中なので、前からの票の仕組みのまま
+// 選ばれ方（GF ごとに16頭。入厩している3歳以上の馬）：招待の条件は持ち主が検討中なので、前からの票の仕組みのまま
 //   1. 確定：前の年のその GF の勝ち馬（連覇に挑む）と、その年にその区分の距離の G1 を勝った自分の馬
 //   2. 残り：その区分のレース（data/gf.js の votes）で集めたファンの票の多い順。票はその年の成績で集まる（大きいレースほど・上の着ほど多い。1番人気で走るとファンが増える）。
 //      G1を1つ勝てば100票なので、その区分の G1 の勝ち馬はたいてい入る。票が同じなら総合力の順
@@ -27,7 +27,7 @@
   // 馬の冠：前の「グランドフェスティバル制覇」の代わりに、GF ごとのトロフィーの名前（GF クラシック覇者など）
   T.TITLES = T.TITLES.filter(t => t.id !== 'dc').concat(T.GF_CATS.map(c => ({ id: 'gf:' + c.id, label: c.trophy, test: ws => ws.some(w => T.gfCatOfName(w.r) === c.id) })));
   T.DC_PREV = ['ドリームクラシック', 'グランドフィナーレ']; // 前の名前（前のセーブの勝ち鞍も GF として数える。「グランドフィナーレ（短距離）」のように区分の付いた名前も）
-  T.DC_RESERVE = 6;                    // 招待のあとに故障した馬の代わり
+  T.DC_RESERVE = 6;                    // 招待のあとに出られなくなった馬（引退など）の代わり
   T.DC_FOREIGN = 4;                    // 外国で調教された馬の枠
   T.gfName = id => `${T.DC_NAME}（${T.GF_BY[id].label}）`;
   // 勝ち鞍の名前が GF か（前の名前「グランドフィナーレ」「ドリームクラシック」も）
@@ -94,7 +94,7 @@
     const C = T.GF_BY[cat], wIdx = W.wIdx(), sf = C.surface === 'ダ' ? 'ダ' : '芝';
     const list = [], fill = [];
     for (const h of W.all()) {
-      if (h.loc !== 'stable' || h.injury || year - h.born < 3 || h.legend) continue;
+      if (h.loc !== 'stable' || year - h.born < 3 || h.legend) continue;
       const g1 = T.g1Wins(h, year, cat), champ = T.dcChamp(h, year, cat), votes = T.votesOf(h, year, cat);
       const mine = h.owner === 'P';
       const fh = T.fh(h, wIdx, sf);
@@ -133,7 +133,7 @@
   };
 
   // 自分の馬ひとつの、ひとつの GF の資格。{ ok, state, text, why, need, votes, rank }
-  //   state：'young'（2歳）・'off'（入厩していない・故障）・'sure'（確定）・'in'（圏内）・'out'（圏外）・'invited'・'notInvited'（招待のあと）
+  //   state：'young'（2歳）・'off'（入厩していない）・'sure'（確定）・'in'（圏内）・'out'（圏外）・'invited'・'notInvited'（招待のあと）
   T.dcStatus = function (h, cat) {
     const G = HS.World.get(), year = G.year;
     cat = cat || 'classic';
@@ -148,7 +148,7 @@
       return { ok: false, state: 'notInvited', text: '招待なし' };
     }
     if (year - h.born < 3) return { ok: false, state: 'young', text: '3歳から', need: '3歳の年から目指せる' };
-    if (h.loc !== 'stable' || h.injury) return { ok: false, state: 'off', text: h.injury ? '故障中' : '牧場', need: '入厩して走ること' };
+    if (h.loc !== 'stable') return { ok: false, state: 'off', text: '牧場', need: '入厩して走ること' };
     const l = T.dcStanding(cat, year);
     const x = l.find(y => y.h === h);
     if (x && x.tier === 0) return { ok: true, state: 'sure', text: '資格あり', why: x.champ ? '前の年の勝ち馬・連覇に挑む' : `G1（${x.why.replace('を勝った', '')}）を勝った`, votes: x.votes, rank: x.rank };
@@ -202,7 +202,7 @@
   T.dcEligible = function (cat) {
     const W = HS.World, x = inv(cat || 'classic');
     if (!x) return [];
-    return (x.elig || []).map(e => ({ h: W.horse(e.id), why: e.why })).filter(e => e.h && e.h.owner === 'P' && e.h.loc === 'stable' && !e.h.injury);
+    return (x.elig || []).map(e => ({ h: W.horse(e.id), why: e.why })).filter(e => e.h && e.h.owner === 'P' && e.h.loc === 'stable');
   };
   // 出る（1頭だけ）。同じ馬がいくつの GF に出てもよい
   T.dcChoose = function (cat, id) {
@@ -226,7 +226,7 @@
   // （招待は1年の成果なので、返事を忘れただけで取り逃さないようにする。出たくなければ「出ない」を選べる）
   T.dcRunners = function (opts) {
     const W = HS.World, wIdx = W.wIdx(), out = {};
-    const ok = h => h && h.owner === 'P' && h.loc === 'stable' && !h.injury;
+    const ok = h => h && h.owner === 'P' && h.loc === 'stable';
     for (const c of T.GF_CATS) { const x = inv(c.id); if (x && x.ans === 'yes' && ok(W.horse(x.pick))) out[c.id] = W.horse(x.pick); }
     if (opts && opts.explicitOnly) return out;
     for (const c of T.GF_CATS) {
@@ -271,7 +271,7 @@
     for (const id of x.ai) {
       if (out.length >= T.DC_FIELD) break;
       const h = W.horse(id);
-      if (!h || h.owner === 'P' || h.loc !== 'stable' || h.injury) continue;
+      if (!h || h.owner === 'P' || h.loc !== 'stable') continue;
       if (h.foreignTrained && nf >= T.DC_FOREIGN) continue; // 抜けた馬の代わりを補欠から埋めるときも、外国の馬の枠を守る
       if (h.foreignTrained) nf++;
       out.push({ horse: h });

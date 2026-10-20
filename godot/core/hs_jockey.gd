@@ -120,7 +120,7 @@ static func week_start() -> void:
 	var g = HSWorld.G
 	for h in HSWorld.mine("farm"):
 		var age: float = g.year - h.born
-		if h.get("injury") or h.get("parked") or age < 2 or (age == 2 and g.month < 4): continue
+		if h.get("parked") or age < 2 or (age == 2 and g.month < 4): continue
 		if not HSWorld.to_stable(h.id):
 			if h.get("auto") == null: h.auto = true
 			HSWorld.news("%sが入厩した。" % h.name, "info")
