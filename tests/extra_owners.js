@@ -183,16 +183,20 @@ module.exports = function (check, assert, HS) {
   });
 
   check('owners: 8つのジャンルの依頼がそのジャンルに寄る（7割以上。OP・G3 の段階）', () => {
-    newGame(47);
+    // 1つの種だけだと、海外（欧州・豪州）のレースの少ない人は件数が10ほどで揺れが大きい（世界の乱数の並びが変わるだけで7割を割る）。
+    // 全部を回すときは2つの種の世界を合わせて数える（2026-10-20：調子を無くして乱数の並びが変わり、種47だけでは欧州好きが 5/10 になった。種48は 23/27）
     const t = {};
-    for (let i = 0; i < (QUICK ? 16 : 52); i++) {
-      const cards = W.cards();
-      for (const stage of [0, 1]) for (const ofr of O.generate(cards, `s${i}`, { stage, all: true })) {
-        const c = cards.find(c => c.race.key === ofr.raceKey), h = c.runners.find(x => x.horse.id === ofr.horseId).horse;
-        const x = t[ofr.oid] = t[ofr.oid] || { n: 0, fit: 0 };
-        x.n++; if (O.signFits(O.by(ofr.oid), c.race, h)) x.fit++;
+    for (const seed of QUICK ? [47] : [47, 48]) {
+      newGame(seed);
+      for (let i = 0; i < (QUICK ? 16 : 52); i++) {
+        const cards = W.cards();
+        for (const stage of [0, 1]) for (const ofr of O.generate(cards, `s${seed}-${i}`, { stage, all: true })) {
+          const c = cards.find(c => c.race.key === ofr.raceKey), h = c.runners.find(x => x.horse.id === ofr.horseId).horse;
+          const x = t[ofr.oid] = t[ofr.oid] || { n: 0, fit: 0 };
+          x.n++; if (O.signFits(O.by(ofr.oid), c.race, h)) x.fit++;
+        }
+        W.finishWeek({});
       }
-      W.finishWeek({});
     }
     const rows = O.list().map(o => ({ o, x: t[o.id] || { n: 0, fit: 0 } }));
     for (const { o, x } of rows) {

@@ -17,7 +17,7 @@
     const rows = P.rows(h, o);
     const wIdx = W.wIdx();
     const head = `<div class="pg-head"><span>距離 <b>${h.distMin}〜${h.distMax}m</b></span><span>芝 ${K.mark(P.fitSurf(h, '芝'))} ダート ${K.mark(P.fitSurf(h, 'ダ'))}</span><span>脚質 <b>${e(H.styleText(h))}</b></span>
-      ${h.loc === 'stable' ? `<span>調子 ${UI.condMark(h, wIdx)}</span><span>疲労 ${UI.fatigueMark(h)}</span>` : `<span class="muted">${h.loc === 'farm' ? farmNote(h) : ''}</span>`}
+      ${h.loc === 'stable' ? `<span>疲労 ${UI.fatigueMark(h)}</span>` : `<span class="muted">${h.loc === 'farm' ? farmNote(h) : ''}</span>`}
       <span class="next">次走：${nextLabel(h)}</span></div>
       ${h.auto ? `<div class="panel small mt row"><span class="grow">おまかせ中：出るレースは自動で決まる。表から選ぶと、おまかせは切れる。</span><button class="btn sm" data-act="auto" data-id="${h.id}">おまかせを切る</button></div>` : ''}`;
     const filters = `<div class="u-segs mt">${K.seg('表示', [['ok', '出られるレース'], ['all', '出られない重賞も']], o.show, 'pg-set', 'pshow')}
@@ -59,7 +59,7 @@
   App.act.unenter = keepY(App.act.unenter);
   App.act.program = d => { App.go({ name: 'horse', id: d.id, htab: 'train' }); };
 
-  // ---------- 厩舎（騎手のゲーム）：お手馬を1行ずつ。調子・総合力・次走が一目で分かる。「番組表」で次走を選ぶ ----------
+  // ---------- 厩舎（騎手のゲーム）：お手馬を1行ずつ。疲労・総合力・次走が一目で分かる。「番組表」で次走を選ぶ ----------
   const stable0 = UI.screens.stable;
   UI.screens.stable = function (st) {
     if (!isJ()) return stable0(st);
@@ -70,12 +70,12 @@
       const fh = T.fhBoth(h, wIdx);
       return `<tr data-act="horse" data-id="${h.id}"${k === 0 ? ' data-autofocus' : ''}><td class="th">${UI.thumb(h)}</td>
         <td><div class="nm">${e(h.name)} ${UI.histMark(h)}${h.auto ? ' <span class="chip">おまかせ</span>' : ''}</div><div class="sub">${UI.age(h)}・${H.className(H.classOf(h), G.year)}・${h.starts || 0}戦${h.wins || 0}勝・${U.money(h.prize || 0)}</div>${UI.reachLine(h)}</td>
-        <td>${h.loc === 'stable' ? UI.condMark(h, wIdx) : `<span class="muted small">${farmNote(h)}</span>`}</td><td>${h.loc === 'stable' ? UI.fatigueMark(h) : ''}</td>
+        <td>${h.loc === 'stable' ? UI.fatigueMark(h) : `<span class="muted small">${farmNote(h)}</span>`}</td>
         <td>${K.fh(fh.turf, fh.dirt)}</td>
         <td class="next small">${nextLabel(h)}</td>
         <td class="r"><button class="btn sm gold" data-act="program" data-id="${h.id}">番組表</button></td></tr>`;
     };
-    const tbl = list => `<div class="u-tbox"><table class="u-t st-t"><tr><th></th><th>馬</th><th>調子</th><th>疲労</th><th>${T.FH_NAME}（いま）</th><th>次走</th><th></th></tr>${list.map(row).join('')}</table></div>`;
+    const tbl = list => `<div class="u-tbox"><table class="u-t st-t"><tr><th></th><th>馬</th><th>疲労</th><th>${T.FH_NAME}（いま）</th><th>次走</th><th></th></tr>${list.map(row).join('')}</table></div>`;
     return K.band({ icon: 'stable', title: '厩舎', sub: '馬を押すと能力、「番組表」で次に出るレースを選ぶ', right: K.stat('お手馬', `${T.ownCount()} / ${T.MAX_OWN}`) + K.stat('毎月の費用', U.money(W.monthlyCost())) })
       + (inStable.length ? tbl(inStable) : '<div class="u-empty">入厩している馬がいません。馬の店で買った馬は、2歳の4月から自動で入厩します。</div>')
       + (farm.length ? `<h2 class="sec">牧場<span class="r">入厩前の馬</span></h2>${tbl(farm)}` : '');

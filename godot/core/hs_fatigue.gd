@@ -1,6 +1,6 @@
 # 疲労（js/core/fatigue.js の HS.Fatigue と同じ式・同じ順。持ち主の仕様書 docs/SPEC.md「疲労」。数の表は docs/BALANCE.md の「疲労」）
 #   ・疲労（h.fatigue 0〜100）はレースでたまり、毎週、健康の値に応じて抜ける。故障は無い
-#   ・レースでたまる量＝(base＋距離)×格（すごい G1 ほど大）×激戦の度合い（着差の小ささ・残った脚の少なさ）
+#   ・レースでたまる量＝(base＋距離)×格×激戦の度合い（着差の小ささ・残った脚の少なさ）。すごい G1 だけ重くする決まりは無い（持ち主の決定 2026-10-20）
 #   ・段階に応じた強さの下げは模擬の中（HSSim.FATIGUE・C++ の fatigue_pen）
 #   ・国が変わると移動の疲れ。前のレースから1週しか空いていないときは別の国のレースに出られない。GF は疲労も移動もない
 class_name HSFatigue
@@ -13,11 +13,7 @@ const STAGES := [
 	{ label = "使いすぎ", color = "#8c8c8c" },
 ]
 const GAIN := { base = 8.0, per100 = 0.7 }
-const GRADE := { G1 = 1.2, G2 = 1.05, G3 = 0.95, OP = 0.85, other = 0.8, top = 1.5 }
-const TOP_G1 := ["東京優駿", "ジャパンカップ", "有馬記念", "天皇賞（春）", "天皇賞（秋）", "宝塚記念", "菊花賞",
-	"凱旋門賞", "キングジョージ6世＆クイーンエリザベスステークス", "ドバイワールドカップ", "ドバイシーマクラシック", "サウジカップ",
-	"ブリーダーズカップクラシック", "ブリーダーズカップターフ", "英ダービー", "ケンタッキーダービー", "メルボルンカップ", "コックスプレート",
-	"香港カップ", "愛チャンピオンステークス", "インターナショナルステークス"]
+const GRADE := { G1 = 1.2, G2 = 1.05, G3 = 0.95, OP = 0.85, other = 0.8 }
 const SEV := { lo = 0.6, close = 0.4, spent = 0.4, winLen = 3.0, loseLen = 4.0, full = 0.25 }
 const REC := { base = 5.0, k = 0.2, min = 2.0, farm = 2.0 }
 const TRAVEL := { near = 4.0, far = 8.0 }
@@ -92,9 +88,7 @@ static func travel_why(h: Dictionary, race: Dictionary) -> Variant:
 	return null
 
 # ---------- レースのあと ----------
-static func is_top(race: Dictionary) -> bool: return race.get("grade") == "G1" and TOP_G1.has(race.get("name"))
 static func grade_mult(race: Dictionary) -> float:
-	if is_top(race): return GRADE.top
 	if race.get("graded"): return GRADE.get(race.get("grade"), GRADE.G3)
 	return GRADE.OP if race.get("cls") == "OP" else GRADE.other
 # 激戦の度合い。results＝模擬の結果の着順の並び、k＝その馬の着順−1

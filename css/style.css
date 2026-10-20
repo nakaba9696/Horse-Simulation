@@ -233,7 +233,7 @@ th.num { text-align: right; }
 .apt { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-2); }
 .apt > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-xs); color: var(--text-2); letter-spacing: .02em; }
 .apt b { display: block; margin-top: 2px; font-size: 14px; color: var(--text); letter-spacing: 0; }
-.cond { font-weight: 700; } .cond.c5 { color: #ff7a3d; } .cond.c4 { color: #ffd34d; } .cond.c3 { color: #dfe6ee; } .cond.c2 { color: #7fb3ff; } .cond.c1 { color: #8e9bb0; }
+.cond { font-weight: 700; }
 .menus { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: var(--sp-2); }
 .menus button { min-height: 40px; padding: var(--sp-2) var(--sp-1); border-radius: var(--r); border: 1px solid var(--line-2); background: var(--surface-3); color: var(--text); font-weight: 700; font-size: 13.5px; cursor: pointer; }
 .menus button.on { background: var(--gold-grad); color: var(--on-accent); border-color: transparent; }
@@ -493,7 +493,7 @@ input[type=range] { accent-color: var(--accent); min-width: 0; min-height: 28px;
   .mgr-cmds button { min-height: 96px; }
 }
 
-/* ---------- 調子の8色・冠・総合力・成長の山 ---------- */
+/* ---------- 疲労の段階の印・冠・総合力・成長の山 ---------- */
 .cmark { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; }
 .cmark i { width: 11px; height: 11px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px rgba(255, 255, 255, .18), 0 0 8px var(--c); }
 .chip.crown { background: linear-gradient(90deg, #7a5c10, #c9a23e); color: #fff; border-color: transparent; margin: 0 4px 4px 0; }

@@ -613,7 +613,7 @@ check('ride: しごく・引くの段は手を止めても保たれ、追い通�
   return `平均着順 直線でしごく ${late.toFixed(1)}・追い通す ${all.toFixed(1)}・何もしない ${none.toFixed(1)}`;
 });
 
-check('season: お手馬10頭まで・資金切れで終わり・冠・調子の8段階・総合力', () => {
+check('season: お手馬10頭まで・資金切れで終わり・冠・疲労の段階・総合力', () => {
   const T = HS.Season;
   W.newGame({ year: 2003, seed: 5, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
@@ -629,11 +629,12 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・調子の
   const h = { gradedWins: [{ y: 2005, short: '皐月賞', grade: 'G1' }, { y: 2005, short: '日本ダービー', grade: 'G1' }, { y: 2005, short: '菊花賞', grade: 'G1' }, { y: 2006, short: '宝塚記念', grade: 'G1' }, { y: 2006, short: '有馬記念', grade: 'G1' }] };
   const tl = T.titles(h).map(t => t.label);
   assert(tl.includes('三冠') && tl.includes('グランプリ制覇') && !tl.includes('二冠') && tl.includes('G1五勝'), tl.join('・'));
-  // 調子と総合力
+  // 馬の状態は疲労の段階だけ（調子は無い：持ち主の決定 2026-10-20）と総合力
   const x = W.mine()[0];
-  x.fatigue = 80; assert(T.condLevel(x, W.wIdx()) === 7, "使いすぎにならない");
-  x.fatigue = 0; x.cond = 30; x.lastRaceW = W.wIdx() - 3; assert(T.condLevel(x, W.wIdx()) === 2, '絶好調にならない');
-  x.lastRaceW = W.wIdx() - 30; assert(T.condLevel(x, W.wIdx()) === 0, '休みすぎにならない');
+  x.fatigue = 80; assert(HS.Fatigue.view(x).label === '使いすぎ', '使いすぎにならない');
+  x.fatigue = 40; assert(HS.Fatigue.view(x).label === '疲れ', '疲れにならない');
+  x.fatigue = 0; x.lastRaceW = W.wIdx() - 30; assert(HS.Fatigue.view(x).label === '万全', '長く休んで万全にならない');
+  assert(!T.condLevel && !('cond' in x), '調子が残っている');
   const fh = T.fhBoth(x, W.wIdx());
   assert(fh.turf >= 1 && fh.turf <= 99 && fh.dirt >= 1 && fh.dirt <= 99, JSON.stringify(fh));
   // 総合力：史実馬は伸びきったとき45〜85に入る（ごく弱い馬を除く）。エアグルーヴ70・キンチェム85。能力の上限がそろうと99

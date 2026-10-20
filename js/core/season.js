@@ -1,4 +1,4 @@
-// シーズンの決まりごと（騎手のゲーム）：お手馬の上限・資金切れの終わり・調子の8段階・総合力と国内の順位・
+// シーズンの決まりごと（騎手のゲーム）：お手馬の上限・資金切れの終わり・総合力と国内の順位・
 // 冠（勝ったレースの組み合わせで付く称号）と殿堂・天気
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
@@ -8,30 +8,7 @@
   T.MAX_OWN = 10;          // お手馬は10頭まで（引退した馬は数えない）
   T.BROKE_MONTHS = 2;      // 月末に資金がマイナスのまま2か月続くと終わり
 
-  // ---------- 調子の8段階（休みすぎ ← 最高 → 使いすぎ） ----------
-  T.COND = [
-    { label: '休みすぎ', color: '#e0443a' },
-    { label: '休み明け', color: '#9a5ad6' },
-    { label: '絶好調', color: '#2f7ff0' },
-    { label: '好調', color: '#3fb56a' },
-    { label: '普通', color: '#e5c443' },
-    { label: '疲れ', color: '#e8892e' },
-    { label: '疲れが濃い', color: '#8a5a32' },
-    { label: '使いすぎ', color: '#8c8c8c' },
-  ];
-  T.gap = (h, wIdx) => h.lastRaceW != null && wIdx != null ? wIdx - h.lastRaceW : null;
-  T.condLevel = function (h, wIdx) {
-    // 疲労の段階（js/core/fatigue.js）：疲れ・疲れが濃い・使いすぎはそのまま、軽い疲れは「普通」まで
-    const st = HS.Fatigue.stage(h), c = h.cond || 0, gap = T.gap(h, wIdx);
-    if (st >= 2) return st + 3;
-    if (st === 1) return 4;
-    if (gap != null && gap >= 24) return 0;
-    if (gap != null && gap >= 12) return 1;
-    if (c >= 15) return 2;
-    if (c >= -20) return 3;
-    return 4;
-  };
-  T.cond = (h, wIdx) => T.COND[T.condLevel(h, wIdx)];
+  // 調子は無い（持ち主の決定 2026-10-20「調子のパラメータは無し。疲労だけにする」）。馬の状態は疲労（js/core/fatigue.js）の段階で見せる
 
   // ---------- 総合力（芝・ダートそれぞれの強さを1〜99の数で）と国内の順位 ----------
   // 持ち主の指摘 2026-10-16：前の名は「フリーハンデ」（斤量 kg の数）。史実馬は伸びきったとき45〜85に入る。

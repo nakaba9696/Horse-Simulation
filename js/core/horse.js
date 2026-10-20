@@ -49,8 +49,8 @@
     right: { label: '右回り○', note: '右回りのコースで走る' },
     small: { label: '小回り○', note: '直線の短いコースが得意' },
     long: { label: '直線巧者', note: '長い直線で伸びる' },
-    summer: { label: '夏馬', note: '6〜8月に調子を上げる' },
-    winter: { label: '冬馬', note: '12〜2月に調子を上げる' },
+    summer: { label: '夏馬', note: '6〜8月のレースで走る' },
+    winter: { label: '冬馬', note: '12〜2月のレースで走る' },
     hipace: { label: 'ハイペース○', note: '流れが速いほど良い' },
     slowpace: { label: 'スローペース○', note: '上がりの勝負に強い' },
     oonige: { label: '大逃げ', note: '後ろを大きく離して逃げる' },
@@ -169,15 +169,6 @@
   };
   H.CLASS_RANK = { maiden: 0, C1: 1, C2: 2, C3: 3, OP: 4 };
 
-  // 調子（-100〜100）を表示に
-  H.condLabel = function (c) {
-    if (c >= 60) return { text: '絶好調', icon: '⤴⤴', cls: 'c5' };
-    if (c >= 20) return { text: '好調', icon: '⤴', cls: 'c4' };
-    if (c > -20) return { text: '普通', icon: '→', cls: 'c3' };
-    if (c > -60) return { text: '不調', icon: '⤵', cls: 'c2' };
-    return { text: '絶不調', icon: '⤵⤵', cls: 'c1' };
-  };
-
   // 距離適性の幅を表示に
   H.distLabel = function (min, max) {
     const mid = (min + max) / 2;
@@ -228,7 +219,7 @@
       growth, peakShift: 0,
       health: d.health != null ? d.health : U.clamp(75 + rng.normal(0, 9), 30, 100),
       skills: Array.isArray(d.skills) ? d.skills.filter(x => H.SKILLS[x]) : H.histSkills(d, rng),
-      bonus: {}, cond: 0, fatigue: 0,
+      bonus: {}, fatigue: 0,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [],
       restUntil: 0, retireYear: d.retire || (d.born + 5),
     };
@@ -341,25 +332,26 @@
       distMin: Math.max(1000, dist - 400 + rng.int(0, 2) * 100), distMax: dist + 200 + rng.int(0, 4) * 100,
       style: rng.weighted(H.STYLES, s => ({ '逃げ': 1, '先行': 3, '差し': 3, '追込': 1.5 })[s]), kire: rng.int(2, 7), skills: [],
       growth, peakShift: 0, health: 60 + rng.int(0, 30),
-      bonus: {}, cond: rng.normal(0, 30), fatigue: 0,
+      bonus: {}, fatigue: 0,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [],
     };
     return H.splitSurface(h, rng);
   };
 
-  // 調教のメニュー。gain＝伸びる能力、fat＝きつさ（調子への効き方。負は休ませる＝疲労が余分に抜ける）、cond＝調子への効き、time＝時計の目安
+  // 調教のメニュー。gain＝伸びる能力、fat＝きつさ（負は休ませる＝疲労が余分に抜ける）、course＝時計を出す所
+  // 調子は無い（持ち主の決定 2026-10-20「調子のパラメータは無し。疲労だけにする」）
   // 疲労はレースでだけたまる（js/core/fatigue.js）。故障は無い（持ち主の仕様書「故障はなしにする」）
   H.MENUS = {
-    '坂路(強め)': { gain: { spd: 0.3, dspd: 0.3, slope: 0.35 }, fat: 16, cond: 14, course: '坂路' },
-    '坂路(馬なり)': { gain: { spd: 0.12, dspd: 0.12, slope: 0.15 }, fat: 8, cond: 8, course: '坂路' },
-    'ウッド(強め)': { gain: { sta: 0.35, spd: 0.2 }, fat: 15, cond: 14, course: 'ウッド' },
-    'ウッド(馬なり)': { gain: { sta: 0.15, spd: 0.1 }, fat: 7, cond: 8, course: 'ウッド' },
-    '併せ馬': { gain: { guts: 0.4, spd: 0.1, dspd: 0.1 }, fat: 17, cond: 16, course: 'ウッド' },
-    'ダート': { gain: { dspd: 0.3, dsta: 0.3, slope: 0.15 }, fat: 10, cond: 8, course: 'ダート' },
-    'プール': { gain: { sta: 0.15, dsta: 0.15 }, fat: 2, cond: 4, course: 'プール' },
-    'ゲート練習': { gain: { mind: 0.4 }, fat: 3, cond: 2, course: 'ゲート' },
-    '軽め': { gain: {}, fat: -6, cond: 3, course: '軽め' },
-    '休養': { gain: {}, fat: -18, cond: -4, course: '休養' },
+    '坂路(強め)': { gain: { spd: 0.3, dspd: 0.3, slope: 0.35 }, fat: 16, course: '坂路' },
+    '坂路(馬なり)': { gain: { spd: 0.12, dspd: 0.12, slope: 0.15 }, fat: 8, course: '坂路' },
+    'ウッド(強め)': { gain: { sta: 0.35, spd: 0.2 }, fat: 15, course: 'ウッド' },
+    'ウッド(馬なり)': { gain: { sta: 0.15, spd: 0.1 }, fat: 7, course: 'ウッド' },
+    '併せ馬': { gain: { guts: 0.4, spd: 0.1, dspd: 0.1 }, fat: 17, course: 'ウッド' },
+    'ダート': { gain: { dspd: 0.3, dsta: 0.3, slope: 0.15 }, fat: 10, course: 'ダート' },
+    'プール': { gain: { sta: 0.15, dsta: 0.15 }, fat: 2, course: 'プール' },
+    'ゲート練習': { gain: { mind: 0.4 }, fat: 3, course: 'ゲート' },
+    '軽め': { gain: {}, fat: -6, course: '軽め' },
+    '休養': { gain: {}, fat: -18, course: '休養' },
   };
   H.MENU_LIST = Object.keys(H.MENUS);
   H.BONUS_CAP = 8; // 調教で上積みできる上限（各能力）
@@ -375,19 +367,16 @@
       const room = Math.max(0, H.BONUS_CAP - cur) / H.BONUS_CAP;
       horse.bonus[k] = cur + v * growthRoom * room * (0.6 + rng.next() * 0.8);
     }
-    // 調子（疲労が残っていると上がりにくい）。休ませるメニューは疲労が余分に抜ける
+    // 休ませるメニューは疲労が余分に抜ける
     const fatBefore = horse.fatigue || 0;
     const ease = m.fat * (0.8 + rng.next() * 0.4);
     if (ease < 0 && fatBefore > 0) horse.fatigue = Math.max(0, fatBefore + ease * H.REST_K);
-    let dc = m.cond * (1 - fatBefore / 120) - fatBefore * 0.25 + rng.normal(0, 8);
-    if (m.fat < 0) dc += 6;
-    horse.cond = U.clamp((horse.cond || 0) * 0.85 + dc, -100, 100);
     horse.trainWeeks = (horse.trainWeeks || 0) + 1;
     // 調教タイム（強めのときだけ速い時計）
     let time = null;
     const c = H.cur(horse, wIdx);
     const sp = m.course === 'ダート' ? c.dspd : Math.max(c.spd, c.dspd);
-    const ability = (sp * 2 + c.slope) / 3 + ((horse.kire || 4) - 4.5) * 0.8 + horse.cond * 0.04 - (horse.fatigue || 0) * 0.03;
+    const ability = (sp * 2 + c.slope) / 3 + ((horse.kire || 4) - 4.5) * 0.8 - (horse.fatigue || 0) * 0.03;
     if (m.course === '坂路') {
       const hard = menuName.includes('強め');
       const t4 = 58.5 - ability * 0.075 - (hard ? 1.6 : 0) + rng.normal(0, 0.4);
@@ -407,21 +396,18 @@
 
   H.REST_K = 0.5; // 休ませるメニュー（fat が負）で、疲労が余分に抜ける割合
 
-  // 牧場にいる週：疲労が多めに抜け（js/core/fatigue.js の F.REC.farm 倍）、調子がならされる
-  H.rest = function (horse, rng) {
+  // 牧場にいる週：疲労が多めに抜ける（js/core/fatigue.js の F.REC.farm 倍）
+  H.rest = function (horse) {
     HS.Fatigue.weekly(horse, HS.Fatigue.REC.farm);
-    horse.cond = U.clamp((horse.cond || 0) * 0.6 + rng.normal(0, 10), -60, 40);
   };
 
-  // 調教師のコメント（調子・疲れ・能力から）
-  H.comment = function (horse, wIdx) {
-    const st = HS.Fatigue.stage(horse), c = horse.cond || 0;
+  // 調教師のコメント（疲労の段階から）
+  H.comment = function (horse) {
+    const st = HS.Fatigue.stage(horse);
+    if (st >= 4) return '使い詰めで、疲れが抜けきっていません。ここは休ませたいところです。';
     if (st >= 3) return '疲れが目立ちます。ここは無理をさせたくありません。';
     if (st >= 2) return '少し疲れが残っています。軽めにしておきたいところです。';
-    if (c >= 60) return '動きは抜群。いつでも走れる状態です。';
-    if (c >= 20) return '順調です。追い切りの反応も上々。';
-    if (c > -20) return '可もなく不可もなく、といったところです。';
-    if (c > -60) return 'どうも覇気がありません。調整を工夫します。';
-    return '状態はかなり悪いです。立て直しに時間が要ります。';
+    if (st >= 1) return '疲れはほとんど抜けました。普段どおり走れます。';
+    return '疲れは抜けて、いつでも走れる状態です。';
   };
 })();

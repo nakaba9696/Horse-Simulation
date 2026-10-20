@@ -93,13 +93,8 @@
     App.go({ name: 'horse', id: r.horse.id, htab: 'info' });
   };
 
-  // ---------- 調子の8色・総合力・冠 ----------
+  // ---------- 総合力・冠（馬の状態は疲労の段階 UI.fatigueMark。js/ui/screens.js） ----------
   const T = HS.Season;
-  UI.condMark = (h, wIdx) => { const c = T.cond(h, wIdx != null ? wIdx : W.wIdx()); return `<span class="cmark" style="--c:${c.color}" title="調子"><i></i>${c.label}</span>`; };
-  // 疲労の段階（js/core/fatigue.js）。extra＝このレースへの移動の疲れ
-  UI.fatigueMark = (h, extra) => { const f = HS.Fatigue.view(h, extra); return `<span class="cmark" style="--c:${f.color}" title="疲労 ${f.value}"><i></i>${f.label}</span>`; };
-  const condTag0 = UI.condTag;
-  UI.condTag = h => isJ() ? UI.condMark(h) : condTag0(h);
   // 冠と、手にしたトロフィー（馬のデータから見られる。持ち主の仕様書 2026-10-19）
   UI.trophyChips = h => (HS.Hall && W.get().eraless ? HS.Hall.trophiesOf(h) : []).map(t => `<span class="chip crown" title="${e(W.yLabel(t.y))}">🏆 ${e(t.label)}</span>`).join('');
   UI.titleChips = h => (h.titles || []).map(l => `<span class="chip crown">👑 ${e(l)}</span>`).join('') + UI.trophyChips(h);
@@ -125,7 +120,7 @@
       <polygon points="${area}" fill="rgba(127,224,160,.18)"/><polyline points="${line}" fill="none" stroke="#7fe0a0" stroke-width="2.5" stroke-linejoin="round"/>
       ${nowA >= a0 && nowA <= a1 ? `<line x1="${nx}" y1="${T0}" x2="${nx}" y2="${H0 - B}" stroke="#ffd34d" stroke-dasharray="3 3"/><circle cx="${nx}" cy="${ny}" r="5.5" fill="#ffd34d" stroke="#3a2a00" stroke-width="1.5"/><text x="${U.clamp(nx, 20, W0 - 20)}" y="${T0 - 1}" fill="#ffd34d" font-size="10" text-anchor="middle">いま</text>` : ''}</svg>`;
   };
-  // 馬の画面の上：総合力（いま・完成）・国内の順位・調子・冠・成長の山・お金
+  // 馬の画面の上：総合力（いま・完成）・国内の順位・疲労・冠・成長の山・お金
   UI.grPanel = function (h, wIdx) {
     if (!isJ()) return '';
     const mine = h.owner === 'P';
@@ -135,7 +130,6 @@
       <div class="grrow"><div><div class="small muted">${T.FH_NAME}（いま）</div><b class="fh"><span class="turf">芝 ${fh.turf}</span><span class="dirt">ダ ${fh.dirt}</span></b></div>
         <div><div class="small muted">${T.FH_NAME}（完成）</div><b class="fh"><span class="turf">芝 ${pk.turf}</span><span class="dirt">ダ ${pk.dirt}</span></b></div>
         <div><div class="small muted">国内の順位</div><b>${rk && rk.pos ? `${rk.pos}位 <small class="muted">/ ${rk.n}頭</small>` : '－'}</b></div>
-        <div><div class="small muted">調子</div>${UI.condMark(h, wIdx)}</div>
         ${h.loc === 'stable' ? `<div><div class="small muted">疲労</div>${UI.fatigueMark(h)}</div>` : ''}
         <div><div class="small muted">成績</div><b>${h.starts || 0}戦${h.wins || 0}勝</b></div></div>
       ${UI.titleChips(h) ? `<div class="mt">${UI.titleChips(h)}</div>` : ''}
@@ -186,7 +180,7 @@
         : `<div class="panel empty">今週は乗るレースがありません。${W.mine('stable').length ? '<br><a href="#" data-act="tab" data-tab="stable">厩舎で出るレースを決める（おまかせなら自動で選ぶ）</a>' : ''}</div>`}
       ${T.reserves().length ? `<h2 class="sec">出走の予約<span class="r">${T.reserves().length}件</span></h2><div class="panel"><table class="t">${T.reserves().map(x => { const h = W.horse(x.id); return h ? `<tr><td class="small muted">${x.m}月${x.w}週</td><td><b>${e(x.label)}</b></td><td>${e(h.name)}</td><td><button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(x.key)}">取消</button></td></tr>` : ''; }).join('')}</table></div>` : ''}
       <h2 class="sec">お手馬<span class="r">${T.ownCount()} / ${T.MAX_OWN}頭・毎月 ${U.money(W.monthlyCost())}</span></h2>
-      ${W.mine().filter(h => h.loc !== 'retired').length ? `<div class="list">${W.mine().filter(h => h.loc !== 'retired').map(h => `<div class="card" data-act="horse" data-id="${h.id}">${UI.thumb(h)}<div class="grow"><div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${h.auto ? '<span class="chip">おまかせ</span>' : ''}${h.loc === 'stable' ? UI.condMark(h) + UI.fatigueMark(h) : ''}</div><div class="sub">${UI.age(h)}・${h.loc === 'stable' ? '入厩中' : '牧場'}・${h.starts || 0}戦${h.wins || 0}勝・${U.money(h.prize || 0)}</div>${UI.titleChips(h) || (UI.dcChip && UI.dcChip(h)) ? `<div>${UI.titleChips(h)}${UI.dcChip ? UI.dcChip(h) : ''}</div>` : ''}${UI.reachLine(h)}${UI.numStats(h, W.wIdx())}</div></div>`).join('')}</div>` : '<div class="panel empty">まだお手馬がいません。</div>'}
+      ${W.mine().filter(h => h.loc !== 'retired').length ? `<div class="list">${W.mine().filter(h => h.loc !== 'retired').map(h => `<div class="card" data-act="horse" data-id="${h.id}">${UI.thumb(h)}<div class="grow"><div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${h.auto ? '<span class="chip">おまかせ</span>' : ''}${h.loc === 'stable' ? UI.fatigueMark(h) : ''}</div><div class="sub">${UI.age(h)}・${h.loc === 'stable' ? '入厩中' : '牧場'}・${h.starts || 0}戦${h.wins || 0}勝・${U.money(h.prize || 0)}</div>${UI.titleChips(h) || (UI.dcChip && UI.dcChip(h)) ? `<div>${UI.titleChips(h)}${UI.dcChip ? UI.dcChip(h) : ''}</div>` : ''}${UI.reachLine(h)}${UI.numStats(h, W.wIdx())}</div></div>`).join('')}</div>` : '<div class="panel empty">まだお手馬がいません。</div>'}
       <h2 class="sec">これからのG1</h2>
       <div class="panel"><table class="t">${up.map(r => `<tr><td class="small muted">${r.inWeeks}週後</td><td>${UI.gradeTag(r)}</td><td><b>${e(R.label(r))}</b></td><td class="small">${r.course} ${UI.surf(r.surface)} ${r.dist}m</td></tr>`).join('') || '<tr><td class="muted">なし</td></tr>'}</table></div>
       <h2 class="sec">ニュース</h2>
@@ -480,14 +474,16 @@
     } finally { busy = false; }
   };
   // パドック：1頭ずつ横から歩く姿（←→で切り替え）と、下の帯（馬番・馬名・性齢・斤量・騎手・単勝・気配）。出走表と、自分で乗るか・おまかせか
+  // 気配は疲労の段階（js/core/fatigue.js）と、休み明け（12週以上あいた。模擬で少し割り引く）と気性から（調子は無い：持ち主の決定 2026-10-20）
   UI.mood = (h, wIdx) => {
-    const lv = T.condLevel(h, wIdx), mind = H.cur(h, wIdx).mind || 60;
+    const st = HS.Fatigue.stage(h), mind = H.cur(h, wIdx).mind || 60;
+    const gap = h.lastRaceW != null && wIdx != null ? wIdx - h.lastRaceW : null;
     const rr = U.hashRng(`pd:${h.id}:${wIdx}`).next();
-    if (lv >= 6) return { text: '覇気がない', cls: 'bad', jitter: 0, slow: 0.7 };
+    if (st >= 3) return { text: '覇気がない', cls: 'bad', jitter: 0, slow: 0.7 };
     if (mind < 55 && rr < 0.5) return { text: 'イレ込んでいる', cls: 'bad', jitter: 1, slow: 1.35 };
-    if (lv === 2) return { text: '気合十分', cls: 'good', jitter: 0.25, slow: 1.1 };
-    if (lv <= 1) return { text: '太め残り', cls: '', jitter: 0, slow: 0.85 };
-    if (lv >= 4) return { text: '少し硬い', cls: '', jitter: 0.1, slow: 0.9 };
+    if (gap != null && gap >= 12) return { text: '太め残り', cls: '', jitter: 0, slow: 0.85 };
+    if (st === 2) return { text: '少し硬い', cls: '', jitter: 0.1, slow: 0.9 };
+    if (st === 0 && gap != null && gap >= 3) return { text: '気合十分', cls: 'good', jitter: 0.25, slow: 1.1 }; // 疲れが抜けて、間をあけて使われている
     return { text: '落ち着いている', cls: 'good', jitter: 0, slow: 1 };
   };
   function paddock(card, runner) {
@@ -516,7 +512,7 @@
       const pdImg = pdSrc ? (UI._pdImg || (UI._pdImg = Object.assign(new Image(), { src: pdSrc }))) : null;
       const show = () => {
         const x = rows[sel], m = UI.mood(x.horse, wIdx), me = x === runner;
-        band.innerHTML = `${UI.waku(x.frame, x.num)}<b class="nm ${me ? 'me' : ''}">${e(x.horse.name)}</b><span>${x.horse.gelding ? 'セ' : x.horse.sex}${W.get().year - x.horse.born}</span><span>${x.weight}kg</span><span>${e(x.jockey ? x.jockey.name : '')}</span><span>単勝 <b>${x.odds}</b>（${x.pop}番人気）</span><span class="md ${m.cls}">${m.text}</span>${me ? UI.condMark(x.horse, wIdx) : ''}${x.horse.filler ? '' : `<span>疲労 ${UI.fatigueMark(x.horse, x.travel)}</span>`}<div class="pd-skills">${UI.hasSkills(x.horse) ? UI.skillChips(x.horse) : '<span class="small muted">特殊能力なし</span>'}</div>`;
+        band.innerHTML = `${UI.waku(x.frame, x.num)}<b class="nm ${me ? 'me' : ''}">${e(x.horse.name)}</b><span>${x.horse.gelding ? 'セ' : x.horse.sex}${W.get().year - x.horse.born}</span><span>${x.weight}kg</span><span>${e(x.jockey ? x.jockey.name : '')}</span><span>単勝 <b>${x.odds}</b>（${x.pop}番人気）</span><span class="md ${m.cls}">${m.text}</span>${x.horse.filler ? '' : `<span>疲労 ${UI.fatigueMark(x.horse, x.travel)}</span>`}<div class="pd-skills">${UI.hasSkills(x.horse) ? UI.skillChips(x.horse) : '<span class="small muted">特殊能力なし</span>'}</div>`;
         x0 = -80; t0 = performance.now();
       };
       const move = d => { sel = (sel + d + rows.length) % rows.length; show(); };

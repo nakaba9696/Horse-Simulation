@@ -15,7 +15,8 @@
   UI.surf = s => `<span class="chip ${s === 'ダ' ? 'dirt' : 'turf'}">${s === 'ダ' ? 'ダート' : '芝'}</span>`;
   UI.age = h => `${h.gelding ? 'セ' : h.sex}${W.get().year - h.born}`;
   UI.yen = m => `<span class="${m < 0 ? 'neg' : ''}">${U.money(m)}</span>`;
-  UI.condTag = h => { const c = H.condLabel(h.cond || 0); return `<span class="cond ${c.cls}">${c.icon} ${c.text}</span>`; };
+  // 疲労の段階（js/core/fatigue.js。調子は無い：持ち主の決定 2026-10-20）。extra＝このレースへの移動の疲れ
+  UI.fatigueMark = (h, extra) => { const f = HS.Fatigue.view(h, extra); return `<span class="cmark" style="--c:${f.color}" title="疲労 ${f.value}"><i></i>${f.label}</span>`; };
   UI.fatigue = h => `<div class="bar" title="疲れ"><i style="width:${Math.round(h.fatigue || 0)}%"></i></div>`;
   UI.aptMark = v => v >= 90 ? '◎' : v >= 75 ? '○' : v >= 60 ? '△' : '×';
   UI.horseLink = (h, text) => `<a href="#" data-act="horse" data-id="${h.id}">${e(text || W.displayName(h))}</a>`;
@@ -139,7 +140,7 @@
       <div class="grow">
         <div class="row"><span class="nm ell">${e(W.displayName(h))}</span>${UI.histMark(h)}${h.auto ? '<span class="chip">おまかせ</span>' : ''}</div>
         <div class="sub">${UI.age(h)}・${cls}・${h.starts || 0}戦${h.wins || 0}勝・${U.money(h.prize || 0)}</div>
-        <div class="row small">${UI.condTag(h)}<span class="grow">${UI.fatigue(h)}</span></div>
+        <div class="row small">${UI.fatigueMark(h)}<span class="grow">${UI.fatigue(h)}</span></div>
         <div class="small">${farm ? '<span class="muted">牧場で休養中</span>' : race ? `次走：${UI.gradeTag(race)} <b>${e(R.label(race))}</b>` : '<span class="muted">今週は出走なし</span>'}</div>
       </div></div>`;
   }
@@ -197,7 +198,7 @@
     const peakNote = (() => { const g = H.growthFactor(h, wIdx); if (g >= 0.995) return 'いまが充実期'; const age = H.ageAt(h, wIdx); const p = H.PEAK[h.growth] || H.PEAK['普通']; return age < p[0] ? 'まだ成長途上' : '衰えが見え始めた'; })();
     return `
       ${known && UI.grPanel ? UI.grPanel(h, wIdx) : ''}
-      ${h.loc === 'stable' && mine ? `<div class="comment mt">${e(H.comment(h, wIdx))}</div>` : ''}
+      ${h.loc === 'stable' && mine ? `<div class="comment mt">${e(H.comment(h))}</div>` : ''}
       <h2 class="sec">能力<span class="r">${known ? 'いまの値' : ''}</span></h2>
       <div class="panel"><div class="stats">${stats}</div></div>
       <h2 class="sec">適性</h2>
@@ -208,7 +209,7 @@
         <div>脚質<b>${H.styleText(h)}${known ? '・' + H.kireLabel(h.kire) : ''}</b></div>
         <div>成長型<b>${growthWord}（${peakNote}）</b></div>
         <div>健康<b>${(h.health ?? 70) >= 85 ? '丈夫' : (h.health ?? 70) >= 65 ? 'ふつう' : '弱い'}</b></div>
-        ${h.loc === 'stable' ? `<div>状態<b>${UI.condTag(h)}</b></div>` : ''}
+        ${h.loc === 'stable' ? `<div>疲労<b>${UI.fatigueMark(h)}</b></div>` : ''}
       </div>
       ${known && UI.hasSkills(h) ? `<h2 class="sec">特殊能力</h2><div class="panel skills">${UI.skillChips(h)}</div>` : ''}
       ${h.gradedWins.length ? `<h2 class="sec">重賞の勝ち鞍</h2><div class="panel">${h.gradedWins.map(g => `<div>${W.yLabel(g.y)} ${UI.gradeTag({ grade: g.grade, region: g.region, year: g.y })} ${e(g.short || g.race)}${g.hist ? ' <span class="small muted">（開始前）</span>' : ''}</div>`).join('')}</div>` : ''}
@@ -271,12 +272,12 @@
     const upcoming = W.upcomingGraded(jm ? HS.Season.weeksLeft(G) : 16).filter(r => r.inWeeks > 0 && !(jm ? HS.Season.staticIneligible(h, r, r.year) : R.ineligible(h, r, r.year))).slice(0, jm ? 200 : 10);
     const rsv = jm ? HS.Season.reserves(h.id) : [];
     return `
-      ${h.loc === 'stable' ? `<div class="comment mt">${e(H.comment(h, wIdx))}</div>` : ''}
-      ${jm ? `<div class="panel mt"><div class="row small">調子 ${UI.condTag(h)}<span class="muted">疲れ</span><span class="grow">${UI.fatigue(h)}</span></div><div class="small muted">調教は調教師にまかせています。</div></div>` : `<h2 class="sec">今週の調教<span class="r">${h.lastTrain && h.lastTrain.time ? '前回 ' + e(h.lastTrain.time) : ''}</span></h2>
+      ${h.loc === 'stable' ? `<div class="comment mt">${e(H.comment(h))}</div>` : ''}
+      ${jm ? `<div class="panel mt"><div class="row small">疲労 ${UI.fatigueMark(h)}<span class="grow">${UI.fatigue(h)}</span></div><div class="small muted">調教は調教師にまかせています。</div></div>` : `<h2 class="sec">今週の調教<span class="r">${h.lastTrain && h.lastTrain.time ? '前回 ' + e(h.lastTrain.time) : ''}</span></h2>
       <div class="panel">
         ${h.auto ? '<div class="small muted">おまかせ中：調教と出走は自動で決まります。</div>' : ''}
         <div class="menus">${H.MENU_LIST.map(m => `<button class="${menu === m && !h.auto ? 'on' : ''}" data-act="menu" data-id="${h.id}" data-m="${m}">${m}</button>`).join('')}</div>
-        <div class="row small mt">調子 ${UI.condTag(h)}<span class="muted">疲れ</span><span class="grow">${UI.fatigue(h)}</span></div>
+        <div class="row small mt">疲労 ${UI.fatigueMark(h)}<span class="grow">${UI.fatigue(h)}</span></div>
       </div>`}
       <h2 class="sec">今週のレース<span class="r">${ent ? '登録済み' : elig.length + 'レースに出られる'}</span></h2>
       ${h.loc !== 'stable' ? `<div class="panel empty">まだ入厩していません${jm ? '（2歳の4月から自動で入厩）。先のレースは下で予約できます' : ''}。</div>` : elig.length ? `<div class="tblwrap"><table class="t">

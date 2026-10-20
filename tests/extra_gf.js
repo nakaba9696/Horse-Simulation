@@ -71,13 +71,13 @@ module.exports = function (check, assert, HS) {
     // 担当の伝説級：前の年のクラシックを勝った馬が出るクラシックにだけ、グラディアトゥール
     const lgOf = gfc => cards.find(x => x.race.gf === gfc).runners.filter(x => x.horse.legend).map(x => x.horse.name);
     assert(lgOf('classic').join() === 'グラディアトゥール' && !lgOf('mile').length, `伝説級（クラシック ${lgOf('classic')}・マイル ${lgOf('mile')}）`);
-    const before = { starts: star.starts, wins: star.wins, fatigue: star.fatigue, cond: star.cond, rest: star.restUntil, pw: G.records.player.wins, ps: G.records.player.starts };
+    const before = { starts: star.starts, wins: star.wins, fatigue: star.fatigue, rest: star.restUntil, pw: G.records.player.wins, ps: G.records.player.starts };
     const y0 = G.year;
     const rep = W.finishWeek({});
     assert(rep.races.length === T.GF_CATS.length && rep.races.every(r => r.race.invite), 'GF の週に GF 以外のレース');
     assert(G.year === y0 + 1 && G.month === 1 && G.week === 1, 'GF の週のあとに年が明けない');
     const m = W.horse(star.id);
-    assert(m.starts === before.starts && m.wins === before.wins && m.fatigue === before.fatigue && m.cond === before.cond && m.restUntil === before.rest, 'GF で出走数・勝ち数・疲れ・調子が動いた');
+    assert(m.starts === before.starts && m.wins === before.wins && m.fatigue === before.fatigue && m.restUntil === before.rest, 'GF で出走数・勝ち数・疲れが動いた');
     assert(G.records.player.wins === before.pw && G.records.player.starts === before.ps, 'GF を騎手の勝ち数に数えた');
     assert(m.results.filter(r => r.y === y0 && /グランドフェスティバル/.test(r.race)).length === 2, 'GF の成績が残らない');
     const won = rep.races.filter(r => r.sim.results[0].horse.id === star.id).map(r => r.race.gf);

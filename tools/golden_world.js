@@ -147,7 +147,7 @@ function build(log) {
     const W = HS.World, G = W.get();
     const mine = W.mine().filter(h => h.loc === 'stable' || h.loc === 'farm');
     const p1 = mine[0], p2 = mine[1];
-    Object.assign(p1, { born: G.year - 5, loc: 'stable', fatigue: 0, cond: 30, wins: 8, starts: 9, apt: { turf: 100, dirt: 100, heavy: 80 } });
+    Object.assign(p1, { born: G.year - 5, loc: 'stable', fatigue: 0, wins: 8, starts: 9, apt: { turf: 100, dirt: 100, heavy: 80 } });
     for (const k of Object.keys(p1.pot)) p1.pot[k] = 120;
     p1.gradedWins = [['皐月賞', '皐月賞'], ['東京優駿', '日本ダービー'], ['天皇賞（秋）', '天皇賞・秋'], ['有馬記念', '有馬記念']].map(([race, short]) => ({ y: G.year - 1, race, short, grade: 'G1', region: 'JRA' }));
     G.trophies = Object.assign(G.trophies || {}, { grandprix: { y: G.year - 1, horse: p1.name, hid: p1.id, bonus: 0 }, tenno: { y: G.year - 1, horse: p1.name, hid: p1.id, bonus: 0 } });
