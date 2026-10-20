@@ -192,6 +192,7 @@ func _horse(t) -> void:
 	var hit = null
 	var hr = null
 	for h in HSWorld.mine():
+		if h.get("loc") == "retired": continue   # 引退させた馬は記録が消える（上で父と母を引退させている。どの馬にリプレイが残るかは乗った鞍しだい）
 		for r in HSU.or_(h.get("results"), []):
 			if UiHorseScreen.find_replay(String(h.name), r) != "":
 				hit = h; hr = r
