@@ -59,6 +59,7 @@ class Runner:
 	var fight := 0.0
 	var duel: Variant = null
 	var fightPeak := 0.0
+	var held := false # 前の馬に追いついて、その馬の速さに合わせている（当たり判定。AI の馬）
 	var kakari := 0.0 # 掛かり（ハミに逆らう強さ・頭の上げ具合 0〜1）
 	# 前の名前（画面の係のため。kakari と同じ）
 	var headUp: float:
@@ -181,8 +182,23 @@ static func gate_wait_of(rng: HSRng) -> float:
 	var g := HSRng.new(float((rng.s ^ 0x9E3779B9) & 0xFFFFFFFF))
 	return float(GATE.wait) + float(GATE.spread) * g.next()
 static var PUSH := { base = 0.25 }
-# 横の移動（自分で乗る馬）：毎秒 v 進路・前後 dx m 以内で、進路の差が gap より近い馬がいる向きへは動けない・何もしないまま drift 秒で内へ戻り始める
-static var LANE := { v = 3.0, dx = 2.0, gap = 0.8, drift = 10.0 }
+# 当たり判定（js/core/racesim.js の S.LANE_M・S.BODY と同じ。docs/BALANCE.md「2-3d. 当たり判定」）
+const LANE_M := 1.6
+static var BODY := { len = 2.4, wid = 0.5, look = 6.0, close = 0.8, follow = 1.0, side = 0.35 }
+
+# 前の馬に詰まらない速さの上限（前に馬がいなければ INF。JS の S.followV）
+static func follow_v(sim, s) -> float:
+	var bl: float = BODY.len; var bw: float = BODY.wid; var lk: float = BODY.look; var cl: float = BODY.close
+	var lim := INF
+	for o in sim.st:
+		if o == s or o.done or o.x <= s.x: continue
+		var d: float = o.x - s.x
+		if d >= bl + lk or absf(o.lane - s.lane) >= bw: continue
+		var v: float = o.v + HSU.mx(0.0, d - bl) * cl
+		if v < lim: lim = v
+	return lim
+# 横の移動（自分で乗る馬）：毎秒 v 進路・前後 dx m 以内で、進路の差が gap より近い馬がいる向きへは動けない。押さない限り横へは動かない
+static var LANE := { v = 3.0, dx = 2.4, gap = 0.65 }
 static var EARLY_PUSH := 500.0
 static var GEAR_GAP := 18.0
 static var GEAR_COST := 0.05
@@ -210,7 +226,7 @@ static var SUNA := 1.08
 # 追走○・外回し○の脚の使い方の倍率。馬群さばき：横の動きの速さの倍率・止められる幅（進路の差 gap・前後 dx m）・AI の前が壁の長さの倍率
 static var TSUISO := 0.95
 static var SOTO := 0.96
-static var SABAKI := { v = 1.6, gap = 0.55, dx = 1.4, block = 0.4 }
+static var SABAKI := { v = 1.6, gap = 0.5, dx = 2.4, block = 0.4 }
 static var KIRE := { s0 = 0.03, s1 = 0.0035, r = 60.0, a0 = 0.85, a1 = 0.05, c0 = 0.95, c1 = 0.0, cS = 0.035, z = 0.0015, top = 2.2 }
 # 馬場の状態（js/core/racesim.js の S.GROUND・S.mudM・S.mudLabel・S.groundFx と同じ。C++ は hs_horse.cpp の mud_m・ground_fx）。数は docs/BALANCE.md「14. 馬場の状態」
 static var GROUND := { mid = 75.0, bad = 45.0, span = 30.0, q = 0.25, mMax = 2.2, good = 25.0, gain = 0.15, pw = 0.4,
@@ -244,7 +260,7 @@ static func ground_fx(horse: Dictionary, race: Dictionary) -> Dictionary:
 	return { e = e, k = k, m = m }
 static var ORIAI := { ramp = 2.5, calmK = 5.0, over = 0.55, overHot = 0.25, fightAfter = 1.2, fightK = 14.0, surgeT = 6.0, match = 0.35, matchLo = 0.12,
 	keen = 40.0, passed = 9.0, wall = 4.0, sand = 3.0, cover = 4.0, shrinkT = 4.0, shrinkSpd = 0.012, pushSurge = 10.0, surgeMax = 45.0 }
-static var FIGHT := { from = 300.0, dx = 2.4, l0 = 0.45, l1 = 1.8, dv = 0.6, g0 = 72.0, up = 10.0, low = -40.0, decay = 0.05, spd = 0.012, cost = 0.12 }
+static var FIGHT := { from = 300.0, dx = 2.4, l0 = 0.45, l1 = 1.8, dv = 0.6, g0 = 70.0, span = 20.0, per = 50.0, up = 20.0, decay = 0.05, spd = 0.008 }
 # step の中で使う定数（上の辞書と同じ値。辞書を引くより速い）
 const _HILL_V := 0.4
 const _HILL_E := 100.0
@@ -262,8 +278,8 @@ const _FIGHT_DX := 2.4
 const _FIGHT_L0 := 0.45
 const _FIGHT_L1 := 1.8
 const _FIGHT_DV := 0.6
-const _FIGHT_SPD := 0.012
-const _FIGHT_COST := 0.12
+const _FIGHT_SPD := 0.008
+const _FIGHT_PER := 50.0
 const _GROUND := { "良": 0, "稍重": 1, "重": 2, "不良": 3 }
 
 # 基準の巡航速度（m/s）。総合85の馬の良馬場・芝
@@ -545,7 +561,7 @@ static func _create_gd(race: Dictionary, runners: Array, w_idx: Variant, rng: HS
 		if opts.get("ride"):
 			var c := Ctl.new()
 			c.tension = HSU.clamp(30.0 + (75.0 - s.mind) * 0.4 * bondF(opts.get("bond")) + (15.0 if s.kakariDay else 0.0), 10.0, 70.0)
-			c.lane = HSU.mn(3.0, s.lane); c.bond = opts.get("bond"); c.bondF = bondF(opts.get("bond"))
+			c.lane = s.lane; c.bond = opts.get("bond"); c.bondF = bondF(opts.get("bond"))
 			sim.ctl = c
 			s.delay = 99.0; s.late = false
 	sim.gateWait = gate_wait_of(rng)
@@ -748,7 +764,8 @@ static func fight_step(sim: Sim, s: Runner, R: float, prog: float) -> void:
 				duel = o; break
 	s.duel = duel
 	if duel:
-		s.fight = HSU.clamp(s.fight + (s.guts - F.g0) / (100.0 - F.g0) * F.up * DT, F.low, 100.0)
+		var aim := HSU.clamp((s.guts - F.g0) / F.span * F.per, -100.0, 100.0)
+		s.fight = HSU.mn(aim, s.fight + F.up * DT) if aim > s.fight else HSU.mx(aim, s.fight - F.up * DT)
 		if s.fight > s.fightPeak: s.fightPeak = s.fight
 	elif s.fight:
 		s.fight *= 1.0 - F.decay * DT
@@ -841,13 +858,8 @@ static func _step_gd(sim: Sim) -> bool:
 					target *= 1.012; costMul *= KAKARI_COST
 				elif c.tension < 35 and not s.spurting: costMul *= CALM_SAVE
 				elif c.tension > 50 and not s.spurting: costMul *= 1.0 + (c.tension - 50.0) / 100.0 * TENSE_COST
-			if c.lane > 0 and t - c.laneT > LANE.drift and t - c.driftT > 1.2:
-				var blockedIn := false
-				for o: Runner in st:
-					if o != s and not o.done and absf(o.x - s.x) < 3.2 and o.lane < s.lane - 0.2 and o.lane > c.lane - 1.9: blockedIn = true; break
-				if not blockedIn:
-					c.lane -= 1.0; c.driftT = t
-			var ahead = _ahead_of(st, s, 2.6, 0.85)
+			# 進路は押さない限り変わらない。前に馬がいて進路が無い（すぐ前・横が馬の幅より近い）
+			var ahead = _ahead_of(st, s, BODY.len + 0.2, BODY.wid)
 			c.blockedNow = ahead != null
 			if ahead: target = HSU.mn(target, ahead.v - 0.05)
 			if c.shrink > 0.05 and not s.spurting: target *= 1.0 - ORIAI.shrinkSpd * c.shrink
@@ -893,10 +905,8 @@ static func _step_gd(sim: Sim) -> bool:
 		if s.sotoM and s.spurting and R > straight and ((sim.track.corner_at(R) != 0 and R < straight + 700) if sim.track else R < straight + 350) and (not (s.me and c) or s.lane > 1.5):
 			costMul *= SOTO; fire(sim, s, "sotomawashi")
 		fight_step(sim, s, R, prog)
-		var fk := s.fight / 100.0
-		if fk and (s.spurting or s.E <= 0):
-			target *= 1.0 + _FIGHT_SPD * fk
-			if fk > 0: costMul *= 1.0 - _FIGHT_COST * fk
+		if s.fight and (s.spurting or s.E <= 0):
+			target *= 1.0 + _FIGHT_SPD * s.fight / _FIGHT_PER
 		if s.boost and t < s.boost.until:
 			target *= s.boost.mul
 			if s.boost.free: costMul /= s.boost.mul * s.boost.mul * s.boost.mul
@@ -915,6 +925,10 @@ static func _step_gd(sim: Sim) -> bool:
 				if s.blocked > 0: say(sim, t, "%s、前が壁になった！" % s.h.name, "trouble")
 		if s.blocked > 0:
 			target *= 0.93; s.blocked -= DT
+		# 当たり判定：前の馬（横が馬の幅より近い）に近づくほど、その馬の速さへ落とす
+		var flim := follow_v(sim, s)
+		s.held = flim < target
+		if s.held: target = flim
 		var accel: float = START_ACC * float(START_STYLE.get(s.h.get("style"), 1.0)) * (START_SKILL_ACC if (s.boost and s.boost.free and t < s.boost.until) else 1.0) if s.v < s.vc * 0.9 else s.acc + s.slopeP * 0.0015
 		var dv := maxf(-1.4 * DT, minf(accel * DT, target - s.v))
 		var vPrev := s.v
@@ -979,7 +993,7 @@ static func _step_gd(sim: Sim) -> bool:
 			if hit:
 				if t - (-9.0 if c.bumpT == null else c.bumpT) > 0.4:
 					c.bumpT = t; c.bumpSide = dir
-				c.lane = HSU.clamp(HSMath.round_js(me.lane - dir * 0.49), 0.0, 12.0) # 押した向きの注文は取り消す（ぶつかった所で止まる）
+				c.lane = me.lane # 押した向きの注文は取り消す（ぶつかった所で止まる。戻りもしない）
 			else: me.lane = nl
 		me.laneT = c.lane
 	var near: Array = []
@@ -993,7 +1007,8 @@ static func _step_gd(sim: Sim) -> bool:
 			want += s.driftLane
 			near.clear()
 			var q := k - 1
-			while q >= 0 and live[q].x - s.x < 2.6:
+			var look: float = BODY.len + (float(BODY.look) if s.held else float(BODY.follow) + 0.2)
+			while q >= 0 and live[q].x - s.x < look:
 				near.append(me.lane if live[q] == me else live[q].laneT); q -= 1
 			if me and me.x < s.x and s.x - me.x < 2.6: near.append(me.lane)
 			var lane := want
@@ -1004,8 +1019,20 @@ static func _step_gd(sim: Sim) -> bool:
 				if not hit: break
 				lane += 1.0
 			s.laneT = lane
-			var dl := (s.laneT - s.lane) * 0.16
-			s.lane += HSU.clamp(dl, -FAN.v, FAN.v) if s.x < FAN.x else dl
+			var dl := (s.laneT - s.lane) * (float(BODY.side) if s.held else 0.16)
+			var mv: float = HSU.clamp(dl, -FAN.v, FAN.v) if s.x < FAN.x else dl
+			# 当たり判定：横に動く向きに馬がいれば（前後 BODY.len 以内）、その馬の BODY.wid 手前で止まる
+			var nl2: float = s.lane + mv
+			if mv != 0:
+				var dir2 := 1.0 if mv > 0 else -1.0
+				var bl2: float = BODY.len; var bw2: float = BODY.wid
+				for o: Runner in st:
+					if o == s or o.done or absf(o.x - s.x) >= bl2 or dir2 * (o.lane - s.lane) <= 0: continue
+					var lim2: float = o.lane - dir2 * bw2
+					if (nl2 > lim2) if dir2 > 0 else (nl2 < lim2):
+						nl2 = HSU.mx(s.lane, lim2) if dir2 > 0 else HSU.mn(s.lane, lim2)
+			s.lane = nl2
+	separate(sim)
 	if opts.get("frames") and sim.step % 5 == 0: commentary(sim)
 	if opts.get("frames") and sim.step % REC_EVERY == 0:
 		var p: Array = []
@@ -1014,6 +1041,52 @@ static func _step_gd(sim: Sim) -> bool:
 	if sim.finished >= st.size() or t >= 400 or (sim.winnerT != null and t > sim.winnerT + 25): sim.over = true
 	if c and st[sim.me].done and t > st[sim.me].finishT + 4: sim.over = true
 	return sim.over
+
+# 当たり判定（毎刻みの終わり。JS の S.separate と同じ）
+static func separate(sim: Sim) -> void:
+	var B := BODY; var c = sim.ctl; var t := sim.t; var EPS := 1e-6
+	var me: Runner = sim.st[sim.me] if c else null
+	var bl: float = B.len; var bw: float = B.wid
+	var live: Array = []
+	for s: Runner in by_x(sim):
+		if not s.done and t >= s.delay: live.append(s)
+	var n := live.size()
+	for k in range(1, n):
+		var s: Runner = live[k]
+		for q in k:
+			var o: Runner = live[q]
+			var ax := absf(o.x - s.x); var al := absf(o.lane - s.lane)
+			if ax >= bl - EPS or al >= bw - EPS: continue
+			var ok := false
+			if (bw - al) * LANE_M < 3.0 * (bl - ax):
+				var y: Runner = o if s == me else s
+				var f: Runner = o if y == s else s
+				var d := 1.0 if y.lane > f.lane else (-1.0 if y.lane < f.lane else 1.0)
+				var nl := f.lane + d * bw
+				if nl >= 0:
+					y.lane = nl; ok = true
+				elif f != me:
+					f.lane = y.lane + bw; ok = true
+			if not ok:
+				s.x = o.x - bl
+				if s.v > o.v: s.v = o.v
+			if me and (s == me or o == me) and t - (-9.0 if c.bumpT == null else c.bumpT) > 0.4:
+				var other: Runner = o if s == me else s
+				c.bumpT = t; c.bumpSide = 1.0 if other.lane > me.lane else (-1.0 if other.lane < me.lane else 0.0)
+	var a := by_x(sim)
+	for k in range(1, a.size()):
+		var s: Runner = a[k]
+		if s.done or t < s.delay: continue
+		for it in k + 1:
+			var moved := false
+			for q in k:
+				var o: Runner = a[q]
+				if o.done or t < o.delay: continue
+				if absf(o.lane - s.lane) < bw - EPS and absf(o.x - s.x) < bl - EPS:
+					s.x = o.x - bl
+					if s.v > o.v: s.v = o.v
+					moved = true
+			if not moved: break
 
 static func commentary(sim: Sim) -> void:
 	var st := sim.st; var D := sim.D; var straight := sim.straight; var t := sim.t; var k := sim.talk

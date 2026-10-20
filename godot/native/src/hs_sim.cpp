@@ -19,7 +19,9 @@ static const double T_BASE = 25.0, T_HOT = 0.5, T_KAKARI = 15.0, T_SETTLE = 0.08
 static const double START_ACC = 7.5, START_SKILL_ACC = 1.35, EASY_START = 0.95, LATE_E = 0.15, PUSH_BASE = 0.25;
 // ゲート（JS の S.GATE）：待つ秒＝wait＋spread×くじ（種の乱数は進めない）・GOOD の幅 buf と good・早押しの出の遅れ fumble・早押しで上がる気分 fret
 static const double G_WAIT = 2.2, G_SPREAD = 1.6, G_BUF = 0.12, G_GOOD = 0.1, G_FUMBLE = 0.35, G_FRET = 4.0;
-static const double LANE_V = 3.0, LANE_DX = 2.0, LANE_GAP = 0.8, LANE_DRIFT = 10.0;
+// 当たり判定（JS の S.LANE_M・S.BODY と同じ。docs/BALANCE.md「2-3d. 当たり判定」）。押さない限り自分の馬は横へ動かない
+static const double LANE_M = 1.6, BODY_LEN = 2.4, BODY_WID = 0.5, BODY_LOOK = 6.0, BODY_CLOSE = 0.8, BODY_FOLLOW = 1.0, BODY_SIDE = 0.35;
+static const double LANE_V = 3.0, LANE_DX = 2.4, LANE_GAP = 0.65;
 // ゲートを出た直後：脚質ごとの出だしの加速の倍率（逃げ・先行・差し・追込）。FAN_X m までは内へ寄る速さを 0.2 秒に FAN_V 進路までに
 static const double START_STYLE[4] = { 1.18, 1.07, 0.96, 0.88 };
 static const double FAN_X = 250.0, FAN_V = 0.1;
@@ -41,11 +43,11 @@ static const double LONGSPURT_R = 50.0, LONGSPURT_Z = 0.002;
 static const double JIYU_SLOW = 0.994, JIYU_HI = 1.006, JIYU_K = 0.5, JIYU_MISFIT = 0.35;
 static const double SUNA = 1.08;
 // 追走○・外回し○の脚の使い方の倍率。馬群さばき：横の動きの速さの倍率・止められる幅・AI の前が壁の長さの倍率
-static const double TSUISO = 0.95, SOTO = 0.96, SABAKI_V = 1.6, SABAKI_GAP = 0.55, SABAKI_DX = 1.4, SABAKI_BLOCK = 0.4;
+static const double TSUISO = 0.95, SOTO = 0.96, SABAKI_V = 1.6, SABAKI_GAP = 0.5, SABAKI_DX = 2.4, SABAKI_BLOCK = 0.4;
 static const double K_S0 = 0.03, K_S1 = 0.0035, K_R = 60.0, K_A0 = 0.85, K_A1 = 0.05, K_C0 = 0.95, K_C1 = 0.0, K_CS = 0.035, K_Z = 0.0015, K_TOP = 2.2;
 static const double O_RAMP = 2.5, O_CALMK = 5.0, O_OVER = 0.55, O_OVERHOT = 0.25, O_FIGHTAFTER = 1.2, O_FIGHTK = 14.0, O_SURGET = 6.0, O_MATCH = 0.35, O_MATCHLO = 0.12,
 	O_KEEN = 40.0, O_PASSED = 9.0, O_WALL = 4.0, O_SAND = 3.0, O_COVER = 4.0, O_SHRINKT = 4.0, O_SHRINKSPD = 0.012, O_PUSHSURGE = 10.0, O_SURGEMAX = 45.0;
-static const double F_FROM = 300.0, F_DX = 2.4, F_L0 = 0.45, F_L1 = 1.8, F_DV = 0.6, F_G0 = 72.0, F_UP = 10.0, F_LOW = -40.0, F_DECAY = 0.05, F_SPD = 0.012, F_COST = 0.12;
+static const double F_FROM = 300.0, F_DX = 2.4, F_L0 = 0.45, F_L1 = 1.8, F_DV = 0.6, F_G0 = 70.0, F_SPAN = 20.0, F_PER = 50.0, F_UP = 20.0, F_DECAY = 0.05, F_SPD = 0.008;
 static const double OONIGE_EARLY = 1.02, OONIGE_MID = 1.02, OONIGE_KICK = 0.5, OONIGE_LEAD = 0.055;
 
 // Godot の値は Godot が読み込みを終えてから作る（大域の初期化で作ると落ちる）
@@ -220,7 +222,7 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 			Ctl &c = sim.ctl;
 			Variant bond = opts.get("bond", Variant());
 			c.tension = clamp(30.0 + (75.0 - s.mind) * 0.4 * bondF(bond) + (s.kakariDay ? 15.0 : 0.0), 10.0, 70.0);
-			c.lane = mn(3.0, s.lane); c.bond = bond; c.bondF = bondF(bond);
+			c.lane = s.lane; c.bond = bond; c.bondF = bondF(bond);
 			c.passSeen.assign(sim.st.size(), std::numeric_limits<double>::quiet_NaN());
 			sim.hasCtl = true;
 			s.delay = 99.0; s.late = false;
@@ -425,7 +427,8 @@ static void fight_step(Sim &sim, Runner &s, double R, double prog) {
 	}
 	s.duel = duel;
 	if (duel >= 0) {
-		s.fight = clamp(s.fight + (s.guts - F_G0) / (100.0 - F_G0) * F_UP * DT, F_LOW, 100.0);
+		double aim = clamp((s.guts - F_G0) / F_SPAN * F_PER, -100.0, 100.0);
+		s.fight = aim > s.fight ? mn(aim, s.fight + F_UP * DT) : mx(aim, s.fight - F_UP * DT);
 		if (s.fight > s.fightPeak) s.fightPeak = s.fight;
 	} else if (s.fight != 0.0) {
 		s.fight *= 1.0 - F_DECAY * DT;
@@ -449,6 +452,53 @@ static Runner *ahead_of(Sim &sim, Runner &s, double dmax, double lmax) {
 }
 
 static void commentary(Sim &sim);
+
+// 当たり判定（毎刻みの終わり。JS の S.separate と同じ）
+static void separate(Sim &sim) {
+	auto &st = sim.st;
+	Ctl *c = sim.hasCtl ? &sim.ctl : nullptr;
+	Runner *me = c ? &st[sim.me] : nullptr;
+	double t = sim.t; const double EPS = 1e-6;
+	std::vector<int> live;
+	for (int i : by_x(sim)) if (!st[i].done && t >= st[i].delay) live.push_back(i);
+	int n = (int)live.size();
+	for (int k = 1; k < n; k++) {
+		Runner &s = st[live[k]];
+		for (int q = 0; q < k; q++) {
+			Runner &o = st[live[q]];
+			double ax = std::fabs(o.x - s.x), al = std::fabs(o.lane - s.lane);
+			if (ax >= BODY_LEN - EPS || al >= BODY_WID - EPS) continue;
+			bool ok = false;
+			if ((BODY_WID - al) * LANE_M < 3.0 * (BODY_LEN - ax)) {
+				Runner *y = &s == me ? &o : &s;
+				Runner *f = y == &s ? &o : &s;
+				double d = y->lane > f->lane ? 1.0 : y->lane < f->lane ? -1.0 : 1.0;
+				double nl = f->lane + d * BODY_WID;
+				if (nl >= 0) { y->lane = nl; ok = true; }
+				else if (f != me) { f->lane = y->lane + BODY_WID; ok = true; }
+			}
+			if (!ok) { s.x = o.x - BODY_LEN; if (s.v > o.v) s.v = o.v; }
+			if (me && (&s == me || &o == me) && t - (c->hasBumpT ? c->bumpT : -9.0) > 0.4) {
+				Runner *other = &s == me ? &o : &s;
+				c->hasBumpT = true; c->bumpT = t; c->bumpSide = other->lane > me->lane ? 1.0 : other->lane < me->lane ? -1.0 : 0.0;
+			}
+		}
+	}
+	auto &a = by_x(sim);
+	for (int k = 1; k < (int)a.size(); k++) {
+		Runner &s = st[a[k]];
+		if (s.done || t < s.delay) continue;
+		for (int it = 0; it <= k; it++) {
+			bool moved = false;
+			for (int q = 0; q < k; q++) {
+				Runner &o = st[a[q]];
+				if (o.done || t < o.delay) continue;
+				if (std::fabs(o.lane - s.lane) < BODY_WID - EPS && std::fabs(o.x - s.x) < BODY_LEN - EPS) { s.x = o.x - BODY_LEN; if (s.v > o.v) s.v = o.v; moved = true; }
+			}
+			if (!moved) break;
+		}
+	}
+}
 
 // 0.1 秒進める。終わったら true
 bool sim_step(Sim &sim) {
@@ -524,12 +574,8 @@ bool sim_step(Sim &sim) {
 				else if (c->tension < 35 && !s.spurting) costMul *= CALM_SAVE;
 				else if (c->tension > 50 && !s.spurting) costMul *= 1.0 + (c->tension - 50.0) / 100.0 * TENSE_COST;
 			}
-			if (c->lane > 0 && t - c->laneT > LANE_DRIFT && t - c->driftT > 1.2) {
-				bool blockedIn = false;
-				for (auto &o : st) if (&o != &s && !o.done && std::fabs(o.x - s.x) < 3.2 && o.lane < s.lane - 0.2 && o.lane > c->lane - 1.9) { blockedIn = true; break; }
-				if (!blockedIn) { c->lane -= 1.0; c->driftT = t; }
-			}
-			Runner *ahead = ahead_of(sim, s, 2.6, 0.85);
+			// 進路は押さない限り変わらない。前に馬がいて進路が無い（すぐ前・横が馬の幅より近い）
+			Runner *ahead = ahead_of(sim, s, BODY_LEN + 0.2, BODY_WID);
 			c->blockedNow = ahead != nullptr;
 			if (ahead) target = mn(target, ahead->v - 0.05);
 			if (c->shrink > 0.05 && !s.spurting) target *= 1.0 - O_SHRINKSPD * c->shrink;
@@ -577,11 +623,7 @@ bool sim_step(Sim &sim) {
 		// 外回し○：3〜4コーナーで追い出している間は、脚の減りが少ない。自分で乗る馬は外（進路1.5より外）にいるときだけ
 		if (s.sotoM && s.spurting && R > straight && (tr ? tr->corner_at(R) != 0 && R < straight + 700 : R < straight + 350) && (!(s.me && c) || s.lane > 1.5)) { costMul *= SOTO; fire(sim, s, sotoId); }
 		fight_step(sim, s, R, prog);
-		double fk = s.fight / 100.0;
-		if (fk != 0.0 && (s.spurting || s.E <= 0)) {
-			target *= 1.0 + F_SPD * fk;
-			if (fk > 0) costMul *= 1.0 - F_COST * fk;
-		}
+		if (s.fight != 0.0 && (s.spurting || s.E <= 0)) target *= 1.0 + F_SPD * s.fight / F_PER;
 		if (s.boost.on && t < s.boost.until) {
 			target *= s.boost.mul;
 			if (s.boost.free_) costMul /= s.boost.mul * s.boost.mul * s.boost.mul;
@@ -602,6 +644,19 @@ bool sim_step(Sim &sim) {
 			}
 		}
 		if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
+		// 当たり判定：AI の馬は、すぐ前の馬（横が馬の幅より近い）に追いついたら、その馬より速く走らない
+		{
+			// 当たり判定：前の馬（横が馬の幅より近い）に近づくほど、その馬の速さへ落とす（JS の S.followV）
+			double lim = std::numeric_limits<double>::infinity();
+			for (auto &o : st) {
+				if (&o == &s || o.done || o.x <= s.x) continue;
+				double d = o.x - s.x;
+				if (d >= BODY_LEN + BODY_LOOK || std::fabs(o.lane - s.lane) >= BODY_WID) continue;
+				double v = o.v + mx(0.0, d - BODY_LEN) * BODY_CLOSE;
+				if (v < lim) lim = v;
+			}
+			s.held = lim < target; if (s.held) target = lim;
+		}
 		double accel = s.v < s.vc * 0.9 ? START_ACC * (s.style >= 0 ? START_STYLE[s.style] : 1.0) * ((s.boost.on && s.boost.free_ && t < s.boost.until) ? START_SKILL_ACC : 1.0) : s.acc + s.slopeP * 0.0015;
 		double dv = maxf(-1.4 * DT, minf(accel * DT, target - s.v));
 		double vPrev = s.v;
@@ -664,7 +719,7 @@ bool sim_step(Sim &sim) {
 			for (auto &o : st) if (&o != me && !o.done && std::fabs(o.x - me->x) < ldx && dir * (o.lane - me->lane) > 0 && std::fabs(o.lane - nl) < lgap) { hit = true; break; }
 			if (hit) {
 				if (t - (c->hasBumpT ? c->bumpT : -9.0) > 0.4) { c->hasBumpT = true; c->bumpT = t; c->bumpSide = dir; }
-				c->lane = clamp(round_js(me->lane - dir * 0.49), 0.0, 12.0);
+				c->lane = me->lane; // 押した向きの注文は取り消す（ぶつかった所で止まる。戻りもしない）
 			} else me->lane = nl;
 		}
 		me->laneT = c->lane;
@@ -679,7 +734,8 @@ bool sim_step(Sim &sim) {
 			if (inStraight && (s.style == ST_SASHI || s.style == ST_OIKOMI)) want = s.trigHas(oosoto) ? 6.0 : 2.0 + (s.i % 4);
 			want += s.driftLane;
 			nn = 0;
-			for (int q = (int)k - 1; q >= 0 && st[live[q]].x - s.x < 2.6; q--) {
+			double look = BODY_LEN + (s.held ? BODY_LOOK : BODY_FOLLOW + 0.2);
+			for (int q = (int)k - 1; q >= 0 && st[live[q]].x - s.x < look; q--) {
 				Runner &o = st[live[q]];
 				if (nn < 64) near[nn++] = (&o == me) ? me->lane : o.laneT;
 			}
@@ -692,10 +748,22 @@ bool sim_step(Sim &sim) {
 				lane += 1.0;
 			}
 			s.laneT = lane;
-			double dl = (s.laneT - s.lane) * 0.16;
-			s.lane += s.x < FAN_X ? clamp(dl, -FAN_V, FAN_V) : dl;
+			double dl = (s.laneT - s.lane) * (s.held ? BODY_SIDE : 0.16);
+			double mv = s.x < FAN_X ? clamp(dl, -FAN_V, FAN_V) : dl;
+			// 当たり判定：横に動く向きに馬がいれば（前後 BODY_LEN 以内）、その馬の BODY_WID 手前で止まる
+			double nl = s.lane + mv;
+			if (mv != 0.0) {
+				double dir = mv > 0 ? 1.0 : -1.0;
+				for (auto &o : st) {
+					if (&o == &s || o.done || std::fabs(o.x - s.x) >= BODY_LEN || dir * (o.lane - s.lane) <= 0) continue;
+					double lim = o.lane - dir * BODY_WID;
+					if (dir > 0 ? nl > lim : nl < lim) nl = dir > 0 ? mx(s.lane, lim) : mn(s.lane, lim);
+				}
+			}
+			s.lane = nl;
 		}
 	}
+	separate(sim);
 	if (sim.optFrames && sim.step % 5 == 0) commentary(sim);
 	if (sim.optFrames && sim.step % REC_EVERY == 0) {
 		Array p;

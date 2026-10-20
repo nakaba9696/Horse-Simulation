@@ -119,7 +119,7 @@ module.exports = function (check, assert, HS) {
     const o = sim.st[1]; o.x = me.x + 0.5; o.lane = me.lane + 1; o.v = me.v;
     const before = me.lane; S.ctl.lane(sim, 1);
     for (let i = 0; i < 5; i++) { o.x = me.x + 0.5; o.lane = before + 1; S.step(sim); }
-    assert(sim.ctl.bumpT != null && sim.ctl.bumpSide === 1 && me.lane - before < 0.25, `横の馬にぶつかっても止まらない（${(me.lane - before).toFixed(2)}・印 ${sim.ctl.bumpT}）`);
+    assert(sim.ctl.bumpT != null && sim.ctl.bumpSide === 1 && me.lane - before <= 1 - S.LANE.gap + 1e-9,`横の馬にぶつかっても止まらない（${(me.lane - before).toFixed(2)}・印 ${sim.ctl.bumpT}）`);
     return `押して0.2秒で ${moved.toFixed(1)} 進路動く・手を離して8.5秒戻らない・横の馬で止まる`;
   });
 

@@ -56,6 +56,7 @@ struct Runner {
 	double blocked = 0; bool blockedOnce = false;
 	double styleMult = 1, gap = 0; int jiyuMove = 0;
 	double fight = 0; int duel = -1; double fightPeak = 0;
+	bool held = false; // 前の馬に追いついて、その馬の速さに合わせている（当たり判定。AI の馬）
 	double kakari = 0, ears = 0.4;
 	bool hasRk = false; double rk = 0;
 	bool easyStart = false;

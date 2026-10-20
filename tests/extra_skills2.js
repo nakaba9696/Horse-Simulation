@@ -80,6 +80,8 @@ module.exports = function (check, assert, HS) {
       K.setup = sim => { setup0(sim); sim.st.forEach(s => { s.trig = []; }); sim.st[0].trig = ids.slice(); };
       try {
         const f = field(rng, (h, i) => { if (i === 0) h.style = '追込'; }).slice(0, n || 14); f[0].rider = 'P';
+        // 自分の馬は大外の枠から（当たり判定があるので、内の枠からは馬群に包まれて外へ出られないことがある）
+        if (f.length > 1) { const k = f.length - 1; [f[0].num, f[k].num] = [f[k].num, f[0].num]; }
         const sim = S.create(race0, f, H.weekIndex(2004, 5, 1), rng, { ride: true });
         S.ctl.up(sim);
         const me = sim.st[0], lanes = [];
