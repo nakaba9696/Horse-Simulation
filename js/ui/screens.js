@@ -207,7 +207,7 @@
         <div>馬場<b>芝 ${UI.aptMark(h.apt.turf)}　ダート ${UI.aptMark(h.apt.dirt)}</b></div>
         <div>道悪<b>${h.apt.heavy >= 75 ? '得意' : h.apt.heavy >= 45 ? 'ふつう' : '苦手'}</b></div>
         <div>脚質<b>${H.styleText(h)}${known ? '・' + H.kireLabel(h.kire) : ''}</b></div>
-        <div>成長型<b>${growthWord}（${peakNote}）</b></div>
+        <div>成長型<b style="color:${(H.GROWTH_INFO[h.growth] || {}).color || 'inherit'}">${growthWord}</b>（${H.growthNote(h.growth)}・${peakNote}）</div>
         <div>健康<b>${(h.health ?? 70) >= 85 ? '丈夫' : (h.health ?? 70) >= 65 ? 'ふつう' : '弱い'}</b></div>
         ${h.loc === 'stable' ? `<div>疲労<b>${UI.fatigueMark(h)}</b></div>` : ''}
       </div>
@@ -221,7 +221,7 @@
     const h = H.fromHistoric(d, 'x');
     return `<h3>${e(d.name)}</h3><div class="small muted">${d.born}年生 ${d.sex}・${e(d.coat || '')}${d.country && d.country !== '日' ? '・' + e(d.country) : ''}　父 ${e(d.sire || '?')}　母 ${e(d.dam || '?')}</div>
       <div class="mt">${UI.histInfo(d)}</div>
-      <div class="apt mt"><div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div><div>脚質<b>${H.styleText(h)}・${H.kireLabel(h.kire)}</b></div><div>成長型<b>${h.growth}</b></div></div>
+      <div class="apt mt"><div>距離<b>${H.distLabel(h.distMin, h.distMax)}</b></div><div>脚質<b>${H.styleText(h)}・${H.kireLabel(h.kire)}</b></div><div>成長型<b style="color:${(H.GROWTH_INFO[h.growth] || {}).color || 'inherit'}">${h.growth}</b>（${H.growthNote(h.growth)}）</div></div>
       ${UI.hasSkills(h) ? `<div class="skills mt">${UI.skillChips(h)}</div>` : ''}
       <div class="btns mt"><button class="btn" data-act="close">閉じる</button></div>`;
   };

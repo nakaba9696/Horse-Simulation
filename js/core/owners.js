@@ -318,7 +318,7 @@
     return (h.sire && sireC.get(h.sire)) || '';
   };
   const turfy = h => !h.apt || h.apt.turf >= h.apt.dirt;
-  const early = h => h.growth === '早熟' || h.growth === '早め';
+  const early = h => h.growth === '超早熟' || h.growth === '早熟' || h.growth === '早め';
   const fitH = {
     sprint: h => (h.distMax || 2000) <= 1600 ? 1 : (h.distMin || 1600) <= 1400 ? 0.5 : 0,
     mile: h => (h.distMin || 1600) <= 1600 && (h.distMax || 2000) >= 1600 ? 1 : 0,

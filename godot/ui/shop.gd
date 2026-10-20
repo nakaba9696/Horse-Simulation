@@ -370,7 +370,9 @@ func open_detail(i: int) -> void:
 	lv.add_child(grid)
 	lv.add_child(_kv("距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]))
 	lv.add_child(_kv("脚質", HSHorse.style_text(h)))
-	lv.add_child(_kv("成長型", String(HSU.or_(h.get("growth"), ""))))
+	var gkv := _kv("成長型", "%s（%s）" % [String(HSU.or_(h.get("growth"), "")), HSHorse.growth_note(h.get("growth"))])
+	(gkv.get_child(2) as Label).add_theme_color_override("font_color", HSHorse.growth_color(h.get("growth")))
+	lv.add_child(gkv)
 	var sk: Array = HSU.or_(h.get("skills"), [])
 	if sk.size():
 		var fl := HFlowContainer.new()

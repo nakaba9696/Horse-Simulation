@@ -107,8 +107,25 @@ static func from_legacy(h: Dictionary) -> Dictionary:
 	return h
 
 const STYLES := ["逃げ", "先行", "差し", "追込"]
-const GROWTHS := ["早熟", "早め", "普通", "遅め", "晩成"]
-const PEAK := { "早熟": [2.6, 3.6], "早め": [3.0, 4.2], "普通": [3.5, 5.0], "遅め": [4.0, 5.8], "晩成": [4.6, 6.8] }
+# 成長型は8つ（持ち主の決定 2026-10-20。js/core/horse.js の H.GROWTHS・H.PEAK・H.DECAY と同じ。数は docs/BALANCE.md「成長型」）
+const GROWTHS := ["超早熟", "早熟", "早め", "普通", "遅め", "晩成", "超晩成", "持続"]
+const PEAK := { "超早熟": [2.3, 3.2], "早熟": [2.6, 3.6], "早め": [3.0, 4.2], "普通": [3.5, 5.0], "遅め": [4.0, 5.8], "晩成": [4.6, 6.8], "超晩成": [5.5, 7.8], "持続": [3.5, 7.5] }
+# ピークのあとの衰え [1年あたり, 2乗の項]。持続だけゆっくり
+const DECAY_STD := [0.04, 0.02]
+const DECAY := { "持続": [0.02, 0.008] }
+# 画面に出す説明（ピークのめやす）と色
+const GROWTH_INFO := {
+	"超早熟": { note = "2歳夏〜3歳春", color = "#e0605a" },
+	"早熟": { note = "2歳秋〜3歳", color = "#e8875a" },
+	"早め": { note = "3〜4歳", color = "#e0b050" },
+	"普通": { note = "3歳秋〜5歳", color = "#9cc06a" },
+	"遅め": { note = "4〜5歳秋", color = "#5fb8a0" },
+	"晩成": { note = "4歳秋〜6歳", color = "#5a9ce0" },
+	"超晩成": { note = "5歳秋〜7歳", color = "#8a78e0" },
+	"持続": { note = "3歳秋〜7歳・衰えがゆっくり", color = "#d0a0e0" },
+}
+static func growth_note(g: Variant) -> String: return String(GROWTH_INFO.get(g, {}).get("note", ""))
+static func growth_color(g: Variant) -> Color: return Color(String(GROWTH_INFO.get(g, {}).get("color", "#c8c8c8")))
 
 # 週の通し番号（年×48＋月・週）。1か月4週
 static func week_index(year: float, month: float, week: float) -> float:
@@ -128,7 +145,8 @@ static func growth_factor(horse: Dictionary, w_idx: float) -> float:
 		return 0.62 + 0.38 * HSU.smooth(t)
 	if age <= pe: return 1.0
 	var d := age - pe
-	return HSU.mx(0.55, 1.0 - 0.04 * d - 0.02 * d * d)
+	var k: Array = DECAY.get(horse.get("growth"), DECAY_STD)
+	return HSU.mx(0.55, 1.0 - float(k[0]) * d - float(k[1]) * d * d)
 
 # いまの能力値（成長×素質＋調教の上積み）
 static func cur(horse: Dictionary, w_idx: Variant) -> Dictionary:

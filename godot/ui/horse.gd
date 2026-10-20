@@ -358,11 +358,14 @@ func _stat() -> void:
 	list.add_child(grid)
 	var kv := HBoxContainer.new()
 	kv.add_theme_constant_override("separation", 30)
-	for x in [["距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]], ["脚質", HSHorse.style_text(h)], ["成長型", String(HSU.or_(h.get("growth"), ""))], ["健康", "%d" % int(HSU.or_(h.get("health"), 70.0))]]:
+	# 成長型は型の色で、ピークのめやすを添える（8つの型。HSHorse.GROWTH_INFO）
+	var gr: Variant = h.get("growth")
+	var gtxt := String(HSU.or_(gr, "")) + ("（%s）" % HSHorse.growth_note(gr) if HSHorse.growth_note(gr) != "" else "")
+	for x in [["距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]], ["脚質", HSHorse.style_text(h)], ["成長型", gtxt, HSHorse.growth_color(gr)], ["健康", "%d" % int(HSU.or_(h.get("health"), 70.0))]]:
 		var pr := HBoxContainer.new()
 		pr.add_theme_constant_override("separation", 8)
 		pr.add_child(UiTheme.label(String(x[0]), 14, UiTheme.MUTED))
-		pr.add_child(UiTheme.label(String(x[1]), 16))
+		pr.add_child(UiTheme.label(String(x[1]), 16, x[2] if x.size() > 2 else UiTheme.IVORY))
 		kv.add_child(pr)
 	list.add_child(kv)
 	var sk := HSSkills.of(h, wi)

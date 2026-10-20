@@ -80,11 +80,11 @@ static func shop_born() -> float: return HSWorld.G.year - shop_age(HSWorld.G.mon
 static func shop_fh(h: Dictionary, wIdx: float) -> Dictionary: return HSSeason.fh_both(h, wIdx)
 # 値段は、いまの評価点（いまの総合力。芝・ダの良いほう）だけで決める（js/core/eraless.js の E.priceOf と同じ式。持ち主の決定 2026-10-20）：
 #   値段 ＝ 2,000万円 × 2^((評価点 − 52) ÷ 6) × 物価 × 1.3 × 成長型の掛け（300万円から）。スペシャルホースはその1.6倍
-#   成長型の掛け：評価点が同じなら晩成ほど少し高い（早熟 0.9・早め 0.95・普通 1・遅め 1.07・晩成 1.15）
+#   成長型の掛け：評価点が同じなら晩成ほど少し高い（超早熟 0.85・早熟 0.9・早め 0.95・普通 1・遅め 1.07・晩成 1.15・超晩成 1.2・持続 1.1）
 const PRICE_BASE := 2000.0
 const PRICE_DOUBLE := 6.0
 const PRICE_FH := 52.0
-const GROWTH_PRICE := { "早熟": 0.9, "早め": 0.95, "普通": 1.0, "遅め": 1.07, "晩成": 1.15 }
+const GROWTH_PRICE := { "超早熟": 0.85, "早熟": 0.9, "早め": 0.95, "普通": 1.0, "遅め": 1.07, "晩成": 1.15, "超晩成": 1.2, "持続": 1.1 }
 static func growth_price(h: Dictionary) -> float: return float(GROWTH_PRICE.get(String(HSU.or_(h.get("growth"), "")), 1.0))
 static func shop_value(h: Dictionary, wIdx: float) -> float:
 	var f := shop_fh(h, wIdx)

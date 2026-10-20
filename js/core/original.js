@@ -75,6 +75,12 @@
     return uniq.concat(hand, trig.filter(id => !hand.includes(id) && !uniq.includes(id))).slice(0, O.MAX_SKILLS);
   };
   // 受け継ぐ候補（両親のものを合わせて最大8つ）
+  // 成長型：父から 0.4・母から 0.4・8つの型からでたらめに 0.2（仕様書「成長型・脚質は両親から引き継ぐ：それ以外を 4:4:2」）
+  O.childGrowth = function (rng, s, m) {
+    const r = rng.next();
+    const g = r < 0.4 ? (s.growth || '普通') : r < 0.8 ? (m.growth || '普通') : rng.pick(H.GROWTHS);
+    return H.GROWTHS.includes(g) ? g : '普通';
+  };
   O.candidates = (s, m) => { const out = []; for (const id of O.skillsOf(s).concat(O.skillsOf(m))) if (!out.includes(id)) out.push(id); return out; };
 
   // 作る
@@ -104,7 +110,7 @@
     const f = {
       sex: rng.chance(0.5) ? '牡' : '牝', pot, distMin: dMin, distMax: dMax,
       apt: { heavy: Math.round(U.clamp(avg((s.apt || {}).heavy || 50, (m.apt || {}).heavy || 50) + rng.normal(0, 8), 20, 100)) },
-      growth: rng.pick([s.growth || '普通', m.growth || '普通']), peakShift: 0, style: rng.pick([s.style, m.style].filter(Boolean)) || '先行',
+      growth: O.childGrowth(rng, s, m), peakShift: 0, style: rng.pick([s.style, m.style].filter(Boolean)) || '先行',
       kire: U.clamp(Math.round(avg(s.kire || 4, m.kire || 4) + rng.normal(0, 1)), 1, 8),
       skills: pick.filter(id => H.SKILLS[id]), health: Math.round(U.clamp(avg(s.health || 70, m.health || 70) + rng.normal(0, 8), 40, 100)),
       coat: rng.pick([s.coat || '鹿毛', m.coat || '鹿毛']),

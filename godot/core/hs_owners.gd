@@ -385,7 +385,7 @@ static func _sire_country(h: Dictionary) -> String:
 	var sr = h.get("sire")
 	return String(_sire_c.get(sr, "")) if sr else ""
 static func _turfy(h: Dictionary) -> bool: return not h.get("apt") or h.apt.turf >= h.apt.dirt
-static func _early(h: Dictionary) -> bool: return h.get("growth") == "早熟" or h.get("growth") == "早め"
+static func _early(h: Dictionary) -> bool: return h.get("growth") == "超早熟" or h.get("growth") == "早熟" or h.get("growth") == "早め"
 static func _dirty(h: Dictionary) -> bool: return h.get("apt") != null and HSU.truthy(h.get("apt")) and h.apt.dirt > h.apt.turf
 static func _fit_h(k: String, h: Dictionary) -> float:
 	match k:
