@@ -1,5 +1,5 @@
-# 殿堂（お手馬。js/core/hall.js の HS.Hall と同じ）：トロフィーを1つ以上手にした自分の馬は、引退するときに「殿堂入りさせますか」と聞かれ、
-# 「はい」なら殿堂入りし、記録の写し（1走ごとの出走馬・ラップの記録 rec も）が残る。「いいえ」なら入らず、レースの記録も消える（持ち主の決定 2026-10-20）
+# 殿堂（お手馬。js/core/hall.js の HS.Hall と同じ）：トロフィーを1つ以上手にした自分の馬は、引退すると案内なしで殿堂入りし、
+# 記録の写し（1走ごとの出走馬・ラップの記録 rec も）が残る。トロフィーの無い馬は入らず、レースの記録も消える（持ち主の決定 2026-10-20「殿堂入りは自動」）
 class_name HSHall
 
 const NEED := 1
@@ -19,8 +19,8 @@ static func trophies_of(h: Dictionary) -> Array:
 					out.append({ id = id, label = label, y = m.y, bonus = float(HSU.or_(m.get("bonus"), 0.0)) }); break
 	return HSU.stable_sort(out, func(a, b): return a.y < b.y)
 static func eligible(h: Variant) -> bool: return h != null and h.get("owner") == "P" and trophies_of(h).size() >= NEED
-# 引退の画面で「殿堂入りさせますか」と聞くか（条件を満たし、まだ殿堂にいない）
-static func ask(h: Variant) -> bool: return eligible(h) and by_id(String(h.id)) == null
+# 引退すると殿堂入りするか（条件を満たし、まだ殿堂にいない。引退の確かめの文に添える）
+static func will(h: Variant) -> bool: return eligible(h) and by_id(String(h.id)) == null
 static func list() -> Array:
 	return HSU.stable_sort(HSU.or_(HSWorld.G.get("hallOwn"), []).duplicate(), func(a, b):
 		if a.trophies.size() != b.trophies.size(): return a.trophies.size() > b.trophies.size()

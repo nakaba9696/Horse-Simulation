@@ -23,14 +23,14 @@ static func bonus_of(h: Dictionary) -> Dictionary:
 # 仔へのボーナス：前の版の引退馬（引退で能力が上がっていない馬）だけ
 static func legacy_bonus(h: Variant) -> float: return float(HSU.or_(h.get("parentBonus"), 0.0)) if (h and not h.get("potUp")) else 0.0
 static func child_bonus(s: Variant, m: Variant) -> float: return HSU.mn(BONUS_MAX, legacy_bonus(s) + legacy_bonus(m))
-# opts.hall：殿堂入りさせるか（引退の画面で「殿堂入りさせますか」に「はい」のとき true）。入らなければレースの記録は消える（original.js と同じ）
-static func retire(id: String, opts: Dictionary = {}) -> Dictionary:
+# トロフィーを1つ以上手にした馬は案内なしで殿堂入り。入らない馬のレースの記録は消える（original.js と同じ）
+static func retire(id: String) -> Dictionary:
 	var G = HSWorld.G; var h = HSWorld.horse(id)
 	if not h or h.get("owner") != "P" or h.get("loc") == "retired": return { err = "持ち馬ではない" }
 	if retired(h.sex).size() >= MAX_EACH and not h.get("gelding"): return { err = "引退した%sは%d頭まで。生産の画面で1頭放してから" % ["牝馬" if h.sex == "牝" else "牡馬", MAX_EACH] }
 	HSWorld.unenter(id)
 	G.reserve = HSU.or_(G.get("reserve"), []).filter(func(x): return x.id != id)
-	var hall = HSHall.on_retire(h) if opts.get("hall") == true else null   # トロフィー1つ以上で、殿堂入りを選んだとき
+	var hall = HSHall.on_retire(h)   # トロフィー1つ以上なら殿堂入り
 	HSRaceRec.strip(h)   # レースの記録は消す（殿堂入りなら殿堂の写しに残る）
 	if h.get("gelding"):
 		G.horses.erase(id); HSWorld.dirty(); HSWorld.news("%sは引退して乗馬になった。おつかれさま。" % h.name, "info"); return { to = "gone", hall = hall }

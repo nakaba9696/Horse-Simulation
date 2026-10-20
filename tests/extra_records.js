@@ -1,6 +1,6 @@
 // 確かめ：お手馬のレースの記録（js/core/racerec.js）と殿堂入りの案内（js/core/hall.js。持ち主の決定 2026-10-20）
 //   自分の持ち馬が走ったレースは、おまかせでも出走馬・ラップ・勝ち時計が残る・引退で消え、殿堂入りなら殿堂に残る・
-//   トロフィー1つで殿堂入りの案内・「いいえ」なら入らない・前のセーブ（記録の無い1走）は「記録なし」
+//   トロフィー1つで案内なしに殿堂入り（持ち主の決定 2026-10-20「殿堂入りは自動」）・トロフィーの無い馬は入らない・前のセーブ（記録の無い1走）は「記録なし」
 // run.js から module.exports(check, assert, HS) で呼ぶ
 module.exports = function (check, assert, HS) {
   const W = HS.World, S = HS.Sim, RR = HS.RaceRec, HL = HS.Hall, J = HS.Jockey, U = HS.U;
@@ -60,23 +60,25 @@ module.exports = function (check, assert, HS) {
     return `${n}走に記録・1走あたり約${per}字（${G.year - G.startYear + 1}年目 ${G.month}月）`;
   });
 
-  check('racerec: 引退で記録が消え、殿堂入り（トロフィー1つで案内・はい）なら殿堂に残る。いいえなら入らず、記録も消える', () => {
+  check('racerec: 引退で記録が消え、殿堂入り（トロフィー1つで自動）なら殿堂に残る。トロフィーの無い馬は入らず、記録も消える', () => {
     const G = play(42, 3, 40);
     const ran = W.mine().filter(h => h.results.some(r => RR.has(r)));
     assert(ran.length >= 3, `記録のある馬が足りない ${ran.length}`);
-    const [a, b, c] = ran;
-    G.trophies = Object.assign(G.trophies || {}, { triple: { y: G.year, horse: a.name, hid: a.id, bonus: 1 }, spring: { y: G.year, horse: b.name, hid: b.id, bonus: 1 } });
-    assert(HL.ask(a) && HL.ask(b) && !HL.ask(c), 'トロフィー1つで殿堂入りの案内が出ない（か、無い馬に出る）');
+    const c = ran.find(h => !HL.trophiesOf(h).length) || ran[2];
+    const [a, b] = ran.filter(h => h !== c);
+    for (const id of Object.keys(G.trophies || {})) { const v = G.trophies[id]; if (v && (v.hid === c.id || v.horse === c.name)) delete G.trophies[id]; }
+    G.trophies = Object.assign(G.trophies || {}, { triple: { y: G.year, horse: a.name, hid: a.id, bonus: 1 }, uk3: { y: G.year, horse: b.name, hid: b.id, bonus: 1 } });
+    assert(HL.will(a) && HL.will(b) && !HL.will(c), 'トロフィー1つで殿堂入りにならない（か、無い馬がなる）');
     const nA = a.results.filter(r => RR.has(r)).length;
-    const ra = J.retire(a.id, { hall: true }), rb = J.retire(b.id, { hall: false }), rc = J.retire(c.id);
+    const ra = J.retire(a.id), rb = J.retire(b.id), rc = J.retire(c.id);
     assert(!ra.err && !rb.err && !rc.err, `引退できない ${ra.err || rb.err || rc.err}`);
-    assert(ra.hall && !rb.hall && !rc.hall && HL.byId(a.id) && !HL.byId(b.id) && !HL.byId(c.id), '殿堂入りの選び方どおりでない');
+    assert(ra.hall && rb.hall && !rc.hall && HL.byId(a.id) && HL.byId(b.id) && !HL.byId(c.id), 'トロフィーのある馬だけが殿堂入りしていない');
     for (const h of [a, b, c]) { const x = W.horse(h.id); if (x) assert(!x.results.some(r => r.rec), `${h.name} の記録が引退で消えない`); }
     const hall = HL.byId(a.id);
     assert(hall.results.filter(r => RR.has(r)).length === nA, '殿堂の写しに記録が残らない');
     const s1 = W.serialize(); W.load(s1);
     assert(HL.byId(a.id).results.filter(r => RR.has(r)).length === nA, 'セーブの往復で殿堂の記録が消える');
-    return `殿堂入り ${a.name}（${nA}走の記録）・いいえ ${b.name}・トロフィー無し ${c.name}`;
+    return `殿堂入り ${a.name}（${nA}走の記録）・${b.name}・トロフィー無し ${c.name}`;
   });
 
   check('racerec: 前のセーブ（記録の無い1走）は「記録なし」で、読み込んでも動く', () => {

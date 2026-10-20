@@ -325,48 +325,15 @@ func confirm(text: String, ok_label: String, on_ok: Callable) -> void:
 	(pb[1] as VBoxContainer).add_child(h)
 	open_modal(p, no)
 
-# 引退の流れ（厩舎・馬の画面）：確かめ（「やめる」から）→ 殿堂入りの条件を満たす馬は「殿堂入りさせますか」（はい・いいえ）→ HSJockey.retire。
-# done(結果) を呼ぶ。殿堂入りの案内で Esc・B を押すと、引退もやめる（持ち主の決定 2026-10-20「引退時に殿堂入りさせるか案内がきます」）
+# 引退の流れ（厩舎・馬の画面）：確かめ（「やめる」から）→ HSJockey.retire。done(結果) を呼ぶ。
+# トロフィーを1つ以上手にした馬は案内なしで殿堂入りする（持ち主の決定 2026-10-20「殿堂入りは自動」）。確かめの文にそのことを添える
 func retire_flow(id: String, done: Callable) -> void:
 	var h = HSWorld.horse(id)
 	if h == null: return
 	var keep: bool = HSOriginal.on() and not h.get("gelding")
-	confirm("%sを引退させますか？%s" % [h.name, "（牧場に残り、オリジナルホースの親にできます）" if keep else "（手もとを離れます）"], "引退させる", func():
-		if HSHall.ask(h): ask_hall(h, done)
-		else: done.call(HSJockey.retire(id, { hall = false })))
-
-# 殿堂入りの案内：トロフィーの札と、入るとどうなるか。カーソルは「はい」から（「いいえ」は記録が消えて戻せない）
-func ask_hall(h: Dictionary, done: Callable) -> void:
-	var id := String(h.id)
-	var pb := UiScreen.panel_box(true, 14)
-	var p: PanelContainer = pb[0]
-	p.custom_minimum_size = Vector2(640, 0)
-	var v: VBoxContainer = pb[1]
-	v.add_child(UiTheme.label("殿堂入り", 15, UiTheme.GOLD_BRIGHT))
-	var t := UiTheme.title("%sを殿堂入りさせますか？" % h.name, 26)
-	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	t.custom_minimum_size.x = 600
-	v.add_child(t)
-	var tl := HFlowContainer.new()
-	tl.add_theme_constant_override("h_separation", 6)
-	tl.add_theme_constant_override("v_separation", 6)
-	for x in HSHall.trophies_of(h): tl.add_child(UiTheme.chip("🏆 " + String(x.label), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 14))
-	v.add_child(tl)
-	var note := UiTheme.label("殿堂入りすると、引退したあとも戦績と、1走ごとの出走馬・ラップをデータの殿堂で見られます。させないと、レースの記録は消えます。", 15, UiTheme.MUTED)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.custom_minimum_size.x = 600
-	v.add_child(note)
-	var hb := HBoxContainer.new()
-	hb.alignment = BoxContainer.ALIGNMENT_END
-	hb.add_theme_constant_override("separation", 12)
-	var no := UiScreen.button("いいえ", false, 150, 50, 18)
-	no.pressed.connect(func(): close_modal(); done.call(HSJockey.retire(id, { hall = false })))
-	hb.add_child(no)
-	var yes := UiScreen.button("はい", true, 190, 54, 20)
-	yes.pressed.connect(func(): close_modal(); done.call(HSJockey.retire(id, { hall = true })))
-	hb.add_child(yes)
-	v.add_child(hb)
-	open_modal(p, yes)
+	var hall := "トロフィーを手にしたので、殿堂入りします。" if HSHall.will(h) else ""
+	confirm("%sを引退させますか？\n%s%s" % [h.name, "牧場に残り、オリジナルホースの親にできます。" if keep else "手もとを離れます。", hall], "引退させる", func():
+		done.call(HSJockey.retire(id)))
 
 # 見せ場（重賞の優勝・トロフィー・スペシャルホース・オリジナルホースの誕生）：光の筋と紙吹雪・大きな明朝の題字。決定で閉じる
 func celebrate(kicker: String, title: String, sub: String, on_done := Callable()) -> void:

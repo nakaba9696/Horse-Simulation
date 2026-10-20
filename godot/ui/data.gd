@@ -242,7 +242,7 @@ func _hall() -> void:
 	var own := HSHall.list()
 	list.add_child(UiScreen.section("殿堂（お手馬）", "%d頭" % own.size()))
 	if own.is_empty():
-		_empty("まだいません。トロフィーを%dつ以上手にした馬は、引退させるときに殿堂入りさせられます" % HSHall.NEED)
+		_empty("まだいません。トロフィーを%dつ以上手にした馬は、引退すると殿堂入りします" % HSHall.NEED)
 	for x in own:
 		var tl: Array = x.trophies.map(func(t): return String(t.label) if t is Dictionary else String(t))
 		var b := _row([[String(x.name), 260, UiTheme.GOLD_BRIGHT], ["・".join(tl), 0, UiTheme.IVORY], ["%d戦%d勝・G1 %d勝" % [int(HSU.or_(x.get("starts"), 0.0)), int(HSU.or_(x.get("wins"), 0.0)), int(HSU.or_(x.get("g1"), 0.0))], 220, UiTheme.MUTED, R],

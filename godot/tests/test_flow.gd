@@ -209,17 +209,17 @@ func _horse(t) -> void:
 	t.ok(sc._modal != null and not HSRaceRec.has(old), "horse: 記録の無い前の1走も開ける（記録なし）")
 	sc.close_modal()
 	sc.free()
-	# 殿堂入り：トロフィー1つで案内（HSHall.ask）・はいで殿堂に入り、記録は殿堂の写しに残る（馬の戦績からは消える）・殿堂から馬の画面を開ける
+	# 殿堂入り：トロフィー1つで案内なしに殿堂に入り、記録は殿堂の写しに残る（馬の戦績からは消える）・殿堂から馬の画面を開ける
 	var G = HSWorld.G
 	if not G.get("trophies"): G.trophies = {}
 	G.trophies[String(HSTrophy.list()[0].id)] = { hid = hit.id, horse = hit.name, y = G.year, bonus = 0.0 }
-	t.ok(HSHall.NEED == 1 and HSHall.ask(hit), "hall: トロフィー1つで殿堂入りの案内が出る")
+	t.ok(HSHall.NEED == 1 and HSHall.will(hit), "hall: トロフィー1つで殿堂入りになる")
 	var nrec := 0
 	for r in hit.results:
 		if HSRaceRec.has(r): nrec += 1
 	var hid := String(hit.id)
-	var rr: Dictionary = HSJockey.retire(hid, { hall = true })
-	t.ok(not rr.has("err") and rr.get("hall") != null and HSHall.by_id(hid) != null, "hall: はいで殿堂入り")
+	var rr: Dictionary = HSJockey.retire(hid)
+	t.ok(not rr.has("err") and rr.get("hall") != null and HSHall.by_id(hid) != null, "hall: 引退で殿堂入り（案内なし）")
 	var x = HSWorld.horse(hid)
 	var gone := true
 	if x != null:
@@ -239,20 +239,19 @@ func _horse(t) -> void:
 	hs.close_modal()
 	hs.free()
 	UiFlow.hall_id = ""
-	# いいえ：トロフィーがあっても殿堂に入らず、記録も消える
+	# トロフィーの無い馬：殿堂に入らず、記録も消える
 	var other = null
 	for h in HSWorld.mine():
-		if h.get("loc") != "retired" and HSU.or_(h.get("results"), []).size(): other = h; break
+		if h.get("loc") != "retired" and HSU.or_(h.get("results"), []).size() and HSHall.trophies_of(h).is_empty(): other = h; break
 	if other != null:
-		G.trophies[String(HSTrophy.list()[1].id)] = { hid = other.id, horse = other.name, y = G.year, bonus = 0.0 }
 		var oid := String(other.id)
-		var ro: Dictionary = HSJockey.retire(oid, { hall = false })
+		var ro: Dictionary = HSJockey.retire(oid)
 		var y = HSWorld.horse(oid)
 		var none := true
 		if y != null:
 			for r in HSU.or_(y.get("results"), []):
 				if r.has("rec"): none = false
-		t.ok(not ro.has("err") and HSHall.by_id(oid) == null and none, "hall: いいえなら殿堂に入らず、記録も消える")
+		t.ok(not ro.has("err") and HSHall.by_id(oid) == null and none, "hall: トロフィーの無い馬は殿堂に入らず、記録も消える")
 
 # 決まった乗り方（test_world.gd と同じ型）：出たらすぐしごき、直線の手前から追い、残り 250m でムチ、詰まったら外へ
 func _ride(L: ViewLive) -> Dictionary:

@@ -121,7 +121,7 @@ func build() -> void:
 	_fill()
 	_setup_shots(args)
 
-# 撮影：1走の記録（記録の残っているいちばん新しい1走。--setup=race_detail_old は記録の無い1走）・殿堂入りの案内
+# 撮影：1走の記録（記録の残っているいちばん新しい1走。--setup=race_detail_old は記録の無い1走）・引退の確かめ（殿堂入りする馬）
 func _setup_shots(args: PackedStringArray) -> void:
 	if args.has("--setup=race_detail"):
 		for r in results:
@@ -133,9 +133,9 @@ func _setup_shots(args: PackedStringArray) -> void:
 			var r: Dictionary = results[0].duplicate()
 			r.erase("rec")
 			race_detail(r)
-	elif args.has("--setup=hall_ask") and not hall_mode:
+	elif args.has("--setup=retire") and not hall_mode:
 		_give_trophy(h)
-		ask_hall(h, func(_r): pass)
+		retire_flow(String(h.id), func(_r): pass)
 
 # 撮影の見本：その馬にトロフィーを1つ持たせる（殿堂入りの条件）
 static func _give_trophy(x: Dictionary) -> void:
@@ -153,7 +153,7 @@ static func _setup_hall_view() -> void:
 	if best == null: return
 	_give_trophy(best)
 	var id := String(best.id)
-	HSJockey.retire(id, { hall = true })
+	HSJockey.retire(id)
 	UiFlow.hall_id = id
 
 # 殿堂の写しを読むだけの画面（殿堂入りした馬。引退したあとも戦績と1走ごとの記録を見られる）
