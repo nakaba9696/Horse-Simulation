@@ -716,7 +716,7 @@ static func after_week(rep: Dictionary) -> void:
 			if x.get("rider") == "P": me = x; break
 		if me and me.get("horse"): on_result(r.race, me)
 	job_result(rep)
-	HSGFHost.after_week(rep)   # GF の一族の人（初めて GF を勝ったときの花輪）
+	HSGFHost.after_week(rep)   # GF の一族の人（GF を全制覇したときの花輪）
 	meet_check()
 	tick()
 

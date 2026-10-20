@@ -411,8 +411,8 @@ static func owner_face_path(oid: String, mood: String) -> String:
 # オーナーの場面（js/ui/ownersui.js の ownerScene）：胸から上の顔・何が起きたか・名前と立場・台詞・ご褒美・「ありがとうございます」
 # 縁ができたとき（kind "meet"）は、初めて声をかけてくる場面（看板の特徴・最初のミッション・「よろしくお願いします」）
 # 依頼が届いたとき（kind "job"）は、依頼の馬とレース。ミッションをやり終えたとき（kind "m1"〜"m5"）は、お礼と次のミッション
-# 初めて GF を勝ったとき（kind "wreath"）は、GF の一族の人（イロナ）の花輪とアイテム
-const OWNER_KICK := {"meet": "新しいオーナーから声がかかった", "job": "騎乗依頼が届いた", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞", "wreath": "初めての花輪"}
+# GF を全制覇したとき（kind "wreath"）は、GF の一族の人（イロナ）の花輪とアイテム
+const OWNER_KICK := {"meet": "新しいオーナーから声がかかった", "job": "騎乗依頼が届いた", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞", "wreath": "GF 全制覇の花輪"}
 func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	var host: bool = q.get("kind") == "wreath"
 	var o = HSGFHost.data() if host else HSOwners.by(String(q.oid))

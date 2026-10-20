@@ -212,7 +212,7 @@
   act['own-ask'] = d => { const err = O.ask(d.id); if (err) return App.toast(err); const o = O.by(d.id); App.toast(`${o.name}「${O.fill_((o.scenes.ask || [''])[0])}」`); App.save(); App.render(); };
 
   // ---------- 場面 ----------
-  const KICK = { meet: '新しいオーナーから声がかかった', job: '騎乗依頼が届いた', m1: '「OP」の依頼をやり終えた', m2: '「G3」の依頼をやり終えた', m3: '「G2」の依頼をやり終えた', m4: '「G1」の依頼をやり終えた', m5: 'すべての依頼をやり終えた', award: '名コンビ賞', wreath: '初めての花輪' };
+  const KICK = { meet: '新しいオーナーから声がかかった', job: '騎乗依頼が届いた', m1: '「OP」の依頼をやり終えた', m2: '「G3」の依頼をやり終えた', m3: '「G2」の依頼をやり終えた', m4: '「G1」の依頼をやり終えた', m5: 'すべての依頼をやり終えた', award: '名コンビ賞', wreath: 'GF 全制覇の花輪' };
   UI.ownerScene = function (q) {
     return new Promise(res => {
       const F = HS.GFHost;

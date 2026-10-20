@@ -400,18 +400,23 @@ module.exports = function (check, assert, HS) {
     return `${years}年・出会い ${Object.entries(met).sort((a, b) => a[1] - b[1]).map(([k, w]) => `${O.by(k).name.split(/[ ・]/)[0]} ${w}週`).join('・')}・依頼 ${issued}・乗った ${rides}・クリア ${cleared}`;
   });
 
-  check('owners: 初めて GF を勝つと、イロナから花輪（1頭の馬から作れるオリジナルホースが＋1）・2度目はもらわない', () => {
+  check('owners: GF を全制覇すると（6つの GF のトロフィーがそろう。年も馬も別でよい）、イロナから花輪（1頭の馬から作れるオリジナルホースが＋1）・2度目はもらわない', () => {
     const G = newGame(71);
-    const F = HS.GFHost, Ori = HS.Original;
+    const F = HS.GFHost, Ori = HS.Original, T = HS.Season;
     assert(!F.hasItem() && Ori.foalsMax() === Ori.FOALS, 'はじめから花輪がある');
-    const me = { pos: 1, rider: 'P', horse: { id: 'h1', name: 'テストホース' } };
-    const rep = { y: G.year, m: 12, w: 5, races: [{ race: { key: 'gf', name: 'グランドフェスティバル（マイル）', grade: 'GF' }, sim: { results: [me] } }] };
-    F.afterWeek(Object.assign({}, rep, { races: [{ race: rep.races[0].race, sim: { results: [Object.assign({}, me, { pos: 2 })] } }] }));
-    assert(!F.hasItem(), '2着で花輪をもらった');
+    const rep = { y: G.year, m: 12, w: 5, races: [] };
+    const cats = T.GF_CATS.map(c => c.id);
+    G.trophies = G.trophies || {};
+    // 5つまでではもらえない（違う年・違う馬で取っていてもよい）
+    cats.slice(0, -1).forEach((c, i) => { G.trophies['gf:' + c] = { y: G.year - i, horse: 'テストホース' + i, hid: 'h' + i, bonus: 0 }; });
     F.afterWeek(rep);
-    assert(F.hasItem() && Ori.foalsMax() === Ori.FOALS + 1, '初めての GF の勝ちで花輪をもらえない');
+    assert(!F.hasItem(), 'GF を5つ勝っただけで花輪をもらった');
+    G.trophies['gf:' + cats[cats.length - 1]] = { y: G.year, horse: 'テストホースZ', hid: 'hz', bonus: 0 };
+    assert(T.gfAllWon(), 'GF の全制覇にならない');
+    F.afterWeek(rep);
+    assert(F.hasItem() && Ori.foalsMax() === Ori.FOALS + 1, 'GF の全制覇で花輪をもらえない');
     const q = O.state().queue.filter(x => x.kind === 'wreath');
-    assert(q.length === 1 && F.sceneLines({ horse: q[0].horse, race: q[0].race }).every(t => !/\{/.test(t)) && F.sceneLines({ horse: 'A', race: 'B' }).length >= 3, '花輪の場面が無い');
+    assert(q.length === 1 && F.sceneLines({}).every(t => !/\{/.test(t)) && F.sceneLines({}).length >= 3, '花輪の場面が無い');
     F.afterWeek(rep);
     assert(O.state().queue.filter(x => x.kind === 'wreath').length === 1, '2度目も花輪の場面が出る');
     const s1 = W.serialize(); W.load(s1); assert(F.hasItem() && W.serialize() === s1, 'セーブの往復で花輪が消える');

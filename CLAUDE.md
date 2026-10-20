@@ -53,12 +53,12 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/core/trophy.js`・`data/trophies.js`・`data/trophy_horses.js` | トロフィー（仕様書の表・お金・引退時の能力の上がり）と、トロフィーのリーチで出てくる隠し馬の紐づけ | C |
 | `data/races_more.js` | 海外の重賞の補い（トロフィーに要るレースと世界の有名な重賞） | D |
 | `js/core/hall.js`・`js/ui/hallui.js` | 殿堂（お手馬）：トロフィーを2つ以上手にした自分の馬は引退したときに殿堂入りし、記録の写し（`G.hallOwn`）を振り返れる | C |
-| `js/core/original.js` | オリジナルホース：引退させた牡馬・牝馬（それぞれ5頭まで牧場に残る）から仔を作る。1頭の馬から3頭まで（イロナの花輪で4頭。作り終えた親は牧場を去る）。能力は両親の値から、特殊能力は両親のもの（最大8つ）から4つまで、トロフィー・GF の勝ちでボーナス | C |
+| `js/core/original.js` | オリジナルホース：引退させた牡馬・牝馬（それぞれ5頭まで牧場に残る）から仔を作る。1頭の馬から3頭まで（GF 全制覇でもらうイロナの花輪で4頭。作り終えた親は牧場を去る）。能力は両親の値から、特殊能力は両親のもの（最大8つ）から4つまで、トロフィー・GF の勝ちでボーナス | C |
 | `js/core/pedigree.js` | 血統表・クロス・ニックス・系統・配合の評価・仔の誕生 | M |
 | `js/core/races.js` | 週ごとのレース（重賞とオープン。OP 以上だけ）・出走できるか（G1 は獲得賞金・海外は仮の条件を `R.abroadWhy` の1か所で）・優先順。数は `docs/BALANCE.md`「8. 出走の条件」 | M |
 | `js/core/racesim.js` | レースの模擬（0.1秒刻み。S.create・S.step・S.finish）・プレイヤーの騎乗の操作（S.ctl）・実況・描画用のコマ | M |
 | `js/core/world.js` | 世界の状態・週の進行（W.prepareWeek → W.cards → W.finishWeek）・AI の出走・賞金・市場・配合・表彰・セーブ | C |
-| `data/owners.js`・`data/owner_races.js`・`js/core/owners.js`・`js/ui/ownersui.js`・`js/ui/ownerface.js`・`css/owners.css` | オーナー（画面の言葉。コードは owners）のキャラクター（架空・8人。仕様書の8つのジャンルに1人ずつ。口調の表・場面ごとの台詞・段階ごとのミッション・最後のアイテム）と騎乗依頼・出会いの点（OP 1・G3 2・G2 3・G1 4。4点で出会い）・友好度・ミッション形式の依頼（段階 OP → G3 → G2 → G1 は依頼の馬とレースが固定。レースの4週前に届き、負けたら次の年の同じレース。お手馬の段階は自分の馬で。依頼の馬はやり終えるまでデビューと店に出ない。OP の段階のレースは `data/owner_races.js` の名前のあるオープン）・店に頼む・名コンビ賞（`G.owners`。数は `docs/BALANCE.md`「9. オーナーの依頼」）。会話とミッションは下書きで、一覧は `docs/OWNERS_DRAFT.md`（`node tools/owners_draft.js`）。画面はホームの依頼の札・オーナーの一覧・場面（出会い・依頼・クリア）・パドックとレースの後のひと言。顔は持ち主が作った絵（`assets/owners_*.js`。札は丸い切り抜き・場面は胸から上・表情4つ）で、無い人・読めないときは SVG（`js/ui/ownerface.js`。Godot 版は `node tools/owner_faces.js` で書き出す）。GF を開いている一族の人（イロナ。キンチェムモチーフ・依頼はしない。初めて GF を勝つと花輪＝1頭の馬から作れるオリジナルホース＋1）は `data/gfhost.js`・`js/core/gfhost.js` | C |
+| `data/owners.js`・`data/owner_races.js`・`js/core/owners.js`・`js/ui/ownersui.js`・`js/ui/ownerface.js`・`css/owners.css` | オーナー（画面の言葉。コードは owners）のキャラクター（架空・8人。仕様書の8つのジャンルに1人ずつ。口調の表・場面ごとの台詞・段階ごとのミッション・最後のアイテム）と騎乗依頼・出会いの点（OP 1・G3 2・G2 3・G1 4。4点で出会い）・友好度・ミッション形式の依頼（段階 OP → G3 → G2 → G1 は依頼の馬とレースが固定。レースの4週前に届き、負けたら次の年の同じレース。お手馬の段階は自分の馬で。依頼の馬はやり終えるまでデビューと店に出ない。OP の段階のレースは `data/owner_races.js` の名前のあるオープン）・店に頼む・名コンビ賞（`G.owners`。数は `docs/BALANCE.md`「9. オーナーの依頼」）。会話とミッションは下書きで、一覧は `docs/OWNERS_DRAFT.md`（`node tools/owners_draft.js`）。画面はホームの依頼の札・オーナーの一覧・場面（出会い・依頼・クリア）・パドックとレースの後のひと言。顔は持ち主が作った絵（`assets/owners_*.js`。札は丸い切り抜き・場面は胸から上・表情4つ）で、無い人・読めないときは SVG（`js/ui/ownerface.js`。Godot 版は `node tools/owner_faces.js` で書き出す）。GF を開いている一族の人（イロナ。キンチェムモチーフ・依頼はしない。GF を全制覇すると花輪＝1頭の馬から作れるオリジナルホース＋1）は `data/gfhost.js`・`js/core/gfhost.js` | C |
 | `js/core/jockey.js` | 騎手のゲーム：持ち馬の入厩・評判・腕前・お手馬・見習いの減量・リーディング・騎手の表彰（騎乗依頼はオーナーのキャラクターから。`js/core/owners.js`） | C |
 | `js/ui/art.js` | 絵（馬・騎手・勝負服・肖像）。画像ファイルは使わず canvas で描く | V |
 | `js/ui/audio.js` | BGM と効果音（Web Audio で鳴らす。曲は書き下ろし） | V |

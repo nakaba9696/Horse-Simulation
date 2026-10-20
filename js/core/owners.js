@@ -582,7 +582,7 @@
       if (me && me.horse) O.onResult(r.race, me);
     }
     if (rep) O.jobResult(rep);
-    if (HS.GFHost && HS.GFHost.afterWeek) HS.GFHost.afterWeek(rep);   // GF の一族の人（初めて GF を勝ったときの花輪）
+    if (HS.GFHost && HS.GFHost.afterWeek) HS.GFHost.afterWeek(rep);   // GF の一族の人（GF を全制覇したときの花輪）
     O.meetCheck();
     O.tick();
   };

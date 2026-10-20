@@ -1,6 +1,6 @@
 # グランドフェスティバルを開いている一族の人（js/core/gfhost.js の HS.GFHost と同じ）：GF の場面で出すひと言を選ぶ
 # 場面：wait 招待の前・invite 招待が届いた・week GF の週・kincsem 全部の GF を勝ったあと。台詞は data/gfhost.js（下書き）
-# 初めて GF を勝ったとき、花輪とアイテム（一族の花輪。1頭の馬から作れるオリジナルホース＋1。HSOriginal）。印は G.owners.flags.wreath
+# GF を全制覇したとき（6つの GF のトロフィーがそろったとき。年をまたいでよい）、花輪とアイテム（一族の花輪。1頭の馬から作れるオリジナルホース＋1。HSOriginal）。印は G.owners.flags.wreath
 class_name HSGFHost
 
 static func data() -> Variant: return HSData.d().get("gfHost")
@@ -45,18 +45,11 @@ static func scene_lines(vars: Dictionary) -> Array:
 	var d = data()
 	if not d: return []
 	return HSU.or_(d.get("lines"), {}).get("wreath", []).map(func(t): return fill(String(t), vars))
-# 週の終わり（HSOwners.after_week から）：自分の乗った馬が初めて GF を勝ったら、花輪とアイテム
-static func after_week(rep: Dictionary) -> void:
+# 週の終わり（HSOwners.after_week から）：GF の全制覇がそろったら、花輪とアイテム（js/core/gfhost.js と同じ）
+static func after_week(_rep: Dictionary) -> void:
 	var G = HSWorld.G; var d = data()
-	if not d or not d.get("item") or not HSOwners.on() or has_item(): return
-	for r in rep.get("races", []):
-		if r.race.get("grade") != "GF" or not r.get("sim"): continue
-		var me = null
-		for x in r.sim.results:
-			if x.get("rider") == "P": me = x; break
-		if not me or me.pos != 1 or not me.get("horse"): continue
-		var s := HSOwners.state(); var label := HSRaces.label(r.race)
-		s.flags.wreath = { y = G.year, horse = me.horse.name, race = label }
-		HSWorld.news("%sさんから%sを受け取った（%s）。" % [d.name, d.item.name, d.item.text], "g1")
-		s.queue.append({ oid = d.id, kind = "wreath", horse = me.horse.name, race = label, reward = "%s（%s）" % [d.item.name, d.item.text], y = G.year })
-		return
+	if not d or not d.get("item") or not HSOwners.on() or has_item() or not HSSeason.gf_all_won(): return
+	var s := HSOwners.state()
+	s.flags.wreath = { y = G.year }
+	HSWorld.news("GF を全制覇した。%sさんから%sを受け取った（%s）。" % [d.name, d.item.name, d.item.text], "g1")
+	s.queue.append({ oid = d.id, kind = "wreath", horse = "", race = "", reward = "%s（%s）" % [d.item.name, d.item.text], y = G.year })

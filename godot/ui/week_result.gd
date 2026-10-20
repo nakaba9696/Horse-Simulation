@@ -93,7 +93,7 @@ func build() -> void:
 	side.add_child(nb[0])
 
 const MOOD := {"win": "joy", "bigwin": "joy", "good": "smile", "lose": "sad", "decline": "sad"}
-const KICK := {"meet": "新しいオーナーから声がかかった", "job": "騎乗依頼が届いた", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞", "wreath": "初めての花輪"}
+const KICK := {"meet": "新しいオーナーから声がかかった", "job": "騎乗依頼が届いた", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞", "wreath": "GF 全制覇の花輪"}
 
 static func _face(oid: String, mood: String, w: float, h: float) -> Control:
 	var o = HSGFHost.data() if oid == "gfhost" else HSOwners.by(oid)
@@ -143,7 +143,7 @@ func _react_card(x: Dictionary) -> PanelContainer:
 	v.add_child(UiTheme.label(foot, 12, UiTheme.GOOD if x.get("up") else UiTheme.FAINT))
 	return p
 
-# 場面（出会い・依頼が届いた・ミッションをやり終えた・名コンビ賞・初めての花輪）
+# 場面（出会い・依頼が届いた・ミッションをやり終えた・名コンビ賞・GF 全制覇の花輪）
 func _gift_card(q: Dictionary) -> PanelContainer:
 	var host: bool = q.get("kind") == "wreath"
 	var o = HSGFHost.data() if host else HSOwners.by(q.oid)
