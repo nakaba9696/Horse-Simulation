@@ -49,10 +49,16 @@
   const BEAT_MALES = ['天皇賞・秋', '天皇賞・春', '有馬記念', 'ジャパンC', '宝塚記念'];
   SP.unbeatenOf = d => d.unbeaten || SP.UNBEATEN[d.name] || 0;
   SP.STREAK = 8; // 無敗の名馬が出てくる連勝の数
-  SP.GROUPS = [
-    { id: 'triple', label: '歴代の三冠馬', note: '皐月賞・日本ダービーを勝って菊花賞へ', finals: ['菊花賞'], legs: sameYear(['皐月賞', '日本ダービー']), member: d => dn(d, '皐月賞') && dn(d, '東京優駿') && dn(d, '菊花賞') },
+  // トロフィー（data/trophies.js）のリーチで出てくる隠し馬（data/trophy_horses.js。持ち主の仕様書 2026-10-19「トロフィー達成系と隠し馬は紐づけたい」）。
+  // 一度倒して店に並んだあとも、またリーチをかけたときに出てくる（again。自分のお手馬になっている間は出ない）。前の「歴代の三冠馬」などはこれに移した
+  const TR = HS.Trophy;
+  const trophyGroups = TR.LIST.filter(t => ((HS.DATA.trophyHorses || {})[t.id] || []).length).map(t => {
+    const names = HS.DATA.trophyHorses[t.id].map(x => x.name);
+    return { id: 't:' + t.id, trophy: t.id, label: `トロフィー「${t.label}」`, note: `${t.note}（あと1勝のとき）`, finals: (t.kind === 'set' || t.kind === 'repeat') ? t.races.slice() : null,
+      again: true, needG1: t.kind === 'hof' || t.kind === 'immortal', legs: (h, race) => TR.reach(h, t, race), member: d => names.includes(d.name) };
+  });
+  SP.GROUPS = trophyGroups.concat([
     { id: 'nikan', label: 'クラシック二冠馬', note: '皐月賞・日本ダービー・菊花賞のどれかを勝って、ほかのクラシックへ', finals: CLASSIC, legs: (h, race) => CLASSIC.filter(n => won(h, n, y => y === race.year)).length === 1 && !won(h, race.short, y => y === race.year), member: d => (dn(d, '皐月賞') ? 1 : 0) + (dn(d, '東京優駿') ? 1 : 0) + (dn(d, '菊花賞') ? 1 : 0) === 2 },
-    { id: 'ftriple', label: '名牝（牝馬の二冠）', note: '桜花賞・オークスを勝って秋華賞へ', finals: ['秋華賞'], legs: sameYear(['桜花賞', 'オークス']), member: d => dn(d, '桜花賞') && dn(d, '優駿牝馬') },
     { id: 'filly', label: '牡馬を破った名牝', note: '牝馬で G1 を勝って、天皇賞・宝塚記念・ジャパンC・有馬記念へ', finals: BEAT_MALES,
       legs: (h, race) => h.sex === '牝' && (h.gradedWins || []).some(g => g.grade === 'G1') && !won(h, race.short), member: d => d.sex === '牝' && ['天皇賞（春）', '天皇賞（秋）', '有馬記念', 'ジャパンカップ', '宝塚記念'].some(n => dn(d, n)) },
     { id: 'long', label: '長距離の王者', note: '菊花賞を勝って天皇賞・春へ', finals: ['天皇賞・春'], legs: (h, race) => won(h, '菊花賞') && !won(h, '天皇賞・春'), member: d => dn(d, '菊花賞') && dn(d, '天皇賞（春）') },
@@ -70,10 +76,7 @@
     { id: 'tenno', label: '天皇賞の春秋制覇', note: '天皇賞の春と秋の片方を勝って、もう片方へ', finals: ['天皇賞・秋', '天皇賞・春'], legs: other({ '天皇賞・秋': '天皇賞・春', '天皇賞・春': '天皇賞・秋' }), member: d => dn(d, '天皇賞（春）') && dn(d, '天皇賞（秋）') },
     { id: 'arima2', label: '有馬記念の連覇', note: '有馬記念を勝って、次の年の有馬記念へ', finals: ['有馬記念'], legs: prevYear('有馬記念'), member: d => dn(d, '有馬記念') >= 2 },
     { id: 'mile', label: 'マイルの王者', note: '安田記念とマイルCSの片方を勝って、もう片方へ', finals: ['マイルCS', '安田記念'], legs: other({ 'マイルCS': '安田記念', '安田記念': 'マイルCS' }), member: d => dn(d, '安田記念') && dn(d, 'マイルチャンピオンシップ') },
-    { id: 'arc2', label: '凱旋門賞の連覇', note: '凱旋門賞を勝って、次の年の凱旋門賞へ', finals: ['凱旋門賞'], legs: prevYear('凱旋門賞'), member: d => dn(d, '凱旋門賞') >= 2 },
     { id: 'europe', label: '欧州の頂点', note: '英ダービーかキングジョージを勝って凱旋門賞へ', finals: ['凱旋門賞'], legs: (h, race) => won(h, '英ダービー', y => y === race.year) || won(h, 'キングジョージ', y => y === race.year), member: d => dn(d, '凱旋門賞') && (dn(d, '英ダービー') || dn(d, 'キングジョージ6世＆クイーンエリザベスステークス')) },
-    { id: 'uk3', label: '英国の三冠馬', note: '英2000ギニー・英ダービーを勝って英セントレジャーへ', finals: ['英セントレジャー'], legs: sameYear(['英2000ギニー', '英ダービー']), member: d => dn(d, '英2000ギニー') && dn(d, '英ダービー') && dn(d, '英セントレジャー') },
-    { id: 'us3', label: '米国の三冠馬', note: 'ケンタッキーダービー・プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['ケンタッキーダービー', 'プリークネスS']), member: d => dn(d, 'ケンタッキーダービー') && dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
     { id: 'us2', label: '米国の名馬', note: 'プリークネスSを勝ってベルモントSへ', finals: ['ベルモントS'], legs: sameYear(['プリークネスS']), member: d => dn(d, 'プリークネスステークス') && dn(d, 'ベルモントステークス') },
     { id: 'aus', label: '豪州の英雄', note: 'コックスプレートを勝ってメルボルンカップへ', finals: ['メルボルンカップ'], legs: sameYear(['コックスプレート']), member: d => dn(d, 'コックスプレート') && dn(d, 'メルボルンカップ') },
     // 伝説級（data/legends.js の tier:'legend'）：グランドフェスティバル（dream.js）ごとに、担当の名馬（データの gf）だけ出る。
@@ -85,7 +88,7 @@
       legs: (h, race) => race.grade === 'GF' && HS.Season.gfAllWon(), member: d => d.gf === 'all' },
     { id: 'g1five', label: 'G1を5勝した名馬', note: 'G1を4勝して、次のG1へ', finals: null, legs: (h, race) => race.grade === 'G1' && gw(h).length && (h.gradedWins || []).filter(g => g.grade === 'G1').length === 4, member: d => g1Count(d) >= 5 },
     { id: 'unbeaten', label: '無敗の名馬', note: `デビューから無敗で${SP.STREAK - 1}連勝して、次のレースへ`, finals: null, legs: h => (h.starts || 0) === (h.wins || 0) && (h.wins || 0) === SP.STREAK - 1, member: d => SP.unbeatenOf(d) >= SP.STREAK },
-  ];
+  ]);
   // 大レースごとのグループ「歴代の○○馬」：いまの番組の G1 それぞれ。G1 を勝った馬がそのレースに出ると、そのレースの歴代の勝ち馬が出てくる
   // （2歳の G1 は、重賞を勝った馬が出ると）。1回に出てくるのは強い順に SP.RACE_IN_RACE 頭まで
   SP.RACE_IN_RACE = 2;
@@ -115,7 +118,7 @@
   // 1頭が出てくる条件は1つだけ（持ち主の決定 2026-10-16）。グループに優先順を付け、各馬は当てはまるいちばん上のグループに入る
   // スピードシンボリは有馬記念の連覇（春の王者より上）。ミエスクは G1を5勝した名馬のまま：年をまたいで路線の違う G1 を重ねた馬で、
   // 1つの冠の組み合わせより「G1 を5勝」が史実の顔に合う（ダリア・アレフランスも同じ理由でここ）
-  SP.PRIORITY = ['gf', 'gfall', 'triple', 'us3', 'uk3', 'arc2', 'unbeaten', 'ftriple', 'long', 'nikan', 'arima2', 'local', 'allround', 'filly', 'europe', 'autumn', 'spring', 'grandprix', 'tenno', 'mile', 'us2', 'aus', 'g1five'];
+  SP.PRIORITY = ['gf', 'gfall'].concat(trophyGroups.map(g => g.id), ['unbeaten', 'long', 'nikan', 'arima2', 'local', 'allround', 'filly', 'europe', 'autumn', 'spring', 'grandprix', 'tenno', 'mile', 'us2', 'aus', 'g1five']);
   let assign = null;
   const assignAll = function () {
     if (assign) return assign;
@@ -164,7 +167,7 @@
     for (const g of SP.GROUPS) {
       if (!SP.members(g).some(d => SP.canAppear(g, d, un))) continue;
       const r = nextRaces.find(rc => SP.reach(h, g, rc));
-      if (r) out.push({ group: g, need: g.finals ? r.short : (['g1five', 'allround', 'local'].includes(g.id) ? '次のG1' : '次のレース') });
+      if (r) out.push({ group: g, need: g.finals ? r.short : (g.needG1 || ['g1five', 'allround', 'local'].includes(g.id) ? '次のG1' : '次のレース') });
     }
     return out;
   };

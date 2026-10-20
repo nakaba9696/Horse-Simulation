@@ -15,7 +15,7 @@
       if (!v) continue;
       const label = TR && TR.BY[id] ? TR.BY[id].label : id;
       if (v.hid ? v.hid === h.id : v.horse === h.name) out.push({ id, label, y: v.y, bonus: v.bonus || 0 });
-      else { const m = (v.more || []).find(x => x.hid === h.id); if (m) out.push({ id, label, y: m.y, bonus: 0 }); } // GF のトロフィーは2頭目からの勝ち馬にも
+      else { const m = (v.more || []).find(x => x.hid === h.id); if (m) out.push({ id, label, y: m.y, bonus: m.bonus || 0 }); } // GF のトロフィーは2頭目からの勝ち馬にも
     }
     return out.sort((a, b) => a.y - b.y);
   };

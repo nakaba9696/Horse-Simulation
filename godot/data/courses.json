@@ -71,5 +71,7 @@
 "ハッピーバレー": {"region":"海外","dir":"右","turf":{"lap":1417,"straight":310,"slope":"平"},"dirt":null,"country":"香港"},
 "ローズヒル": {"region":"海外","dir":"右","turf":{"lap":2048,"straight":408,"slope":"平"},"dirt":null,"country":"豪"},
 "クランジ": {"region":"海外","dir":"左","turf":{"lap":2000,"straight":400,"slope":"平"},"dirt":null,"country":"星"},
-"レパーズタウン": {"region":"海外","dir":"左","turf":{"lap":2800,"straight":400,"slope":"中","speed":-0.02},"dirt":null,"country":"愛"}
+"レパーズタウン": {"region":"海外","dir":"左","turf":{"lap":2800,"straight":400,"slope":"中","speed":-0.02},"dirt":null,"country":"愛"},
+"ヘイドック": {"region":"海外","dir":"左","turf":{"lap":2600,"straight":600,"slope":"平","speed":-0.02},"dirt":null,"country":"英"},
+"オークローンパーク": {"region":"海外","dir":"左","turf":null,"dirt":{"lap":1609,"straight":350,"slope":"平","speed":0.02},"country":"米"}
 }

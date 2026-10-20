@@ -75,7 +75,7 @@ func _fill() -> void:
 func _note() -> String:
 	match TABS[tab][0]:
 		"special": return "自分の馬がグループの条件にリーチをかけると、最後のレースに名馬が出てくる。勝つと馬の店に並ぶ"
-		"trophy": return "勝ったレースの組み合わせで手にする"
+		"trophy": return "手にした馬それぞれに付き、ボーナス賞金が入る。引退すると、手にしたトロフィーの数と種類で能力が上がる"
 		"hall": return "トロフィーを2つ以上手にした自分の馬は、引退したときに殿堂入りする"
 		"lead": return "左右で年を替える"
 		"gf": return "行を押すとグランドフェスティバルの画面へ（招待への返事もそこで）"
@@ -175,13 +175,19 @@ func _special() -> void:
 			hb.move_child(rl, 1)
 
 func _trophy() -> void:
-	var tr: Dictionary = HSU.or_(HSWorld.G.get("trophies"), {})
-	var n := HSTrophy.list().filter(func(t): return tr.has(t.id)).size()
+	var n := HSTrophy.list().filter(func(t): return HSTrophy.holders(t.id).size() > 0).size()
 	list.add_child(UiScreen.section("トロフィー", "%d / %d" % [n, HSTrophy.list().size()]))
-	for t in HSTrophy.list():
-		var got = tr.get(t.id)
-		_row([["🏆" if got else "🔒", 40, UiTheme.GOLD_BRIGHT, C], [String(t.label), 220, UiTheme.GOLD_BRIGHT if got else UiTheme.IVORY], [HSTrophy.note_of(t), 0, UiTheme.MUTED],
-			["%s・%s" % [yl(got.y), got.horse] if got else "まだ", 260, UiTheme.IVORY if got else UiTheme.FAINT, R]], got != null, 44)
+	for c in HSTrophy.CATS:
+		var ts: Array = HSTrophy.list().filter(func(t): return t.cat == c.id)
+		if not ts.size(): continue
+		list.add_child(UiScreen.section(String(c.label), "%d" % ts.size()))
+		for t in ts:
+			var hs := HSTrophy.holders(t.id)
+			var got := hs.size() > 0
+			var who := "まだ"
+			if got: who = "・".join(hs.map(func(x): return "%s %s" % [yl(x.y), x.horse]))
+			_row([["🏆" if got else "🔒", 40, UiTheme.GOLD_BRIGHT, C], [String(t.label), 240, UiTheme.GOLD_BRIGHT if got else UiTheme.IVORY], [HSTrophy.note_of(t), 0, UiTheme.MUTED],
+				[who, 300, UiTheme.IVORY if got else UiTheme.FAINT, R]], got, 44)
 
 func _lead() -> void:
 	var G = HSWorld.G

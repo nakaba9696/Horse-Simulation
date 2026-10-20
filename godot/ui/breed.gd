@@ -69,7 +69,7 @@ func _fill() -> void:
 	pair_box.add_child(top)
 	top.add_child(UiTheme.title("%s　×　%s" % [ps.name if ps else "（父）", pd.name if pd else "（母）"], 24, UiTheme.GOLD_BRIGHT if ps and pd else UiTheme.FAINT))
 	if ps and pd:
-		var bonus := HSU.mn(HSOriginal.BONUS_MAX, float(HSU.or_(ps.get("parentBonus"), 0.0)) + float(HSU.or_(pd.get("parentBonus"), 0.0)))
+		var bonus := HSOriginal.child_bonus(ps, pd)   # 前の版の引退馬だけ（いまは引退で親の能力が上がっている）
 		if bonus > 0: top.add_child(UiTheme.chip("ボーナス +%s" % HSU.num(bonus), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
 	var cand: Array = HSOriginal.candidates(ps, pd) if ps and pd else []
 	var fl := HFlowContainer.new()
@@ -125,7 +125,7 @@ func _col(v: VBoxContainer, title: String, list: Array, is_sire: bool) -> void:
 		l1.add_theme_constant_override("separation", 8)
 		l1.add_child(UiTheme.label(String(h.name), 16, UiTheme.GOLD_BRIGHT if on else UiTheme.IVORY))
 		if float(HSU.or_(h.get("parentBonus"), 0.0)) > 0:
-			l1.add_child(UiTheme.chip("ボーナス +%s" % HSU.num(h.parentBonus), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 11))
+			l1.add_child(UiTheme.chip(("引退で能力 最大+%s" if h.get("potUp") else "ボーナス +%s") % HSU.num(h.parentBonus), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 11))
 		if not is_sire and h.get("foalY") == G.year:
 			l1.add_child(UiTheme.chip("今年は産んだ", UiTheme.SURFACE_3, UiTheme.MUTED, 11))
 		nv.add_child(l1)

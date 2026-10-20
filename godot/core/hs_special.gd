@@ -63,11 +63,20 @@ static var _GROUPS: Variant = null
 static func groups() -> Array:
 	if _GROUPS == null: _GROUPS = _groups()
 	return _GROUPS
+# トロフィー（HSTrophy）のリーチで出てくる隠し馬（data/trophy_horses.js）。並んだあとも、またリーチをかければ出てくる（again）
+static func _trophy_groups() -> Array:
+	var out: Array = []
+	var th: Dictionary = HSData.d().get("trophyHorses", {})
+	for t in HSTrophy.list():
+		var xs: Array = th.get(t.id, [])
+		if not xs.size(): continue
+		out.append({ id = "t:" + t.id, trophy = t.id, label = "トロフィー「%s」" % t.label, note = "%s（あと1勝のとき）" % t.note,
+			finals = t.races.duplicate() if (t.kind == "set" or t.kind == "repeat") else null, again = true, needG1 = t.kind == "hof" or t.kind == "immortal",
+			names = xs.map(func(x): return x.name) })
+	return out
 static func _groups() -> Array:
-	var gs: Array = [
-		{ id = "triple", label = "歴代の三冠馬", finals = ["菊花賞"] },
+	var gs: Array = _trophy_groups() + [
 		{ id = "nikan", label = "クラシック二冠馬", finals = CLASSIC },
-		{ id = "ftriple", label = "名牝（牝馬の二冠）", finals = ["秋華賞"] },
 		{ id = "filly", label = "牡馬を破った名牝", finals = BEAT_MALES },
 		{ id = "long", label = "長距離の王者", finals = ["天皇賞・春"] },
 		{ id = "allround", label = "万能の名馬", finals = null },
@@ -78,10 +87,7 @@ static func _groups() -> Array:
 		{ id = "tenno", label = "天皇賞の春秋制覇", finals = ["天皇賞・秋", "天皇賞・春"] },
 		{ id = "arima2", label = "有馬記念の連覇", finals = ["有馬記念"] },
 		{ id = "mile", label = "マイルの王者", finals = ["マイルCS", "安田記念"] },
-		{ id = "arc2", label = "凱旋門賞の連覇", finals = ["凱旋門賞"] },
 		{ id = "europe", label = "欧州の頂点", finals = ["凱旋門賞"] },
-		{ id = "uk3", label = "英国の三冠馬", finals = ["英セントレジャー"] },
-		{ id = "us3", label = "米国の三冠馬", finals = ["ベルモントS"] },
 		{ id = "us2", label = "米国の名馬", finals = ["ベルモントS"] },
 		{ id = "aus", label = "豪州の英雄", finals = ["メルボルンカップ"] },
 		{ id = "gf", label = "伝説級の名馬", finals = null, top = true, fit = true, again = true },
@@ -105,10 +111,9 @@ static func by_id() -> Dictionary:
 
 static func legs(g: Dictionary, h: Dictionary, race: Dictionary) -> bool:
 	var gwins: Array = HSU.or_(h.get("gradedWins"), [])
+	if g.get("trophy"): return HSTrophy.reach(h, HSTrophy.by()[g.trophy], race)
 	match g.id:
-		"triple": return _same_year(h, race, ["皐月賞", "日本ダービー"])
 		"nikan": return CLASSIC.filter(func(n): return _won(h, n, func(y): return y == race.year)).size() == 1 and not _won(h, race.short, func(y): return y == race.year)
-		"ftriple": return _same_year(h, race, ["桜花賞", "オークス"])
 		"filly": return h.get("sex") == "牝" and gwins.any(func(x): return x.get("grade") == "G1") and not _won(h, race.short)
 		"long": return _won(h, "菊花賞") and not _won(h, "天皇賞・春")
 		"allround":
@@ -123,10 +128,7 @@ static func legs(g: Dictionary, h: Dictionary, race: Dictionary) -> bool:
 		"tenno": return _other(h, race, { "天皇賞・秋": "天皇賞・春", "天皇賞・春": "天皇賞・秋" })
 		"arima2": return _prev_year(h, race, "有馬記念")
 		"mile": return _other(h, race, { "マイルCS": "安田記念", "安田記念": "マイルCS" })
-		"arc2": return _prev_year(h, race, "凱旋門賞")
 		"europe": return _won(h, "英ダービー", func(y): return y == race.year) or _won(h, "キングジョージ", func(y): return y == race.year)
-		"uk3": return _same_year(h, race, ["英2000ギニー", "英ダービー"])
-		"us3": return _same_year(h, race, ["ケンタッキーダービー", "プリークネスS"])
 		"us2": return _same_year(h, race, ["プリークネスS"])
 		"aus": return _same_year(h, race, ["コックスプレート"])
 		"gf": return race.get("grade") == "GF" and HSSeason.gf_won_prev(h, race)
@@ -137,10 +139,9 @@ static func legs(g: Dictionary, h: Dictionary, race: Dictionary) -> bool:
 		return not _won(h, race.short) and (gwins.size() > 0 if g.two else gwins.any(func(x): return x.get("grade") == "G1"))
 	return false
 static func member(g: Dictionary, d: Dictionary) -> bool:
+	if g.get("trophy"): return g.names.has(d.name)
 	match g.id:
-		"triple": return _dn(d, "皐月賞") > 0 and _dn(d, "東京優駿") > 0 and _dn(d, "菊花賞") > 0
 		"nikan": return (1 if _dn(d, "皐月賞") else 0) + (1 if _dn(d, "東京優駿") else 0) + (1 if _dn(d, "菊花賞") else 0) == 2
-		"ftriple": return _dn(d, "桜花賞") > 0 and _dn(d, "優駿牝馬") > 0
 		"filly": return d.get("sex") == "牝" and ["天皇賞（春）", "天皇賞（秋）", "有馬記念", "ジャパンカップ", "宝塚記念"].any(func(n): return _dn(d, n) > 0)
 		"long": return _dn(d, "菊花賞") > 0 and _dn(d, "天皇賞（春）") > 0
 		"allround": return big_wins(d).size() > 0 and _all_round(HSHorse.win_races(d))
@@ -151,10 +152,7 @@ static func member(g: Dictionary, d: Dictionary) -> bool:
 		"tenno": return _dn(d, "天皇賞（春）") > 0 and _dn(d, "天皇賞（秋）") > 0
 		"arima2": return _dn(d, "有馬記念") >= 2
 		"mile": return _dn(d, "安田記念") > 0 and _dn(d, "マイルチャンピオンシップ") > 0
-		"arc2": return _dn(d, "凱旋門賞") >= 2
 		"europe": return _dn(d, "凱旋門賞") > 0 and (_dn(d, "英ダービー") > 0 or _dn(d, "キングジョージ6世＆クイーンエリザベスステークス") > 0)
-		"uk3": return _dn(d, "英2000ギニー") > 0 and _dn(d, "英ダービー") > 0 and _dn(d, "英セントレジャー") > 0
-		"us3": return _dn(d, "ケンタッキーダービー") > 0 and _dn(d, "プリークネスステークス") > 0 and _dn(d, "ベルモントステークス") > 0
 		"us2": return _dn(d, "プリークネスステークス") > 0 and _dn(d, "ベルモントステークス") > 0
 		"aus": return _dn(d, "コックスプレート") > 0 and _dn(d, "メルボルンカップ") > 0
 		"gf": return HSU.truthy(d.get("gf")) and d.gf != "all"
@@ -180,13 +178,14 @@ static func data(name: String) -> Variant:
 		if d.name == name: return d
 	return null
 static func is_top(d: Dictionary) -> bool: return d.get("tier") == "legend"
-const PRIORITY := ["gf", "gfall", "triple", "us3", "uk3", "arc2", "unbeaten", "ftriple", "long", "nikan", "arima2", "local", "allround", "filly", "europe", "autumn", "spring", "grandprix", "tenno", "mile", "us2", "aus", "g1five"]
+const PRIORITY_REST := ["unbeaten", "long", "nikan", "arima2", "local", "allround", "filly", "europe", "autumn", "spring", "grandprix", "tenno", "mile", "us2", "aus", "g1five"]
 static var _assign: Variant = null
 static func _assign_all() -> Dictionary:
 	if _assign != null: return _assign
 	_assign = {}
 	var order: Array = []
-	for id in PRIORITY:
+	var prio: Array = ["gf", "gfall"] + _trophy_groups().map(func(g): return g.id) + PRIORITY_REST
+	for id in prio:
 		if by_id().has(id): order.append(by_id()[id])
 	order += HSU.stable_sort(groups().filter(func(g): return g.get("race")), func(a, b): return float(HSU.or_(a.get("prize"), 0.0)) > float(HSU.or_(b.get("prize"), 0.0)))
 	var taken := {}
@@ -232,7 +231,7 @@ static func reach_info(h: Dictionary) -> Array:
 		var r = null
 		for rc in nextRaces:
 			if reach(h, g, rc): r = rc; break
-		if r: out.append({ group = g, need = r.short if g.finals else ("次のG1" if ["g1five", "allround", "local"].has(g.id) else "次のレース") })
+		if r: out.append({ group = g, need = r.short if g.finals else ("次のG1" if (g.get("needG1") or ["g1five", "allround", "local"].has(g.id)) else "次のレース") })
 	return out
 static func horse(d: Dictionary, race: Dictionary) -> Dictionary:
 	var age := 2.0 if race.get("age") == "2" else (3.0 if race.get("age") == "3" else 4.0)

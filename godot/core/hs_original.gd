@@ -3,20 +3,22 @@ class_name HSOriginal
 
 const MAX_EACH := 5
 const MAX_SKILLS := 4
-const BONUS_PER := 3.0
+const BONUS_PER := 3.0   # 前の版：仔へのボーナス（前のセーブの引退馬だけ。potUp の無い馬）
 const BONUS_MAX := 12.0
+const POT_MAX := 118.0   # 能力の上限（仔を作るときと同じ）
 
 static func on() -> bool:
 	var G = HSWorld.G
 	return G != null and HSU.truthy(G.get("eraless"))
 static func retired(sex: String) -> Array:
 	return HSWorld.mine().filter(func(h): return h.get("loc") == "retired" and ((h.get("sex") == "牝") if sex == "牝" else (h.get("sex") != "牝")))
+# 引退したときの能力の上がり：手にしたトロフィー（GF のトロフィーも）。by＝能力ごとの上がり、pts＝いちばん大きい上がり（original.js と同じ）
 static func bonus_of(h: Dictionary) -> Dictionary:
-	var G = HSWorld.G
-	var trs: Dictionary = HSU.or_(G.get("trophies"), {})
-	var tr = trs.keys().filter(func(id): return not String(id).begins_with("gf:") and trs[id].horse == h.name).size()   # GF のトロフィーは下の GF の勝ちで数える
-	var dc := HSSeason.gf_wins(h).size()
-	return { trophies = float(tr), dc = float(dc), pts = HSU.mn(BONUS_MAX, (tr + dc) * BONUS_PER) }
+	var p := HSTrophy.points(h)
+	return { trophies = p.n, by = p.by, pts = p.top }
+# 仔へのボーナス：前の版の引退馬（引退で能力が上がっていない馬）だけ
+static func legacy_bonus(h: Variant) -> float: return float(HSU.or_(h.get("parentBonus"), 0.0)) if (h and not h.get("potUp")) else 0.0
+static func child_bonus(s: Variant, m: Variant) -> float: return HSU.mn(BONUS_MAX, legacy_bonus(s) + legacy_bonus(m))
 static func retire(id: String) -> Dictionary:
 	var G = HSWorld.G; var h = HSWorld.horse(id)
 	if not h or h.get("owner") != "P" or h.get("loc") == "retired": return { err = "持ち馬ではない" }
@@ -28,8 +30,16 @@ static func retire(id: String) -> Dictionary:
 		G.horses.erase(id); HSWorld.dirty(); HSWorld.news("%sは引退して乗馬になった。おつかれさま。" % h.name, "info"); return { to = "gone" }
 	var b := bonus_of(h)
 	h.loc = "retired"; h.retiredY = G.year; h.auto = false; h.parentBonus = b.pts
+	# トロフィーで能力が上がる（上がった分は potUp に残す）
+	h.potUp = {}
+	for k in HSHorse.STATS:
+		if h.pot.get(k) == null: continue
+		var v: float = h.pot[k]
+		var up: float = HSU.mn(float(HSU.or_(b.by.get(k), 0.0)), HSU.mx(0.0, POT_MAX - v))
+		h.potUp[k] = HSMath.round_js(up * 10.0) / 10.0
+		if up > 0: h.pot[k] = HSMath.round_js((v + up) * 10.0) / 10.0
 	HSWorld.dirty()
-	HSWorld.news("%sは引退し、牧場に残った。オリジナルホースの%sにできる%s。" % [h.name, "母" if h.sex == "牝" else "父", ("（仔へのボーナス +%s）" % HSU.num(b.pts)) if b.pts else ""], "info")
+	HSWorld.news("%sは引退し、牧場に残った。オリジナルホースの%sにできる%s。" % [h.name, "母" if h.sex == "牝" else "父", ("（トロフィー%sつで能力が上がった。最大 +%s）" % [HSU.num(b.trophies), HSU.num(b.pts)]) if b.pts else ""], "info")
 	return { to = "retired" }
 static func release(id: String) -> Variant:
 	var G = HSWorld.G; var h = HSWorld.horse(id)
@@ -56,7 +66,7 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	if m.get("foalY") == G.year: return { err = "%sは今年もう仔を産んだ（来年また作れる）" % m.name }
 	if not HSSeason.can_buy(): return { err = "お手馬は%s頭まで" % HSU.num(HSSeason.MAX_OWN) }
 	var rng := HSRng.new(float(HSU.hash32("orig:%s:%s:%s:%s" % [HSU.num(G.seed), HSU.num(G.year), s.id, m.id])))
-	var bonus := HSU.mn(BONUS_MAX, float(HSU.or_(s.get("parentBonus"), 0.0)) + float(HSU.or_(m.get("parentBonus"), 0.0)))
+	var bonus := child_bonus(s, m)   # 前の版の引退馬だけ（いまは引退で親の能力が上がっている）
 	var pot := {}
 	for k in HSHorse.STATS:
 		var a: float = HSU.or_(s.pot.get(k), 70.0); var b: float = m.pot[k] if m.pot.get(k) != null else a

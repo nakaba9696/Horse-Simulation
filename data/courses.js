@@ -79,6 +79,9 @@
     'ローズヒル': C('海外', '右', { lap: 2048, straight: 408, slope: '平' }, null, { country: '豪' }),
     'クランジ': C('海外', '左', { lap: 2000, straight: 400, slope: '平' }, null, { country: '星' }),
     'レパーズタウン': C('海外', '左', { lap: 2800, straight: 400, slope: '中', speed: -0.02 }, null, { country: '愛' }),
+    // 世界の有名な重賞を足したときに増やした競馬場（data/races_more.js。おおよその値）
+    'ヘイドック': C('海外', '左', { lap: 2600, straight: 600, slope: '平', speed: -0.02 }, null, { country: '英' }),
+    'オークローンパーク': C('海外', '左', null, { lap: 1609, straight: 350, slope: '平', speed: 0.02 }, { country: '米' }),
   };
   // その月に条件戦を開く競馬場（おおよその開催）
   HS.DATA.meets = {

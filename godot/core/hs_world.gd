@@ -527,6 +527,20 @@ static func prepare_week() -> Dictionary:
 	return _week
 
 # 出走表を作る（頭数合わせ・騎手・枠）。r はこのレースの乱数
+# 人気の見込み（set_odds の見積もりから運の揺れを除いたもの）。スペシャルホースと入れ替える馬を選ぶ（world.js の W.popEstimate）
+static func pop_estimate(h: Dictionary, race: Dictionary, wIdx: float) -> float:
+	return HSSim.power(h, race, wIdx, null).total + (1.5 if (h.get("hist") and h.gradedWins.size()) else 0.0)
+static func swap_legends(race: Dictionary, runners: Array, legends: Array, wIdx: float) -> void:
+	for lg in legends:
+		var x := { horse = lg.horse, jockey = null, mine = false, legend = true }
+		var low := -1; var lv := INF
+		for i in runners.size():
+			var rr: Dictionary = runners[i]
+			if rr.get("mine") or rr.get("legend"): continue
+			var v := pop_estimate(rr.horse, race, wIdx)
+			if v < lv: lv = v; low = i
+		if low < 0: runners.append(x)
+		else: runners[low] = x
 static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -> Variant:
 	var year: float = G.year
 	var seen := {}
@@ -534,6 +548,9 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 	for e in entr0:
 		if e.get("horse") and not seen.has(e.horse.id):
 			seen[e.horse.id] = true; entr.append(e)
+	# スペシャルホース（隠し馬）は、出走表ができてから手持ちでない最低人気の馬と入れ替わる（world.js と同じ）
+	var legends: Array = entr.filter(func(e): return e.get("legend"))
+	if legends.size(): entr = entr.filter(func(e): return not e.get("legend"))
 	var mx := HSRaces.max_field(race)
 	HSSort.sort(entr, func(a, b):
 		var d := (1.0 if b.get("legend") else 0.0) - (1.0 if a.get("legend") else 0.0)
@@ -566,6 +583,7 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 		f.name = HSHorse.make_name(r, used, foreign, usedAll)
 		f.local = race.get("region") == "地方" and not foreign
 		runners.append({ horse = f, jockey = null })
+	if legends.size(): swap_legends(race, runners, legends, wIdx)
 	var taken := {}
 	for x in runners:
 		if x.jockey: taken[x.jockey.name] = true
@@ -674,6 +692,7 @@ static func finish_week(played: Dictionary = {}) -> Dictionary:
 	var y0: float = G.year
 	next_week(report)
 	if G.year != y0: HSJockey.year_end(y0)
+	if G.year != y0: HSTrophy.year_end(y0)   # 年末の表彰のトロフィー（ホールオブフェイム）
 	HSJockey.week_start()
 	G.rngState = floorf(rng.next() * 4294967296.0)
 	G.lastWeek = { date = report.date, races = report.races.map(func(r): return slim_result(r)) }
@@ -798,6 +817,7 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 				rec.pts += pts
 				if race.dist <= 1600 and race.surface == "芝": rec.sprint += pts
 				if race.surface == "ダ": rec.dirt += pts
+	if G.get("eraless"): HSTrophy.after_race(race, sim)   # 着差の合計・G1 の連勝のトロフィー
 	if G.get("eraless"): HSSpecial.after_race(race, sim)
 	if race.get("graded"):
 		var win = sim.results[0]

@@ -928,12 +928,12 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   const SP = HS.Special;
   W.newGame({ seed: 33, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
-  const tri = SP.members(SP.BY.triple).map(d => d.name);
+  const tri = SP.members(SP.BY['t:triple']).map(d => d.name);
   assert(['セントライト', 'シンザン', 'ミスターシービー', 'シンボリルドルフ'].every(n => tri.includes(n)), `歴代の三冠馬 ${tri.join('・')}`);
   assert(SP.members(SP.BY.unbeaten).some(d => d.name === 'トキノミノル'), '無敗の名馬にトキノミノルがいない');
   assert(SP.members(SP.BY.gf).some(d => d.name === 'セントサイモン') && !SP.members(SP.BY.unbeaten).some(d => d.name === 'セントサイモン'), '伝説級はグランドフェスティバルのグループだけ');
   const seen = new Set(); for (const g of SP.GROUPS) for (const d of SP.members(g)) { assert(!seen.has(d.name), `${d.name} が2つ以上のグループにいる`); seen.add(d.name); }
-  assert(!SP.members(SP.BY.autumn).some(d => d.name === 'シンボリルドルフ'), 'シンボリルドルフが三冠以外にもいる');
+  assert(!SP.members(SP.BY.autumn).some(d => d.name === 'シンボリルドルフ'), 'シンボリルドルフが日本三冠以外にもいる');
   assert(['ダンシングブレーヴ', 'ミルリーフ', 'トキノミノル'].every(n => SP.byName(n)), '名馬がスペシャルホースにいない');
   // 強さの下限は無い：評価の低い大レースの勝ち馬も入る
   assert(SP.list().some(x => (x.d.rating || 0) < 88 && !HS.DATA.isForeign(x.d)), '評価の低い名馬が入っていない');
@@ -943,7 +943,7 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   assert(mem('long').includes('グリーングラス'), `長距離の王者 ${mem('long').join('・')}`);
   assert(mem('allround').includes('タケシバオー'), `万能の名馬 ${mem('allround').join('・')}`);
   assert(mem('local').includes('ハイセイコー'), `地方から来た名馬 ${mem('local').join('・')}`);
-  assert(mem('arima2').includes('スピードシンボリ') && mem('arc2').includes('リボー') && mem('unbeaten').includes('ラフィアン'), 'スピードシンボリ・リボー・ラフィアンのグループが違う');
+  assert(mem('arima2').includes('スピードシンボリ') && mem('t:arc2').includes('リボー') && mem('t:usf3').includes('ラフィアン') && mem('unbeaten').includes('トキノミノル'), 'スピードシンボリ・リボー・ラフィアン・トキノミノルのグループが違う');
   assert(!SP.list().some(x => x.groups.length !== 1), '2つ以上のグループに入る名馬がいる');
   assert(!SP.list().some(x => HS.Eraless.isPool(x.d)), '1989年以降の馬がスペシャルホースになっている');
   // 皐月賞と日本ダービーを勝った馬が菊花賞に出ると、歴代の三冠馬が出てくる
@@ -951,7 +951,7 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   const h = W.all().find(x => x.hist && x.sex !== '牝' && !x.gelding && G.year - x.born === 3 && x.loc === 'stable' && !x.injury);
   h.owner = 'P'; h.auto = false; h.fatigue = 0; h.injury = null; h.earn = 30000; h.wins = 4; h.starts = 5;
   h.gradedWins.push({ y: G.year, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year, race: '東京優駿', short: '日本ダービー', grade: 'G1' });
-  assert(SP.reachInfo(h).some(r => r.group.id === 'triple' && r.need === '菊花賞'), 'リーチが出ない');
+  assert(SP.reachInfo(h).some(r => r.group.id === 't:triple' && r.need === '菊花賞'), 'リーチが出ない');
   for (const k of H.STATS) h.pot[k] = 150;
   h.distMin = 1600; h.distMax = 3200; h.kire = 6; h.apt.turf = 100;
   G.month = kk.month; G.week = kk.week; W.dirty(); W._cache = null; W._week = null;
@@ -975,8 +975,8 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   return `${SP.list().length}頭・${SP.GROUPS.length}グループ・菊花賞に ${sps.join('・')}`;
 });
 
-check('original: 引退させた牡馬と牝馬からオリジナルホース。能力は親から、特殊能力は4つまで、トロフィー・GFでボーナス', () => {
-  const O = HS.Original, J = HS.Jockey;
+check('original: 引退させた牡馬と牝馬からオリジナルホース。能力は親から、特殊能力は4つまで、引退でトロフィーの分だけ親の能力が上がる', () => {
+  const O = HS.Original, J = HS.Jockey, TR0 = HS.Trophy;
   W.newGame({ seed: 44, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
   const pick = (sex, n) => W.all().filter(x => x.hist && x.loc === 'stable' && !x.gelding && (sex === '牝' ? x.sex === '牝' : x.sex !== '牝') && G.year - x.born >= 4).slice(0, n);
@@ -989,7 +989,7 @@ check('original: 引退させた牡馬と牝馬からオリジナルホース。
   for (let i = 0; i < 5; i++) { const r = J.retire(males[i].id); assert(r.to === 'retired', `引退できない ${r.err}`); }
   assert(J.retire(males[5].id).err, '6頭目の牡馬も牧場に残れてしまう');
   for (const m of mares) assert(J.retire(m.id).to === 'retired', '牝馬が残らない');
-  assert(s.parentBonus === 2 * O.BONUS_PER, `ボーナス ${s.parentBonus}`);
+  assert(s.parentBonus === D.trophyRule.TIER_PTS[TR0.BY.triple.tier] && s.potUp, `引退の能力の上がり ${s.parentBonus}`); // 日本三冠（前のセーブの名前だけの記録）
   // 特殊能力：両親で8つあれば4つ
   s.skills = ['big', 'longspurt']; s.trigFixed = ['isshun', 'chokusen'];
   const m = mares[0]; m.skills = ['slowpace', 'tataki']; m.trigFixed = ['oosoto', 'startdash'];
@@ -1000,7 +1000,7 @@ check('original: 引退させた牡馬と牝馬からオリジナルホース。
   const c = r.horse;
   const all = (c.skills || []).concat(HS.Skills.of(c));
   assert(all.length === 4 && all.every(id => O.candidates(s, m).includes(id)), `特殊能力 ${all.join(',')}`);
-  assert(r.bonus === s.parentBonus, 'ボーナスが付かない');
+  assert(r.bonus === 0, '上がった親の能力に、さらに仔へのボーナスが付く');
   for (const k of H.STATS) { const avg = (s.pot[k] + m.pot[k]) / 2; assert(Math.abs(c.pot[k] - avg - r.bonus) < 30, `${k} が親から離れすぎ`); }
   assert(O.make(males[1].id, m.id).err, '同じ年に同じ牝馬から2頭作れてしまう');
   assert(!O.make(males[1].id, mares[1].id).err, '別の牝馬から作れない');
@@ -1310,6 +1310,7 @@ require('./extra_feel.js')(check, assert, HS); // 騎乗の手ざわり（パッ
 require('./extra_gate.js')(check, assert, HS); // スタートの目押し（数えを出さない・待つ秒は種から・GOOD の幅）と、騎手のゲームに放牧が無い
 require('./extra_skills2.js')(check, assert, HS); // 逃げ・追込の能力・道悪○・外枠○・伝説級の固有の能力
 require('./extra_gf.js')(check, assert, HS); // グランドフェスティバル（6つ・GF の週・連戦・伝説級の担当・店と牧場・トロフィー・キンチェム）
+require('./extra_trophy.js')(check, assert, HS); // トロフィー（仕様書の表・お金・引退の能力）・足したレース・トロフィーの隠し馬（入れ替わり）
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
 require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
 require('./extra_gdgame.js')(check, assert); // Godot 版の週の流れを本物の画面で自動で遊ぶ
