@@ -106,7 +106,8 @@ static func gain(race: Dictionary, results: Array, k: int) -> float:
 	return (GAIN.base + float(race.dist) / 100.0 * GAIN.per100) * grade_mult(race) * severity(results, k)
 # レースのあと（GF は呼ばない）：移動の疲れとレースの疲れを足し、いる国を移す
 static func after_race(h: Dictionary, race: Dictionary, results: Array, k: int, trav: Variant) -> void:
-	h.fatigue = HSU.mn(100.0, float(HSU.or_(h.get("fatigue"), 0.0)) + float(HSU.or_(trav, 0.0)) + gain(race, results, k))
+	# AI の馬（自分の馬でない馬）は疲労がたまらない（fatigue.js と同じ）。いる国は移す
+	if h.get("owner") == "P": h.fatigue = HSU.mn(100.0, float(HSU.or_(h.get("fatigue"), 0.0)) + float(HSU.or_(trav, 0.0)) + gain(race, results, k))
 	var c := country_of(race)
 	if c == home(h): h.erase("at")
 	else: h.at = c

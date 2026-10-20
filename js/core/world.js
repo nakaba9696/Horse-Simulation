@@ -327,8 +327,18 @@
     }
     return list[0].name;
   };
+  // 騎手の名前と年から（同じ名前・年・データなら同じ結果なので覚えておく。史実馬が増えて、1週に何百回も引くため）
+  const jockeyMemo = new Map();
   W.jockey = function (name) {
     const yr = G ? G.year : 2000;
+    const mk = `${name}|${yr}|${U.ERA ? 1 : 0}`;
+    const hit = jockeyMemo.get(mk);
+    if (hit && hit.data === HS.DATA.jockeys) return Object.assign({}, hit.v);
+    const v = W.jockey0(name, yr);
+    jockeyMemo.set(mk, { data: HS.DATA.jockeys, v });
+    return Object.assign({}, v);
+  };
+  W.jockey0 = function (name, yr) {
     const all = (HS.DATA.jockeys || []).filter(j => j.name === name);
     const j = all.find(x => x.from <= yr && yr <= (x.to || 9999)) || all[0];
     if (!j) return { name: name || '騎手未定', skill: 65, region: '' };
@@ -355,7 +365,8 @@
     return [...(d.wins || []), ...(d.ran || [])].filter(s => s.startsWith(String(year - off))).map(s => s.slice(4));
   };
   // このプレイヤー以外の馬を、どのレースに出すか
-  W.aiChoose = function (h, races, wIdx, r) {
+  // full（無くてもよい）：そのレースがもうフルゲートか。史実の目標のレース（と依頼のレース）のほかは、埋まったレースを選ばない
+  W.aiChoose = function (h, races, wIdx, r, full) {
     if (h.loc !== 'stable') return null;
     const year = G.year;
     const targets = h.hist ? W.histTargets(h, year) : [];
@@ -372,12 +383,12 @@
     if (h.foreignTrained) {
       // 外国の馬は自分の地域の大レースに出る
       const z = W.zoneOf(h.country);
-      const cand = races.filter(rc => rc.region === '海外' && W.zoneOf(rc.country) === z && !R.ineligible(h, rc, year))
+      const cand = races.filter(rc => rc.region === '海外' && W.zoneOf(rc.country) === z && !(full && full(rc)) && !R.ineligible(h, rc, year))
         .filter(rc => rc.dist >= h.distMin - 300 && rc.dist <= h.distMax + 300 && (rc.surface === 'ダ' ? h.apt.dirt : h.apt.turf) >= 70);
       return cand.length ? r.pick(cand) : null;
     }
     const c = H.overall(H.cur(h, wIdx));
-    const cand = races.filter(rc => !R.ineligible(h, rc, year) && rc.region !== '海外')
+    const cand = races.filter(rc => !(full && full(rc)) && !R.ineligible(h, rc, year) && rc.region !== '海外')
       .filter(rc => rc.dist >= h.distMin - 200 && rc.dist <= h.distMax + 200)
       .filter(rc => (rc.surface === 'ダ' ? h.apt.dirt : h.apt.turf) >= 70)
       .filter(rc => !rc.graded || c >= (GRADE_NEED[rc.grade] || 72) - (year - h.born <= 3 ? 6 : 0));
@@ -406,6 +417,94 @@
     return 70 + L;
   };
 
+  // ---------- 頭数を史実馬で埋める（持ち主の決定 2026-10-20「架空馬はなえるので無し」「架空馬もなくしていいよ」） ----------
+  // 頭数合わせの架空の馬（モブ）はもう作らない。出走を決めた馬が足りないレースは、今週走らない史実馬（ほかの AI の馬）で埋める。
+  // 数は docs/BALANCE.md「18. 出走の頭数（架空の馬なし）」
+  // - 目標の頭数は前と同じ決め方（W.wantOf）。重い格から（G1・GF → G2 → G3 → OP）、目安の強さ（W.fillerLevel）に近い馬を選ぶ
+  // - AI の馬は疲労がたまらない（持ち主の補足 2026-10-20「CPUの馬に疲労はないのである程度連闘しても許容する」）。
+  //   ふだんは前のレースから W.FILL_GAP 週（中1週）あけ、足りなければ W.FILL_GAP_MIN 週（連闘）まで。同じ週に2レースは無い
+  // - 1回目は馬場の適性70以上・距離の幅±300m・中1週。2回目は適性50以上・±600m・連闘も・地域も広く。3回目は馬場と距離を問わない
+  // - 日本のレースは日本の馬。海外のレースは同じ地域の外国の馬 → ほかの地域の外国の馬・日本の馬。地方のレースは地方の馬（JRA の馬は7頭まで）
+  // - G1 の獲得賞金の条件は1・2回目は守り、3回目だけ問わない（条件戦はゲームに無いので、2歳・3歳の G1 は賞金の足りる AI の馬が少ない）
+  W.FILL_GAP = 2; W.FILL_GAP_MIN = 1;
+  W.MIN_FIELD = 8; // 最低の頭数（まず全部のレースをここまで埋める。測った範囲では、どのレースもこれ以上になる）
+  W.AI_ROOM = 2; // AI の馬が自分で選ぶのは、フルゲートの2頭手前まで（残りは自分の馬と、埋める馬のため）
+  W.wantOf = function (race, n, r) {
+    const max = R.maxField(race);
+    if (race.invite) return Math.max(n, HS.Season ? HS.Season.DC_FIELD : 16);
+    if (race.graded) return Math.max(n, Math.min(max, r.int(max - 4, max)));
+    return Math.max(n, r.int(Math.min(10, max), max));
+  };
+  // 地方の馬（史実の勝ち鞍が地方のほうが多い日本の馬）
+  const localCache = new Map();
+  W.isLocal = function (h) {
+    if (h.local) return true;
+    if (!h.hist || h.foreignTrained || h.foreign) return false;
+    if (localCache.has(h.name)) return localCache.get(h.name);
+    const d = W.histByName.get(h.name);
+    let v = false;
+    if (d) { const ws = H.winRaces(d); const loc = ws.filter(x => x.region === '地方').length, jra = ws.filter(x => x.region === 'JRA').length; v = loc > 0 && loc >= jra; }
+    localCache.set(h.name, v);
+    return v;
+  };
+  const FILL_RANK = { G1: 0, GF: 0, G2: 1, G3: 2 };
+  W.fillWhy = function (c, race, year, wIdx, pass) {
+    const h = c.h;
+    if (wIdx - (h.lastRaceW != null ? h.lastRaceW : -99) < (pass ? W.FILL_GAP_MIN : W.FILL_GAP)) return 'gap';
+    if (race.region === '海外') {
+      const z = W.zoneOf(race.country || (HS.DATA.courses[race.course] || {}).country);
+      if (pass === 0 ? c.zone !== z : c.zone === 'JP' && !race.graded) return 'zone';
+    } else {
+      if (c.zone !== 'JP') return 'zone';
+      if (race.region === '地方' && pass === 0 && !c.local) return 'local';
+    }
+    const why = R.ineligibleBase(h, race.invite ? Object.assign({}, race, { invite: false }) : race, year);
+    if (why && !(pass === 2 && why.startsWith(R.G1_WHY))) return why; // G1 の獲得賞金は3回目だけ問わない
+    if (HS.Fatigue.travelWhy(h, race)) return 'travel';
+    if (pass === 2) return null; // 3回目：馬場・距離を問わない（2歳の牝馬限定など、どうしても足りないとき）
+    const apt = race.surface === 'ダ' ? h.apt.dirt : h.apt.turf, slack = pass ? 600 : 300;
+    if (apt < (pass ? 50 : 70) || race.dist < h.distMin - slack || race.dist > h.distMax + slack) return 'fit';
+    return null;
+  };
+  W.fillFields = function (allRaces, field, wIdx, r) {
+    const year = G.year;
+    const used = new Set();
+    for (const k of Object.keys(field)) for (const e of field[k]) if (e.horse) used.add(e.horse.id);
+    const cands = [];
+    for (const h of W.all()) {
+      if (h.owner === 'P' || h.loc !== 'stable' || h.legend || used.has(h.id)) continue;
+      cands.push({ h, c: H.overall(H.cur(h, wIdx)), zone: h.foreignTrained ? W.zoneOf(h.country) : 'JP', local: W.isLocal(h), used: false });
+    }
+    const order = allRaces.filter(rc => (field[rc.key] || []).length || (rc.graded && rc.grade === 'G1'))
+      .map((rc, i) => ({ rc, i, k: rc.graded ? (FILL_RANK[rc.grade] != null ? FILL_RANK[rc.grade] : 2) : 3 }))
+      .sort((a, b) => a.k - b.k || a.i - b.i);
+    // 目標の頭数は先に全部のレースで決める（乱数の順を変えない）。まず全部のレースを最低の頭数（W.MIN_FIELD）まで、それから目標まで埋める
+    // （同じ週に2歳の牝馬限定が2つあるときなど、先のレースが馬を使い切らないように）
+    const plan = order.map(({ rc }) => { const arr = field[rc.key] = field[rc.key] || []; const n0 = arr.filter(e => !e.legend).length; return { race: rc, arr, want: W.wantOf(rc, n0, r) }; });
+    for (const cap of [W.MIN_FIELD, Infinity]) for (const { race, arr, want } of plan) {
+      let need = Math.min(want, cap) - arr.filter(e => !e.legend).length; // スペシャルホースは出走表ができてから入れ替わるので数えない
+      if (need <= 0) continue;
+      const lvl = W.fillerLevel(race, year);
+      // 地方：JRA の馬は7頭まで
+      let jraRoom = race.region === '地方' ? Math.max(0, 7 - arr.filter(e => !W.isLocal(e.horse)).length) : Infinity;
+      for (let pass = 0; pass < 3 && need > 0; pass++) {
+        const list = [];
+        for (const c of cands) {
+          if (c.used || W.fillWhy(c, race, year, wIdx, pass)) continue;
+          // 目安の強さより上は少しだけ、下は大きく減らす（強い馬を小さなレースで使い切らない）
+          const s = (c.c >= lvl ? -(c.c - lvl) * 0.3 : -(lvl - c.c)) + r.next() * 4;
+          list.push({ c, s });
+        }
+        list.sort((a, b) => b.s - a.s);
+        for (const x of list) {
+          if (need <= 0) break;
+          if (race.region === '地方' && !x.c.local) { if (jraRoom <= 0) continue; jraRoom--; }
+          arr.push(pass === 2 ? { horse: x.c.h, fill: true } : { horse: x.c.h }); x.c.used = true; need--;
+        }
+      }
+    }
+  };
+
   // ---------- 週を進める ----------
   // ---------- 週の流れ ----------
   // 1. W.prepareWeek：今週のレースの出走表（出走馬・騎手・枠）を作る。G は変えない（同じ状態なら何度呼んでも同じ）
@@ -427,8 +526,10 @@
       field[k] = arr.map(e => ({ horse: G.horses[e.horseId], jockeyName: e.jockey, mine: true })).filter(x => x.horse && x.horse.loc === 'stable');
     }
     const aiHorses = W.all().filter(h => h.owner !== 'P' && h.loc === 'stable');
+    // 史実馬が増えたので、AI の馬はフルゲートの W.AI_ROOM 頭手前で埋まったレースを選ばない（自分の馬が AI の馬で除外されすぎないように。docs/BALANCE.md「18」）
+    const full = rc => (field[rc.key] ? field[rc.key].length : 0) >= R.maxField(rc) - W.AI_ROOM;
     for (const h of aiHorses) {
-      const rc = W.aiChoose(h, races, wIdx, r);
+      const rc = W.aiChoose(h, races, wIdx, r, full);
       if (!rc) continue;
       (field[rc.key] = field[rc.key] || []).push({ horse: h });
     }
@@ -436,8 +537,8 @@
     const busy = W.oneRide() ? new Set(Object.keys(field).filter(k => field[k].some(x => x.mine)).concat(Object.keys(G.rides || {}))) : null;
     for (const h of W.mine('stable')) {
       if (!h.auto || W.entryOf(h.id) || h.skipW === wIdx) continue;
-      let rc = W.aiChoose(h, races, wIdx, r);
-      if (rc && busy && busy.has(rc.key)) rc = W.aiChoose(h, races.filter(x => !busy.has(x.key)), wIdx, r);
+      let rc = W.aiChoose(h, races, wIdx, r, full);
+      if (rc && busy && busy.has(rc.key)) rc = W.aiChoose(h, races.filter(x => !busy.has(x.key)), wIdx, r, full);
       if (rc && rc.region !== '海外') {
         (field[rc.key] = field[rc.key] || []).push({ horse: h, jockeyName: W.bestFreeJockey(rc.key, h.id), mine: true, auto: true });
         if (busy) busy.add(rc.key);
@@ -447,6 +548,8 @@
     for (const rc of allRaces) if (rc.invite && HS.Season) field[rc.key] = HS.Season.dcField(rc);
     // 自分の馬がスペシャルホースの条件にリーチをかけて出るレースには、その名馬が出てくる（special.js）
     if (G.eraless && HS.Special) for (const rc of allRaces) { const lg = HS.Special.forRace(rc, field[rc.key] || []); if (lg.length) field[rc.key] = (field[rc.key] || []).concat(lg); }
+    // 足りない頭数は、今週走らない史実馬で埋める（架空の馬は作らない）
+    W.fillFields(allRaces, field, wIdx, r);
     // レースごとの出走表（G1 は出走が無くても実施）。レースごとに乱数の種を分ける
     const cards = [];
     for (const race of allRaces) {
@@ -469,28 +572,21 @@
     // スペシャルホース（隠し馬）は、出走表ができてから手持ちでない最低人気の馬と入れ替わる（持ち主の仕様書 2026-10-19）
     const legends = entr.filter(e => e.legend);
     if (legends.length) entr = entr.filter(e => !e.legend);
-    // 地方：JRA 所属は7頭まで
+    // 地方：JRA の馬は7頭まで（地方の馬は数えない）
     const max = R.maxField(race);
     entr.sort((a, b) => ((b.legend ? 1 : 0) - (a.legend ? 1 : 0)) || (R.priority(b.horse, race, year, r) - R.priority(a.horse, race, year, r))); // スペシャルホースは必ず出る
-    const limit = race.region === '地方' ? Math.min(max, 7) : max;
-    const excluded = entr.slice(limit).filter(e => e.mine).map(e => e.horse.id);
-    entr = entr.slice(0, limit);
-    if (!entr.length && !(race.graded && race.grade === 'G1')) return null;
-    // 頭数をそろえる
-    const lvl = W.fillerLevel(race, year);
-    // 招待のレース（GF）は招待馬だけ。足りないときだけ16頭まで埋める
-    const want = race.invite ? Math.max(entr.length, HS.Season ? HS.Season.DC_FIELD : 16) : race.graded ? Math.max(entr.length, Math.min(max, r.int(max - 4, max))) : Math.max(entr.length, r.int(Math.min(10, max), max));
-    const used = new Set(W.usedNames());
-    const runners = entr.map(e => ({ horse: e.horse, jockey: e.jockeyName ? W.jockey(e.jockeyName) : null, mine: !!e.mine, legend: !!e.legend }));
-    while (runners.length < want) {
-      const born = year - (race.age === '2' ? 2 : race.age === '3' ? 3 : race.age === '4' ? 4 : 3 + r.int(0, 3));
-      const foreign = race.region === '海外' && r.chance(0.85);
-      const sire = W.pickSire(r, born - 1);
-      const f = H.makeFiller(r, { level: lvl + r.normal(0, 1.5), surface: race.surface, dist: race.dist, born, sex: race.sex === '牝' ? '牝' : undefined, foreign, sireName: foreign ? null : sire && sire.name });
-      f.name = H.makeName(r, used, foreign);
-      f.local = race.region === '地方' && !foreign;
-      runners.push({ horse: f, jockey: null });
+    const keep = [], excluded = [];
+    let jra = 0;
+    for (const e of entr) {
+      const nonLocal = race.region === '地方' && !W.isLocal(e.horse);
+      if (keep.length >= max || (nonLocal && jra >= 7)) { if (e.mine) excluded.push(e.horse.id); continue; }
+      if (nonLocal) jra++;
+      keep.push(e);
     }
+    entr = keep;
+    if (!entr.length) return null; // 走る馬が1頭もいない（G1 でも）
+    // 頭数合わせの架空の馬は作らない（足りない分は W.fillFields が史実馬で埋めてある。持ち主の決定 2026-10-20）
+    const runners = entr.map(e => { const x = { horse: e.horse, jockey: e.jockeyName ? W.jockey(e.jockeyName) : null, mine: !!e.mine, legend: !!e.legend }; if (e.fill) x.fill = true; return x; }); // fill：3回目に G1 の賞金を問わずに入れた馬
     if (legends.length) W.swapLegends(race, runners, legends, wIdx);
     // 騎手：プレイヤーの指名 → 史実馬の主戦 → 残りを強い馬から
     const taken = new Set(runners.filter(x => x.jockey).map(x => x.jockey.name));
@@ -514,7 +610,7 @@
     byPower.forEach((x, i) => {
       const strong = i < 6;
       if (x.horse.foreign || x.horse.foreignTrained) x.jockey = take(pools.foreign.length ? pools.foreign : pools.JRA, strong);
-      else if (x.horse.local) x.jockey = take(pools.local.length ? pools.local : pools.JRA, strong);
+      else if (W.isLocal(x.horse)) x.jockey = take(pools.local.length ? pools.local : pools.JRA, strong);
       else x.jockey = take(pools.JRA.length ? pools.JRA : pools.foreign, strong);
     });
     // 枠順
@@ -699,7 +795,8 @@
       // 疲れ（js/core/fatigue.js：格×距離×激戦の度合い＋移動）・休み（GF は動かさない）。故障も調子も無い
       if (!gf) {
         HS.Fatigue.afterRace(h, race, sim.results, res.pos - 1, x.travel);
-        h.restUntil = wIdx + (race.grade === 'G1' ? 5 + rng.int(0, 4) : 3 + rng.int(0, 4));
+        // AI の馬は疲労がたまらないので、休みを短く（G1 のあと3〜4週・ほか2〜3週。持ち主の補足 2026-10-20「CPUの馬に疲労はないのである程度連闘しても許容する」）
+        h.restUntil = wIdx + (h.owner === 'P' ? (race.grade === 'G1' ? 5 + rng.int(0, 4) : 3 + rng.int(0, 4)) : (race.grade === 'G1' ? 3 + rng.int(0, 1) : 2 + rng.int(0, 1)));
         h.lastRaceW = wIdx;
       }
       if (h.owner === 'P') {

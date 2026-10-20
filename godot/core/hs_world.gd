@@ -448,7 +448,8 @@ static func hist_targets(h: Dictionary, year: float) -> Array:
 	for s in HSU.or_(d.get("wins"), []) + HSU.or_(d.get("ran"), []):
 		if s.begins_with(pre): out.append(s.substr(4))
 	return out
-static func ai_choose(h: Dictionary, races: Array, wIdx: float, r: HSRng) -> Variant:
+# full（無くてもよい）：そのレースがもうフルゲートか。史実の目標のレース（と依頼のレース）のほかは、埋まったレースを選ばない（world.js と同じ）
+static func ai_choose(h: Dictionary, races: Array, wIdx: float, r: HSRng, full: Callable = Callable()) -> Variant:
 	if h.get("owner") != "P" and h.get("loc") == "stable" and HSOwners.on():   # owners.js の包み（依頼の馬は、ミッションのレースの週にそのレースへ）
 		var fr = HSOwners.forced_race(h, races)
 		if fr: return fr
@@ -464,11 +465,11 @@ static func ai_choose(h: Dictionary, races: Array, wIdx: float, r: HSRng) -> Var
 	if not r.chance(0.35 if h.get("foreignTrained") else 0.5): return null
 	if h.get("foreignTrained"):
 		var z := zone_of(h.get("country"))
-		var cand: Array = races.filter(func(rc): return rc.get("region") == "海外" and zone_of(rc.get("country")) == z and not HSRaces.ineligible(h, rc, year)) \
+		var cand: Array = races.filter(func(rc): return rc.get("region") == "海外" and zone_of(rc.get("country")) == z and not (full.is_valid() and full.call(rc)) and not HSRaces.ineligible(h, rc, year)) \
 			.filter(func(rc): return rc.dist >= h.distMin - 300 and rc.dist <= h.distMax + 300 and (h.apt.dirt if rc.surface == "ダ" else h.apt.turf) >= 70)
 		return r.pick(cand) if cand.size() else null
 	var c := HSHorse.overall(HSHorse.cur(h, wIdx))
-	var cand: Array = races.filter(func(rc): return not HSRaces.ineligible(h, rc, year) and rc.get("region") != "海外") \
+	var cand: Array = races.filter(func(rc): return not (full.is_valid() and full.call(rc)) and not HSRaces.ineligible(h, rc, year) and rc.get("region") != "海外") \
 		.filter(func(rc): return rc.dist >= h.distMin - 200 and rc.dist <= h.distMax + 200) \
 		.filter(func(rc): return (h.apt.dirt if rc.surface == "ダ" else h.apt.turf) >= 70) \
 		.filter(func(rc): return not rc.get("graded") or c >= float(GRADE_NEED.get(rc.grade, 72.0)) - (6.0 if year - h.born <= 3 else 0.0))
@@ -492,6 +493,116 @@ static func filler_level(race: Dictionary, _year: float) -> float:
 	if race.get("age") == "2": return 50.0 + minf(12.0, maxf(6.0, m)) + L
 	if race.get("age") == "3": return (64.0 if m <= 4 else (66.0 if m <= 6 else 69.0)) + L
 	return 70.0 + L
+
+# ---------- 頭数を史実馬で埋める（world.js の W.fillFields と同じ。持ち主の決定 2026-10-20「架空馬はなえるので無し」） ----------
+# 頭数合わせの架空の馬はもう作らない。出走を決めた馬が足りないレースは、今週走らない史実馬（ほかの AI の馬）で埋める。数は docs/BALANCE.md「18」
+const FILL_GAP := 2.0
+const FILL_GAP_MIN := 1.0
+const MIN_FIELD := 8   # 最低の頭数（まず全部のレースをここまで埋める）
+const AI_ROOM := 2   # AI の馬が自分で選ぶのは、フルゲートの2頭手前まで
+const FILL_RANK := { G1 = 0, GF = 0, G2 = 1, G3 = 2 }
+static func want_of(race: Dictionary, n: int, r: HSRng) -> int:
+	var mx := HSRaces.max_field(race)
+	if race.get("invite"): return maxi(n, HSSeason.DC_FIELD)
+	if race.get("graded"): return maxi(n, mini(mx, r.int_(mx - 4, mx)))
+	return maxi(n, r.int_(mini(10, mx), mx))
+# 地方の馬（史実の勝ち鞍が地方のほうが多い日本の馬）
+static var _localCache := {}
+static func is_local(h: Dictionary) -> bool:
+	if HSU.truthy(h.get("local")): return true
+	if not h.get("hist") or h.get("foreignTrained") or h.get("foreign"): return false
+	if _localCache.has(h.name): return _localCache[h.name]
+	var d = histByName.get(h.name)
+	var v := false
+	if d:
+		var loc := 0; var jra := 0
+		for x in HSHorse.win_races(d):
+			if x.get("region") == "地方": loc += 1
+			elif x.get("region") == "JRA": jra += 1
+		v = loc > 0 and loc >= jra
+	_localCache[h.name] = v
+	return v
+static func fill_why(c: Dictionary, race: Dictionary, year: float, wIdx: float, pss: int) -> Variant:
+	var h: Dictionary = c.h
+	var lr = h.get("lastRaceW")
+	if wIdx - (float(lr) if lr != null else -99.0) < (FILL_GAP_MIN if pss else FILL_GAP): return "gap"
+	if race.get("region") == "海外":
+		var z := zone_of(HSU.or_(race.get("country"), HSData.d().get("courses", {}).get(race.course, {}).get("country")))
+		if pss == 0:
+			if c.zone != z: return "zone"
+		elif c.zone == "JP" and not race.get("graded"): return "zone"
+	else:
+		if c.zone != "JP": return "zone"
+		if race.get("region") == "地方" and pss == 0 and not c.local: return "local"
+	var rc := race
+	if race.get("invite"):
+		rc = race.duplicate(); rc.invite = false
+	var why = HSRaces.ineligible_base(h, rc, year)
+	if why and not (pss == 2 and String(why).begins_with(HSRaces.G1_WHY)): return why   # G1 の獲得賞金は3回目だけ問わない
+	if HSFatigue.travel_why(h, race): return "travel"
+	if pss == 2: return null   # 3回目：馬場・距離を問わない
+	var apt: float = h.apt.dirt if race.surface == "ダ" else h.apt.turf
+	var slack := 600.0 if pss else 300.0
+	if apt < (50.0 if pss else 70.0) or race.dist < h.distMin - slack or race.dist > h.distMax + slack: return "fit"
+	return null
+static func fill_fields(allRaces: Array, field: Dictionary, wIdx: float, r: HSRng) -> void:
+	var year: float = G.year
+	var used := {}
+	for k in field:
+		for e in field[k]:
+			if e.get("horse"): used[e.horse.id] = true
+	var cands: Array = []
+	for h in all():
+		if h.get("owner") == "P" or h.get("loc") != "stable" or h.get("legend") or used.has(h.id): continue
+		cands.append({ h = h, c = HSHorse.overall(HSHorse.cur(h, wIdx)), zone = zone_of(h.get("country")) if h.get("foreignTrained") else "JP", local = is_local(h), used = false })
+	var order: Array = []
+	var i := 0
+	for rc in allRaces:
+		if field.get(rc.key, []).size() or (rc.get("graded") and rc.get("grade") == "G1"):
+			order.append({ rc = rc, i = i, k = (FILL_RANK.get(rc.grade, 2) if rc.get("graded") else 3) })
+			i += 1
+	HSSort.sort(order, func(a, b): return (a.k - b.k) if a.k != b.k else (a.i - b.i))
+	# 目標の頭数は先に全部のレースで決める。まず全部のレースを最低の頭数（MIN_FIELD）まで、それから目標まで埋める（world.js と同じ）
+	var plan: Array = []
+	for o in order:
+		var rc0: Dictionary = o.rc
+		if not field.has(rc0.key): field[rc0.key] = []
+		var n0 := 0
+		for e in field[rc0.key]:
+			if not e.get("legend"): n0 += 1
+		plan.append({ race = rc0, arr = field[rc0.key], want = want_of(rc0, n0, r) })
+	for cap in [MIN_FIELD, 1 << 30]:
+		for p in plan:
+			var race: Dictionary = p.race
+			var arr: Array = p.arr
+			var cnt := 0   # スペシャルホースは出走表ができてから入れ替わるので数えない
+			for e in arr:
+				if not e.get("legend"): cnt += 1
+			var need: int = mini(p.want, cap) - cnt
+			if need <= 0: continue
+			var lvl := filler_level(race, year)
+			var jraRoom := 1 << 30
+			if race.get("region") == "地方":
+				var nl := 0
+				for e in arr:
+					if not is_local(e.horse): nl += 1
+				jraRoom = maxi(0, 7 - nl)
+			var pss := 0
+			while pss < 3 and need > 0:
+				var lst: Array = []
+				for c in cands:
+					if c.used or fill_why(c, race, year, wIdx, pss) != null: continue
+					var cc: float = c.c
+					var sc: float = (-(cc - lvl) * 0.3 if cc >= lvl else -(lvl - cc)) + r.next() * 4.0
+					lst.append({ c = c, s = sc })
+				HSSort.sort(lst, func(a, b): return b.s - a.s)
+				for x in lst:
+					if need <= 0: break
+					if race.get("region") == "地方" and not x.c.local:
+						if jraRoom <= 0: continue
+						jraRoom -= 1
+					arr.append({ horse = x.c.h, fill = true } if pss == 2 else { horse = x.c.h }); x.c.used = true; need -= 1
+				pss += 1
 
 # ---------- 週の流れ ----------
 # 1. prepare_week：今週のレースの出走表を作る。G は変えない（同じ状態なら何度呼んでも同じ）
@@ -518,9 +629,11 @@ static func prepare_week() -> Dictionary:
 			var hh = G.horses.get(e.horseId)
 			if hh and hh.get("loc") == "stable": lst.append({ horse = hh, jockeyName = e.jockey, mine = true })
 		field[k] = lst
+	# 史実馬が増えたので、AI の馬はフルゲートの AI_ROOM 頭手前で埋まったレースを選ばない（world.js と同じ）
+	var full := func(rc) -> bool: return field.get(rc.key, []).size() >= HSRaces.max_field(rc) - AI_ROOM
 	for h in all():
 		if h.get("owner") == "P" or h.get("loc") != "stable": continue
-		var rc = ai_choose(h, races, wi, r)
+		var rc = ai_choose(h, races, wi, r, full)
 		if not rc: continue
 		if not field.has(rc.key): field[rc.key] = []
 		field[rc.key].append({ horse = h })
@@ -533,9 +646,9 @@ static func prepare_week() -> Dictionary:
 		for k in HSU.or_(G.get("rides"), {}): busy[k] = true
 	for h in mine("stable"):
 		if not h.get("auto") or entry_of(h.id) or h.get("skipW") == wi: continue
-		var rc = ai_choose(h, races, wi, r)
+		var rc = ai_choose(h, races, wi, r, full)
 		if rc and busy != null and busy.has(rc.key):
-			rc = ai_choose(h, races.filter(func(x): return not busy.has(x.key)), wi, r)
+			rc = ai_choose(h, races.filter(func(x): return not busy.has(x.key)), wi, r, full)
 		if rc and rc.get("region") != "海外":
 			if not field.has(rc.key): field[rc.key] = []
 			field[rc.key].append({ horse = h, jockeyName = best_free_jockey(rc.key, h.id), mine = true, auto = true })
@@ -546,6 +659,8 @@ static func prepare_week() -> Dictionary:
 		for rc in allRaces:
 			var lg := HSSpecial.for_race(rc, field.get(rc.key, []))
 			if lg.size(): field[rc.key] = field.get(rc.key, []) + lg
+	# 足りない頭数は、今週走らない史実馬で埋める（架空の馬は作らない）
+	fill_fields(allRaces, field, wi, r)
 	var cards: Array = []
 	for race in allRaces:
 		var entr: Array = field.get(race.key, [])
@@ -587,33 +702,25 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 		var d := (1.0 if b.get("legend") else 0.0) - (1.0 if a.get("legend") else 0.0)
 		if d: return d
 		return HSRaces.priority(b.horse, race, year, r) - HSRaces.priority(a.horse, race, year, r))
-	var limit := mini(mx, 7) if race.get("region") == "地方" else mx
+	# 地方：JRA の馬は7頭まで（地方の馬は数えない）
+	var keep: Array = []
 	var excluded: Array = []
-	for e in entr.slice(limit):
-		if e.get("mine"): excluded.append(e.horse.id)
-	entr = entr.slice(0, limit)
-	if not entr.size() and not (race.get("graded") and race.get("grade") == "G1"): return null
-	var lvl := filler_level(race, year)
-	var want: int
-	if race.get("invite"): want = maxi(entr.size(), HSSeason.DC_FIELD)
-	elif race.get("graded"): want = maxi(entr.size(), mini(mx, r.int_(mx - 4, mx)))
-	else: want = maxi(entr.size(), r.int_(mini(10, mx), mx))
-	var used := {} # このレースで付けた名前（使われている名前の表は写さずに、両方を見る）
-	var usedAll := used_names()
+	var jra := 0
+	for e in entr:
+		var nonLocal: bool = race.get("region") == "地方" and not is_local(e.horse)
+		if keep.size() >= mx or (nonLocal and jra >= 7):
+			if e.get("mine"): excluded.append(e.horse.id)
+			continue
+		if nonLocal: jra += 1
+		keep.append(e)
+	entr = keep
+	if not entr.size(): return null   # 走る馬が1頭もいない（G1 でも）
+	# 頭数合わせの架空の馬は作らない（足りない分は fill_fields が史実馬で埋めてある。持ち主の決定 2026-10-20）
 	var runners: Array = []
 	for e in entr:
-		runners.append({ horse = e.horse, jockey = jockey(e.jockeyName) if e.get("jockeyName") else null, mine = HSU.truthy(e.get("mine")), legend = HSU.truthy(e.get("legend")) })
-	while runners.size() < want:
-		var born: float = year - (2.0 if race.get("age") == "2" else (3.0 if race.get("age") == "3" else (4.0 if race.get("age") == "4" else 3.0 + r.int_(0, 3))))
-		var foreign: bool = race.get("region") == "海外" and r.chance(0.85)
-		var sire = pick_sire(r, born - 1.0)
-		var fo := { level = lvl + r.normal(0.0, 1.5), surface = race.surface, dist = race.dist, born = born }
-		if race.get("sex") == "牝": fo.sex = "牝"
-		fo.foreign = foreign; fo.sireName = null if foreign else (sire.name if sire else null)
-		var f := HSHorse.make_filler(r, fo)
-		f.name = HSHorse.make_name(r, used, foreign, usedAll)
-		f.local = race.get("region") == "地方" and not foreign
-		runners.append({ horse = f, jockey = null })
+		var rx := { horse = e.horse, jockey = jockey(e.jockeyName) if e.get("jockeyName") else null, mine = HSU.truthy(e.get("mine")), legend = HSU.truthy(e.get("legend")) }
+		if e.get("fill"): rx.fill = true   # 3回目に G1 の賞金を問わずに入れた馬
+		runners.append(rx)
 	if legends.size(): swap_legends(race, runners, legends, wIdx)
 	var taken := {}
 	for x in runners:
@@ -639,7 +746,7 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 		var x = byPower[i]
 		var strong := i < 6
 		if x.horse.get("foreign") or x.horse.get("foreignTrained"): x.jockey = take.call(pools.foreign if pools.foreign.size() else pools.JRA, strong)
-		elif x.horse.get("local"): x.jockey = take.call(pools.local if pools.local.size() else pools.JRA, strong)
+		elif is_local(x.horse): x.jockey = take.call(pools.local if pools.local.size() else pools.JRA, strong)
 		else: x.jockey = take.call(pools.JRA if pools.JRA.size() else pools.foreign, strong)
 	r.shuffle(runners)
 	var n := runners.size()
@@ -840,7 +947,9 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 		# 疲れ（HSFatigue：格×距離×激戦の度合い＋移動）・休み（GF は動かさない）。故障も調子も無い
 		if not gf:
 			HSFatigue.after_race(h, race, sim.results, int(res.pos) - 1, x.get("travel"))
-			h.restUntil = wIdx + (5.0 + rng.int_(0, 4) if race.get("grade") == "G1" else 3.0 + rng.int_(0, 4))
+			# AI の馬は疲労がたまらないので、休みを短く（world.js と同じ）
+			if h.get("owner") == "P": h.restUntil = wIdx + (5.0 + rng.int_(0, 4) if race.get("grade") == "G1" else 3.0 + rng.int_(0, 4))
+			else: h.restUntil = wIdx + (3.0 + rng.int_(0, 1) if race.get("grade") == "G1" else 2.0 + rng.int_(0, 1))
 			h.lastRaceW = wIdx
 		if h.get("owner") == "P":
 			var owner := HSMath.round_js(money * 0.8 + 30.0 * IDX())
