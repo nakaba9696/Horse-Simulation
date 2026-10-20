@@ -1,4 +1,5 @@
-# 週ごとのレース（js/core/races.js の HS.Races と同じ）：重賞はデータから、条件戦は開催場ごとに作る。出走できるか・優先順
+# 週ごとのレース（js/core/races.js の HS.Races と同じ）：重賞はデータから、オープン（OP・リステッド）は開催場ごとに作る。出走できるか・優先順
+# レースは OP 以上だけ（持ち主の決定 2026-10-20）：新馬戦・未勝利戦・条件戦は無い。OP〜G2 は無条件、G1 は獲得賞金の条件
 class_name HSRaces
 
 const DISTS := {
@@ -13,7 +14,7 @@ const DISTS := {
 	"札幌": { "芝": [1200.0, 1500.0, 1800.0, 2000.0, 2600.0], "ダ": [1000.0, 1700.0] },
 	"函館": { "芝": [1200.0, 1800.0, 2000.0, 2600.0], "ダ": [1000.0, 1700.0] },
 }
-const CLS_PRIZE := { newcomer = 700.0, maiden = 520.0, C1 = 950.0, C2 = 1400.0, C3 = 1850.0, OP = 2300.0 }
+const CLS_PRIZE := { OP = 2300.0, L = 2600.0 }   # オープンの1着賞金（万円・1995年の物価）。リステッド（L）は少し高い
 const GRADE_RANK := { G1 = 3, G2 = 2, G3 = 1 }
 
 static func _ey(year: float) -> float:
@@ -50,44 +51,49 @@ static func graded_year(year: float) -> Array:
 		if a.week != b.week: return a.week < b.week
 		return GRADE_RANK.get(a.grade, 0) > GRADE_RANK.get(b.grade, 0))
 
-# 条件戦を作る（種と日付で毎回同じものになる）
-static func conditional_of(seed: float, year: float, month: float, week: float) -> Array:
+# オープン（OP・リステッド）を作る（種と日付で毎回同じものになる）。競馬場ごとに、2歳（6月〜）・3歳（〜9月）・古馬を1つずつと、ときどきもう1つ
+# 鍵は 年-月-週-o競馬場-番号（前の版の条件戦は -c…。HSWorld.migrate が予約と出走登録を外す）
+static func open_of(seed: float, year: float, month: float, week: float) -> Array:
 	var out: Array = []
 	var meets = HSData.d().get("meets", {})
 	var courses: Array = meets.get(HSU.num(month), []) if meets else []
-	var ey := _ey(year)
 	for ci in courses.size():
 		var course: String = courses[ci]
-		var rng := HSU.hash_rng("%s:%s:%s:%s:%s" % [HSU.num(seed), HSU.num(year), HSU.num(month), HSU.num(week), course])
+		var rng := HSU.hash_rng("op:%s:%s:%s:%s:%s" % [HSU.num(seed), HSU.num(year), HSU.num(month), HSU.num(week), course])
 		var slots: Array = []
-		if month >= 6: slots.append({ age = "2", cls = "newcomer" if (month <= 8 or rng.chance(0.5)) else "maiden" })
-		if month >= 9: slots.append({ age = "2", cls = "maiden" if rng.chance(0.6) else "C1" })
-		if month <= 3: slots.append({ age = "3", cls = "newcomer" if rng.chance(0.3) else "maiden" })
-		if month <= 9: slots.append({ age = "3", cls = "maiden" })
-		if month <= 6: slots.append({ age = "3", cls = "C1" if rng.chance(0.75) else "OP" })
+		if month >= 6: slots.append("2")
+		if month >= 9 and rng.chance(0.4): slots.append("2")
+		if month <= 9: slots.append("3")
 		var olderAge := "4+" if month <= 5 else "3+"
-		slots.append({ age = olderAge, cls = "C1" }); slots.append({ age = olderAge, cls = "C2" }); slots.append({ age = olderAge, cls = "C3" if rng.chance(0.6) else "OP" })
+		slots.append(olderAge)
+		if rng.chance(0.5): slots.append(olderAge)
 		for si in slots.size():
-			var sl: Dictionary = slots[si]
-			var surface := "芝" if rng.chance(0.55 if sl.cls == "newcomer" else 0.5) else "ダ"
+			var age: String = slots[si]
+			var listed := rng.chance(0.3)
+			var surface := "芝" if rng.chance(0.6 if age == "2" else 0.5) else "ダ"
 			var ds: Array = DISTS[course][surface]
-			if sl.age == "2":
+			if age == "2":
 				var lim := 1800.0 if month < 9 else 2000.0
 				var f: Array = ds.filter(func(d): return d <= lim)
 				ds = f if f.size() else [ds[0]]
 			var dist: float = rng.pick(ds)
-			var ageLabel: String = "2歳" if sl.age == "2" else ("3歳" if sl.age == "3" else ("3歳以上" if sl.age == "3+" else "4歳以上"))
-			var clsLabel: String = "新馬" if sl.cls == "newcomer" else ("未勝利" if sl.cls == "maiden" else ("オープン" if sl.cls == "OP" else HSHorse.class_name_of(sl.cls, ey)))
-			var fem: bool = sl.cls != "newcomer" and rng.chance(0.15)
-			var r := { key = "%s-%s-%s-c%d-%d" % [HSU.num(year), HSU.num(month), HSU.num(week), ci, si], name = "%s%s%s" % [ageLabel, clsLabel, "（牝）" if fem else ""], short = null, grade = null, cls = sl.cls,
-				region = "JRA", course = course, surface = surface, dist = dist, month = month, week = week, age = sl.age }
+			var ageLabel: String = "2歳" if age == "2" else ("3歳" if age == "3" else ("3歳以上" if age == "3+" else "4歳以上"))
+			var fem: bool = rng.chance(0.15)
+			var r := { key = "%s-%s-%s-o%d-%d" % [HSU.num(year), HSU.num(month), HSU.num(week), ci, si], name = "%s%s%s" % [ageLabel, "リステッド" if listed else "オープン", "（牝）" if fem else ""], short = null, grade = null, cls = "OP",
+				region = "JRA", course = course, surface = surface, dist = dist, month = month, week = week, age = age }
+			r.weight = "馬齢"; r.prize = HSMath.round_js(CLS_PRIZE["L" if listed else "OP"] * HSU.price_index(year) / 10.0) * 10.0; r.year = year; r.graded = false
 			if fem: r.sex = "牝"
-			r.weight = "馬齢"; r.prize = HSMath.round_js(CLS_PRIZE[sl.cls] * HSU.price_index(year) / 10.0) * 10.0; r.year = year; r.graded = false
+			if listed: r.listed = true
 			out.append(r)
 	return out
+# 前の版の条件戦の鍵（年-月-週-c…）
+static var _re_old: RegEx = null
+static func is_old_key(key: Variant) -> bool:
+	if _re_old == null: _re_old = RegEx.create_from_string("-c\\d+-\\d+$")
+	return _re_old.search(String(key if key != null else "")) != null
 
 static func of_week(seed: float, year: float, month: float, week: float) -> Array:
-	return graded_of(year, month, week) + conditional_of(seed, year, month, week)
+	return graded_of(year, month, week) + open_of(seed, year, month, week)
 
 # 馬場状態（週・競馬場ごとに決まる）
 static func ground(seed: float, year: float, month: float, week: float, course: String) -> String:
@@ -107,7 +113,8 @@ static func grade_badge(r: Dictionary) -> String:
 		if r.get("region") == "JRA" and r.get("year") and r.year < 1984: return "重賞"
 		if r.get("region") == "地方": return "Jpn1" if r.grade == "G1" else r.grade.replace("G", "Jpn")
 		return r.grade
-	return "OP" if r.get("cls") == "OP" else ""
+	if r.get("cls") == "OP": return "L" if r.get("listed") else "OP"
+	return ""
 static func max_field(race: Dictionary) -> int:
 	if race.get("region") == "海外": return 14
 	if race.get("region") == "地方": return 16 if race.course == "大井" else 14
@@ -133,34 +140,46 @@ static func ineligible_base(horse: Dictionary, race: Dictionary, year: float) ->
 	if age < 2: return "年齢"
 	if race.get("sex") == "牝" and horse.get("sex") != "牝": return "牝馬限定"
 	if race.get("noGelding") and horse.get("gelding"): return "せん馬は出られない"
+	# 外国で調教されている馬は、向こうでの実績で出てくるので賞金を問わない（重賞だけ）
 	if horse.get("foreignTrained"): return null if race.get("graded") else "外国調教馬"
-	var cls := HSHorse.class_of(horse); var rank: int = HSHorse.CLASS_RANK[cls]
-	if not race.get("graded"):
-		if race.cls == "newcomer": return null if float(HSU.or_(horse.get("starts"), 0.0)) == 0 else "新馬戦はデビュー戦のみ"
-		if race.cls == "maiden": return null if rank == 0 else "勝ち上がり済み"
-		var need: int = HSHorse.CLASS_RANK[race.cls]
-		if rank > need: return "クラスが上"
-		return null
-	if rank == 0: return "未勝利馬"
-	if (ra == "3+" or ra == "4+") and rank < 2 and race.get("grade") != "G3": return "実績が足りない"
-	if race.get("region") == "海外" and rank < 4: return "オープン馬のみ"
-	return null
+	if race.get("region") == "海外": return abroad_why(horse, race, year)
+	if race.get("grade") == "G1": return g1_why(horse, race, year)
+	return null   # OP・リステッド・G3・G2 は無条件（年齢・性の決まりだけ）
+
+# ---------- G1 の獲得賞金の条件（js/core/races.js と同じ。数は docs/BALANCE.md「8. 出走の条件」） ----------
+const G1_EARN := { "2": 2000.0, "3": 3500.0, "older": 5000.0 }
+const G1_WHY := "賞金が足りない"
+static func g1_need(race: Dictionary, year: float) -> float:
+	var ra = race.get("age")
+	var k: String = "2" if ra == "2" else ("3" if ra == "3" else "older")
+	return HSMath.round_js(G1_EARN[k] * HSU.price_index(year) / 10.0) * 10.0
+static func g1_why(horse: Dictionary, race: Dictionary, year: float) -> Variant:
+	var rights = horse.get("rights")
+	if rights and rights.get(race.name) == year: return null   # トライアルの優先出走権（その年のもの）
+	var need := g1_need(race, year); var earn := float(HSU.or_(horse.get("earn"), 0.0))
+	return null if earn >= need else "%s（あと%s）" % [G1_WHY, HSU.money(need - earn)]
+# 海外のレースの出走条件（仮。持ち主の決定待ち）：ここだけ差し替えればよい（js/core/races.js の R.abroadWhy と同じ）
+# いまは 豪州の2歳 G1 は出られない（持ち主の決定 2026-10-20）・ほかの2歳の G1 は無条件・ほかの G1 は JRA の G1 と同じ獲得賞金・G2 と G3 は無条件
+const AU2_WHY := "豪州の2歳 G1 には出られない"
+static func abroad_why(horse: Dictionary, race: Dictionary, year: float) -> Variant:
+	if race.get("grade") != "G1": return null
+	if race.get("age") == "2":
+		var c = race.get("country")
+		if not c:
+			var cd = HSData.d().courses.get(race.get("course"))
+			c = cd.get("country") if cd else null
+		return AU2_WHY if c == "豪" else null
+	return g1_why(horse, race, year)
 
 # 出走の優先順（大きいほど先）
 static func priority(horse: Dictionary, race: Dictionary, year: float, rng: HSRng) -> float:
 	var p := 0.0
 	var rights = horse.get("rights")
-	if rights and rights.get(race.name) == year: p += 1e6
+	if rights and rights.get(race.name) == year: p += 1e6   # トライアルの優先出走権
 	var g1 := 0
 	for g in HSU.or_(horse.get("gradedWins"), []):
 		if g.get("grade") == "G1": g1 += 1
 	p += g1 * 1e5
-	if not race.get("graded") and race.get("cls"):
-		# JS では表に無い格（新馬戦の newcomer）は undefined で、差が NaN になる（並べ替えでは「同じ」扱い）。同じにする
-		var ra = HSHorse.CLASS_RANK.get(race.cls)
-		var ha = HSHorse.CLASS_RANK.get(HSHorse.class_of(horse))
-		if ra == null or ha == null: p = NAN   # 乱数は JS と同じく下で引く
-		else: p -= (ra - ha) * 5e4
-	p += float(HSU.or_(horse.get("earn"), 0.0))
+	p += float(HSU.or_(horse.get("earn"), 0.0))   # あとは獲得賞金の順（フルゲートを超えたら下から除外）
 	p += rng.next() * 500.0
 	return p

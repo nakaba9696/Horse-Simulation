@@ -43,7 +43,7 @@ module.exports = function (check, assert, HS) {
     return gs.map(g => `${g.label}${g.courses.length}`).join('・');
   });
 
-  check('program: 番組表（出られるか・適性・予約。条件戦も予約でき、その週に出走登録になる）', () => {
+  check('program: 番組表（出られるか・適性・予約。オープンも予約でき、その週に出走登録になる）', () => {
     W.newGame({ seed: 21, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
     const G = W.get(); G.player.money = 60000;
     let n = 0; for (const it of W.marketHistoric().slice().sort((a, b) => a.price - b.price)) { if (n >= 3) break; if (!W.buy(it)) n++; }
@@ -62,10 +62,10 @@ module.exports = function (check, assert, HS) {
     const all = P.rows(h, { show: 'all', kind: 'graded' });
     assert(all.every(r => r.race.graded) && all.some(r => r.why), '重賞だけ・出られないものも、が効かない');
     assert(P.rows(h, { surf: 'ダ' }).every(r => r.race.surface === 'ダ'), '馬場で絞れない');
-    // 条件戦を予約 → 同じ週はほかを予約できない → その週に出走登録になる
+    // オープンを予約 → 同じ週はほかを予約できない → その週に出走登録になる
     const c = rows.find(r => r.can === 'reserve' && !r.race.graded);
-    assert(c, '予約できる条件戦が無い');
-    assert(P.reserve(h.id, c.race.key) === null, '条件戦を予約できない');
+    assert(c, '予約できるオープンが無い');
+    assert(P.reserve(h.id, c.race.key) === null, 'オープンを予約できない');
     const after = P.rows(h, {});
     assert(after.some(r => r.state === 'reserved' && r.race.key === c.race.key), '予約の印が付かない');
     assert(after.filter(r => r.wk.i === c.wk.i && r.race.key !== c.race.key).every(r => r.busy && !r.can), '同じ週のほかのレースが予約できてしまう');
@@ -74,7 +74,7 @@ module.exports = function (check, assert, HS) {
     guard = 0; while (!(G.year === c.wk.y && G.month === c.wk.m && G.week === c.wk.w) && guard++ < 60) W.finishWeek({});
     W.prepareWeek();
     const ent = W.entryOf(h.id);
-    assert(ent && ent.raceKey === c.race.key, `予約した条件戦に出走登録されない ${JSON.stringify(ent)} ${c.race.key}`);
+    assert(ent && ent.raceKey === c.race.key, `予約したオープンに出走登録されない ${JSON.stringify(ent)} ${c.race.key}`);
     const now = P.rows(h, {});
     assert(now.some(r => r.wk.i === 0 && r.state === 'entered'), '今週の出走登録の印');
     return `${rows.length}行・予約 ${c.race.name}（${c.wk.m}月${c.wk.w}週）`;

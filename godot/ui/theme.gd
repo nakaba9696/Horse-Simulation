@@ -345,7 +345,7 @@ static func mark(lv: int, size := 17) -> Label:
 	var c: Color = [Color(BAD.r, BAD.g, BAD.b, 0.8), WARN, IVORY, GOOD][clampi(lv, 0, 3)]
 	return label(t, size, c, HORIZONTAL_ALIGNMENT_CENTER)
 
-# 格の札か条件戦の枠だけの札
+# 格の札か、オープン（OP・L）の枠だけの札
 static func class_chip(text: String, graded: bool, size := 13) -> PanelContainer:
 	if graded:
 		return grade_chip(text, size)

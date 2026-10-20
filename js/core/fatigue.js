@@ -47,11 +47,11 @@
     if (race.region !== '海外') return '日';
     return race.country || (HS.DATA.courses[race.course] || {}).country || '外';
   };
-  // 予約の鍵（年-月-週-レース名、条件戦は年-月-週-c…、新馬戦は debut:…）から国
+  // 予約の鍵（年-月-週-レース名、オープンは年-月-週-o…（前の版の条件戦は -c…）、デビュー戦は debut:…）から国
   let byName = null;
   F.countryOfKey = function (key) {
     const m = /^(\d+)-(\d+)-(\d+)-(.*)$/.exec(key || '');
-    if (!m || /^c\d+-\d+$/.test(m[4])) return '日';
+    if (!m || /^[co]\d+-\d+$/.test(m[4])) return '日';
     if (!byName) { byName = {}; for (const r of HS.DATA.races) if (!(r.name in byName)) byName[r.name] = F.countryOf(r); }
     return byName[m[4]] || '日';
   };

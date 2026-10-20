@@ -1,10 +1,11 @@
-// その週のレース一覧（重賞はデータから、条件戦は開催場ごとに作る）と、出走できるかの判定
+// その週のレース一覧（重賞はデータから、オープン（OP・リステッド）は開催場ごとに作る）と、出走できるかの判定
+// レースは OP 以上だけ（持ち主の決定 2026-10-20「レースはOP以上のみ」）：新馬戦・未勝利戦・条件戦は無い。最初から OP に出られ、G2 までは無条件、G1 は獲得賞金の条件
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const U = HS.U, H = HS.Horse;
   const R = HS.Races = {};
 
-  // 条件戦の距離（競馬場ごと）
+  // オープンの距離（競馬場ごと）
   R.DISTS = {
     '東京': { '芝': [1400, 1600, 1800, 2000, 2300, 2400], 'ダ': [1300, 1400, 1600, 2100] },
     '中山': { '芝': [1200, 1600, 1800, 2000, 2200, 2500], 'ダ': [1200, 1800, 2400] },
@@ -17,7 +18,8 @@
     '札幌': { '芝': [1200, 1500, 1800, 2000, 2600], 'ダ': [1000, 1700] },
     '函館': { '芝': [1200, 1800, 2000, 2600], 'ダ': [1000, 1700] },
   };
-  R.CLS_PRIZE = { newcomer: 700, maiden: 520, C1: 950, C2: 1400, C3: 1850, OP: 2300 };
+  // オープンの1着賞金（万円・1995年の物価）。リステッド（L）は少し高い
+  R.CLS_PRIZE = { OP: 2300, L: 2600 };
   R.GRADE_RANK = { G1: 3, G2: 2, G3: 1 };
 
   // 重賞のデータ（年で有効なもの）
@@ -38,41 +40,43 @@
       .sort((a, b) => (a.month - b.month) || (a.week - b.week) || ((R.GRADE_RANK[b.grade] || 0) - (R.GRADE_RANK[a.grade] || 0)));
   };
 
-  // 条件戦を作る（種と日付で毎回同じものになる）
-  R.conditionalOf = function (seed, year, month, week) {
+  // オープン（OP・リステッド）を作る（種と日付で毎回同じものになる）。競馬場ごとに、2歳（6月〜）・3歳（〜9月）・古馬を1つずつと、ときどきもう1つ
+  // 鍵は 年-月-週-o競馬場-番号（前の版の条件戦は -c…。World.migrate が予約と出走登録を外す）
+  R.openOf = function (seed, year, month, week) {
     const out = [];
     const courses = (HS.DATA.meets && HS.DATA.meets[month]) || [];
-    const old = (U.ERA || year) < 2019;
     courses.forEach((course, ci) => {
-      const rng = U.hashRng(`${seed}:${year}:${month}:${week}:${course}`);
+      const rng = U.hashRng(`op:${seed}:${year}:${month}:${week}:${course}`);
       const slots = [];
-      // 2歳戦（6月〜）・3歳戦（〜9月）・古馬の条件戦
-      if (month >= 6) slots.push({ age: '2', cls: month <= 8 || rng.chance(0.5) ? 'newcomer' : 'maiden' });
-      if (month >= 9) slots.push({ age: '2', cls: rng.chance(0.6) ? 'maiden' : 'C1' });
-      if (month <= 3) slots.push({ age: '3', cls: rng.chance(0.3) ? 'newcomer' : 'maiden' });
-      if (month <= 9) slots.push({ age: '3', cls: 'maiden' });
-      if (month <= 6) slots.push({ age: '3', cls: rng.chance(0.75) ? 'C1' : 'OP' });
+      if (month >= 6) slots.push('2');
+      if (month >= 9 && rng.chance(0.4)) slots.push('2');
+      if (month <= 9) slots.push('3');
       const olderAge = month <= 5 ? '4+' : '3+';
-      slots.push({ age: olderAge, cls: 'C1' }, { age: olderAge, cls: 'C2' }, { age: olderAge, cls: rng.chance(0.6) ? 'C3' : 'OP' });
-      slots.forEach((sl, si) => {
-        const surface = rng.chance(sl.cls === 'newcomer' ? 0.55 : 0.5) ? '芝' : 'ダ';
+      slots.push(olderAge);
+      if (rng.chance(0.5)) slots.push(olderAge);
+      slots.forEach((age, si) => {
+        const listed = rng.chance(0.3);
+        const surface = rng.chance(age === '2' ? 0.6 : 0.5) ? '芝' : 'ダ';
         let ds = R.DISTS[course][surface];
-        if (sl.age === '2') ds = ds.filter(d => d <= (month < 9 ? 1800 : 2000)).length ? ds.filter(d => d <= (month < 9 ? 1800 : 2000)) : [ds[0]];
+        if (age === '2') ds = ds.filter(d => d <= (month < 9 ? 1800 : 2000)).length ? ds.filter(d => d <= (month < 9 ? 1800 : 2000)) : [ds[0]];
         const dist = rng.pick(ds);
-        const ageLabel = sl.age === '2' ? '2歳' : sl.age === '3' ? '3歳' : sl.age === '3+' ? '3歳以上' : '4歳以上';
-        const clsLabel = sl.cls === 'newcomer' ? '新馬' : sl.cls === 'maiden' ? '未勝利' : sl.cls === 'OP' ? 'オープン' : H.className(sl.cls, U.ERA || year);
-        const fem = sl.cls !== 'newcomer' && rng.chance(0.15);
-        out.push({
-          key: `${year}-${month}-${week}-c${ci}-${si}`, name: `${ageLabel}${clsLabel}${fem ? '（牝）' : ''}`, short: null, grade: null, cls: sl.cls,
-          region: 'JRA', course, surface, dist, month, week, age: sl.age, sex: fem ? '牝' : undefined, weight: '馬齢', prize: Math.round(R.CLS_PRIZE[sl.cls] * U.priceIndex(year) / 10) * 10, year, graded: false,
-        });
+        const ageLabel = age === '2' ? '2歳' : age === '3' ? '3歳' : age === '3+' ? '3歳以上' : '4歳以上';
+        const fem = rng.chance(0.15);
+        const r = {
+          key: `${year}-${month}-${week}-o${ci}-${si}`, name: `${ageLabel}${listed ? 'リステッド' : 'オープン'}${fem ? '（牝）' : ''}`, short: null, grade: null, cls: 'OP',
+          region: 'JRA', course, surface, dist, month, week, age, weight: '馬齢', prize: Math.round(R.CLS_PRIZE[listed ? 'L' : 'OP'] * U.priceIndex(year) / 10) * 10, year, graded: false,
+        };
+        if (fem) r.sex = '牝';
+        if (listed) r.listed = true;
+        out.push(r);
       });
     });
     return out;
   };
+  R.isOldKey = key => /-c\d+-\d+$/.test(key || ''); // 前の版の条件戦の鍵
 
   R.ofWeek = function (seed, year, month, week) {
-    return R.gradedOf(year, month, week).concat(R.conditionalOf(seed, year, month, week));
+    return R.gradedOf(year, month, week).concat(R.openOf(seed, year, month, week));
   };
 
   // 馬場状態（週・競馬場ごとに決まる）
@@ -88,7 +92,7 @@
 
   R.label = r => r.short || r.name;
   // 1984年より前の日本には格付けが無いので「重賞」と出す
-  R.gradeBadge = r => r.grade ? (r.region === 'JRA' && r.year && r.year < 1984 ? '重賞' : r.region === '地方' ? (r.grade === 'G1' ? 'Jpn1' : r.grade.replace('G', 'Jpn')) : r.grade) : (r.cls === 'OP' ? 'OP' : '');
+  R.gradeBadge = r => r.grade ? (r.region === 'JRA' && r.year && r.year < 1984 ? '重賞' : r.region === '地方' ? (r.grade === 'G1' ? 'Jpn1' : r.grade.replace('G', 'Jpn')) : r.grade) : (r.cls === 'OP' ? (r.listed ? 'L' : 'OP') : '');
   R.maxField = function (race) {
     if (race.region === '海外') return 14;
     if (race.region === '地方') return race.course === '大井' ? 16 : 14;
@@ -111,33 +115,40 @@
     if (age < 2) return '年齢';
     if (race.sex === '牝' && horse.sex !== '牝') return '牝馬限定';
     if (race.noGelding && horse.gelding) return 'せん馬は出られない';
-    // 外国で調教されている馬は、向こうでの実績で出てくるのでクラスを問わない
+    // 外国で調教されている馬は、向こうでの実績で出てくるので賞金を問わない（重賞だけ）
     if (horse.foreignTrained) return race.graded ? null : '外国調教馬';
-    const cls = H.classOf(horse), rank = H.CLASS_RANK[cls];
-    if (!race.graded) {
-      if (race.cls === 'newcomer') return (horse.starts || 0) === 0 ? null : '新馬戦はデビュー戦のみ';
-      if (race.cls === 'maiden') return rank === 0 ? null : '勝ち上がり済み';
-      const need = H.CLASS_RANK[race.cls];
-      if (rank > need) return 'クラスが上';
-      return null; // 格上挑戦は出られる（除外されやすい）
-    }
-    // 重賞：1勝以上（2歳・3歳限定戦）、古馬は2勝クラス以上
-    if (rank === 0) return '未勝利馬';
-    if ((race.age === '3+' || race.age === '4+') && rank < 2 && race.grade !== 'G3') return '実績が足りない';
-    if (race.region === '海外' && rank < 4) return 'オープン馬のみ';
-    return null;
+    if (race.region === '海外') return R.abroadWhy(horse, race, year);
+    if (race.grade === 'G1') return R.g1Why(horse, race, year);
+    return null; // OP・リステッド・G3・G2 は無条件（年齢・性の決まりだけ）
+  };
+
+  // ---------- G1 の獲得賞金の条件（数は docs/BALANCE.md「8. 出走の条件」） ----------
+  // 獲得賞金（h.earn）：勝った1着賞金と、重賞の2着の4割を足したもの。G1 の前の週までの分で見る
+  // 要る額は G1 の年齢の区分ごと（万円・1995年の物価）。2歳：OP を1つ勝てば足りる／3歳：OP 2勝か G3 1勝ほど／古馬：G2 1勝か G3＋OP ほど
+  R.G1_EARN = { '2': 2000, '3': 3500, older: 5000 };
+  R.G1_WHY = '賞金が足りない';
+  R.g1Need = (race, year) => Math.round(R.G1_EARN[race.age === '2' ? '2' : race.age === '3' ? '3' : 'older'] * U.priceIndex(year) / 10) * 10;
+  R.g1Why = function (horse, race, year) {
+    if (horse.rights && horse.rights[race.name] === year) return null; // トライアルの優先出走権（その年のもの）
+    const need = R.g1Need(race, year), earn = horse.earn || 0;
+    return earn >= need ? null : `${R.G1_WHY}（あと${U.money(need - earn)}）`;
+  };
+  // 海外のレースの出走条件（仮。持ち主の決定待ち「海外のG1、特に2歳については条件未定」）：ここだけ差し替えればよい
+  // いまは：豪州の2歳 G1 は出られない（持ち主の決定 2026-10-20「豪州の2歳 G1 には出られない」）・ほかの2歳の G1 は無条件・ほかの G1 は JRA の G1 と同じ獲得賞金・G2 と G3 は無条件
+  // （外国で調教されている馬はここに来ない。R.ineligibleBase で先に通す）
+  R.AU2_WHY = '豪州の2歳 G1 には出られない';
+  R.abroadWhy = function (horse, race, year) {
+    if (race.grade !== 'G1') return null;
+    if (race.age === '2') return (race.country || (HS.DATA.courses[race.course] || {}).country) === '豪' ? R.AU2_WHY : null;
+    return R.g1Why(horse, race, year);
   };
 
   // 出走の優先順（大きいほど先）
   R.priority = function (horse, race, year, rng) {
     let p = 0;
-    if (horse.rights && horse.rights[race.name] === year) p += 1e6;
+    if (horse.rights && horse.rights[race.name] === year) p += 1e6; // トライアルの優先出走権
     p += (horse.gradedWins || []).filter(g => g.grade === 'G1').length * 1e5;
-    if (!race.graded && race.cls) {
-      const diff = H.CLASS_RANK[race.cls] - H.CLASS_RANK[H.classOf(horse)];
-      p -= diff * 5e4; // 格上挑戦は後回し
-    }
-    p += (horse.earn || 0);
+    p += (horse.earn || 0); // あとは獲得賞金の順（フルゲートを超えたら下から除外）
     p += rng.next() * 500;
     return p;
   };

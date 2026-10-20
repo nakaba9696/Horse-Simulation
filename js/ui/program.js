@@ -6,7 +6,7 @@
   const e = U.esc;
   const isJ = () => HS.Jockey && HS.Jockey.isMode();
 
-  const clsLabel = r => r.graded ? UI.gradeTag(r) : `<span class="chip">${r.cls === 'newcomer' ? '新馬' : r.cls === 'maiden' ? '未勝利' : r.cls === 'OP' ? 'OP' : '条件'}</span>`;
+  const clsLabel = r => UI.gradeTag(r); // レースは OP 以上だけ（オープンは OP・リステッドは L の札）
   // 牧場にいる馬の一言（騎手のゲームに放牧は無い。持ち主の指摘 2026-10-17「放牧いらない」）：入厩前の若駒・前のセーブで放牧に出していた馬（World.migrate が戻す）
   const farmNote = h => h.parked ? '牧場（次の週に入厩）' : '入厩前（2歳の4月から入厩）';
   const nextLabel = h => { const n = P.next(h); return !n ? `<span class="muted">${h.auto ? 'おまかせ' : '未定'}</span>` : n.entered ? `今週 <b>${e(R.label(n.race))}</b>` : `${n.label} <b>${e(n.name)}</b>`; };
@@ -21,7 +21,7 @@
       <span class="next">次走：${nextLabel(h)}</span></div>
       ${h.auto ? `<div class="panel small mt row"><span class="grow">おまかせ中：出るレースは自動で決まる。表から選ぶと、おまかせは切れる。</span><button class="btn sm" data-act="auto" data-id="${h.id}">おまかせを切る</button></div>` : ''}`;
     const filters = `<div class="u-segs mt">${K.seg('表示', [['ok', '出られるレース'], ['all', '出られない重賞も']], o.show, 'pg-set', 'pshow')}
-      ${K.seg('種類', [['all', '重賞と条件戦'], ['graded', '重賞だけ']], o.kind, 'pg-set', 'pkind')}
+      ${K.seg('種類', [['all', 'オープンと重賞'], ['graded', '重賞だけ']], o.kind, 'pg-set', 'pkind')}
       ${K.seg('馬場', [['', 'すべて'], ['芝', '芝'], ['ダ', 'ダート']], o.surf, 'pg-set', 'psurf')}</div>`;
     let lastM = null, first = true;
     const body = rows.map(x => {
@@ -43,10 +43,10 @@
     }).join('');
     return `${head}${filters}
       <div class="u-tbox mt">${rows.length ? `<table class="u-t pg-t"><tr><th>週</th><th>レース</th><th>コース</th><th class="c">距離</th><th class="c">馬場</th><th class="r">1着賞金</th><th></th></tr>${body}</table>` : '<div class="u-empty">この条件で出られるレースがありません。「出られない重賞も」で見られます。</div>'}</div>
-      <div class="small muted mt">今週のレースは出走登録、来週から1年先までは予約。予約はその週の初めに出走登録に変わる（勝ち上がりなどで出られなくなったら知らせる）。◎○△× は距離と馬場の向き。</div>`;
+      <div class="small muted mt">今週のレースは出走登録、来週から1年先までは予約。予約はその週の初めに出走登録に変わる（出られなくなったら知らせる）。G1 は獲得賞金の条件がある。◎○△× は距離と馬場の向き。</div>`;
   };
   App.act['pg-set'] = d => { const v = App.st.view; if (!v) return; v[d.k] = d.v; const y = window.scrollY; App.render(); window.scrollTo(0, y); const el = App.findSig(document.getElementById('app'), JSON.stringify(['pg-set', '', '', d.k, d.v, '', '', '', ''])); if (el && document.body.dataset.input !== 'mouse') App.navSelect(el, true); };
-  // 予約：今週から1年先の番組から探す（重賞も条件戦も）
+  // 予約：今週から1年先の番組から探す（重賞もオープンも）
   App.act.reserve = d => {
     const race = P.find(d.key);
     const err = race ? T.reserve(d.id, race) : 'レースが見つからない';
@@ -69,7 +69,7 @@
     const row = (h, k) => {
       const fh = T.fhBoth(h, wIdx);
       return `<tr data-act="horse" data-id="${h.id}"${k === 0 ? ' data-autofocus' : ''}><td class="th">${UI.thumb(h)}</td>
-        <td><div class="nm">${e(h.name)} ${UI.histMark(h)}${h.auto ? ' <span class="chip">おまかせ</span>' : ''}</div><div class="sub">${UI.age(h)}・${H.className(H.classOf(h), G.year)}・${h.starts || 0}戦${h.wins || 0}勝・${U.money(h.prize || 0)}</div>${UI.reachLine(h)}</td>
+        <td><div class="nm">${e(h.name)} ${UI.histMark(h)}${h.auto ? ' <span class="chip">おまかせ</span>' : ''}</div><div class="sub">${UI.age(h)}・${h.starts || 0}戦${h.wins || 0}勝・本賞金 ${U.money(h.earn || 0)}</div>${UI.reachLine(h)}</td>
         <td>${h.loc === 'stable' ? UI.condMark(h, wIdx) : `<span class="muted small">${farmNote(h)}</span>`}</td><td>${h.loc === 'stable' ? UI.fatigueMark(h) : ''}</td>
         <td>${K.fh(fh.turf, fh.dirt)}</td>
         <td class="next small">${nextLabel(h)}</td>

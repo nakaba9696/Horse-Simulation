@@ -33,7 +33,7 @@
   // ---------- 段階と数（仮の値。遊んで直す） ----------
   // floor：その段階の好感度の下限。課題をやり終えると次の段階の下限まで上がる。課題をやらずに次の段階の下限を超えることはない
   O.STAGES = [
-    { key: 'op', label: 'OP', maxClass: 0, maxFh: 60, maxStrength: 0.9, floor: 10, money: 300 },   // 条件戦・OP の依頼
+    { key: 'op', label: 'OP', maxClass: 0, maxFh: 60, maxStrength: 0.9, floor: 10, money: 300 },   // OP の依頼
     { key: 'g3', label: 'G3', maxClass: 1, maxFh: 66, maxStrength: 0.95, floor: 25, money: 600 },
     { key: 'g2', label: 'G2', maxClass: 2, maxFh: 72, maxStrength: 1, floor: 40, money: 1000 },
     { key: 'g1', label: 'G1', maxClass: 3, maxFh: 80, maxStrength: 1, floor: 55, money: 2000 },     // 海外の G1・いちばん強い馬も
@@ -42,11 +42,11 @@
   O.DONE = 5;              // 最後の課題までやり終えた段階
   O.MAX = 100;             // 好感度の上限（やり終えると、いっぱい）
   O.MEET = 10;             // 出会いに要る好感度
-  O.GAIN = [5, 7, 9, 12, 15];   // ジャンルのレースで勝ったときの好感度（条件戦・G3・G2・G1・GF）
+  O.GAIN = [5, 7, 9, 12, 15];   // ジャンルのレースで勝ったときの好感度（OP・G3・G2・G1・GF）
   O.PLACE = [0, 0, 3, 2];       // まだ会っていない人：ジャンルのレースで2着・3着のときの好感度（出会いを少し早める）
   O.OWNED = 0.5;           // AI の史実馬のうち、馬主のキャラが持つ割合
   O.OWNED_FILLER = 0.3;    // その場限りの馬（モブ）のうち、馬主のキャラが持つ割合
-  O.FEE = [10, 30, 50, 100, 200];   // 騎乗料（万円・1995年の物価）。条件戦・G3・G2・G1・GF
+  O.FEE = [10, 30, 50, 100, 200];   // 騎乗料（万円・1995年の物価）。OP・G3・G2・G1・GF
   O.GIFT = 1000;           // 思い出の名馬が受け取れないときのお祝い（前の版。前のセーブのため）
   O.AWARD = 500;           // 名コンビ賞の賞金（万円・1995年の物価）
   O.AWARD_MIN = 3;         // 名コンビ賞に要る、その年の勝ち数
@@ -243,7 +243,7 @@
   };
   O.bestHorse = oid => O.horsesOf(oid).find(h => h.loc === 'stable') || null;
 
-  // レースの格：0 条件戦・1 G3・2 G2・3 G1・4 グランドフェスティバル
+  // レースの格：0 OP（リステッドも）・1 G3・2 G2・3 G1・4 グランドフェスティバル
   O.classOf = race => race.invite || race.grade === 'GF' ? 4 : !race.graded ? 0 : ({ G1: 3, G2: 2, G3: 1 }[race.grade] || 1);
   // その段階で、このレースのこの馬の依頼が来るか
   O.allowed = function (stage, race, h, strength) {

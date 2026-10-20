@@ -26,7 +26,7 @@ const digest = v => crypto.createHash('sha256').update(canon(v, []).join(''), 'u
 
 // 週の初めに行う操作（ops）：['reserve', 馬の id, レース名]・['retire', 馬の id]・['make', 父の id, 母の id, 名前]・
 //   ['win', 馬の id, 短い名, レース名, 格]（その年の重賞の勝ちを足して、冠とトロフィーを見る）・['pts', 馬主の id, 好感度]（好感度）・['meet', 馬主の id]（縁を作る）・['adv', 馬主の id]（課題をやり終えたことにする）・['ask', 馬主の id]（店に頼む）・
-//   ['program', 馬の id]（番組表の行の指紋）・['rsvp', 馬の id]（番組表で出られる最初の条件戦を予約）・
+//   ['program', 馬の id]（番組表の行の指紋）・['rsvp', 馬の id]（番組表で出られる最初のオープンを予約）・
 //   ['away', 馬の id, 国]（その馬が先週その国で走ったことにする）・['fat', 馬の id]（疲労の段階・回復・今週のレースへの移動の疲れと出られるか・決まった着順の並びでたまる量の指紋。js/core/fatigue.js）
 function runOps(HS, ops) {
   const { World: W, Jockey: J, Season: T, Original: Ori } = HS;
@@ -38,7 +38,7 @@ function runOps(HS, ops) {
     if (op[0] === 'meet') return HS.Owners.meet(op[1], { horse: 'テストホース', race: 'テストのレース' });
     if (op[0] === 'adv') return HS.Owners.advance(op[1], { horse: 'テストホース', race: 'テストのレース' });   // 馬主の課題をやり終えたことにする
     if (op[0] === 'ask') return HS.Owners.ask(op[1]) || 'ok';   // 来月の店に馬を頼む
-    // 番組表（js/core/program.js）：行の指紋と、出られる最初の条件戦を予約する
+    // 番組表（js/core/program.js）：行の指紋と、出られる最初のオープンを予約する
     if (op[0] === 'program') return digest(HS.Program.rows(W.horse(op[1]), { show: 'all' }).map(r => [r.wk.i, r.race.key, r.why || '', r.fit, r.state || '', r.can || '', r.busy, r.others.join(',')]));
     if (op[0] === 'rsvp') { const r = HS.Program.rows(W.horse(op[1])).find(x => x.can === 'reserve' && !x.race.graded); return r ? r.race.key + ':' + (HS.Program.reserve(op[1], r.race.key) || 'ok') : 'no race'; }
     if (op[0] === 'away') { const h = W.horse(op[1]); h.at = op[2]; h.lastRaceW = W.wIdx() - 1; W.dirty(); return HS.Fatigue.where(h); }
