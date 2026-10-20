@@ -27,7 +27,7 @@ const SHOTS = [
   ['15b-entry-wet', () => { App.st.screen = 'game'; App.act.tab({ tab: 'home' }); const c0 = HS.World.cards().find(c => c.race.graded) || HS.World.cards()[0]; const c = Object.assign({}, c0, { race: Object.assign({}, c0.race, { ground: '不良', weather: '雨' }) }); App.modal(HS.UI.entryTable(c) + '<div class="btns mt"><button class="btn gold" data-act="close">ゲートイン</button></div>', { noClose: true, scene: 'paddock' }); }],
   ['16-breed', () => { App.st.screen = 'game'; App.act.tab({ tab: 'breed' }); }],
   // オーナー：何人かと会い、段階をばらばらにしてから（千石さんの依頼は今週に届いたことにする）
-  ['17-owners', () => { const O = HS.Owners; O.state().flags.overseas = { y: 1 }; [['makino', 1], ['sengoku', 3], ['yuni', 2], ['dakota', 0]].forEach(([id, s]) => { O.meet(id); O.of(id).stage = s; O.of(id).pts = O.STAGES[s].floor + 5; }); O.planMissing(); const j = O.of('sengoku').job; if (j) { j.at = Math.min(j.at, HS.World.wIdx()); O.tick(); } O.state().queue = []; App.st.screen = 'game'; App.act.owners(); }],
+  ['17-owners', () => { const O = HS.Owners; O.state().flags.overseas = { y: 1 }; [['makino', 1], ['sengoku', 3], ['yuni', 2], ['lucy', 0]].forEach(([id, s]) => { O.meet(id); O.of(id).stage = s; O.of(id).pts = O.STAGES[s].floor + 5; }); O.planMissing(); const j = O.of('sengoku').job; if (j) { j.at = Math.min(j.at, HS.World.wIdx()); O.tick(); } O.state().queue = []; App.st.screen = 'game'; App.act.owners(); }],
   ['18-owner', () => { App.st.screen = 'game'; App.act.owner({ id: 'yuni' }); }],
   // ホームの騎乗依頼の札（17-owners のあと。千石さんの依頼が届いている）
   ['19-home-offer', () => { App.st.screen = 'game'; App.st.tab = 'home'; App.st.view = null; App.render(); }],

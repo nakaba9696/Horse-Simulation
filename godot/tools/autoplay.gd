@@ -174,5 +174,5 @@ func _finish(ok: bool) -> void:
 	process_frame.disconnect(_tick)
 	var sec := (Time.get_ticks_msec() - t0) / 1000.0
 	_say("autoplay: %s %d週（%.0f秒）・画面の数 %s" % ["ok" if ok else "NG", done_weeks, sec, JSON.stringify(counts)])
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(UiFlow.save_path))
+	UiFlow.delete_save()   # セーブと、その枠の殿堂の記録
 	quit(0 if ok else 1)

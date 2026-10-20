@@ -13,7 +13,7 @@ const CAST = {
   yuni: '新しく入れた（秘書。持ち主の指定）。ふつうの優秀なナビゲーター兼クラシック系の依頼主。絵は別のセッションでメイドの絵を作っている途中なので、いまは絵が無いときの顔',
   takenouchi: '前の7人から。人柄を仕様書に寄せた（やさしいご隠居 → 穏やかに人を試す老獪なご隠居）',
   takarada: '前の7人から。そのまま',
-  dakota: '新しく入れた。絵は無い（候補は下の「顔の絵」）',
+  lucy: '新しく入れた（2026-10-20。ダコタ・ベルに代えた。持ち主のメモ「お姉さん系が多いので外して、金髪の少女にしたい」）。名前・年齢・人柄は案。台詞は仮。絵は無い',
   violaine: '新しく入れた（持ち主の指定）。絵は trpg-game の violaine',
   farina: '新しく入れた（持ち主の指定）。絵は trpg-game の farina（前は鷺ノ宮さんに当てていた絵）',
 };
@@ -28,13 +28,18 @@ const raceNote = (O, name) => {
   const where = d.region === '海外' ? `${d.course}（${d.country || '海外'}）` : d.region === '地方' ? `${d.course}（地方）` : d.course;
   return `${d.grade || (d.listed ? 'L' : 'OP')}・${where} ${d.surface === 'ダ' ? 'ダート' : '芝'}${d.dist}m・${age}${d.sex === '牝' ? '牝馬' : ''}・${d.month}月${d.week}週`;
 };
+// 史実か、たらればか（たらればなら史実はどうだったか）
+const factNote = (O, o, k) => { const f = O.missionFact(o, k); return !f ? '' : f.ifs ? `たられば：${f.real}` : `史実：${f.year}年`; };
 const horseNote = (D, m) => {
   const d = (D.historic || []).find(x => x.name === m.horse); if (!d) return m.horse;
   const won = (d.wins || []).filter(w => w.slice(4) === m.race || w.slice(4).startsWith(m.race)).map(w => w.slice(0, 4));
-  return `${m.horse}（${d.born}年生・${d.sex}。${m.age}歳で走る${won.length ? `。史実では${won.join('・')}年に勝った` : ''}）`;
+  const sp = HS_.Special && HS_.Special.data(m.horse) ? '。スペシャルホース' : '';
+  return `${m.horse}（${d.born}年生・${d.sex}。${m.age}歳で走る${won.length ? `。史実では${won.join('・')}年に勝った` : ''}${sp}）`;
 };
 
+let HS_ = {};
 function build(HS) {
+  HS_ = HS;
   const D = HS.DATA, O = HS.Owners;
   const all = D.owners;
   const active = all.filter(o => !o.retired);
@@ -62,7 +67,7 @@ function build(HS) {
   p('');
   p('| ジャンル | 人 | 人柄 | 好み | 出会いの条件 | 前の7人から | 最後のアイテム |');
   p('|---|---|---|---|---|---|---|');
-  for (const o of active) p(`| ${GENRE[O.signOf(o)] || O.signLabel(o)} | ${o.name}（${o.age}歳・${q(o.title)}） | ${q(o.note)} | ${[O.signLabel(o)].concat(O.subLabels(o)).join('・')} | ${q(o.unlock.text)} | ${q(CAST[o.id] || '')} | ${o.item.name}（${o.item.text}） |`);
+  for (const o of active) p(`| ${GENRE[O.signOf(o)] || O.signLabel(o)} | ${o.name}（${o.age}歳・${q(o.title)}） | ${q(o.note)} | ${[O.signLabel(o)].concat(O.subLabels(o)).join('・')} | ${q(o.unlock.text)} | ${q(CAST[o.id] || '')} | ${o.item.name}（${o.item.text}。${q(o.item.from || '')}） |`);
   p('');
   p('外した人（前のセーブのために `data/owners.js` に残す。依頼は来ない）：' + all.filter(o => o.retired).map(o => `${o.name}（${O.LIKE_LABEL[o.likes[0]] || ''}）`).join('・') + '。前のセーブで縁があっても依頼は来なくなる。着せていた勝負服はそのまま。');
   p('');
@@ -70,7 +75,10 @@ function build(HS) {
   p('');
   p(`| 人 | ${STAGE.join(' | ')} |`);
   p(`|---|${STAGE.map(() => '---').join('|')}|`);
-  for (const o of active) p(`| ${o.name} | ${o.missions.map((m, k) => k < O.JOBS ? `${q(m.horse)}（${m.age}歳）で${q(O.raceLabel(m.race))}` : q(m.text)).join(' | ')} |`);
+  for (const o of active) p(`| ${o.name} | ${o.missions.map((m, k) => k < O.JOBS ? `${q(m.horse)}（${m.age}歳）で${q(O.raceLabel(m.race))}（${factNote(O, o, k)}）` : q(m.text)).join(' | ')} |`);
+  p('');
+  p('持ち主の決定（2026-10-20）「ミッションは史実に基づいて選びたい　たられば系もいれたい　ミホノブルボンの菊花賞とか」。史実＝その馬が史実で勝ったレース、たられば＝史実では勝てなかった（惜敗・出なかった）レース。依頼の場面とオーナーの画面（Godot 版）に「史実」「たられば」の印を出す。');
+  p('ハイセイコー・メジロティターンはスペシャルホース（1989年より前に走り終えた名馬）。ミッションをやり終えるまでと、依頼で出た馬が走っているあいだは、スペシャルホースとしてレースに出てこない（同じ馬が2頭にならない）。');
   p('');
   p('レースの中身（格・競馬場・距離・条件・時期）は人ごとの節。OP の段階のレースは名前のあるオープン（`data/owner_races.js`。実在の JRA のオープン・リステッド）で、ミッションのために番組に足した。');
   p('');
@@ -115,7 +123,8 @@ function build(HS) {
   p('|---|---|---|---|---|---|---|---|---|---|');
   for (const o of active) { const l = o.look; p(`| ${o.name} | ${o.portrait ? '持ち主の絵あり' : '絵が無いときの顔'} | ${q(l.hair)} | ${q(l.eyes)} | ${q(l.clothes)} | ${q(l.items)} | ${q(l.moods.base)} | ${q(l.moods.smile)} | ${q(l.moods.joy)} | ${q(l.moods.sad)} |`); }
   p('');
-  p('trpg-game（`assets/portraits/`）の絵で、米系（ダコタ・ベル）に合いそうなもの（決めるのは持ち主）：`bride`（マリエッタ。波打つ金髪・豪快に笑う・白い花の髪飾り。ただし鎧と大槌と眼帯）、`angelica`（アンジェリカ。蜂蜜色の髪・自信のある笑み・軍服）、`natalia`（ナタリア。酒好きでほろ酔いの笑い。表情の差分が無い）、`zerina`（ゼリナ。物怖じしない商人の娘。関西言葉の人）。どれも服が競馬場の人に見えないので、新しく作るほうがよさそう。GF の一族の人（花輪）に合う絵も trpg-game には無い（花輪をのせた人がいない。bride の白い花の髪飾りが近いだけ）。見た目は下の「GF を開いている一族の人」の節。');
+  p('米系は金髪の少女（ルーシー・ハーランド。案）に代えた。絵はまだ無い。');
+  p('（前の版のメモ）trpg-game（`assets/portraits/`）の絵で、米系（ダコタ・ベル）に合いそうなもの（決めるのは持ち主）：`bride`（マリエッタ。波打つ金髪・豪快に笑う・白い花の髪飾り。ただし鎧と大槌と眼帯）、`angelica`（アンジェリカ。蜂蜜色の髪・自信のある笑み・軍服）、`natalia`（ナタリア。酒好きでほろ酔いの笑い。表情の差分が無い）、`zerina`（ゼリナ。物怖じしない商人の娘。関西言葉の人）。どれも服が競馬場の人に見えないので、新しく作るほうがよさそう。GF の一族の人（花輪）に合う絵も trpg-game には無い（花輪をのせた人がいない。bride の白い花の髪飾りが近いだけ）。見た目は下の「GF を開いている一族の人」の節。');
   p('');
   // 人ごと
   for (const o of active) {
@@ -123,17 +132,19 @@ function build(HS) {
     p('');
     p(`- 読み：${o.kana}・${o.age}歳・${o.title}`);
     p(`- 人柄：${o.note}`);
+    if (o.attr) p(`- 属性（絵の目安。文には出さない）：${o.attr}`);
+    if (o.core) p(`- ストーリーの芯：${o.core}`);
     p(`- 口調：一人称「${o.voice.me}」・呼び方「${o.voice.you}」・語尾 ${o.voice.end}・言わないこと：${o.voice.never.join('・')}`);
     p(`- 好み：${[O.signLabel(o)].concat(O.subLabels(o)).join('・')}${o.only ? `（${O.LIKE_LABEL[o.only]}の馬しか持たない）` : ''}`);
     p(`- 出会いの条件：${o.unlock.text}${o.gate ? `（${O.GATE_LABEL[o.gate] || o.gate}）` : ''}。まだ会っていないときのヒント「${o.unlock.hint}」`);
-    p(`- 最後のアイテム：${o.item.name}（${o.item.text}）`);
+    p(`- 最後のアイテム：${o.item.name}（${o.item.text}）。由来：${o.item.from || ''}`);
     p(`- 初めのあいさつ：「${o.intro}」`);
     p('');
-    p('| 段階 | 依頼の馬 | レース | 頼むときのひと言 |');
-    p('|---|---|---|---|');
+    p('| 段階 | 依頼の馬 | レース | 史実／たられば | 頼むときのひと言（仮） |');
+    p('|---|---|---|---|---|');
     o.missions.forEach((m, i) => i < O.JOBS
-      ? p(`| ${STAGE[i]} | ${q(horseNote(D, m))} | ${q(O.raceLabel(m.race))}（${q(raceNote(O, m.race))}） | 「${q(m.say)}」 |`)
-      : p(`| ${STAGE[i]} | 自分の馬 | ${q(m.text)} | 「${q(m.say)}」 |`));
+      ? p(`| ${STAGE[i]} | ${q(horseNote(D, m))} | ${q(O.raceLabel(m.race))}（${q(raceNote(O, m.race))}） | ${q(factNote(O, o, i))} | 「${q(m.say)}」 |`)
+      : p(`| ${STAGE[i]} | 自分の馬 | ${q(m.text)} | — | 「${q(m.say)}」 |`));
     p('');
     p('場面の会話：');
     p('');

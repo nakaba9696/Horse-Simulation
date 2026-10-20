@@ -69,7 +69,7 @@
   const blank = () => ({ pts: 0, stage: 0, prog: 0, met: false, known: false, rides: 0, wins: 0, big: 0, dec: 0, streak: 0, fees: 0, got: {}, years: {}, cleared: [], job: null, fails: 0 });
   O.init = function () {
     const st = {}; for (const o of ALL()) st[o.id] = blank();
-    return { v: 3, st, log: [], queue: [], react: [], awards: {}, wear: {}, flags: {}, ask: null };
+    return { v: 4, st, log: [], queue: [], react: [], awards: {}, wear: {}, flags: {}, ask: null };
   };
   // 前の形（好感度 0〜800・段階 顔見知り／信頼／主戦／相棒）を、段階に移す
   O.migrateSt = function (st) {
@@ -105,10 +105,34 @@
     if ((s.v || 0) < 3) for (const o of ALL()) s.st[o.id].prog = 0;
     s.awards = s.awards || {}; s.wear = s.wear || {}; s.flags = s.flags || {};
     if (s.ask === undefined) s.ask = null;
+    if ((s.v || 0) < 4) O.migrateV4(s, g);
     // 海外の印：前のセーブで、自分が海外の重賞を勝っていれば出たことにする
     if (!s.flags.overseas && g && g.records && g.records.player && (g.records.player.g1 || []).some(x => x.region === '海外')) s.flags.overseas = { y: g.year };
-    s.v = 3;
+    s.v = 4;
     return s;
+  };
+  // v3 まで → v4（2026-10-20）：米系のダコタ・ベルを外してルーシーに代えた（縁・出会いの点・段階・勝負服はルーシーに移す）。
+  // ミッションの馬とレースを持ち主のメモに合わせて決め直したので、前の予定（job）がいまのミッションと違えば捨てる（読み込んだあと O.planMissing が立て直す）。
+  // 受けていた依頼の騎乗も外す。世界に出ていた前の依頼の馬は、ふつうの馬として走り続ける
+  O.MOVED = { dakota: 'lucy' };
+  O.migrateV4 = function (s, g) {
+    const drop = new Set(Object.keys(O.MOVED));
+    for (const o of ALL()) {
+      const st = s.st[o.id], j = st && st.job; if (!j) continue;
+      const m = O.missionOf(o, st.stage);
+      if (!o.retired && m && m.horse === j.horse && O.raceData(m.race) && O.raceData(m.race).name === j.race) continue;
+      if (j.on && g && g.rides && g.rides[O.jobKey(j)] === j.hid) delete g.rides[O.jobKey(j)];
+      st.job = null;
+      drop.add(o.id);
+    }
+    for (const [from, to] of Object.entries(O.MOVED)) {
+      const a = s.st[from], b = s.st[to];
+      if (!a || !b || b.known || !(a.known || a.pts > 0)) continue;
+      s.st[to] = Object.assign(blank(), a, { job: null });
+      s.st[from] = blank();
+      for (const k of Object.keys(s.wear)) if (s.wear[k] === from) s.wear[k] = to;
+    }
+    s.queue = s.queue.filter(q => !(drop.has(q.oid) && (q.kind === 'job' || Object.keys(O.MOVED).includes(q.oid))));
   };
   O.state = function () { const g = G(); if (!g.owners) g.owners = O.init(); return g.owners; };
   O.of = id => { const s = O.state(); return s.st[id] || (s.st[id] = blank()); };
@@ -489,6 +513,12 @@
     if (k >= O.JOBS || !m.horse) return m.text || '';
     return `依頼の馬${m.horse}で、${O.raceLabel(m.race)}を勝つ`;
   };
+  // 史実か、たらればか（data の fact）。印（label）と、たらればなら史実はどうだったか（real）。お手馬の段階は null
+  O.missionFact = function (o, k) {
+    const m = O.missionOf(o, k); if (!m || k >= O.JOBS || !m.horse || !m.fact) return null;
+    const ifs = m.fact === 'ifs';
+    return { ifs, label: ifs ? 'たられば' : '史実', year: m.year || null, real: ifs ? m.real || '' : `${m.year}年に勝った` };
+  };
   const nameIn = (names, race) => names.includes(race.name) || (race.short != null && names.includes(race.short));
   const won = (h, name, y) => (h.gradedWins || []).some(w => (y == null || w.y === y) && (w.race === name || w.short === name));
   O.wonAll = (h, names, y) => names.every(n => won(h, n, y));
@@ -520,6 +550,7 @@
     if (n.set && !O.wonAll(h, n.set, yearOf(race))) return false;
     if (n.all && !O.wonAll(h, n.all, null)) return false;
     if (n.twice && !(n.names || []).some(x => won(h, x, yearOf(race) - 1))) return false;
+    if (n.years && !(n.names || []).some(x => { for (let i = 1; i < n.years; i++) if (!won(h, x, yearOf(race) - i)) return false; return true; })) return false;
     if (n.wonRegion && !(h.gradedWins || []).some(w => w.region === n.wonRegion)) return false;
     return true;
   };
@@ -809,6 +840,18 @@
       if (pc && pc.p === p && pc.res === res) return pc.list;
       pc = { p, res, list: p.filter(d => !res.has(d.name)) };
       return pc.list;
+    };
+  }
+  // スペシャルホース（1989年より前の名馬）を依頼の馬にしたとき（ハイセイコー・メジロティターン）：
+  //   まだやり終えていないミッションの馬と、いま世界で走っている（依頼で出した）馬は、スペシャルホースとしてレースに出てこない（同じ馬が2頭にならない・
+  //   依頼の前に倒して店に並ぶことがない）。ミッションをやり終え、依頼の馬が引退したあとは、ふつうのスペシャルホースに戻る
+  const SPc = HS.Special;
+  if (SPc && SPc.canAppear) {
+    const canAppear0 = SPc.canAppear;
+    SPc.canAppear = function (grp, d) {
+      const g = G();
+      if (g && g.mode === 'jockey' && d && (O.reserved().has(d.name) || (O.missionOwner(d.name) && E && E.activeNames().has(d.name)))) return false;
+      return canAppear0.apply(this, arguments);
     };
   }
   if (J) {

@@ -455,7 +455,8 @@ module.exports = function (check, assert, HS) {
     // 組Aのいちばん良い牡 × 組Bのいちばん良い牝、組Bの牡 × 組Aの牝（きょうだい同士はインブリードの決まりで作れない。js/core/inbreed.js）
     const lines = (nt, kids, gens, seed) => {
       const G = newGame(seed); G.player.money = 1e12;
-      const pool = HS.Eraless.pool().map(d => H.fromHistoric(d, 'p:' + d.name));
+      // 店の候補はオーナーのミッションの馬（デビューと店に出ない32頭）を抜く前の全部から（ミッションの馬を決め直しても、この見積もりが変わらないように）
+      const pool = (D.historic || []).filter(HS.Eraless.isPool).map(d => H.fromHistoric(d, 'p:' + d.name));
       const ranked = sex => pool.filter(h => sex === '牝' ? h.sex === '牝' : h.sex === '牡').sort((a, b) => fh(b) - fh(a));
       const sires = ranked('牡'), dams = ranked('牝');
       const mate = (s, used) => dams.find(d => !used.includes(d) && !HS.Inbreed.analyze(s.name, d.name).block);

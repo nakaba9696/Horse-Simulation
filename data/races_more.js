@@ -129,6 +129,11 @@
     { name: 'フォアゴーステークス', short: 'フォアゴーS', grade: 'G1', region: '海外', country: '米', course: 'サラトガ', surface: 'ダ', dist: 1400, month: 8, week: 4, age: '4+', weight: '別定', prize: 3000, from: 2003, to: 9999 },
     // ジェロームH（ベルモント・3歳・1マイル）：1995年はG2（HorseRacingNation の1995年の結果・ja.wikipedia「フレンチデピュティ」）。ほかの年の格付けは確かめていない。今は格付けの無い特別戦
     { name: 'ジェロームハンデキャップ', short: 'ジェロームH', grade: 'G2', region: '海外', country: '米', course: 'ベルモント', surface: 'ダ', dist: 1600, month: 9, week: 2, age: '3', weight: 'ハンデ', prize: 1500, from: 1995, to: 1995, uncertain: true, note: '施行の週は確かめていない' },
+    // ---- オーナーのミッション（data/owners.js）に使う海外の G2（持ち主の決定 2026-10-20「ミッションは史実に基づいて選びたい」） ----
+    // ロイヤルロッジS（2歳・1マイル）：フランケルが2010年に勝った（当時はアスコット）。2011年からニューマーケットの9月末。古い年の形は確かめきれていない
+    { name: 'ロイヤルロッジステークス', short: 'ロイヤルロッジS', grade: 'G2', region: '海外', country: '英', course: 'ニューマーケット', surface: '芝', dist: 1600, month: 9, week: 4, age: '2', weight: '馬齢', prize: 1500, from: 1990, to: 9999, uncertain: true },
+    // スキラッチS（コーフィールド・1000m）：ブラックキャビアが2010年・2011年に勝った（en.wikipedia「Black Caviar」の成績の表）。10月の2週。古い年の形は確かめきれていない
+    { name: 'スキラッチステークス', short: 'スキラッチS', grade: 'G2', region: '海外', country: '豪', course: 'コーフィールド', surface: '芝', dist: 1000, month: 10, week: 2, age: '3+', weight: '別定', prize: 1000, from: 2000, to: 9999, uncertain: true },
   );
   // ブリーダーズカップターフスプリント（2012年からG1）：開催地は BC マイルと同じ。距離は開催地の芝コースで変わる（デルマーは5ハロン＝1000m）
   const BCTS_DIST = { 'デルマー': 1000, 'キーンランド': 1100, 'サンタアニタ': 1300, 'チャーチルダウンズ': 1000 };

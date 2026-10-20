@@ -138,7 +138,8 @@
   // （外国で調教されている馬はここに来ない。R.ineligibleBase で先に通す）
   R.AU2_WHY = '豪州の2歳 G1 には出られない';
   R.ABROAD2_WHY = '海外の G1 を一度勝つと出られる';
-  R.abroadOk = () => { const G = HS.World && HS.World.get && HS.World.get(); return !!(G && G.abroadG1); };
+  // 印（G.abroadG1。自分の馬が海外の G1 を勝つと world.js が立てる）か、いま持っている自分の馬の勝ち鞍で見る（前のセーブもそのまま効く。セーブの中身は変えない）
+  R.abroadOk = () => { const W = HS.World, G = W && W.get && W.get(); if (!G) return false; if (G.abroadG1) return true; return Object.values(G.horses || {}).some(h => h.owner === 'P' && (h.gradedWins || []).some(w => w.grade === 'G1' && w.region === '海外')); };
   R.abroadWhy = function (horse, race, year) {
     if (race.grade !== 'G1') return null;
     if (race.age === '2') {

@@ -122,6 +122,7 @@ static func new_game(opts: Dictionary) -> Dictionary:
 		news = [], entries = {}, rides = {}, mode = "jockey" if opts.get("mode") == "jockey" else "owner", lastWeek = null, market = { gen = [], genMares = [], month = 0.0 },
 		farmLevel = 1.0, stats = {}, settings = { animSpeed = 1.0, showHistNote = true }, broke = 0.0, gameOver = null, reserve = [], dc = null }
 	_reset_caches()
+	HSHall.forget()
 	rng = HSRng.new(seed)
 	HSPed.build(G.pedExtra)
 	if eraless: HSEraless.populate()
@@ -1180,6 +1181,7 @@ static func serialize() -> String:
 static func load_save(json: Variant) -> Dictionary:
 	var g = HSJson.parse(json) if typeof(json) == TYPE_STRING else json
 	if not g or not g.get("v") or not g.get("horses"): push_error("セーブデータが読めない"); return {}
+	HSHall.forget()
 	migrate(g)
 	G = g
 	HSU.ERA = HSEraless.ERA if G.get("eraless") else null
@@ -1210,6 +1212,7 @@ static func migrate(g: Dictionary) -> void:
 	if not g.get("edits"): g.edits = {}
 	if not g.get("bond"): g.bond = {}
 	if g.get("dc"): HSSeason.dc_upgrade(g)
+	HSHall.migrate(g)   # 殿堂の写しの1走ごとの記録（rec）は別ファイルへ（持ち主の決定 2026-10-20）
 	HSTrophy.migrate_removed(g)   # 外したトロフィー（仕様書に無い5つ・豪州2歳三冠）の記録を消す
 	if g.get("eraless") and not g.get("gfTrophy"):   # 前のセーブ（GF ごとのトロフィーより前）：勝った GF の区分のトロフィーを付ける
 		HSTrophy.migrate_gf(g)
@@ -1253,11 +1256,5 @@ static func migrate(g: Dictionary) -> void:
 		if rc.get("rode") == null: rc.rode = HSU.truthy(rc.get("mine")) and g.mode == "jockey"
 	# オリジナルホースのインブリードの因子（G.origFactor）と血統（G.pedExtra）：前のセーブは牧場にいる馬から足す（hs_inbreed.gd）
 	HSInbreed.migrate(g)
-	# 前のセーブ：自分の馬が海外の G1 を勝っていれば、海外の2歳 G1 に出られる（world.js と同じ）
-	if not HSU.truthy(g.get("abroadG1")):
-		for h in HSU.or_(g.get("horses"), {}).values():
-			if h.get("owner") != "P": continue
-			for w in HSU.or_(h.get("gradedWins"), []):
-				if w.get("grade") == "G1" and w.get("region") == "海外": g.abroadG1 = true
 	g.v = SAVE_VERSION
 	if g.mode == "jockey": g.owners = HSOwners.fill(g.get("owners"), g)   # owners.js の包み

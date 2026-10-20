@@ -57,7 +57,7 @@ func _ready() -> void:
 				UiFlow.demo_fatigue()   # 撮影の見本：疲労の段階が並ぶように
 			if OS.get_cmdline_user_args().has("--setup=owners8"):
 				# 撮影の見本：8人の段階がばらばら（会っていない人・OP〜お手馬・やり終えた人）
-				var plan := {"makino": [1, 30.0], "sengoku": [3, 62.0], "yuni": [2, 47.0], "takenouchi": [0, 18.0], "takarada": [5, 100.0], "dakota": [4, 80.0]}
+				var plan := {"makino": [1, 30.0], "sengoku": [3, 62.0], "yuni": [2, 47.0], "takenouchi": [0, 18.0], "takarada": [5, 100.0], "lucy": [4, 80.0]}
 				for o in HSOwners.LIST():
 					var st := HSOwners.of(String(o.id))
 					st.known = plan.has(o.id)
@@ -100,7 +100,7 @@ func _ready() -> void:
 		owner_scene({"oid": "sengoku", "kind": "meet", "horse": "サンプルホース", "race": "2歳オープン", "reward": ""})
 	elif args.has("--setup=job"):
 		# ミッションの依頼が届いた場面（G1 の段階の依頼の馬とレース）
-		owner_scene({"oid": "makino", "kind": "job", "k": 3.0, "horse": "フリオーソ", "race": "帝王賞", "date": "2年目7月1週", "retry": false, "y": 2026.0})
+		owner_scene({"oid": "makino", "kind": "job", "k": 3.0, "horse": "ハイセイコー", "race": "日本ダービー", "date": "2年目5月4週", "retry": false, "y": 2026.0})
 	elif args.has("--setup=wreath"):
 		# GF を全制覇したときのイロナの花輪（アイテム）
 		owner_scene({"oid": "gfhost", "kind": "wreath", "horse": "", "race": "", "reward": "一族の花輪（1頭の馬からオリジナルホースを作れる数＋1）"})
@@ -519,6 +519,8 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	var note := ""
 	if not host and q.get("kind") == "job":
 		note = "依頼（%s）：%sで%sを勝つ（%s）" % [HSOwners.STAGES[int(q.k)].label, q.horse, q.race, q.get("date", "")]
+		var fa = HSOwners.mission_fact(o, int(q.k))
+		if fa: note += "　【%s】%s" % [fa.label, ("\n史実：" + String(fa.real)) if fa.ifs else ""]
 	elif not host:
 		var k := 0 if meet else (int(String(q.kind).substr(1)) if String(q.kind) in ["m1", "m2", "m3", "m4"] else -1)
 		if k >= 0 and HSOwners.mission_of(o, k):
