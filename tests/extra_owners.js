@@ -8,7 +8,7 @@ module.exports = function (check, assert, HS) {
   const PATTERNS = ['plain', 'hoops', 'stripes', 'sash', 'cross', 'diamonds', 'stars', 'halves', 'yoke'];
   const SCENES = ['offer', 'paddock', 'win', 'bigwin', 'good', 'lose', 'decline'];
   const GENRES = ['local', 'sprint', 'classic', 'long', 'filly', 'usa', 'europe', 'aus'];
-  const NEED_KEYS = ['by', 'pos', 'cls', 'region', 'countries', 'eu', 'surface', 'minDist', 'maxDist', 'ages', 'raceSex', 'horseSex', 'styles', 'popMin', 'names', 'set', 'all', 'twice', 'unbeaten', 'streak', 'wonRegion', 'count'];
+  const NEED_KEYS = ['by', 'pos', 'cls', 'region', 'countries', 'eu', 'surface', 'minDist', 'maxDist', 'ages', 'raceSex', 'horseSex', 'styles', 'popMin', 'names', 'set', 'all', 'twice', 'years', 'unbeaten', 'streak', 'wonRegion', 'count'];
   const AVOID = /どこか|少しだけ|そっと|ふと|まるで|気がした|胸が温かく|なぜか/;
   const newGame = seed => { W.newGame({ seed, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' }); return W.get(); };
   // 暦を飛ばす（ミッションの週の決まりだけを見るテスト用）
@@ -36,6 +36,7 @@ module.exports = function (check, assert, HS) {
       starts: n.unbeaten || n.streak ? k : k + 2, wins: k, results: Array.from({ length: k }, () => ({ pos: 1 })), gradedWins: [] };
     for (const nm of (n.set || []).concat(n.all || [])) h.gradedWins.push({ y: g.year, race: nm, short: nm, grade: 'G1', region: '海外' });
     if (n.twice) for (const y of [g.year - 1, g.year]) h.gradedWins.push({ y, race: n.names[0], short: n.names[0], grade: 'G1', region: 'JRA' });
+    if (n.years) for (let i = n.years - 1; i >= 0; i--) h.gradedWins.push({ y: g.year - i, race: n.names[0], short: n.names[0], grade: 'G1', region: 'JRA' });
     if (n.wonRegion) h.gradedWins.push({ y: g.year - 1, race: '帝王賞', short: '帝王賞', grade: 'G1', region: n.wonRegion });
     return { race, me: { pos: 1, pop: n.popMin || 1, horse: h } };
   }
@@ -83,20 +84,32 @@ module.exports = function (check, assert, HS) {
     return `${L.map(o => `${o.name.split(/[ ・]/)[0]}＝${O.signLabel(o)}`).join('・')}（外した人：${retired.join('・')}）`;
   });
 
-  check('owners: ミッションの馬とレースが決まっている（番組にある OP 以上のレース・データにいる1989〜2026年の史実馬・年齢と性とレースの条件が合う・史実の現役のうち）', () => {
+  check('owners: ミッションの馬とレースが決まっている（番組にある OP 以上のレース・データにいる1989〜2026年の史実馬かスペシャルホース・年齢と性とレースの条件が合う・史実の現役のうち・史実かたらればか）', () => {
     const pool = new Map(E.pool().map(d => [d.name, d]));   // 包む前の全部は HS.DATA.historic から見る
     const hist = new Map((D.historic || []).map(d => [d.name, d]));
-    const seen = new Set();
+    const seen = new Set(), races = new Set(), legends = [], ifs = [];
     let n = 0;
     for (const o of O.list()) for (let k = 0; k < O.JOBS; k++) {
       const m = o.missions[k];
       assert(m.horse && m.race && m.age && m.say, `${o.name} のミッション${k + 1}に馬・レース・年齢・ひと言が無い`);
       assert(!m.need && !m.by, `${o.name} のミッション${k + 1}に前の形の判定が残っている`);
       const d = hist.get(m.horse);
-      assert(d && E.isPool(d) && !E.isLegend(d), `${o.name} の依頼の馬 ${m.horse} がデータの1989〜2026年の馬にいない`);
+      assert(d && ((E.isPool(d) && !E.isLegend(d)) || (E.isLegend(d) && HS.Special.data(m.horse))), `${o.name} の依頼の馬 ${m.horse} がデータの1989〜2026年の馬にもスペシャルホースにもいない`);
+      if (E.isLegend(d)) legends.push(m.horse);
       assert(!seen.has(m.horse), `依頼の馬 ${m.horse} がほかのミッションと重なる`); seen.add(m.horse);
       const r = raceData(m.race);
       assert(r, `${o.name} のレース ${m.race} が番組に無い`);
+      assert(!races.has(r.name), `ミッションのレース ${m.race} がほかのオーナーのミッションと重なる（同じ週に依頼が2つ来る）`); races.add(r.name);
+      // 史実（その馬が勝ったレース）か、たられば（勝てなかったレース。史実はどうだったかを1行）か（持ち主の決定 2026-10-20）
+      assert(['hist', 'ifs'].includes(m.fact) && m.year && m.year - d.born === m.age, `${o.name} のミッション${k + 1}の史実・たらればの印か年（${m.fact}・${m.year}）`);
+      const f = O.missionFact(o, k);
+      assert(f && f.label && (m.fact === 'ifs' ? !!m.real && f.real === m.real : true), `${o.name} のミッション${k + 1}のたらればに史実の結果が無い`);
+      if (r.grade && (r.region !== '海外' || r.grade === 'G1')) {   // 海外の G2・G3 はデータの勝ち鞍に無い（G1 だけ）
+        const names = new Set([r.name, r.short, m.race]);
+        const winY = (d.wins || []).some(w => +w.slice(0, 4) === m.year && [...names].some(nm => nm && (w.slice(4) === nm || w.slice(4).startsWith(nm) || nm.startsWith(w.slice(4)))));
+        assert(m.fact === 'hist' ? winY : !winY, `${o.name} のミッション${k + 1}（${m.horse}・${m.year}年の${m.race}）の史実・たらればの印がデータの勝ち鞍と合わない`);
+      }
+      if (m.fact === 'ifs') ifs.push(`${m.horse}の${m.race}`);
       const cls = O.classOf(Object.assign({}, r, { graded: !!r.grade }));
       assert(cls === k, `${o.name} のミッション${k + 1}（${O.STAGES[k].label}）のレース ${m.race} の格が ${cls}`);
       assert(ageOk(r, m.age) && (r.sex !== '牝' || d.sex === '牝'), `${m.horse}（${m.age}歳・${d.sex}）が ${m.race}（${r.age}${r.sex || ''}）に出られない`);
@@ -109,7 +122,8 @@ module.exports = function (check, assert, HS) {
     }
     // OP の段階のレースは、番組に足した名前のあるオープン
     for (const r of D.ownerRaces) assert(r.cls === 'OP' && !r.grade && D.courses[r.course] && R_AGES.includes(r.age) && r.month >= 1 && r.month <= 12 && r.week >= 1 && r.week <= 4, `名前のあるオープン ${r.name} の項目`);
-    return `${n}のミッション（${O.list().map(o => `${o.name.split(/[ ・]/)[0]}：${o.missions.slice(0, 4).map(m => m.horse).join('→')}`).join('／')}）`;
+    assert(legends.includes('ハイセイコー') && legends.includes('メジロティターン'), `スペシャルホースの依頼の馬（${legends}）`);
+    return `${n}のミッション（${O.list().map(o => `${o.name.split(/[ ・]/)[0]}：${o.missions.slice(0, 4).map(m => m.horse).join('→')}`).join('／')}）・たられば ${ifs.join('・')}`;
   });
   check('owners: 名前のあるオープンが番組の週に入る（鍵は 年-月-週-レース名）', () => {
     const g = newGame(13);
@@ -150,6 +164,9 @@ module.exports = function (check, assert, HS) {
       assert(O.needOk(m.need, x.race, x.me), `${o.name} の最後のミッション「${m.text}」が、満たす結果で通らない`);
       assert(!O.needOk(m.need, x.race, Object.assign({}, x.me, { pos: 2 })), `${o.name} の最後のミッションが2着で通る`);
       assert(!O.needOk(m.need, x.race, Object.assign({}, x.me, { horse: Object.assign({}, x.me.horse, { owner: 'AI' }) })), `${o.name} の最後のミッションがお手馬でない馬で通る`);
+      // 「無敗の」ミッション：デビューから全勝のときだけ（GF は出走数に数えないので、GF の負けは関係しない＝js/core/world.js）
+      if (m.need.unbeaten) assert(!O.needOk(m.need, x.race, Object.assign({}, x.me, { horse: Object.assign({}, x.me.horse, { starts: x.me.horse.starts + 1 }) })), `${o.name} の無敗のミッションが、1つ負けた馬で通る`);
+      if (m.need.years) assert(!O.needOk(m.need, x.race, Object.assign({}, x.me, { horse: Object.assign({}, x.me.horse, { gradedWins: x.me.horse.gradedWins.slice(1) }) })), `${o.name} の${m.need.years}連覇のミッションが、${m.need.years - 1}連覇で通る`);
       if (m.need.by === 'orig') assert(!O.needOk(m.need, x.race, Object.assign({}, x.me, { horse: Object.assign({}, x.me.horse, { original: false }) })), `${o.name} の最後のミッションがオリジナルホースでない馬で通る`);
       n++;
     }
@@ -183,9 +200,9 @@ module.exports = function (check, assert, HS) {
     assert(q && O.sceneLines('takenouchi', 'meet', { horse: q.horse, race: q.race }).length >= 2, '出会いの場面が無い');
     // 海外の人：ダートの G1 で4点たまっても、海外の印の前は出会わない
     O.onResult(race({ surface: 'ダ', dist: 2000, graded: true, grade: 'G1' }), { pos: 1, horse: Object.assign({}, horse, { country: '米' }) }); O.meetCheck();
-    assert(O.of('dakota').pts >= O.MEET && !O.known('dakota'), '海外の印の前にダコタさんと縁ができた');
+    assert(O.of('lucy').pts >= O.MEET && !O.known('lucy'), '海外の印の前にルーシーさんと縁ができた');
     O.onResult(race({ region: '海外', country: '米', surface: 'ダ', dist: 2000, graded: true, grade: 'G1' }), { pos: 5, horse }); O.meetCheck();
-    assert(O.state().flags.overseas && O.known('dakota'), '海外の印のあとでダコタさんと縁ができない');
+    assert(O.state().flags.overseas && O.known('lucy'), '海外の印のあとでルーシーさんと縁ができない');
     return `OP ${O.GAIN[0]}・G3 ${O.GAIN[1]}・G2 ${O.GAIN[2]}・G1 ${O.GAIN[3]}・出会い ${O.MEET}点`;
   });
 
@@ -254,10 +271,38 @@ module.exports = function (check, assert, HS) {
     return `お礼 ${U.money(G.player.money - money0)}`;
   });
 
+  check('owners: どのミッションも、依頼の週に依頼の馬が出られる年齢でオーナーの馬として世界に出て、レースの週の出走表に入る（海外・スペシャルホースも）', () => {
+    const G = newGame(89);
+    G.owners.flags.overseas = { y: G.year };
+    let n = 0;
+    const bad = [];
+    for (const o of O.list()) {
+      meetOne(o.id);
+      const st = O.of(o.id);
+      for (let k = 0; k < O.JOBS; k++) {
+        st.stage = k; O.plan(o.id);
+        const j = st.job;
+        jump(Math.floor(j.at / 48), Math.floor((j.at % 48) / 4) + 1, j.at % 4 + 1); O.tick();
+        const h = W.horse(st.job.hid);
+        if (!(st.job.on && h && h.name === o.missions[k].horse && O.canRun(h, st.job) && O.ownerOf(h) === o.id)) { bad.push(`${o.missions[k].horse}（依頼が来ない）`); continue; }
+        jump(j.y, j.m, j.w);
+        const card = W.cardOf(O.jobKey(st.job));
+        const me = card && card.runners.find(x => x.rider === 'P');
+        if (!(me && me.horse.id === h.id)) bad.push(`${h.name}（${O.raceLabel(j.race)}の出走表に入らない）`);
+        n++;
+        // 次へ：依頼の馬は世界から外し、予定を消す
+        W.unenter(h.id); delete G.horses[h.id]; st.job = null; G.rides = {}; O.state().queue = []; W.dirty();
+      }
+      st.stage = O.DONE;
+    }
+    assert(!bad.length, bad.join('・'));
+    return `${n}のミッション`;
+  });
+
   check('owners: 負けても詰まらない（次の年の同じレース・同じ馬が出られなければ出られる年齢で出し直す）・見送ると次の年に・自分の馬と重なると依頼が先で、見送れば自分の馬に戻る', () => {
     const G = newGame(43);
-    meetOne('sengoku');
-    const st = O.of('sengoku'), m = O.by('sengoku').missions[0];
+    meetOne('yuni');
+    const st = O.of('yuni'), m = O.by('yuni').missions[0];
     let j = st.job;
     jump(Math.floor(j.at / 48), Math.floor((j.at % 48) / 4) + 1, j.at % 4 + 1); O.tick();
     const h1 = W.horse(st.job.hid);
@@ -265,14 +310,14 @@ module.exports = function (check, assert, HS) {
     jump(j.y, j.m, j.w);
     O.jobResult({ y: j.y, m: j.m, w: j.w, races: [] });
     assert(st.stage === 0 && st.job.y === j.y + 1 && st.job.tries === 1 && st.fails === 1 && !st.job.on, '負けたあと、次の年の同じレースにならない');
-    // 次の年：2歳のレースなので、3歳になった馬は使えない。出られる年齢で出し直す
+    // 次の年：3歳のレース（若駒S）なので、4歳になった馬は使えない。出られる年齢で出し直す
     j = st.job;
     jump(Math.floor(j.at / 48), Math.floor((j.at % 48) / 4) + 1, j.at % 4 + 1); O.tick();
     const h2 = W.horse(st.job.hid);
     assert(st.job.on && h2 && h2.name === m.horse && j.y - h2.born === m.age && !W.horse(h1.id) && W.all().filter(h => h.name === m.horse).length === 1, '次の年の依頼の馬が出られる年齢でない（か、同じ名前の馬が2頭いる）');
     assert(O.state().queue.some(q => q.kind === 'job' && q.retry), 'やり直しの依頼の場面が無い');
     // 見送る：次の年に
-    assert(!O.decline('sengoku') && st.job.y === j.y + 1 && !st.job.on && st.dec === 1, '見送っても次の年にならない');
+    assert(!O.decline('yuni') && st.job.y === j.y + 1 && !st.job.on && st.dec === 1, '見送っても次の年にならない');
     // 自分の馬と重なる：G3 の段階（函館スプリントS・3歳以上）で、自分の馬を同じレースに登録しておく
     const G2 = newGame(47);
     meetOne('sengoku'); O.advance('sengoku', {}); O.state().queue = [];
@@ -295,6 +340,56 @@ module.exports = function (check, assert, HS) {
     const me2 = card2.runners.find(x => x.rider === 'P');
     assert(me2 && me2.horse.id === mine.id && s2.job.y === j2.y + 1, '見送ったのに自分の馬に戻らない（か、依頼が次の年にならない）');
     return `${m.horse}：2年目は出し直し（${h1.id}→${h2.id}）・重なったら依頼が先`;
+  });
+
+  check('owners: v3 のセーブ（米系のダコタさんのミッションの途中・前のミッションの予定）を v4 に移す：縁と段階はルーシーさんへ・前の予定は捨てていまのミッションで立て直す', () => {
+    const G = newGame(73);
+    W.finishWeek({});
+    const old = JSON.parse(W.serialize());
+    old.owners.v = 3;
+    // ダコタさん：G2 の段階まで進み、前のミッション（ハリウッドGC）の依頼が来ている途中。勝負服も着せている
+    old.owners.st.dakota = Object.assign({}, old.owners.st.lucy, { known: true, met: true, stage: 2, pts: 45, rides: 4, wins: 2, got: { t2: undefined }, cleared: [{ y: 2025 }, { y: 2025 }],
+      job: { k: 2, horse: 'ゲームオンデュード', race: 'ハリウッドゴールドカップ', y: G.year, m: 5, w: 4, at: 0, on: true, hid: 'x-dude', tries: 0 } });
+    delete old.owners.st.lucy;
+    old.rides = Object.assign({}, old.rides, { [`${G.year}-5-4-ハリウッドゴールドカップ`]: 'x-dude' });
+    old.owners.wear = { y: 'dakota' };
+    old.owners.queue = [{ oid: 'dakota', kind: 'job', k: 2, horse: 'ゲームオンデュード', race: 'ハリウッドGC', y: G.year }];
+    // 竹之内さん：前のミッション（メジロマックイーンで天皇賞・春）の予定
+    old.owners.st.takenouchi = Object.assign({}, old.owners.st.takenouchi, { known: true, stage: 3, pts: 56, job: { k: 3, horse: 'メジロマックイーン', race: '天皇賞（春）', y: G.year + 1, m: 4, w: 4, at: 0, on: false, hid: null, tries: 0 } });
+    W.load(JSON.stringify(old));
+    const s = O.state(), g = W.get();
+    const lu = O.of('lucy');
+    assert(s.v === 4 && lu.known && lu.stage === 2 && lu.wins === 2 && !O.known('dakota') && O.of('dakota').stage === 0, `ダコタさんの縁と段階がルーシーさんに移らない（${JSON.stringify(lu)}）`);
+    assert(lu.job && lu.job.horse === O.by('lucy').missions[2].horse && !lu.job.on, `ルーシーさんのいまのミッションの予定が無い（${JSON.stringify(lu.job)}）`);
+    assert(!g.rides[`${G.year}-5-4-ハリウッドゴールドカップ`] && s.wear.y === 'lucy' && !s.queue.some(q => q.oid === 'dakota'), '前の依頼の騎乗・勝負服・場面が移らない');
+    const tk = O.of('takenouchi');
+    assert(tk.job && tk.job.horse === 'メジロティターン' && tk.job.k === 3, `竹之内さんの前の予定が、いまのミッションに立て直されない（${JSON.stringify(tk.job)}）`);
+    const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
+    return `ルーシーさん：${lu.job.horse}で${lu.job.race}・竹之内さん：${tk.job.horse}で${tk.job.race}`;
+  });
+
+  check('owners: スペシャルホースの依頼の馬（ハイセイコー）：依頼の前とオーナーの馬として走っているあいだはスペシャルホースとして出てこない・同じ馬は1頭', () => {
+    const G = newGame(79);
+    const SP = HS.Special;
+    const d = SP.data('ハイセイコー');
+    assert(d, 'ハイセイコーがスペシャルホースにいない');
+    const grp = SP.GROUPS.find(gp => SP.members(gp).includes(d)) || SP.GROUPS[0];
+    assert(!SP.canAppear(grp, d, []), 'まだやり終えていないミッションの馬が、スペシャルホースとして出てこられる');
+    meetOne('makino');
+    for (let k = 0; k < 3; k++) O.advance('makino', {});
+    const st = O.of('makino'), j = st.job;
+    assert(j && j.horse === 'ハイセイコー' && j.race === '東京優駿', `G1 の段階の予定が違う（${JSON.stringify(j)}）`);
+    jump(Math.floor(j.at / 48), Math.floor((j.at % 48) / 4) + 1, j.at % 4 + 1); O.tick();
+    const h = W.horse(st.job.hid);
+    assert(st.job.on && h && h.name === 'ハイセイコー' && j.y - h.born === 3 && O.ownerOf(h) === 'makino' && !h.legend, '依頼の週にハイセイコーがオーナーの馬として出ない');
+    assert(!SP.canAppear(grp, d, []), '依頼の馬として走っているのに、スペシャルホースとして出てこられる');
+    O.advance('makino', { horse: 'ハイセイコー', race: '日本ダービー' });
+    assert(!O.reserved().has('ハイセイコー') && !SP.canAppear(grp, d, []), 'やり終えたあと、依頼の馬が走っているのにスペシャルホースとして出てこられる');
+    delete G.horses[h.id];
+    W.dirty();
+    assert(SP.canAppear(grp, d, []), '依頼の馬が引退したあと、スペシャルホースに戻らない');
+    assert(W.all().filter(x => x.name === 'ハイセイコー').length === 0, '同じ馬が残っている');
+    return `${grp.label || grp.id}のスペシャルホース・依頼は${O.raceLabel(j.race)}`;
   });
 
   check('owners: まだやり終えていないミッションの依頼の馬は、デビューと馬の店に出ない（クリアしたら出られる）', () => {
@@ -336,7 +431,7 @@ module.exports = function (check, assert, HS) {
     const old = JSON.parse(W.serialize()); delete old.owners;
     W.load(JSON.stringify(old));
     const g = W.get();
-    assert(g.owners && g.owners.v === 3 && O.list().every(o => g.owners.st[o.id]), '古いセーブにオーナーの既定値が入らない');
+    assert(g.owners && g.owners.v === 4 && O.list().every(o => g.owners.st[o.id]), '古いセーブにオーナーの既定値が入らない');
     assert(O.knownList().length === 0 && O.offers().length === 0, 'オーナーの項目が無いセーブで、縁のあるオーナーがいる');
     const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
     return '';
@@ -367,7 +462,7 @@ module.exports = function (check, assert, HS) {
     assert(!s.week && !g.rides['x-race'], '前の版の毎週の依頼か、その騎乗が残っている');
     assert(O.of('takenouchi').job && O.of('takenouchi').job.horse === O.by('takenouchi').missions[3].horse && O.of('makino').job && O.of('makino').job.k === 1 && !O.of('takarada').job, '前のセーブで縁のある人に、いまの段階のミッションの予定が無い');
     assert(O.of('kirishima').known && !O.active('kirishima') && s.wear.x === 'kirishima' && O.by('kirishima').silks && !O.of('kirishima').job, '外した人の縁・勝負服が消えた（か、外した人に予定がある）');
-    assert(s.queue.length === 0 && s.v === 3 && s.flags, '前の形の場面が残る');
+    assert(s.queue.length === 0 && s.v === 4 && s.flags, '前の形の場面が残る');
     const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
     return `竹之内さん：${O.of('takenouchi').job.horse}で${O.of('takenouchi').job.race}（${O.of('takenouchi').job.y}年）`;
   });

@@ -178,6 +178,8 @@ func _preview(i: int) -> void:
 			var d = HSOwners.race_data(String(mi.race))
 			txt = "%s（%d歳）で%s" % [mi.horse, int(mi.age), HSOwners.race_label(String(mi.race))]
 			if d: txt += "　%s %s%sm・%d月%d週" % [d.course, "ダート" if d.surface == "ダ" else "芝", HSU.num(d.dist), int(d.month), int(d.week)]
+			var fa = HSOwners.mission_fact(o, k)
+			if fa: txt += "　【%s】%s" % [fa.label, ("史実：" + String(fa.real)) if fa.ifs else ""]
 		var rw := ("✓ " if st.stage > k else ("▶ " if st.stage == k else "")) + "お礼 %s%s" % [HSU.money(HSOwners.yen(HSOwners.STAGES[k].money)), extra]
 		pv.add_child(_ladder(String(HSOwners.STAGES[k].label), txt, rw, st.stage >= k))
 	var il := UiTheme.label(("🎁 %s：%s（受け取った）" if HSOwners.done(oid) else "最後のアイテム：%s（%s）") % [o.item.name, o.item.text], 13, UiTheme.GOLD_BRIGHT if HSOwners.done(oid) else UiTheme.MUTED)

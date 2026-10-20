@@ -55,7 +55,7 @@ Poly Haven の素材はすべて CC0（https://polyhaven.com/license）。人物
 | ファイル | 馬主 | 元の絵 | 作者 | ライセンス | 出典 |
 |---|---|---|---|---|---|
 | `assets/owners_takenouchi.js` | 竹之内 源三郎 | `gensai.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
-| `assets/owners_makino.js` | 牧野 ひなた | `tiria.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
+| `assets/owners_makino.js` | 牧園 ひなた | `tiria.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
 | `assets/owners_sengoku.js` | 千石 悠斗 | `dil.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
 | `assets/owners_takarada.js` | 宝田 マリエ | `dorothea.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
 | `assets/owners_violaine.js` | ヴィオレーヌ・ド・サン＝クレール | `violaine.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
