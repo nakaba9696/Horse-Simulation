@@ -32,7 +32,9 @@
     const key = y + n;
     if (cache.has(key)) return cache.get(key);
     let out = n;
-    if (!(raceByName.get(n) || []).some(r => active(r, y))) {
+    // 史実の勝ち鞍の記録のためのレース（data/hist_races.js）にその年の形があれば、そのまま
+    const hist = (D.histRaces || []).some(r => r.name === n && active(r, y));
+    if (!hist && !(raceByName.get(n) || []).some(r => active(r, y))) {
       const alt = [n, n.replace(/盃/g, '杯'), n.replace(/杯/g, '盃')];
       const east = /（東）$/.test(n), west = /（西）$/.test(n);
       const base = alt.map(a => a.replace(/（[東西]）$/, ''));
@@ -116,6 +118,10 @@
       h.heavy = f.heavy;
       if (f.heavy >= 86 && Array.isArray(h.skills) && !h.skills.includes('mud')) h.skills = h.skills.concat('mud');
     }
+  }
+  // 記録から作った史実馬の脚質（data/style_fix.js。名鑑・出典で走り方がはっきりした名の知れた馬だけ。ほかは tools/build_auto.js の引きのまま）
+  for (const [n, f] of Object.entries(D.styleFix || {})) {
+    const h = byName.get(n) || byNorm.get(HS.normName(n)); if (h && f.style) h.style = f.style;
   }
   // 外国で調教された馬かどうか
   D.isForeign = h => !!(h.country && h.country !== '日');

@@ -63,7 +63,7 @@ check('historic: 1995年以降の勝ち鞍が暦にある（海外の一部を�
   for (const h of D.historic) for (const w of [...(h.wins || []), ...(h.ran || [])]) {
     const y = +w.slice(0, 4), n = w.slice(4);
     if (y < 1995 || allowed.has(n)) continue;
-    if (!D.races.some(r => r.name === n && r.from <= y && y <= (r.to || 9999))) bad.push(`${h.name}:${w}`);
+    if (![...D.races, ...(D.histRaces || [])].some(r => r.name === n && r.from <= y && y <= (r.to || 9999))) bad.push(`${h.name}:${w}`);
   }
   assert(bad.length <= 5, '暦にないレース: ' + bad.join(', '));
   return bad.length ? '少しだけ: ' + bad.join(', ') : '';
@@ -1445,6 +1445,7 @@ require('./extra_trophy.js')(check, assert, HS); // トロフィー（仕様書�
 require('./extra_oponly.js')(check, assert, HS); // レースは OP 以上だけ・G1 の獲得賞金の条件・海外の仮の条件・前のセーブの条件戦の予約
 require('./extra_oneride.js')(check, assert, HS); // おまかせ騎乗は無い・1つのレースに自分が乗るのは1頭（自分の馬・依頼）
 require('./extra_ground.js')(check, assert, HS); // 馬場の状態（スタミナの減り・切れは全馬共通・スピードの下がりは道悪の適性で変わる・走破タイム）
+require('./extra_style.js')(check, assert, HS); // 記録から作った史実馬の脚質の決め直し・史実の勝ち鞍の記録のためのレース
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
 require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
 require('./extra_gdgame.js')(check, assert); // Godot 版の週の流れを本物の画面で自動で遊ぶ

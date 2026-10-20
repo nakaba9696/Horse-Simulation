@@ -301,7 +301,9 @@
     const out = [];
     for (const w of d.wins || []) {
       const y = +w.slice(0, 4), n = w.slice(4);
-      const r = (RACE_BY_NAME.get(n) || []).find(x => x.from <= y && y <= (x.to || 9999));
+      const on = x => x.from <= y && y <= (x.to || 9999);
+      // 暦にその年の形が無ければ、史実の勝ち鞍の記録のためのレース（data/hist_races.js。遊ぶ番組には出ない）
+      const r = (RACE_BY_NAME.get(n) || []).find(on) || (HS.DATA.histRaces || []).find(x => x.name === n && on(x));
       if (r) out.push(r);
     }
     return out;
