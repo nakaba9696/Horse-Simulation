@@ -92,8 +92,7 @@ func _play(t, name: String, weeks: Array) -> void:
 		step.cards = HSData.digest_save(cs.map(func(c): return [c.race.key, c.runners.map(func(x): return [x.horse.name, x.jockey.name if x.get("jockey") else null, x.odds, x.num])]))
 		step.cardKeys = cs.map(func(c): return "%s:%d" % [c.race.key, c.runners.size()])
 		var offers := HSOwners.offers()
-		step.offers = offers.map(func(o): return o.raceKey + "/" + o.horse)
-		if offers.size(): step.accept = HSOwners.accept(offers[0].raceKey, offers[0].horseId)
+		step.offers = offers.map(func(o): return o.raceKey + "/" + o.horse + "/" + HSU.num(o.inWeeks))
 		for cat in HSSeason.dc_pending_list():
 			var e := HSSeason.dc_eligible(cat)
 			step["gf:" + cat] = HSSeason.dc_choose(cat, e[0].h.id) if e.size() else HSSeason.dc_decline(cat)

@@ -56,7 +56,7 @@ var res := HSSim.finish(sim)  # { results, events, frames, D, straight, lap, win
 HSWorld.new_game({ mode = "jockey", seed = 1, jockeyName = "…", region = "美浦" })  # または HSWorld.load_save(JSON の文字)
 var G = HSWorld.G                       # JS の G と同じ形（G.player.money・G.horses・G.news …）
 HSWorld.market_historic()               # 馬の店 → HSWorld.buy(item)
-HSOwners.offers() → HSOwners.accept(raceKey, horseId)   # 馬主の依頼
+HSOwners.offers()                       # オーナーの依頼（ミッション。届いた依頼の一覧。レースの週は依頼の馬に自分が乗る。見送るは HSOwners.decline(oid)）
 HSSeason.dc_pending_list() → HSSeason.dc_choose(cat, id) / dc_decline(cat)   # 12月の GF
 for r in HSJockey.my_rides():           # 今週自分が乗るレース
 	var sim = HSWorld.start_sim(r.card, { ride = true })   # → HSSim.step … → HSSim.finish(sim)
@@ -84,10 +84,10 @@ data/*.js（正）→ index.html の並びで読む → fictional.js（騎手の
    - 比べるもの：10 刻みごとの状態の指紋（全馬の x・lane・v・E と操作の気分・段・進路・高ぶりのビット）、100 刻みごとの全馬の値（ずれたときの手がかり）、ペース、着順・タイム・着差・上がり・残りのスタミナ、勝ちタイムの書式、実況の文と時刻、特殊能力の発動、描画のコマ。
 2. `godot/tests/golden/free.json`：フリーレース 6 本（`tools/golden_race.js` が一緒に作る）。
    `godot/tests/golden/math.json`：数学の関数（各 1500 件）・乱数の列・U.hash・並べ替え（TimSort。長さ 1〜1500・比べる関数が乱数を引くもの）の答え。
-3. `node tools/golden_world.js` → `godot/tests/golden/world.json`・`world_save.json`：決まった遊び方（店でいちばん安い馬を買う・馬主の最初の依頼を受ける・GF に出る・自分の馬の1レースを決まった乗り方で乗る）で週を進め、毎週のセーブ（G）の指紋・出走表の指紋・依頼・乗ったレースの着順を書く。
+3. `node tools/golden_world.js` → `godot/tests/golden/world.json`・`world_save.json`：決まった遊び方（店でいちばん安い馬を買う・オーナーの依頼の馬に乗る・GF に出る・自分の馬の1レースを決まった乗り方で乗る）で週を進め、毎週のセーブ（G）の指紋・出走表の指紋・依頼・乗ったレースの着順を書く。
    - new：新しいゲームから 4 週。late：JS で 46 週遊んだセーブ（JS のセーブそのもの）を読んで、12月3週から 4 週（GF・年度表彰・年明けの史実馬のデビューをまたぐ）。
    - gf：11月4週のセーブに手を加え（1頭を4歳・前の年の GF（中長距離）の勝ち馬に）、12月1週の招待から年明けまで 7 週。
-   - craft（番組表の行の指紋と、オープンの予約も通す）：late の続きのセーブに手を加え（週の初めの操作に、重賞の勝ちを足す・馬主の好感度を足す、も使う）（1頭を5歳・能力120・G1を4勝・トロフィー2つ、もう1頭を牝馬に）、JS が読み直したものを Godot も読み、8週。週の初めの操作（予約・引退・オリジナルホースを作る）も同じ列で行う。フェブラリーSにスペシャルホース（G1を5勝した名馬・歴代の勝ち馬）が出て、引退で殿堂入り、オリジナルホースが生まれる。
+   - craft（番組表の行の指紋と、オープンの予約も通す）：late の続きのセーブに手を加え（週の初めの操作に、重賞の勝ちを足す・オーナーの点を足す・ミッションをやり終えたことにする、も使う）（1頭を5歳・能力120・G1を4勝・トロフィー2つ、もう1頭を牝馬に）、JS が読み直したものを Godot も読み、8週。週の初めの操作（予約・引退・オリジナルホースを作る）も同じ列で行う。フェブラリーSにスペシャルホース（G1を5勝した名馬・歴代の勝ち馬）が出て、引退で殿堂入り、オリジナルホースが生まれる。
    - 指紋は、辞書の項目を名前の順に並べ、null の項目を除き、-0 を 0 にした並べ方（JSON に書いて読み直したのと同じ）。
 4. `sh godot/tests/run.sh`（headless）が `godot/tests/test_*.gd` を回す。C++ の模擬（`godot/native/bin`）があれば、模擬の 54 本と数学・乱数を C++ と GDScript の両方で比べ、世界の進行・フリーレース・並列は C++ で回す。無ければ「C++ の模擬が無いので飛ばした」と出して GDScript だけで比べる。`node tests/run.js` は、Godot があればこれを呼ぶ（無ければ「飛ばした」と出す）。Godot の場所は `GODOT=`・PATH の `godot`・`/home/user/godot-bin/godot` の順に探す。
 

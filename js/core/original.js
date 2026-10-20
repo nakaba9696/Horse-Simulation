@@ -11,6 +11,11 @@
   O.BONUS_PER = 3;      // 前の版：トロフィー・GF の勝ち1つあたりの、仔へのボーナス（前のセーブの引退馬だけ。potUp の無い馬）
   O.BONUS_MAX = 12;
   O.POT_MAX = 118;      // 能力の上限（仔を作るときと同じ）
+  // 1頭の馬から作れる仔の数（仕様書「合わせる馬は何回かするといなくなる」。数は docs/BALANCE.md「10. オリジナルホース」）。
+  // その数の仔を作った親は、牧場を去る（枠が空く）。GF の一族の人（イロナ）の花輪を持っていれば＋1（持ち主の決定 2026-10-20。js/core/gfhost.js）
+  O.FOALS = 3;
+  O.foalsMax = () => O.FOALS + (HS.GFHost && HS.GFHost.hasItem && HS.GFHost.hasItem() ? 1 : 0);
+  O.foalsLeft = h => Math.max(0, O.foalsMax() - ((h && h.origN) || 0));
   // 仔の能力の元：両親の平均のうち SOFT を超えた分は HERIT の割合だけ受け継ぐ（強い両親の仔ほど親に届きにくい）。
   // 選んで重ねるだけでは史実の名馬の上（総合力80前後）で止まり、そこから上はトロフィーを集めた親から（持ち主の決定 2026-10-20
   // 「上げすぎなくていいよ すぐ総合力99ができてもつまらないし」。総合力90台は何世代も重ねて、99はやりこみの果てに）
@@ -79,6 +84,7 @@
     if (!s || !m || s.loc !== 'retired' || m.loc !== 'retired' || s.owner !== 'P' || m.owner !== 'P') return { err: '引退馬を選んでください' };
     if (s.sex === '牝' || m.sex !== '牝') return { err: '父は牡馬、母は牝馬' };
     if (m.foalY === G.year) return { err: `${m.name}は今年もう仔を産んだ（来年また作れる）` };
+    for (const p of [s, m]) if (!O.foalsLeft(p)) return { err: `${p.name}はもう仔を作れない（1頭から${O.foalsMax()}頭まで）` };
     if (HS.Season && !HS.Season.canBuy()) return { err: `お手馬は${HS.Season.MAX_OWN}頭まで` };
     const rng = new U.RNG(U.hash(`orig:${G.seed}:${G.year}:${s.id}:${m.id}`));
     const bonus = O.childBonus(s, m); // 前の版の引退馬だけ（いまは引退で親の能力が上がっている）
@@ -117,6 +123,11 @@
     m.foalY = G.year;
     W.dirty();
     W.news(`オリジナルホース「${nm}」が生まれた！（父 ${s.name}・母 ${m.name}${bonus ? `・ボーナス +${bonus}` : ''}）`, 'g1');
+    // 作った数を数え、決まった数の仔を残した親は牧場を去る
+    for (const p of [s, m]) {
+      p.origN = (p.origN || 0) + 1;
+      if (!O.foalsLeft(p)) { delete G.horses[p.id]; W.news(`${p.name}は仔を${p.origN}頭残して、牧場を去った。`, 'info'); }
+    }
     return { horse: h, bonus, skills: pick };
   };
 })();

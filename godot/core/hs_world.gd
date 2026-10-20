@@ -315,7 +315,7 @@ static func unenter(horseId: String) -> void:
 		G.entries[k] = G.entries[k].filter(func(e): return e.horseId != horseId)
 		if not G.entries[k].size(): G.entries.erase(k)
 # 騎手のゲームは、1つのレースに自分が乗る馬1頭だけ（おまかせ騎乗は無い。持ち主の決定 2026-10-20「おまかせ騎乗　なしにして」。world.js の W.rideTaken）。
-# 自分の馬は1レース1頭まで。騎乗依頼を受けたレースには自分の馬を出せない（依頼は自分の馬が出るレースには来ない。hs_owners.gd）
+# 自分の馬は1レース1頭まで。騎乗依頼を受けたレースには自分の馬を出せない（依頼のレースは依頼が先で自分の馬は取り消し。hs_owners.gd の apply_ride）
 const WHY_MINE := "ほかのお手馬が出る"
 const WHY_OFFER := "騎乗依頼を受けたレース"
 static func one_ride() -> bool:
@@ -448,6 +448,9 @@ static func hist_targets(h: Dictionary, year: float) -> Array:
 		if s.begins_with(pre): out.append(s.substr(4))
 	return out
 static func ai_choose(h: Dictionary, races: Array, wIdx: float, r: HSRng) -> Variant:
+	if h.get("owner") != "P" and h.get("loc") == "stable" and HSOwners.on():   # owners.js の包み（依頼の馬は、ミッションのレースの週にそのレースへ）
+		var fr = HSOwners.forced_race(h, races)
+		if fr: return fr
 	if h.get("loc") != "stable": return null
 	var year: float = G.year
 	var targets: Array = hist_targets(h, year) if h.get("hist") else []
@@ -483,11 +486,11 @@ static func filler_level(race: Dictionary, _year: float) -> float:
 		if race.get("age") == "2": return float({ G1 = 71.0, G2 = 68.0, G3 = 66.0 }.get(gr, 66.0))
 		if race.get("age") == "3" and m <= 6: return float({ G1 = 77.0, G2 = 74.0, G3 = 71.0 }.get(gr, 71.0))
 		return float({ G1 = 81.0, G2 = 78.0, G3 = 76.0 }.get(gr, 76.0))
-	# オープン（レースは OP 以上だけ）：2歳は6月 58 から月に1ずつ上がり、3歳は春は低め、古馬は G3 の少し下。リステッドは1上
+	# オープン（レースは OP 以上だけ）：2歳は6月 56 から月に1ずつ上がり、3歳は春は低め、古馬は G3 より6下。リステッドは1上
 	var L := 1.0 if race.get("listed") else 0.0
-	if race.get("age") == "2": return 52.0 + minf(12.0, maxf(6.0, m)) + L
-	if race.get("age") == "3": return (68.0 if m <= 4 else (70.0 if m <= 6 else 72.0)) + L
-	return 73.0 + L
+	if race.get("age") == "2": return 50.0 + minf(12.0, maxf(6.0, m)) + L
+	if race.get("age") == "3": return (64.0 if m <= 4 else (66.0 if m <= 6 else 69.0)) + L
+	return 70.0 + L
 
 # ---------- 週の流れ ----------
 # 1. prepare_week：今週のレースの出走表を作る。G は変えない（同じ状態なら何度呼んでも同じ）
@@ -650,6 +653,7 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 
 # プレイヤーの騎乗を当てた出走表（人気つき）。騎乗が変わるまで使い回す
 static func cards() -> Array:
+	if HSOwners.on(): HSOwners.apply_ride()   # owners.js の包み（レースの週は依頼の馬に乗る。依頼が先）
 	var wk := prepare_week()
 	var rides: Dictionary = HSU.or_(G.get("rides"), {})
 	var rk := JSON.stringify(rides)
@@ -689,7 +693,8 @@ static func start_sim(card: Dictionary, opts: Dictionary = {}):
 
 # played：{ raceKey: HSSim.finish の結果 }（プレイヤーが乗ったレース）
 static func finish_week(played: Dictionary = {}) -> Dictionary:
-	if HSOwners.on(): HSOwners.state().react = []   # owners.js の包み
+	if HSOwners.on():   # owners.js の包み
+		HSOwners.state().react = []; HSOwners.apply_ride()
 	var wk := prepare_week()
 	var cs := cards()
 	var wIdx: float = wk.wIdx
@@ -728,7 +733,7 @@ static func finish_week(played: Dictionary = {}) -> Dictionary:
 	G.rngState = floorf(rng.next() * 4294967296.0)
 	G.lastWeek = { date = report.date, races = report.races.map(func(r): return slim_result(r)) }
 	_week = null
-	if HSOwners.on(): HSOwners.after_week(report)   # owners.js の包み（自分が乗ったレースの結果：ジャンルの勝ち・課題・出会い）
+	if HSOwners.on(): HSOwners.after_week(report)   # owners.js の包み（自分が乗ったレースの結果：ジャンルの勝ち・ミッション・出会い・次の依頼）
 	return report
 
 # コースレコード
@@ -1182,6 +1187,7 @@ static func load_save(json: Variant) -> Dictionary:
 	HSPed.build(HSU.or_(G.get("pedExtra"), {}))
 	rng = HSRng.new(G.rngState)
 	_reset_caches()
+	if HSOwners.on(): HSOwners.plan_missing()   # owners.js の包み（前のセーブ：縁のある人のミッションの予定）
 	return G
 # 古いセーブを今の形にそろえる
 static func migrate(g: Dictionary) -> void:

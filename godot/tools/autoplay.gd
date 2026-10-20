@@ -1,6 +1,6 @@
 # 画面の流れを自動で遊ぶ（画面なしで動く）：新しいゲームから、週ごとにホーム → 出走表 → 決まった乗り方で乗る（UiFlow.bot_ride） → 週の結果 → 次の週、を本物の画面で進める
 #   godot --headless --path godot -s res://tools/autoplay.gd -- [--weeks=52] [--seed=1]
-# 初めに馬の店でいちばん安い馬を3頭買い、毎週ホームで馬主の最初の依頼を受ける。12月の GF の招待は GF の画面で最初の馬を出す。
+# 初めに馬の店でいちばん安い馬を3頭買い、オーナーの依頼の馬には自分が乗る。12月の GF の招待は GF の画面で最初の馬を出す。
 # 見せ場・ご褒美の場面（小窓）は、遊ぶ人と同じくカーソルのあるボタンを押して閉じる。
 # 1つの画面に 20 秒（実時間）いても先へ進まなければ「止まった」とする。実行時の誤り（SCRIPT ERROR）の数も数える
 extends SceneTree
@@ -104,9 +104,6 @@ func _tick() -> void:
 			if HSSeason.dc_pending_list().size():
 				cs.go("gf")
 				return
-			var offers := HSOwners.offers()
-			if offers.size() and not HSOwners.accepted(offers[0].raceKey):
-				HSOwners.accept(offers[0].raceKey, offers[0].horseId)
 			if cs.b_main.disabled:
 				_say("NG ホームの主な操作が押せない（%s）" % UiFlow.date_label())
 				_finish(false)

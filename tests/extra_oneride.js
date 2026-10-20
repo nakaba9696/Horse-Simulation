@@ -1,7 +1,7 @@
 // 自分の騎乗は必ず自分で乗る（おまかせ騎乗は無い。持ち主の決定 2026-10-20「おまかせ騎乗　なしにして」）。
 // プレイヤーは1つのレースに1頭しか乗れないので、騎手のゲームでは：
 //   ・1つのレースに自分の馬は1頭まで（出走登録・予約・デビュー戦・おまかせのレース選びで弾く）
-//   ・騎乗依頼は自分の馬が出るレースには来ない。受けた依頼のレースには自分の馬を出せない
+//   ・オーナーの依頼のレースは依頼の馬に乗る（依頼が先で自分の馬は取り消し）。依頼の騎乗が決まったレースには自分の馬を出せない
 //   ・前のセーブで同じレースに2頭いれば1頭目だけ残す
 // 画面：JS のパドック・フリーレースと Godot の出走表に「おまかせで乗る」が無く、週の流れは乗っていない騎乗を残して週を締めない
 module.exports = function (check, assert, HS) {
@@ -86,41 +86,32 @@ module.exports = function (check, assert, HS) {
     assert(!P.reserve(b.id, hit.race.key), '1頭目の予約を外しても2頭目が予約できない');
   });
 
-  check('oneride: 騎乗依頼は自分の馬が出るレースには来ない・受けた依頼のレースに自分の馬は出せない', () => {
-    setup(41);
-    O.state().flags.overseas = { y: W.get().year };
-    for (const o of O.list()) O.meet(o.id, { horse: 'テストホース', race: 'テストのレース' });
-    O.state().queue = [];
-    let hidden = 0, blocked = 0, offers = 0;
-    for (let i = 0; i < WEEKS; i++) {
-      const offs = O.offers();
-      offers += offs.length;
-      for (const o of offs) { const c = W.cardOf(o.raceKey); assert(c && !mineCount(c), `${o.raceKey}：自分の馬が出るレースに依頼が来た`); }
-      // 受けていない依頼のレースに自分の馬を出すと、その依頼は見えなくなる（出走を外すと戻る）
-      const o1 = offs.find(o => W.mine('stable').some(h => canRun(h, W.raceByKey(o.raceKey)) && !W.entryOf(h.id)));
-      if (o1) {
-        const h = W.mine('stable').find(h => canRun(h, W.raceByKey(o1.raceKey)) && !W.entryOf(h.id));
-        if (!W.enter(h.id, o1.raceKey)) {
-          assert(!O.offers().some(o => o.raceKey === o1.raceKey), '自分の馬を出したレースの依頼が残る');
-          W.unenter(h.id);
-          assert(O.offers().some(o => o.raceKey === o1.raceKey), '出走を外しても依頼が戻らない');
-          hidden++;
-        }
-      }
-      // 受けた依頼のレースには、自分の馬を出せない
-      const o2 = O.offers()[0];
-      if (o2) {
-        assert(!O.accept(o2.raceKey, o2.horseId), '依頼を受けられない');
-        const h = W.mine('stable').find(h => canRun(h, W.raceByKey(o2.raceKey)) && !W.entryOf(h.id));
-        if (h) { assert(W.enter(h.id, o2.raceKey) === W.WHY_OFFER, '受けた依頼のレースに自分の馬を出せてしまう'); blocked++; }
-        const c = W.cardOf(o2.raceKey);
-        assert(c && riderCount(c) === 1 && c.runners.find(x => x.rider === 'P').horse.id === o2.horseId, '受けた依頼のレースで自分が乗るのは依頼の馬1頭');
-      }
-      for (const c of W.cards()) assert(riderCount(c) <= 1, `${R.label(c.race)}に自分の馬・自分が乗る馬が${riderCount(c)}頭`);
-      W.finishWeek({});
-    }
-    assert(offers > 0 && blocked > 0, `依頼 ${offers}件・弾いた ${blocked}件`);
-    return `依頼 ${offers}件・自分の馬で隠れた ${hidden}・受けたレースへの出走を弾いた ${blocked}`;
+  // オーナーの依頼（ミッション形式）：レースの週は依頼の馬に乗る（依頼が先）。そのレースに出していた自分の馬は取り消され、
+  // 依頼の騎乗が決まったあとは自分の馬を出せない。見送れば自分の馬に戻る。どの形でも、そのレースで自分が乗るのは1頭
+  check('oneride: 依頼のレースで自分が乗るのは1頭（依頼が先で自分の馬は取り消し・決まったあとは出せない・見送れば自分の馬）', () => {
+    const jump = (y, m, w) => { const g = W.get(); g.year = y; g.month = m; g.week = w; W._week = null; W._cache = null; W._soon = null; W.dirty(); };
+    W.newGame({ seed: 47, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+    const g = W.get();
+    O.meet('sengoku', { horse: 'テストホース', race: 'テストのレース' }); O.advance('sengoku', {}); O.state().queue = [];
+    const st = O.of('sengoku'), j = st.job;
+    jump(Math.floor(j.at / 48), Math.floor((j.at % 48) / 4) + 1, j.at % 4 + 1); O.tick();
+    jump(j.y, j.m, j.w);
+    g.player.money = 1e9;
+    W.buy(W.marketHistoric().find(x => x.horse.sex !== '牝'));
+    const mine = W.mine()[0];
+    Object.assign(mine, { born: g.year - 4, loc: 'stable', auto: false, fatigue: 0 });
+    const key = O.jobKey(j);
+    W._week = null;
+    assert(!W.enter(mine.id, key), '依頼の騎乗が決まる前は、自分の馬を登録できる');
+    const c1 = W.cardOf(key);
+    assert(c1 && riderCount(c1) === 1 && c1.runners.find(x => x.rider === 'P').horse.id === j.hid, '依頼のレースで自分が乗るのが依頼の馬1頭でない');
+    assert(W.enter(mine.id, key) === W.WHY_OFFER, '依頼の騎乗が決まったレースに自分の馬を出せてしまう');
+    const row = P.rows(mine, { weeks: 1, show: 'all' }).find(x => x.race.key === key);
+    assert(!row || (row.why === W.WHY_OFFER && !row.can), '番組表に「騎乗依頼を受けたレース」が出ない');
+    assert(!O.decline('sengoku'), '見送れない');
+    const c2 = W.cardOf(key);
+    assert(c2 && riderCount(c2) === 1 && c2.runners.find(x => x.rider === 'P').horse.id === mine.id, '見送ったのに自分の馬に乗らない');
+    for (const c of W.cards()) assert(riderCount(c) <= 1, `${R.label(c.race)}に自分の馬・自分が乗る馬が${riderCount(c)}頭`);
   });
 
   check('oneride: 前のセーブで同じレースに自分の馬が2頭いれば1頭目だけ・受けた依頼のレースの自分の馬は外す', () => {

@@ -1,15 +1,20 @@
-// 馬主と騎乗依頼（持ち主の仕様書 docs/SPEC.md「騎乗依頼」2026-10-19 が正本）
-// 世界の AI の馬の一部を、架空の馬主（data/owners.js）が持つ。縁のある馬主から、毎週「この馬でこのレースに」と依頼が来る。
-// 受けると出走表で自分が乗る（G.rides。おまかせ騎乗は無い。自分の馬が出るレースには依頼が来ない）。騎手の取り分は賞金の5%（jockey.js）と、ここで払う騎乗料。
-// 馬主は8つのジャンル（地方・短距離・クラシック・長距離・牝馬・米・欧州・豪州）に1人ずつ。クラシック系は秘書のユニ（ふつうの優秀なナビゲーター）。キンチェムモチーフの人物は GF の一族の人として別に作った（data/gfhost.js・js/core/gfhost.js）。
+// オーナー（馬主）と騎乗依頼（持ち主の仕様書 docs/SPEC.md「騎乗依頼」2026-10-19 と「持ち主の決定（2026-10-20・オーナーの依頼）」が正本）
+// 世界の AI の馬の一部を、架空のオーナー（data/owners.js）が持つ。オーナーは8つのジャンル（地方・短距離・クラシック・長距離・牝馬・米・欧州・豪州）に1人ずつ。
+// クラシック系は秘書のユニ（ふつうの優秀なナビゲーター）。キンチェムモチーフの人物は GF の一族の人として別に作った（data/gfhost.js・js/core/gfhost.js）。
+// 画面の言葉は「オーナー」「友好度」（持ち主の決定 2026-10-20）。コードの名前（owners・pts）はそのまま。
 //
-// 好感度（pts。0〜100）は、その人のジャンルのレースで勝つと上がる（自分の馬でも依頼の馬でも）。ある程度たまると出会いの場面になり、
-// 次の週から依頼が来る（海外の人は、海外のレースに1度出た印のあと。O.GATES）。
-// 段階：OP → G3 → G2 → G1 → お手馬。段階ごとに課題（data の missions）があり、やり終えるとお礼のお金と好感度、会話の場面、次の段階へ。
-// 段階が上がるほど格の高いレース・強い馬の依頼が来る。G1 の段階からは、その人のいちばん強い馬の依頼も来る。G1 の段階で勝負服を着せられる。
-// お手馬の段階の課題までやり終えると好感度がいっぱいになり、繁殖の永続のボーナスのアイテムをもらって、その人からの依頼は来なくなる。
+// 出会いの点：その人のジャンルのレースを自分が乗って勝つと、点がたまる（OP 1点・G3 2点・G2 3点・G1 4点。O.GAIN）。合わせて O.MEET（4点）で出会い。
+//   海外の人は、海外のレースに1度出た印のあと（O.GATES）。出会いの場面は次の週の頭に見せる（場面の列 queue）。
+// 依頼はミッション形式：段階 OP → G3 → G2 → G1 → お手馬。OP〜G1 の段階は「依頼の馬」と「レース」が決まっている（data の missions。名前で固定）。
+//   出会い・ミッションのクリアのあと、次のミッションのレースの O.LEAD 週前に依頼が来る（st.job）。依頼が来た週に、オーナーの馬として世界に出す（O.issue）。
+//   レースの週は、依頼の馬に自分が乗る（G.rides。依頼が先）。自分の馬が同じレースに出ていれば出走を取り消す。自分の馬に乗るなら依頼は見送り（O.decline）。
+//   勝てばクリア（お礼・友好度・場面・次の段階）。負けた・見送った・走れなかったときは、次の年の同じレースでもう一度（詰まらない）。
+//   お手馬の段階は自分の馬で条件を満たす（need。O.needOk）。最後までやり終えると友好度がいっぱいになり、繁殖の永続のボーナスのアイテムをもらって依頼は終わる。
+// 年代なしの世界とぶつからないように：まだやり終えていないミッションの依頼の馬は、デビュー（E.pick）と馬の店に出さない（E.pool を包む）。
+//   依頼が来たとき、その馬が走っていればその馬を使い、年齢や引退でそのレースに出られなければ、いったん世界から外して、出られる年齢でもう一度出す。
+//   自分の馬になっていれば（前のセーブ）、自分の馬で勝てばよい。
 // 少し仲良くなると（G3 の段階から）、頼めば来月の店にその人の好きな系統の馬が並びやすくなる（O.ask）。年末には「名コンビ賞」。
-// 乱数は U.hashRng（週と馬の名前から決まる）だけで、世界の乱数は使わない。セーブは G.owners（W.migrate で既定値と前の形からの移し替え）。
+// 乱数は U.hashRng（馬の名前などから決まる）だけで、世界の乱数は使わない。セーブは G.owners（W.migrate で既定値と前の形からの移し替え）。
 // Godot 版は godot/core/hs_owners.gd（同じ種で同じ結果。tools/golden_world.js の一致テスト）。
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
@@ -30,43 +35,43 @@
   O.by = id => LIST().find(o => o.id === id) || ALL().find(o => o.id === id) || null;
   O.active = id => LIST().some(o => o.id === id);
 
-  // ---------- 段階と数（仮の値。遊んで直す） ----------
-  // floor：その段階の好感度の下限。課題をやり終えると次の段階の下限まで上がる。課題をやらずに次の段階の下限を超えることはない
+  // ---------- 段階と数（仮の値。遊んで直す。docs/BALANCE.md「9. オーナーの依頼」） ----------
+  // floor：その段階の友好度の下限。ミッションをやり終えると次の段階の下限まで上がる。やらずに次の段階の下限を超えることはない
   O.STAGES = [
-    { key: 'op', label: 'OP', maxClass: 0, maxFh: 60, maxStrength: 0.9, floor: 10, money: 300 },   // OP の依頼
-    { key: 'g3', label: 'G3', maxClass: 1, maxFh: 66, maxStrength: 0.95, floor: 25, money: 600 },
-    { key: 'g2', label: 'G2', maxClass: 2, maxFh: 72, maxStrength: 1, floor: 40, money: 1000 },
-    { key: 'g1', label: 'G1', maxClass: 3, maxFh: 80, maxStrength: 1, floor: 55, money: 2000 },     // 海外の G1・いちばん強い馬も
-    { key: 'own', label: 'お手馬', maxClass: 4, maxFh: 99, maxStrength: 1, floor: 70, money: 5000 }, // 課題は自分の馬で
+    { key: 'op', label: 'OP', floor: 10, money: 300 },
+    { key: 'g3', label: 'G3', floor: 25, money: 600 },
+    { key: 'g2', label: 'G2', floor: 40, money: 1000 },
+    { key: 'g1', label: 'G1', floor: 55, money: 2000 },
+    { key: 'own', label: 'お手馬', floor: 70, money: 5000 },  // ミッションは自分の馬で
   ];
-  O.DONE = 5;              // 最後の課題までやり終えた段階
-  O.MAX = 100;             // 好感度の上限（やり終えると、いっぱい）
-  O.MEET = 10;             // 出会いに要る好感度
-  O.GAIN = [5, 7, 9, 12, 15];   // ジャンルのレースで勝ったときの好感度（OP・G3・G2・G1・GF）
-  O.PLACE = [0, 0, 3, 2];       // まだ会っていない人：ジャンルのレースで2着・3着のときの好感度（出会いを少し早める）
-  O.OWNED = 0.5;           // AI の史実馬のうち、馬主のキャラが持つ割合
-  O.OWNED_FILLER = 0.3;    // その場限りの馬（モブ）のうち、馬主のキャラが持つ割合
+  O.DONE = 5;              // 最後のミッションまでやり終えた段階
+  O.JOBS = 4;              // 馬とレースの決まったミッションの数（OP〜G1）
+  O.MAX = 100;             // 友好度の上限（やり終えると、いっぱい）
+  O.MEET = 4;              // 出会いに要る点
+  O.GAIN = [1, 2, 3, 4, 0];   // ジャンルのレースで勝ったときの点（OP・G3・G2・G1・GF。GF は勝ち数に数えないので0）
+  O.LEAD = 4;              // 依頼が来るのは、ミッションのレースの何週前か
+  O.OWNED = 0.5;           // AI の史実馬のうち、オーナーのキャラが持つ割合（依頼の馬は別に、その人の馬）
+  O.OWNED_FILLER = 0.3;    // その場限りの馬のうち、オーナーのキャラが持つ割合
   O.FEE = [10, 30, 50, 100, 200];   // 騎乗料（万円・1995年の物価）。OP・G3・G2・G1・GF
   O.GIFT = 1000;           // 思い出の名馬が受け取れないときのお祝い（前の版。前のセーブのため）
   O.AWARD = 500;           // 名コンビ賞の賞金（万円・1995年の物価）
-  O.AWARD_MIN = 3;         // 名コンビ賞に要る、その年の勝ち数
-  O.SIGN_RATE = 0.95;      // ジャンルに合う候補があるとき、その中から選ぶ割合（仮）
-  O.OFF_SIGN = 0.15;       // ジャンルに合う候補が無い週に、それでも依頼を出す割合（仮）
+  O.AWARD_MIN = 2;         // 名コンビ賞に要る、その年の勝ち数（依頼はミッションだけになったので、前の3から2に）
   O.ASK_STAGE = 1;         // 店に馬を頼めるようになる段階（G3 の段階。「少し仲良くなると」）
   O.ASK_N = 3;             // 頼んだとき、牡馬・牝馬それぞれ何頭までその人の好みの馬に入れ替えるか
   O.WEAR_STAGE = 3;        // 勝負服を着せられるようになる段階（G1 の段階）
   // 依頼が始まる前に要る印（あとで本当の「海外の解放」に差し替える）
   O.GATES = { overseas: () => !!O.state().flags.overseas };
   O.GATE_LABEL = { overseas: '海外のレースに1度出たあと' };
+  O.POINT_TEXT = 'OP 1点・G3 2点・G2 3点・G1 4点。合わせて4点で出会い';
 
   O.on = () => !!(J && J.isMode && J.isMode());
-  // stage：段階（0 OP〜4 お手馬・5 やり終えた）。prog：いまの課題の回数。known：縁がある（依頼が来る）。knownAt：縁ができた日
-  const blank = () => ({ pts: 0, stage: 0, prog: 0, met: false, known: false, rides: 0, wins: 0, big: 0, dec: 0, streak: 0, fees: 0, got: {}, years: {}, cleared: [] });
+  // stage：段階（0 OP〜4 お手馬・5 やり終えた）。pts：出会いの前は出会いの点、出会いのあとは友好度。known：縁がある。job：いまのミッションの予定
+  const blank = () => ({ pts: 0, stage: 0, prog: 0, met: false, known: false, rides: 0, wins: 0, big: 0, dec: 0, streak: 0, fees: 0, got: {}, years: {}, cleared: [], job: null, fails: 0 });
   O.init = function () {
     const st = {}; for (const o of ALL()) st[o.id] = blank();
-    return { v: 2, st, week: null, log: [], queue: [], react: [], awards: {}, wear: {}, flags: {}, ask: null };
+    return { v: 3, st, log: [], queue: [], react: [], awards: {}, wear: {}, flags: {}, ask: null };
   };
-  // 前の形（好感度 0〜800・段階 顔見知り／信頼／主戦／相棒）を、新しい段階に移す
+  // 前の形（好感度 0〜800・段階 顔見知り／信頼／主戦／相棒）を、段階に移す
   O.migrateSt = function (st) {
     const t = st.tier || 0, p = st.pts || 0;
     const lo = [0, 100, 260, 520][t] || 0, hi = [100, 260, 520, 800][t] || 800;
@@ -76,14 +81,14 @@
     delete st.tier;
     return st;
   };
-  // 古いセーブ・足りない項目を埋める
+  // 古いセーブ・足りない項目を埋める（ミッションの予定は、読み込んだあと O.planMissing で）
   O.fill = function (s, g) {
     s = s || O.init();
     s.st = s.st || {};
     const old = !s.v;
     for (const o of ALL()) {
       const st = s.st[o.id];
-      // 縁の項目が無い前のセーブ：依頼を受けた・断った・乗った・好感度がある馬主は、縁がある扱い
+      // 縁の項目が無い前のセーブ：依頼を受けた・断った・乗った・好感度がある人は、縁がある扱い
       if (st && st.known === undefined) st.known = !!(st.met || st.rides || st.pts || st.tier);
       if (st && st.stage === undefined) O.migrateSt(st);
       s.st[o.id] = Object.assign(blank(), st || {});
@@ -91,12 +96,18 @@
     for (const k of ['log', 'queue', 'react']) s[k] = s[k] || [];
     // 前の形の場面（間柄が上がった・引退した馬など）は、新しい形には無いので捨てる
     if (old) { s.queue = []; s.react = []; }
+    // 前の版（v2 まで）の「毎週の依頼」：受けていた騎乗を外し、依頼の形を捨てる（ミッションの予定は O.planMissing が作る）
+    if (s.week) {
+      if (g && g.rides && s.week.acc) for (const [rk, a] of Object.entries(s.week.acc)) if (g.rides[rk] === a.horseId) delete g.rides[rk];
+      delete s.week;
+    }
+    // 前の版の課題の途中の回数（count）は、ミッションの形には無い
+    if ((s.v || 0) < 3) for (const o of ALL()) s.st[o.id].prog = 0;
     s.awards = s.awards || {}; s.wear = s.wear || {}; s.flags = s.flags || {};
-    if (s.week === undefined) s.week = null;
     if (s.ask === undefined) s.ask = null;
     // 海外の印：前のセーブで、自分が海外の重賞を勝っていれば出たことにする
     if (!s.flags.overseas && g && g.records && g.records.player && (g.records.player.g1 || []).some(x => x.region === '海外')) s.flags.overseas = { y: g.year };
-    s.v = 2;
+    s.v = 3;
     return s;
   };
   O.state = function () { const g = G(); if (!g.owners) g.owners = O.init(); return g.owners; };
@@ -109,6 +120,193 @@
   const IDX = () => U.priceIndex(G().year);
   const yen = v => Math.round(v * IDX() / 10) * 10;
   O.yen = yen;
+
+  // ---------- ミッションのレース ----------
+  // 番組のレース（data/races.js などの重賞。年代なしの年で有効なもの）と、依頼に使う名前のあるオープン（data/owner_races.js）
+  let rIdx = null;
+  O.raceData = function (name) {
+    const ey = U.ERA || 2025;
+    if (!rIdx || rIdx.ey !== ey || rIdx.src !== HS.DATA.races) {
+      const m = new Map();
+      for (const r of HS.DATA.ownerRaces || []) m.set(r.name, r);
+      for (const r of HS.DATA.races || []) if (r.from <= ey && ey <= (r.to || 9999)) { if (!m.has(r.name)) m.set(r.name, r); if (r.short && !m.has(r.short)) m.set(r.short, r); }
+      rIdx = { ey, src: HS.DATA.races, m };
+    }
+    return rIdx.m.get(name) || null;
+  };
+  O.raceLabel = name => { const d = O.raceData(name); return d ? R.label(d) : name; };
+  // 名前のあるオープンを、年代なしのゲームの週に足す（R.ofWeek を包む。鍵は重賞と同じ 年-月-週-レース名）
+  O.openRaces = function (year, month, week) {
+    if (!U.ERA) return [];
+    return (HS.DATA.ownerRaces || []).filter(r => r.month === month && r.week === week).map(r => Object.assign({}, r, {
+      key: `${year}-${month}-${week}-${r.name}`, short: null, grade: null, graded: false, year,
+      prize: Math.round(R.CLS_PRIZE[r.listed ? 'L' : 'OP'] * U.priceIndex(year) / 10) * 10,
+    }));
+  };
+  // ミッションの馬の名前 → オーナー（依頼の馬は、その人の馬）
+  let mh = null;
+  O.missionOwner = function (name) {
+    if (!mh || mh.src !== ALL()) { mh = { src: ALL(), m: new Map() }; for (const o of LIST()) for (const m of (o.missions || []).slice(0, O.JOBS)) if (m.horse) mh.m.set(m.horse, o.id); }
+    return mh.m.get(name) || null;
+  };
+  // まだやり終えていないミッションの依頼の馬（デビューと馬の店に出さない）
+  O.reserved = function () {
+    const g = G(); const s = g && g.owners;
+    const sig = LIST().map(o => (s && s.st[o.id] ? s.st[o.id].stage : 0)).join(',');
+    if (O._res && O._res.sig === sig && O._res.src === ALL()) return O._res.set;
+    const set = new Set();
+    for (const o of LIST()) { const k0 = s && s.st[o.id] ? s.st[o.id].stage : 0; (o.missions || []).slice(0, O.JOBS).forEach((m, k) => { if (k >= k0 && m.horse) set.add(m.horse); }); }
+    O._res = { sig, src: ALL(), set };
+    return set;
+  };
+  O.jobKey = j => `${j.y}-${j.m}-${j.w}-${j.race}`;
+  O.jobIdx = j => H.weekIndex(j.y, j.m, j.w);
+  O.jobDate = j => `${W.yLabel ? W.yLabel(j.y) : j.y + '年'}${j.m}月${j.w}週`;
+  // その馬が、そのミッションのレースに出られるか（年齢・性・引退の年）
+  O.canRun = function (h, j) {
+    const d = O.raceData(j.race); if (!d || !h) return false;
+    const age = j.y - h.born;
+    if (d.age === '2' && age !== 2) return false;
+    if (d.age === '3' && age !== 3) return false;
+    if (d.age === '3+' && age < 3) return false;
+    if (d.age === '4+' && age < 4) return false;
+    if (age < 2 || age >= 9) return false;
+    if (d.sex === '牝' && h.sex !== '牝') return false;
+    if (h.retireYear && h.retireYear < j.y) return false;
+    return true;
+  };
+  // 次のミッションの予定を立てる。after（{y,m,w}）より後のいちばん近いレースの週（無ければいまの週より後）。依頼はその O.LEAD 週前に来る
+  O.plan = function (oid, after) {
+    const st = O.of(oid), o = O.by(oid), prev = st.job;
+    st.job = null;
+    if (!o || !O.active(oid) || !st.known || st.stage >= O.JOBS) return null;
+    const m = o.missions[st.stage], d = m && O.raceData(m.race);
+    if (!d) return null;
+    const g = G();
+    const base = after || { y: g.year, m: g.month, w: Math.min(g.week, 4) };
+    const bi = H.weekIndex(base.y, base.m, base.w);
+    let y = base.y;
+    if (H.weekIndex(y, d.month, d.week) <= bi) y++;
+    st.job = { k: st.stage, horse: m.horse, race: d.name, y, m: d.month, w: d.week, at: H.weekIndex(y, d.month, d.week) - O.LEAD, on: false, hid: null, tries: prev && prev.k === st.stage ? (prev.tries || 0) + 1 : 0 };
+    return st.job;
+  };
+  // 縁のある人で、予定の無い人に予定を立てる（読み込んだとき）
+  O.planMissing = function () {
+    for (const o of LIST()) { const st = O.of(o.id); if (st.known && st.stage < O.JOBS && (!st.job || st.job.k !== st.stage)) O.plan(o.id); }
+  };
+  // 依頼の馬を世界に出す（その年齢で、オーナーの馬として。年代なしの世界の生年のずらし方は E.spawn と同じ）
+  O.spawn = function (name, age, raceY) {
+    const g = G(), E = HS.Eraless;
+    const d = W.histByName.get(name); if (!d || !E) return null;
+    const off = (raceY - age) - d.born;
+    const h = H.fromHistoric(E.shift(d, off), W.newId());
+    if (W.foreignTrained.has(d.name) || HS.DATA.isForeign(d)) { h.foreignTrained = true; h.country = d.country || '外'; }
+    h.loc = 'stable';
+    g.bornHist = (g.bornHist || []).filter(n => n !== d.name).concat([d.name]);
+    g.lineup[d.name] = off;
+    g.horses[h.id] = h;
+    W.dirty();
+    return h;
+  };
+  // 依頼が来る：依頼の馬を用意して、場面を積む
+  O.issue = function (oid) {
+    const g = G(), s = O.state(), o = O.by(oid), st = O.of(oid), j = st.job;
+    if (!o || !j || j.on) return false;
+    const m = o.missions[j.k];
+    let h = W.all().find(x => x.name === j.horse && (x.loc === 'stable' || x.loc === 'farm'));
+    if (h && h.owner !== 'P' && !O.canRun(h, j)) { W.unenter(h.id); delete g.horses[h.id]; W.dirty(); h = null; }   // 年齢などで出られない：いったん世界から外す
+    if (h && h.owner === 'P' && !O.canRun(h, j)) { O.plan(oid, j); return false; }   // 自分の馬（前のセーブ）が出られない年：次の年に
+    if (!h) h = O.spawn(j.horse, m.age, j.y);
+    if (!h) { O.plan(oid, j); return false; }
+    if (h.owner !== 'P') { h.loc = 'stable'; h.restUntil = 0; }
+    h.rights = Object.assign({}, h.rights, { [j.race]: j.y });   // 出走の権利（G1 の賞金の条件と、フルゲートの優先。js/core/races.js）
+    j.on = true; j.hid = h.id;
+    const label = O.raceLabel(j.race);
+    W.news(`${o.name}さんから騎乗依頼：${O.jobDate(j)}の${label}に${h.name}で。`, 'good');
+    s.queue.push({ oid, kind: 'job', k: j.k, horse: h.name, race: label, date: O.jobDate(j), retry: j.tries > 0, y: g.year });
+    return true;
+  };
+  // 週の頭：予定の週になった依頼を出す。レースの週を過ぎた依頼は次の年へ
+  O.tick = function () {
+    const now = W.wIdx();
+    for (const o of LIST()) {
+      const st = O.of(o.id), j = st.job;
+      if (!j || !st.known || st.stage >= O.JOBS) continue;
+      if (O.jobIdx(j) < now) { O.plan(o.id, j); continue; }
+      if (!j.on && now >= j.at) O.issue(o.id);
+    }
+  };
+  // いま来ている依頼（UI とテスト用）。now：今週がレースの週
+  O.offers = function () {
+    if (!O.on()) return [];
+    const g = G(), now = W.wIdx();
+    const out = [];
+    for (const o of LIST()) {
+      const st = O.of(o.id), j = st.job;
+      if (!j || !j.on || st.stage >= O.JOBS) continue;
+      const key = O.jobKey(j);
+      out.push({ oid: o.id, k: j.k, raceKey: key, horseId: j.hid, horse: j.horse, race: j.race, y: j.y, m: j.m, w: j.w, inWeeks: O.jobIdx(j) - now, now: j.y === g.year && j.m === g.month && j.w === g.week, line: U.hash(`${key}:${j.horse}`) % 997, retry: j.tries > 0 });
+    }
+    return out.sort((a, b) => a.inWeeks - b.inWeeks || (a.oid < b.oid ? -1 : 1));
+  };
+  O.offerOf = raceKey => O.offers().find(o => o.raceKey === raceKey) || null;
+  // 今週のレースの依頼（その人の）
+  O.jobNow = function (oid) {
+    const g = G(), j = O.of(oid).job;
+    return j && j.on && j.y === g.year && j.m === g.month && j.w === g.week ? j : null;
+  };
+  // このレースの依頼で乗っているか（パドックのひと言など）
+  O.accepted = raceKey => { const g = G(); return LIST().some(o => { const j = O.jobNow(o.id); return j && O.jobKey(j) === raceKey && (g.rides || {})[raceKey] === j.hid; }); };
+  O.jobOfRace = function (raceKey) { for (const o of LIST()) { const j = O.jobNow(o.id); if (j && O.jobKey(j) === raceKey) return { oid: o.id, j }; } return null; };
+  // 同じレースに出す予定だった自分の馬（依頼のために取り消した馬）
+  O.clash = function (ofr) { const j = O.of(ofr.oid).job; return j && j.scr && j.scr.length ? (W.horse(j.scr[0].id) || null) : null; };
+  // 自分の馬の出走を取り消す（依頼が先）。取り消した馬は j.scr に覚えて、見送ったら戻す
+  const scratch = function (j, h, key, label) {
+    const g = G();
+    const e = (g.entries[key] || []).find(e => e.horseId === h.id);
+    if (e) { g.entries[key] = g.entries[key].filter(x => x.horseId !== h.id); if (!g.entries[key].length) delete g.entries[key]; (j.scr = j.scr || []).push({ id: h.id, jockey: e.jockey }); }
+    else if (h.auto) { h.skipW = W.wIdx(); (j.scr = j.scr || []).push({ id: h.id, auto: true }); }
+    else return;
+    W.news(`${h.name}は${label}で依頼の馬と重なったので、今週の出走を取り消した。`, 'warn');
+  };
+  // レースの週：依頼の馬に自分が乗る（W.cards を包む）
+  O.applyRide = function () {
+    if (!O.on()) return;
+    const g = G();
+    for (const o of LIST()) {
+      const j = O.jobNow(o.id); if (!j) continue;
+      const key = O.jobKey(j);
+      const card = W.prepareWeek().cards.find(c => c.race.key === key);
+      if (!card || !card.runners.some(x => x.horse.id === j.hid)) continue;
+      for (const x of card.runners) if (x.mine && x.horse.id !== j.hid) scratch(j, x.horse, key, R.label(card.race));
+      if ((g.rides || {})[key] !== j.hid) g.rides = Object.assign({}, g.rides, { [key]: j.hid });
+    }
+  };
+  // 受ける（前の形の名残。依頼は来た時点で受けている。レースの週なら騎乗を当て直す）
+  O.accept = function (raceKey) {
+    const x = O.jobOfRace(raceKey);
+    if (!x) return O.offerOf(raceKey) ? null : '依頼が見つからない';
+    O.applyRide(); W.dirty();
+    return null;
+  };
+  // 見送る（自分の馬に乗るときも）：次の年の同じレースでもう一度。取り消した自分の馬は戻す
+  O.decline = function (oid) {
+    if (!O.by(oid)) { const x = O.offerOf(oid); if (!x) return '依頼が見つからない'; oid = x.oid; }   // レースの鍵でも呼べる（前の形）
+    const g = G(), s = O.state(), st = O.of(oid), j = st.job;
+    if (!j || !j.on) return '依頼が見つからない';
+    const key = O.jobKey(j);
+    for (const x of j.scr || []) {
+      const h = W.horse(x.id); if (!h) continue;
+      if (x.auto) delete h.skipW; else { g.entries[key] = g.entries[key] || []; if (!g.entries[key].some(e => e.horseId === x.id)) g.entries[key].push({ horseId: x.id, jockey: x.jockey }); }
+    }
+    if ((g.rides || {})[key] === j.hid) J.cancel(key);
+    st.met = true; st.dec++;
+    s.log.unshift({ y: g.year, m: g.month, w: g.week, oid, race: O.raceLabel(j.race), horse: j.horse, pos: 0, d: 0 });
+    if (s.log.length > 150) s.log.length = 150;
+    O.plan(oid, j);
+    W.dirty();
+    return null;
+  };
 
   // ---------- 好み ----------
   // 国の好み（usa・europe・aus）：その国で生まれた馬・その国の種牡馬の仔、その国のレース
@@ -158,7 +356,7 @@
   O.signOf = o => (o && o.likes && o.likes[0]) || '';
   O.signLabel = o => O.LIKE_LABEL[O.signOf(o)] || '';
   O.subLabels = o => ((o && o.likes) || []).slice(1).map(k => O.LIKE_LABEL[k]).filter(Boolean);
-  // そのレースとその馬が、ジャンルに合うか（依頼を選ぶときと、好感度が上がる勝ちの判定。勝ちの判定はレースのあとの馬で見る）
+  // そのレースとその馬が、ジャンルに合うか（出会いの点が入る勝ちの判定。レースのあとの馬で見る）
   const yearOf = r => r.year != null ? r.year : G().year;
   const SIGN = {
     local: (r, h) => r.surface === 'ダ' || r.region === '地方',
@@ -193,7 +391,7 @@
   O.known = id => !!O.of(id).known;
   O.knownList = () => LIST().filter(o => O.known(o.id));
   O.gateOk = o => !o || !o.gate || !!(O.GATES[o.gate] && O.GATES[o.gate]());
-  // 縁ができる：次の週から依頼が来る。出会いの場面（kind 'meet'）を積む
+  // 縁ができる：最初のミッションの予定を立てる。出会いの場面（kind 'meet'）を積む
   O.meet = function (oid, ctx) {
     const o = O.by(oid), st = O.of(oid);
     if (!o || st.known) return false;
@@ -201,23 +399,26 @@
     ctx = ctx || st.lastWin || {};
     st.known = true; st.knownAt = { y: g.year, m: g.month, w: g.week };
     st.pts = Math.max(st.pts, O.STAGES[0].floor);
+    O.plan(oid);
     W.news(`${o.name}さん（${O.signLabel(o)}）から声がかかった。これから騎乗依頼が来る。`, 'good');
     s.queue.push({ oid, kind: 'meet', horse: ctx.horse || '', race: ctx.race || '', reward: '', y: g.year });
     return true;
   };
-  // 好感度がたまって、印のそろった人と出会う
+  // 出会いの点がたまって、印のそろった人と出会う
   O.meetCheck = function () {
     for (const o of LIST()) { const st = O.of(o.id); if (!st.known && st.pts >= O.MEET && O.gateOk(o)) O.meet(o.id); }
   };
   // まだ会っていない人の、条件のヒント（ぼかした一言）
   O.hint = oid => { const o = O.by(oid); return (o && o.unlock && o.unlock.hint) || ''; };
 
-  // ---------- 馬主の馬 ----------
-  // 馬の名前と種から決まる（セーブに持たない）。自分の馬・スペシャルホースはだれの馬でもない
+  // ---------- オーナーの馬 ----------
+  // 馬の名前と種から決まる（セーブに持たない）。依頼の馬はその人の馬。自分の馬・スペシャルホースはだれの馬でもない
   let own = null;
   O.ownerOf = function (h) {
     if (!h || h.owner === 'P' || h.legend || !LIST().length) return null;
     const g = G(); if (!g) return null;
+    const mo = h.name ? O.missionOwner(h.name) : null;
+    if (mo) return mo;
     if (!own || own.seed !== g.seed || own.map.size > 6000) own = { seed: g.seed, map: new Map() };
     // 覚えておく鍵は名前と id の組（同じ名前の別の馬＝店の馬と走っている馬で、答えが入れ替わらないように）
     const name = h.name || h.id, key = `${name}|${h.id}`;
@@ -233,7 +434,7 @@
   };
   const peak = h => { const T = HS.Season; if (!T || !h.pot) return 50; const p = T.fhPeak(h); return Math.max(p.turf, p.dirt); };
   O.peak = peak;
-  // その馬主の、いま走っている馬（強い順）
+  // その人の、いま走っている馬（強い順）
   O.horsesOf = function (oid) {
     const wc = W.wc(); wc.owners = wc.owners || {};
     if (wc.owners[oid]) return wc.owners[oid];
@@ -245,132 +446,9 @@
 
   // レースの格：0 OP（リステッドも）・1 G3・2 G2・3 G1・4 グランドフェスティバル
   O.classOf = race => race.invite || race.grade === 'GF' ? 4 : !race.graded ? 0 : ({ G1: 3, G2: 2, G3: 1 }[race.grade] || 1);
-  // その段階で、このレースのこの馬の依頼が来るか
-  O.allowed = function (stage, race, h, strength) {
-    const t = O.STAGES[Math.min(stage, 4)];
-    const cls = O.classOf(race);
-    if (cls > t.maxClass) return false;
-    if (race.region === '海外' && stage < 3) return false;
-    if (strength > t.maxStrength + 1e-9) return false;
-    if (peak(h) > t.maxFh) return false;
-    return true;
-  };
 
-  // ---------- 今週の依頼 ----------
-  // cards：W.cards() の出走表。opts.stage で段階を決め打ちにできる・opts.all で縁の無い馬主も（テスト用）
-  // 縁のある馬主だけが依頼を出す（やり終えた人は出さない）。ジャンルに合う候補があればたいていその中から、無い週はたまにだけ合わない依頼を出す
-  O.generate = function (cards, key, opts) {
-    opts = opts || {};
-    const g = G();
-    const wIdx = W.wIdx();
-    const r = U.hashRng(`${key}:owners:${g.seed}`);
-    const stageOf = oid => opts.stage != null ? opts.stage : O.of(oid).stage;
-    const per = {};
-    for (const c of cards) {
-      const race = c.race;
-      if (c.runners.some(x => x.mine)) continue; // 自分の馬が出るレースには依頼が来ない（1レースに乗れるのは1頭。持ち主の決定 2026-10-20）
-      const ranked = c.runners.slice().sort((a, b) => H.overall(H.cur(b.horse, wIdx)) - H.overall(H.cur(a.horse, wIdx)));
-      ranked.forEach((x, k) => {
-        if (x.mine || x.horse.owner === 'P' || x.horse.legend) return;
-        const oid = O.ownerOf(x.horse); if (!oid) return;
-        if (!opts.all && !O.of(oid).known) return;
-        const stage = stageOf(oid);
-        if (stage >= O.DONE) return;
-        const strength = 1 - k / Math.max(1, ranked.length - 1); // 1＝いちばん強い
-        if (!O.allowed(stage, race, x.horse, strength)) return;
-        (per[oid] = per[oid] || []).push({ c, x, strength });
-      });
-    }
-    const out = [], used = new Set();
-    const push = (o, y, best) => { used.add(y.c.race.key); out.push({ oid: o.id, raceKey: y.c.race.key, horseId: y.x.horse.id, horse: y.x.horse.name, best: !!best, line: r.int(0, 999) }); };
-    const owners = r.shuffle(LIST().slice());
-    for (const o of owners) {
-      const cand = (per[o.id] || []).filter(y => !used.has(y.c.race.key));
-      if (!cand.length) continue;
-      const stage = stageOf(o.id);
-      // G1 の段階から：その馬主のいちばん強い馬が走るなら、必ずその馬で
-      const best = stage >= 3 ? O.bestHorse(o.id) : null;
-      const bestPick = best && cand.find(y => y.x.horse.id === best.id);
-      if (bestPick) { push(o, bestPick, true); continue; }
-      if (!r.chance(0.4 + 0.1 * stage)) continue;
-      const fit = cand.filter(y => O.signFits(o, y.c.race, y.x.horse));
-      let pool = cand;
-      if (fit.length) { if (r.chance(O.SIGN_RATE)) pool = fit; }
-      else if (!r.chance(O.OFF_SIGN)) continue;
-      const want = 0.5 + 0.12 * stage;
-      const pick = r.weighted(pool, y => (Math.exp(-Math.pow((y.strength - want) / 0.3, 2)) + 0.02) * (1 + O.classOf(y.c.race) * stage * 0.6) * (1 + O.fitRace(o, y.c.race) + O.fitHorse(o, y.x.horse)));
-      push(o, pick);
-    }
-    // 縁のある馬主がいれば、毎週少なくとも1件は来る（だれも出さなかった週は、候補のいちばん多い馬主から。ジャンルに合う候補を先に）
-    if (!out.length) {
-      const o = owners.filter(o => (per[o.id] || []).length).sort((a, b) => per[b.id].length - per[a.id].length)[0];
-      if (o) { const fit = per[o.id].filter(y => O.signFits(o, y.c.race, y.x.horse)); push(o, r.pick(fit.length ? fit : per[o.id])); }
-    }
-    return out;
-  };
-  const wkKey = () => { const g = G(); return `${g.year}-${g.month}-${g.week}`; };
-  const cardHas = (cards, raceKey, horseId) => { const c = cards.find(c => c.race.key === raceKey); return !!(c && c.runners.some(x => x.horse.id === horseId)); };
-  const mineIn = (cards, raceKey) => { const c = cards.find(c => c.race.key === raceKey); return !!(c && c.runners.some(x => x.mine)); };
-  // 今週の依頼（週の初めに一度だけ作り、セーブに残す。断った依頼・走れなくなった依頼は除く）
-  // 依頼を作ったあとで自分の馬をそのレースに出したら、受けていない依頼は見せない（自分の馬に乗るので、依頼の馬には乗れない）
-  O.offers = function () {
-    if (!O.on()) return [];
-    const s = O.state(), g = G();
-    const key = wkKey();
-    const cards = W.cards();
-    if (!s.week || s.week.key !== key) s.week = { key, list: O.generate(cards, key), acc: {}, dec: [] };
-    // 出走表が変わって馬がいなくなった依頼は、黙って取り下げる（受けていたら騎乗も外す）
-    for (const [rk, a] of Object.entries(s.week.acc)) {
-      if (cardHas(cards, rk, a.horseId)) continue;
-      delete s.week.acc[rk];
-      if (g.rides && g.rides[rk] === a.horseId) J.cancel(rk);
-    }
-    const fresh = W.cards();
-    return s.week.list.filter(o => cardHas(fresh, o.raceKey, o.horseId) && !s.week.dec.includes(o.raceKey) && (s.week.acc[o.raceKey] || !mineIn(fresh, o.raceKey)));
-  };
-  O.offerOf = (raceKey) => O.offers().find(o => o.raceKey === raceKey) || null;
-  O.accepted = raceKey => { const s = O.state(); return !!(s.week && s.week.key === wkKey() && s.week.acc[raceKey]); };
-  // 自分の馬が同じレースに出るか。1レースに乗れるのは1頭なので、ふつうは無い（O.offers が見せない）。前のセーブとテストのために残す
-  O.clash = function (o) {
-    const c = W.cardOf(o.raceKey); if (!c) return null;
-    const x = c.runners.find(x => x.mine && x.horse.id !== o.horseId);
-    return x ? x.horse : null;
-  };
-
-  // 受ける
-  O.accept = function (raceKey, horseId) {
-    const g = G(), s = O.state();
-    const o = O.offers().find(o => o.raceKey === raceKey && o.horseId === horseId);
-    if (!o) return '依頼が見つからない';
-    g.rides = Object.assign({}, g.rides, { [raceKey]: horseId });
-    s.week.acc[raceKey] = { oid: o.oid, horseId };
-    O.of(o.oid).met = true;
-    W.dirty();
-    return null;
-  };
-  // 受けたのを取り消す（好感度は動かない）
-  O.unaccept = function (raceKey) {
-    const s = O.state();
-    if (s.week && s.week.acc[raceKey]) { delete s.week.acc[raceKey]; J.cancel(raceKey); }
-  };
-  // 断る（好感度が少し下がる。段階の下限より下にはならない）
-  O.decline = function (raceKey) {
-    const s = O.state(), g = G();
-    const o = O.offers().find(o => o.raceKey === raceKey);
-    if (!o) return '依頼が見つからない';
-    if (s.week.acc[raceKey]) O.unaccept(raceKey);
-    s.week.dec.push(raceKey);
-    const st = O.of(o.oid); st.met = true; st.dec++;
-    const d = -2;
-    O.addPts(o.oid, d);
-    const race = W.raceByKey(raceKey);
-    s.log.unshift({ y: g.year, m: g.month, w: g.week, oid: o.oid, race: race ? R.label(race) : '', horse: o.horse, pos: 0, d });
-    if (s.log.length > 150) s.log.length = 150;
-    return null;
-  };
-
-  // ---------- 好感度 ----------
-  // 上限：まだ会っていない人は G3 の下限の手前まで、会った人は次の段階の下限の手前まで（課題をやらずに段階は上がらない）
+  // ---------- 友好度 ----------
+  // 上限：まだ会っていない人は G3 の下限の手前まで、会った人は次の段階の下限の手前まで（ミッションをやらずに段階は上がらない）
   O.cap = st => !st.known ? O.STAGES[1].floor - 1 : st.stage >= O.DONE ? O.MAX : st.stage >= 4 ? O.MAX - 1 : O.STAGES[st.stage + 1].floor - 1;
   O.floor = st => !st.known ? 0 : st.stage >= O.DONE ? O.MAX : O.STAGES[st.stage].floor;
   O.addPts = function (oid, d) {
@@ -381,24 +459,21 @@
     st.pts = Math.round(v * 10) / 10;
     return st.pts;
   };
-  // 依頼を受けて乗った結果（騎乗料・成績・ひと言。好感度も少し動く）
+  // 依頼の馬に乗った結果（騎乗料・成績・ひと言。友好度も少し上がる）
   O.onRide = function (oid, race, me, pop) {
     const g = G(), s = O.state(), o = O.by(oid), st = O.of(oid);
     if (!o) return;
     const cls = O.classOf(race), pos = me.pos;
     st.streak = pos <= 3 ? 0 : st.streak + 1;
-    let d = pos === 1 ? 3 + cls : pos === 2 ? 1.5 : pos === 3 ? 1 : pos <= 5 ? 0.5 : st.streak >= 4 ? -1 : 0;
+    let d = pos === 1 ? 0 : pos === 2 ? 1.5 : pos === 3 ? 1 : pos <= 5 ? 0.5 : 0;   // 勝ちはミッションのクリアで上がる。負けても下がらない
     if (pop && pop - pos >= 3) d += 0.5;                          // 人気より上に来た
-    const bigLoss = cls >= 3 && pos >= 10 && pop && pop <= 3;     // 大事なレースで大敗
-    if (bigLoss) d = -2;
-    // 騎乗料（賞金の取り分は jockey.js で入っている）
     const fee = yen(O.FEE[cls]);
     g.player.money += fee; st.fees += fee;
     st.rides++; if (pos === 1) { st.wins++; if (cls >= 3) st.big++; }
     const yr = st.years[g.year] = st.years[g.year] || { rides: 0, wins: 0 };
     yr.rides++; if (pos === 1) yr.wins++;
     st.met = true;
-    O.addPts(oid, d);
+    if (d) O.addPts(oid, d);
     const kind = pos === 1 ? (cls >= 3 ? 'bigwin' : 'win') : (pos <= 3 || (pop && pop - pos >= 3)) ? 'good' : 'lose';
     const label = R.label(race);
     s.react.push({ oid, kind, race: label, horse: me.horse.name, pos, d, fee, line: U.hash(`${label}:${me.horse.name}:${g.year}`) % 997, tags: [...O.tagsOf(race, me.horse)] });
@@ -407,17 +482,22 @@
     if (pos === 1 && cls >= 3) W.news(`${o.name}さんの${me.horse.name}で${label}を勝った。`, 'g1');
   };
 
-  // ---------- 課題 ----------
+  // ---------- ミッション ----------
+  // OP〜G1 の段階：依頼の馬とレースが決まっている。文は馬とレースから作る
+  O.missionText = function (o, k) {
+    const m = O.missionOf(o, k); if (!m) return '';
+    if (k >= O.JOBS || !m.horse) return m.text || '';
+    return `依頼の馬${m.horse}で、${O.raceLabel(m.race)}を勝つ`;
+  };
   const nameIn = (names, race) => names.includes(race.name) || (race.short != null && names.includes(race.short));
   const won = (h, name, y) => (h.gradedWins || []).some(w => (y == null || w.y === y) && (w.race === name || w.short === name));
   O.wonAll = (h, names, y) => names.every(n => won(h, n, y));
   // いまの連勝（成績の新しいほうから数える）
   O.streakOf = function (h) { const rs = h.results || []; let n = 0; for (let i = rs.length - 1; i >= 0 && rs[i].pos === 1; i--) n++; return n; };
-  // 課題の判定。me：着順の結果（レースのあとの馬）、isOffer：その人の依頼で乗ったか
-  O.needOk = function (n, race, me, isOffer) {
+  // お手馬の段階のミッションの判定。me：着順の結果（レースのあとの馬）
+  O.needOk = function (n, race, me) {
     const h = me.horse;
-    const by = n.by || 'offer';
-    if (by === 'offer' && !isOffer) return false;
+    const by = n.by || 'own';
     if (by === 'own' && h.owner !== 'P') return false;
     if (by === 'orig' && !(h.owner === 'P' && h.original)) return false;
     if (me.pos > (n.pos || 1)) return false;
@@ -443,7 +523,7 @@
     if (n.wonRegion && !(h.gradedWins || []).some(w => w.region === n.wonRegion)) return false;
     return true;
   };
-  // 課題をやり終えた：お礼・好感度・場面・次の段階（最後ならアイテム）
+  // ミッションをやり終えた：お礼・友好度・場面・次の段階（次のミッションの予定。最後ならアイテム）
   O.advance = function (oid, ctx) {
     const g = G(), s = O.state(), o = O.by(oid), st = O.of(oid);
     if (!o || st.stage >= O.DONE) return false;
@@ -451,7 +531,7 @@
     const k = st.stage;
     const m = yen(O.STAGES[k].money);
     g.player.money += m;
-    st.stage = k + 1; st.prog = 0;
+    st.stage = k + 1; st.prog = 0; st.job = null;
     st.pts = Math.max(st.pts, st.stage >= O.DONE ? O.MAX : O.STAGES[st.stage].floor);
     st.cleared = (st.cleared || []).concat([{ y: g.year, m: g.month, w: g.week, horse: ctx.horse || '', race: ctx.race || '' }]);
     let reward = `お礼 ${U.money(m)}`;
@@ -459,29 +539,40 @@
     if (st.stage >= O.DONE) { st.got.item = { y: g.year }; reward += `・${o.item.name}（${o.item.text}）`; }
     W.news(st.stage >= O.DONE ? `${o.name}さんの依頼をすべてやり終えた。${o.item.name}を受け取った（${o.item.text}）。` : `${o.name}さんの「${O.STAGES[k].label}」の依頼をやり終えた。次は「${O.STAGES[st.stage].label}」の依頼。${reward}。`, 'g1');
     s.queue.push({ oid, kind: 'm' + st.stage, horse: ctx.horse || '', race: ctx.race || '', reward, y: g.year });
+    if (st.stage < O.JOBS) O.plan(oid);
     return true;
   };
-  // 自分が乗ったレースの結果（週の終わりに、レースのあとの馬で見る）：ジャンルの勝ちで好感度、課題、海外の印
+  // 自分が乗ったレースの結果（週の終わりに、レースのあとの馬で見る）：ジャンルの勝ちで出会いの点（会ったあとは友好度）、お手馬の段階のミッション、海外の印
   O.onResult = function (race, me) {
     const s = O.state();
     const h = me.horse, label = R.label(race);
     if (race.region === '海外' && !s.flags.overseas) s.flags.overseas = { y: yearOf(race), race: label };
-    const a = s.week && s.week.acc[race.key];
-    const offerOid = a && a.horseId === h.id ? a.oid : null;
     const cls = O.classOf(race);
     for (const o of LIST()) {
       const st = O.of(o.id);
       if (st.stage >= O.DONE) continue;
-      const gain = me.pos === 1 ? O.GAIN[cls] : !st.known ? O.PLACE[me.pos] || 0 : 0;
+      const gain = me.pos === 1 ? O.GAIN[cls] || 0 : 0;
       if (gain && O.signFits(o, race, h)) {
         O.addPts(o.id, gain);
         if (!st.known) st.lastWin = { horse: h.name, race: label };
       }
-      if (!st.known) continue;
+      if (!st.known || st.stage < O.JOBS) continue;
       const m = O.missionOf(o, st.stage);
-      if (!m || !O.needOk(m.need || {}, race, me, offerOid === o.id)) continue;
-      st.prog = (st.prog || 0) + 1;
-      if (st.prog >= ((m.need && m.need.count) || 1)) O.advance(o.id, { horse: h.name, race: label });
+      if (m && m.need && O.needOk(m.need, race, me)) O.advance(o.id, { horse: h.name, race: label });
+    }
+  };
+  // ミッションのレースの結果：依頼の馬で勝てばクリア。負け・見送り・走れなかったときは次の年の同じレースでもう一度
+  O.jobResult = function (rep) {
+    for (const o of LIST()) {
+      const st = O.of(o.id), j = st.job;
+      if (!j || !j.on || st.stage >= O.JOBS || j.y !== rep.y || j.m !== rep.m || j.w !== rep.w) continue;
+      const key = O.jobKey(j);
+      const r = (rep.races || []).find(x => x.race.key === key);
+      const me = r && r.sim && r.sim.results.find(x => x.rider === 'P');
+      if (me && me.horse && me.horse.id === j.hid && me.pos === 1) { O.advance(o.id, { horse: me.horse.name, race: R.label(r.race) }); continue; }
+      st.fails = (st.fails || 0) + 1;
+      W.news(`${o.name}さんの依頼（${O.raceLabel(j.race)}）は、次の年の同じレースでもう一度。`, 'info');
+      O.plan(o.id, j);
     }
   };
   O.afterWeek = function (rep) {
@@ -490,7 +581,10 @@
       const me = r.sim.results.find(x => x.rider === 'P');
       if (me && me.horse) O.onResult(r.race, me);
     }
+    if (rep) O.jobResult(rep);
+    if (HS.GFHost && HS.GFHost.afterWeek) HS.GFHost.afterWeek(rep);   // GF の一族の人（GF を全制覇したときの花輪）
     O.meetCheck();
+    O.tick();
   };
 
   // ---------- 最後のアイテム（繁殖の永続のボーナス） ----------
@@ -548,7 +642,7 @@
     const d = g.eraless && E && SP && o.memory ? SP.data(o.memory) : null;
     const money = () => { const m = yen(O.GIFT * 3); g.player.money += m; got.money = m; delete got.pending; return `お祝い ${U.money(m)}`; };
     if (!d) return money();
-    if (T && !T.canBuy()) { got.pending = true; return `思い出の名馬${o.memory}（お手馬に空きができたら、馬主の画面で受け取れる）`; }
+    if (T && !T.canBuy()) { got.pending = true; return `思い出の名馬${o.memory}（お手馬に空きができたら、オーナーの画面で受け取れる）`; }
     g.unlocked = g.unlocked || [];
     if (!g.unlocked.includes(d.name)) g.unlocked.push(d.name);
     const it = E.market().find(x => x.horse.name === d.name);
@@ -573,7 +667,7 @@
     W.news(`${O.by(oid).name}さんから受け取った：${r}`, 'good');
     return null;
   };
-  // 前の版で「引退した馬を譲ってもらう」約束をした馬主の馬を1頭、年明けに牧場へ（W.newYear の前に。乗って勝った馬を優先）
+  // 前の版で「引退した馬を譲ってもらう」約束をした人の馬を1頭、年明けに牧場へ（W.newYear の前に。乗って勝った馬を優先）
   O.retireGifts = function () {
     const g = G();
     const Ori = HS.Original;
@@ -602,7 +696,7 @@
       W.dirty();
     }
   };
-  // 年末：その年にいちばん勝った馬主と「名コンビ賞」
+  // 年末：その年にいちばん勝ったオーナーと「名コンビ賞」
   O.yearAward = function (year) {
     const s = O.state(), g = G();
     const rows = LIST().map(o => ({ o, y: O.of(o.id).years[year] || { rides: 0, wins: 0 } })).filter(x => x.y.wins >= O.AWARD_MIN)
@@ -617,7 +711,7 @@
     s.queue.push({ oid: o.id, kind: 'award', reward: `名コンビ賞 ${U.money(m)}`, y: year });
     return o.id;
   };
-  // 勝負服：自分の馬に、G1 の段階になった馬主の勝負服を着せる（null で自分の服に戻す）
+  // 勝負服：自分の馬に、G1 の段階になったオーナーの勝負服を着せる（null で自分の服に戻す）
   O.canWear = oid => !!O.of(oid).got.t2;
   O.wear = function (horseId, oid) {
     const s = O.state(), h = W.horse(horseId);
@@ -662,34 +756,71 @@
     return String(text).replace(/\{(\w+)\}/g, (m, k) => vars[k] != null ? vars[k] : '');
   };
   O.sceneLines = (oid, kind, vars) => { const o = O.by(oid); return o ? ((o.scenes || {})[kind] || []).map(t => O.fill_(t, vars)) : []; };
+  // 依頼が来たときのひと言：はじめはミッションの say、やり直しは offer の台詞
+  O.jobLine = function (oid, q) {
+    const o = O.by(oid); if (!o) return '';
+    const m = O.missionOf(o, q.k);
+    const vars = { horse: q.horse || '', race: q.race || '' };
+    if (!q.retry && m && m.say) return O.fill_(m.say, vars);
+    const d = O.raceData(m ? m.race : '');
+    return O.line(oid, 'offer', U.hash(`${q.race}:${q.horse}:${q.y}`) % 997, vars, { race: d, horse: W.histByName.get(q.horse) });
+  };
 
   // ---------- 週の流れにつなぐ（共有のファイルは書き換えず、包む） ----------
   const newGame0 = W.newGame;
   W.newGame = function (opts) { const g = newGame0.apply(this, arguments); if (g && g.mode === 'jockey') g.owners = O.init(); return g; };
   const migrate0 = W.migrate;
   W.migrate = function (g) { migrate0.apply(this, arguments); if (g.mode === 'jockey') g.owners = O.fill(g.owners, g); };
+  const load0 = W.load;
+  W.load = function () { const r = load0.apply(this, arguments); if (O.on()) O.planMissing(); return r; };
+  // レースの週の騎乗（依頼が先）。出走表を作る前に当てる
+  const cards0 = W.cards;
+  W.cards = function () { if (O.on()) O.applyRide(); return cards0.apply(this, arguments); };
+  // 依頼の馬は、ミッションのレースの週にそのレースへ出る（年代なしの世界の AI の出走の判断を包む）
+  const aiChoose0 = W.aiChoose;
+  W.aiChoose = function (h, races) {
+    if (h && h.owner !== 'P' && O.on() && h.loc === 'stable') {
+      for (const o of LIST()) { const j = O.jobNow(o.id); if (j && j.hid === h.id) { const rc = races.find(r => r.key === O.jobKey(j)); if (rc) return rc; } }
+    }
+    return aiChoose0.apply(this, arguments);
+  };
   const finish0 = W.finishWeek;
   W.finishWeek = function () {
-    if (O.on()) O.state().react = [];
+    if (O.on()) { O.state().react = []; O.applyRide(); }
     const rep = finish0.apply(this, arguments);
-    if (O.on() && rep) O.afterWeek(rep);   // 自分が乗ったレースの結果（ジャンルの勝ち・課題・出会い）
+    if (O.on() && rep) O.afterWeek(rep);   // 自分が乗ったレースの結果（ジャンルの勝ち・ミッション・出会い・次の依頼）
     return rep;
   };
   const newYear0 = W.newYear;
   W.newYear = function () { if (O.on()) O.retireGifts(); return newYear0.apply(this, arguments); };
+  // 名前のあるオープン（ミッションのレース）を番組に足す
+  const ofWeek0 = R.ofWeek;
+  R.ofWeek = function (seed, year, month, week) { return ofWeek0.apply(this, arguments).concat(O.openRaces(year, month, week)); };
   const E = HS.Eraless;
   if (E && E.restock) { const restock0 = E.restock; E.restock = function () { const names = restock0.apply(this, arguments); if (O.on()) O.shopBias(names); return names; }; }
+  // まだやり終えていないミッションの依頼の馬は、デビューと馬の店に出さない（騎手のゲーム。始めたときの世代を作る前から）
+  if (E && E.pool) {
+    const pool0 = E.pool;
+    let pc = null;
+    E.pool = function () {
+      const p = pool0.apply(this, arguments), g = G();
+      if (!g || g.mode !== 'jockey' || !g.eraless) return p;
+      const res = O.reserved();
+      if (pc && pc.p === p && pc.res === res) return pc.list;
+      pc = { p, res, list: p.filter(d => !res.has(d.name)) };
+      return pc.list;
+    };
+  }
   if (J) {
     const record0 = J.record;
     J.record = function (race, sim, runners) {
       record0.apply(this, arguments);
       if (!O.on()) return;
-      const s = O.state(), a = s.week && s.week.acc[race.key];
-      if (!a) return;
-      const me = sim.results.find(x => x.rider === 'P');
-      if (!me || me.horse.id !== a.horseId) return;
-      const ex = runners.find(x => x.rider === 'P');
-      O.onRide(a.oid, race, me, ex && ex.pop);
+      const x = O.jobOfRace(race.key); if (!x) return;
+      const me = sim.results.find(r => r.rider === 'P');
+      if (!me || me.horse.id !== x.j.hid) return;
+      const ex = runners.find(r => r.rider === 'P');
+      O.onRide(x.oid, race, me, ex && ex.pop);
     };
     const yearEnd0 = J.yearEnd;
     J.yearEnd = function (year) { yearEnd0.apply(this, arguments); if (O.on()) O.yearAward(year); };

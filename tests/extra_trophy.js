@@ -223,9 +223,12 @@ module.exports = function (check, assert, HS) {
     assert(W.marketHistoric().some(x => sps.includes(x.horse.name) && x.legend), '店に並ばない');
     // 店に並んだあとも、別の馬がまた日本三冠をねらうと出てくる（again）。一度も達成していない条件のグループ（大レース）は、倒した馬は出てこない
     const h2 = Object.assign({}, h, { id: 'h2', gradedWins: [{ y: G.year + 1, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year + 1, race: '東京優駿', short: '日本ダービー', grade: 'G1' }] });
-    // 出走表の並び（sps の順）は種で変わるので、倒した馬のうち日本三冠のグループの馬が出てくるかで見る
-    const again = SP.pending(h2, Object.assign({}, race, { year: G.year + 1 }));
-    assert(again.some(x => x.g.id === 't:triple' && sps.includes(x.d.name)), `再達成のときに出てこない（倒した馬 ${sps.join('・')}）`);
+    // 見るのは日本三冠（t:triple）の名馬。出走表には「歴代の菊花賞馬」（r:菊花賞。大レースのグループで、倒すと出てこない）の名馬もいて、枠の並びしだいで先頭に来る
+    const tri = sps.find(n => SP.byName(n).groups.includes('t:triple'));
+    assert(tri, `日本三冠の名馬が出走表にいない（${sps}）`);
+    assert(SP.pending(h2, Object.assign({}, race, { year: G.year + 1 })).some(x => x.d.name === tri), `再達成のときに出てこない（${tri}）`);
+    const kikka = sps.find(n => SP.byName(n).groups.includes('r:菊花賞'));
+    if (kikka) assert(!SP.pending(h2, Object.assign({}, race, { year: G.year + 1 })).some(x => x.d.name === kikka), `倒した大レースの名馬がまた出てくる（${kikka}）`);
     return `菊花賞に ${sps.join('・')}（入れ替わり ${gone.map(x => x.horse.name).join('・')}）`;
   });
 
@@ -307,6 +310,7 @@ module.exports = function (check, assert, HS) {
     const fh = h => S.fhPeak(h).turf;
     const turfT = TR.LIST.filter(t => t.kind === 'set' && !t.focus.includes('dspd')).sort((a, b) => b.tier - a.tier);
     const canBuy = S.canBuy; S.canBuy = () => true;
+    const foals = O.FOALS; O.FOALS = 99;   // 世代を重ねる見積もり：1組の親から8頭ずつ作るので、1頭から作れる数（オーナーの依頼の子が足した決まり）は外す
     // 店のいちばん強い牡・牝から始め、両親に nt 個のトロフィー（難しい順）を取らせて引退 → 仔を kids 頭 → いちばん良い牡・牝で次の世代
     const lines = (nt, kids, gens, seed) => {
       const G = newGame(seed); G.player.money = 1e12;
@@ -343,6 +347,6 @@ module.exports = function (check, assert, HS) {
       assert(flat(many).every(x => x < 99), `3世代で99（${many.map(r => r.join('→')).join('／')}）`);
       assert(avg(many.map(r => r[2])) > avg(none.map(r => r[2])) + 5, 'トロフィーを集めても仔が良くならない');
       return `いちばん良い仔の総合力（3世代）：トロフィー無し ${none.map(r => r.join('→')).join('／')}・両親が8個ずつ ${many.map(r => r.join('→')).join('／')}`;
-    } finally { S.canBuy = canBuy; }
+    } finally { S.canBuy = canBuy; O.FOALS = foals; }
   });
 };

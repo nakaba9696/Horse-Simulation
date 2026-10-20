@@ -1,7 +1,7 @@
 // Godot 版の世界の進行が JS 版と同じになるかを確かめる「答え」を作る（godot/tests/golden/world.json。生成物。手で直さない）。
 //   node tools/golden_world.js          # 書き出す
 //   node tools/golden_world.js --check  # 書き出し済みのものが今の JS と同じか
-// 決まった遊び方（店で安い馬を買う・馬主の依頼を受ける・GF に出る・自分の馬の1レースを決まった乗り方で乗る）で週を進め、
+// 決まった遊び方（店で安い馬を買う・オーナーの依頼の馬に乗る・GF に出る・自分の馬の1レースを決まった乗り方で乗る）で週を進め、
 // 毎週のセーブ（G）の指紋を書く。指紋は、辞書の項目を名前の順に並べ、null の項目を除き、-0 を 0 にした並べ方（JSON に書いて読み直したのと同じ）。
 //   new：新しいゲームから WEEKS_NEW 週
 //   late：JS で LATE_SKIP 週遊んだセーブ（JS のセーブそのもの）を Godot が読み、そこから WEEKS_LATE 週（12月の GF と年明けをまたぐ）
@@ -25,7 +25,7 @@ function canon(v, out) {
 const digest = v => crypto.createHash('sha256').update(canon(v, []).join(''), 'utf8').digest('hex').slice(0, 16);
 
 // 週の初めに行う操作（ops）：['reserve', 馬の id, レース名]・['retire', 馬の id]・['make', 父の id, 母の id, 名前]・
-//   ['win', 馬の id, 短い名, レース名, 格]（その年の重賞の勝ちを足して、冠とトロフィーを見る）・['pts', 馬主の id, 好感度]（好感度）・['meet', 馬主の id]（縁を作る）・['adv', 馬主の id]（課題をやり終えたことにする）・['ask', 馬主の id]（店に頼む）・
+//   ['win', 馬の id, 短い名, レース名, 格]（その年の重賞の勝ちを足して、冠とトロフィーを見る）・['pts', オーナーの id, 点]（出会いの点・友好度）・['meet', オーナーの id]（縁を作る）・['adv', オーナーの id]（ミッションをやり終えたことにする）・['ask', オーナーの id]（店に頼む）・
 //   ['program', 馬の id]（番組表の行の指紋）・['rsvp', 馬の id]（番組表で出られる最初のオープンを予約）・
 //   ['away', 馬の id, 国]（その馬が先週その国で走ったことにする）・['fat', 馬の id]（疲労の段階・回復・今週のレースへの移動の疲れと出られるか・決まった着順の並びでたまる量の指紋。js/core/fatigue.js）
 function runOps(HS, ops) {
@@ -36,7 +36,7 @@ function runOps(HS, ops) {
     if (op[0] === 'win') { const h = W.horse(op[1]), G = W.get(); const race = { name: op[3], short: op[2], grade: op[4], region: 'JRA', year: G.year }; h.gradedWins.push({ y: G.year, race: race.name, short: race.short, grade: race.grade, region: race.region }); return T.onWin(h, race, G.year).join(','); }
     if (op[0] === 'pts') return HS.Owners.addPts(op[1], op[2]);
     if (op[0] === 'meet') return HS.Owners.meet(op[1], { horse: 'テストホース', race: 'テストのレース' });
-    if (op[0] === 'adv') return HS.Owners.advance(op[1], { horse: 'テストホース', race: 'テストのレース' });   // 馬主の課題をやり終えたことにする
+    if (op[0] === 'adv') return HS.Owners.advance(op[1], { horse: 'テストホース', race: 'テストのレース' });   // オーナーのミッションをやり終えたことにする
     if (op[0] === 'ask') return HS.Owners.ask(op[1]) || 'ok';   // 来月の店に馬を頼む
     // 番組表（js/core/program.js）：行の指紋と、出られる最初のオープンを予約する
     if (op[0] === 'program') return digest(HS.Program.rows(W.horse(op[1]), { show: 'all' }).map(r => [r.wk.i, r.race.key, r.why || '', r.fit, r.state || '', r.can || '', r.busy, r.others.join(',')]));
@@ -68,10 +68,9 @@ function play(HS, weeks, log, opsByWeek) {
     const cs = W.cards();
     step.cards = digest(cs.map(c => [c.race.key, c.runners.map(x => [x.horse.name, x.jockey && x.jockey.name, x.odds, x.num])]));
     step.cardKeys = cs.map(c => c.race.key + ':' + c.runners.length);
-    // 2. 馬主の依頼：最初のものを受ける
+    // 2. オーナーの依頼（ミッション）：来ている依頼の一覧（受けるのは来た時点。レースの週は依頼の馬に乗る）
     const offers = O.offers();
-    step.offers = offers.map(o => o.raceKey + '/' + o.horse);
-    if (offers.length) step.accept = O.accept(offers[0].raceKey, offers[0].horseId);
+    step.offers = offers.map(o => o.raceKey + '/' + o.horse + '/' + o.inWeeks);
     // 3. GF：返事を待っている GF に、出られる最初の馬で出る（いなければ出ない）
     for (const cat of T.dcPendingList()) { const e = T.dcEligible(cat); step['gf:' + cat] = e.length ? T.dcChoose(cat, e[0].h.id) : T.dcDecline(cat); }
     // 4. 自分の馬の最初の1レースを、決まった乗り方で乗る（ほかはおまかせ）
@@ -111,8 +110,8 @@ function build(log) {
   let HS = load();
   HS.World.newGame({ seed: 11, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const newStart = digest(JSON.parse(HS.World.serialize()));
-  // はじめは依頼が来ないので、2週目に2人と縁を作る（依頼を受ける道を通す）
-  const newWeeks = play(HS, WEEKS_NEW, log, { 1: [['meet', 'sengoku'], ['meet', 'makino']] });
+  // はじめは依頼が来ないので、2週目に3人と縁を作る（宝田さんの最初の依頼（2月2週のエルフィンS）はその週の終わりに来る。依頼の馬を出す道を通す）
+  const newWeeks = play(HS, WEEKS_NEW, log, { 1: [['meet', 'sengoku'], ['meet', 'makino'], ['meet', 'takarada']] });
   // late
   HS = load();
   HS.World.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '栗東' });
@@ -135,7 +134,7 @@ function build(log) {
   }
   play(HS, 3, false);
   const save = HS.World.serialize();
-  // セーブを読み直してから続ける（遊んでいる間の使い回し（馬主の own など）を、Godot がセーブを読んだときと同じ空の状態にする）
+  // セーブを読み直してから続ける（遊んでいる間の使い回し（オーナーの own など）を、Godot がセーブを読んだときと同じ空の状態にする）
   HS = load();
   HS.World.load(save);
   const lateStart = digest(JSON.parse(HS.World.serialize()));

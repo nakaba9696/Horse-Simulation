@@ -266,7 +266,7 @@
     for (const k of Object.keys(G.entries)) { G.entries[k] = G.entries[k].filter(e => e.horseId !== horseId); if (!G.entries[k].length) delete G.entries[k]; }
   };
   // 騎手のゲームは、1つのレースに自分が乗る馬1頭だけ（おまかせ騎乗は無い。持ち主の決定 2026-10-20「おまかせ騎乗　なしにして」）。
-  // 自分の馬は1レース1頭まで。騎乗依頼を受けたレースには自分の馬を出せない（依頼は自分の馬が出るレースには来ない。js/core/owners.js）
+  // 自分の馬は1レース1頭まで。騎乗依頼を受けたレースには自分の馬を出せない（依頼のレースは依頼が先で自分の馬は取り消し。js/core/owners.js の O.applyRide）
   W.WHY_MINE = 'ほかのお手馬が出る';
   W.WHY_OFFER = '騎乗依頼を受けたレース';
   W.oneRide = () => !!G && G.mode === 'jockey';
@@ -398,11 +398,12 @@
       if (race.age === '3' && m <= 6) return { G1: 77, G2: 74, G3: 71 }[gr] || 71;
       return { G1: 81, G2: 78, G3: 76 }[gr] || 76;
     }
-    // オープン（レースは OP 以上だけ）：2歳は6月 58 から月に1ずつ上がり、3歳は春は低め、古馬は G3 の少し下。リステッドは1上
+    // オープン（レースは OP 以上だけ）：2歳は6月 56 から月に1ずつ上がり、3歳は春は低め、古馬は G3 より6下。リステッドは1上
+    // （仕様書の総合力の目安「46〜50 OP 馬相当」の馬が、ときどき勝てる強さ。docs/BALANCE.md「8-1」）
     const L = race.listed ? 1 : 0;
-    if (race.age === '2') return 52 + Math.min(12, Math.max(6, m)) + L;
-    if (race.age === '3') return (m <= 4 ? 68 : m <= 6 ? 70 : 72) + L;
-    return 73 + L;
+    if (race.age === '2') return 50 + Math.min(12, Math.max(6, m)) + L;
+    if (race.age === '3') return (m <= 4 ? 64 : m <= 6 ? 66 : 69) + L;
+    return 70 + L;
   };
 
   // ---------- 週を進める ----------

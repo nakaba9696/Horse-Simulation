@@ -93,7 +93,7 @@ static func is_old_key(key: Variant) -> bool:
 	return _re_old.search(String(key if key != null else "")) != null
 
 static func of_week(seed: float, year: float, month: float, week: float) -> Array:
-	return graded_of(year, month, week) + open_of(seed, year, month, week)
+	return graded_of(year, month, week) + open_of(seed, year, month, week) + HSOwners.open_races(year, month, week)   # owners.js の包み（ミッションに使う名前のあるオープン）
 
 # 馬場状態（週・競馬場ごとに決まる）
 static func ground(seed: float, year: float, month: float, week: float, course: String) -> String:
