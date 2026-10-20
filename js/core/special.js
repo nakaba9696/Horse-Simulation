@@ -77,19 +77,6 @@
     for (const n of t.races) { const r = (HS.DATA.races || []).find(x => (x.short || x.name) === n && x.from <= (HS.Eraless ? HS.Eraless.ERA : 2025) && (HS.Eraless ? HS.Eraless.ERA : 2025) <= (x.to || 9999)); if (r) ss.add(r.surface); }
     return ss.size > 1;
   };
-  // 隠し馬の強さ：トロフィーの難しさごとの総合力の下限（data/trophies.js の HIDDEN_FH。そのレースの馬場で）
-  SP.floorOf = g => (g && g.trophy && TR.BY[g.trophy] && (TR.RULE.HIDDEN_FH || [])[TR.BY[g.trophy].tier]) || 0;
-  // 下限に届かない馬は、そのレースの馬場のスピードとスタミナを同じだけ（0.5ずつ）上げて下限にそろえる（その場限りの馬だけ。データは変えない）
-  SP.lift = function (h, surface, floor) {
-    if (!floor || !surface) return h;
-    const S = HS.Season, keys = surface === 'ダ' ? ['dspd', 'dsta'] : ['spd', 'sta'];
-    if (keys.some(k => h.pot[k] == null)) return h;
-    const base = keys.map(k => h.pot[k]);
-    let x = 0;
-    while (S.fhOf(H.cur(h, 0), surface, h) < floor && x < 60) { x += 0.5; keys.forEach((k, i) => { h.pot[k] = base[i] + x; }); }
-    if (x > 0) H.syncApt(h);
-    return h;
-  };
   SP.GROUPS = trophyGroups.concat([
     { id: 'nikan', label: 'クラシック二冠馬', note: '皐月賞・日本ダービー・菊花賞のどれかを勝って、ほかのクラシックへ', finals: CLASSIC, legs: (h, race) => CLASSIC.filter(n => won(h, n, y => y === race.year)).length === 1 && !won(h, race.short, y => y === race.year), member: d => (dn(d, '皐月賞') ? 1 : 0) + (dn(d, '東京優駿') ? 1 : 0) + (dn(d, '菊花賞') ? 1 : 0) === 2 },
     { id: 'filly', label: '牡馬を破った名牝', note: '牝馬で G1 を勝って、天皇賞・宝塚記念・ジャパンC・有馬記念へ', finals: BEAT_MALES,
@@ -212,13 +199,12 @@
     }
     return out;
   };
-  // その場限りの馬にする（いちばん良いときの力で）。g がトロフィーのグループなら、難しさの下限（SP.floorOf）までそのレースの馬場で力を上げる
-  SP.horse = function (d, race, g) {
+  // その場限りの馬にする（いちばん良いときの力で）。能力はデータのまま（トロフィーの難しさで底上げしない。持ち主の決定 2026-10-20「これ言ってないんだけど　こんな仕様やめてね」）
+  SP.horse = function (d, race) {
     const age = race.age === '2' ? 2 : race.age === '3' ? 3 : 4;
     const h = H.fromHistoric(HS.Eraless.shift(d, (race.year - age) - d.born), `special:${d.name}`);
     h.legend = true; h.owner = 'AI'; h.loc = 'legend'; h.starts = 8; h.wins = 8; h.earn = 50000;
     if (HS.DATA.isForeign(d)) { h.foreignTrained = true; h.country = d.country || '外'; }
-    SP.lift(h, race.surface, SP.floorOf(g));
     return h;
   };
   // prepareWeek から：自分の馬がリーチをかけて出るレースに、スペシャルホースを足す
@@ -232,7 +218,7 @@
         if (sp.g.race && fromRace >= SP.RACE_IN_RACE) continue;
         if (sp.g.race) fromRace++;
         if (race.sex === '牝' && sp.d.sex !== '牝') continue; // 牝馬限定のレースには牝馬だけ
-        names.add(sp.d.name); out.push({ horse: SP.horse(sp.d, race, sp.g), legend: true });
+        names.add(sp.d.name); out.push({ horse: SP.horse(sp.d, race), legend: true });
       }
     }
     return out;

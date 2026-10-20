@@ -88,26 +88,6 @@ static func when_ok(g: Dictionary, d: Dictionary, h: Dictionary, race: Variant =
 	if s != null and race != null and race.get("surface") and s != race.surface: return false
 	var w = g.get("when", {}).get(d.name)
 	return w == null or (w == "unbeaten" and unbeaten_now(h))
-# 隠し馬の強さ：トロフィーの難しさごとの総合力の下限（data/trophies.js の HIDDEN_FH。そのレースの馬場で）
-static func floor_of(g: Variant) -> float:
-	if g == null or not g.get("trophy"): return 0.0
-	var t = HSTrophy.by().get(g.trophy)
-	var fl: Array = HSTrophy.rule().get("HIDDEN_FH", [])
-	if t == null or int(t.tier) >= fl.size(): return 0.0
-	return float(fl[int(t.tier)])
-# 下限に届かない馬は、そのレースの馬場のスピードとスタミナを同じだけ（0.5ずつ）上げて下限にそろえる（その場限りの馬だけ。データは変えない）
-static func lift(h: Dictionary, surface: Variant, fl: float) -> Dictionary:
-	if fl <= 0.0 or not surface: return h
-	var keys: Array = ["dspd", "dsta"] if surface == "ダ" else ["spd", "sta"]
-	for k in keys:
-		if h.pot.get(k) == null: return h
-	var base: Array = keys.map(func(k): return float(h.pot[k]))
-	var x := 0.0
-	while HSSeason.fh_of(HSHorse.cur(h, 0), String(surface), h) < fl and x < 60.0:
-		x += 0.5
-		for i in keys.size(): h.pot[keys[i]] = base[i] + x
-	if x > 0.0: HSHorse.sync_apt(h)
-	return h
 static func _groups() -> Array:
 	var gs: Array = _trophy_groups() + [
 		{ id = "nikan", label = "クラシック二冠馬", finals = CLASSIC },
@@ -289,13 +269,13 @@ static func reach_info(h: Dictionary) -> Array:
 			if reach(h, g, rc) and ms.any(func(d): return when_ok(g, d, h, rc)): r = rc; break
 		if r: out.append({ group = g, need = r.short if g.finals else ("次のG1" if (g.get("needG1") or ["g1five", "allround", "local"].has(g.id)) else "次のレース") })
 	return out
-static func horse(d: Dictionary, race: Dictionary, g: Variant = null) -> Dictionary:
+# その場限りの馬にする。能力はデータのまま（トロフィーの難しさで底上げしない。持ち主の決定 2026-10-20）
+static func horse(d: Dictionary, race: Dictionary) -> Dictionary:
 	var age := 2.0 if race.get("age") == "2" else (3.0 if race.get("age") == "3" else 4.0)
 	var h := HSHorse.from_historic(HSEraless.shift(d, (race.year - age) - d.born), "special:" + d.name)
 	h.legend = true; h.owner = "AI"; h.loc = "legend"; h.starts = 8.0; h.wins = 8.0; h.earn = 50000.0
 	if HSData.is_foreign(d):
 		h.foreignTrained = true; h.country = HSU.or_(d.get("country"), "外")
-	lift(h, race.get("surface"), floor_of(g))
 	return h
 static func for_race(race: Dictionary, entries: Array) -> Array:
 	var names := {}; var out: Array = []
@@ -307,7 +287,7 @@ static func for_race(race: Dictionary, entries: Array) -> Array:
 			if sp.g.get("race") and fromRace >= 2: continue
 			if sp.g.get("race"): fromRace += 1
 			if race.get("sex") == "牝" and sp.d.get("sex") != "牝": continue
-			names[sp.d.name] = true; out.append({ horse = horse(sp.d, race, sp.g), legend = true })
+			names[sp.d.name] = true; out.append({ horse = horse(sp.d, race), legend = true })
 	return out
 static func after_race(race: Dictionary, sim: Dictionary) -> Array:
 	var G = HSWorld.G

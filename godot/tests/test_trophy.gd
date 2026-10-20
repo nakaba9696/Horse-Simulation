@@ -28,17 +28,13 @@ func run(t) -> void:
 	for n in ["カーバイン", "ロベルト", "ロイヤルパレス", "ギャロレット", "トムフール"]:
 		var x = HSSpecial.list().filter(func(e): return e.name == n)
 		t.ok(x.is_empty() or not String(x[0].groups[0]).begins_with("t:"), "%s はトロフィーの隠し馬でない" % n)
-	# 隠し馬の強さ：難しさの下限（そのレースの馬場で）。データは変えない
-	var fl: Array = HSTrophy.rule().HIDDEN_FH
-	t.eq(fl.map(func(v): return int(v)), [0, 70, 72, 75, 78, 81, 84], "隠し馬の総合力の下限")
-	var uk: Dictionary = HSSpecial.by_id()["t:uk3"]
-	t.eq(HSSpecial.floor_of(uk), 78.0, "英国三冠の下限")
+	# 隠し馬はデータのままの能力で出てくる（底上げしない。持ち主の決定 2026-10-20「これ言ってないんだけど　こんな仕様やめてね」）
+	t.ok(not HSTrophy.rule().has("HIDDEN_FH"), "隠し馬の底上げの下限が無い")
 	var dj = HSSpecial.data("ダイヤモンドジュビリー")
 	var turf := { age = "3+", year = 2030.0, surface = "芝" }
-	var raw := HSSpecial.horse(dj, turf)
-	var up := HSSpecial.horse(dj, turf, uk)
-	t.ok(HSSeason.fh_of(HSHorse.cur(raw, 0), "芝", raw) < 78.0 and HSSeason.fh_of(HSHorse.cur(up, 0), "芝", up) >= 78.0, "下限まで上げる（ダイヤモンドジュビリー）")
-	t.eq(up.pot.dspd, raw.pot.dspd, "ほかの馬場の能力は変えない")
+	var sp := HSSpecial.horse(dj, turf)
+	var raw := HSHorse.from_historic(HSEraless.shift(dj, (2030.0 - 4.0) - dj.born), "special:" + dj.name)
+	t.eq(sp.pot, raw.pot, "データのままの能力（ダイヤモンドジュビリー）")
 	# 芝にもダートにもなるトロフィー：そのレースの馬場の馬だけ
 	var bc: Dictionary = HSSpecial.by_id()["t:bc2"]
 	var al = HSSpecial.data("アリシーバ")
