@@ -217,6 +217,55 @@
         56,
         24
       ]
+    },
+    "band_title.png": {
+      "width": 1600,
+      "height": 96,
+      "corner_px": 40,
+      "nine_patch": true,
+      "slice_margins_px": [
+        96,
+        40,
+        96,
+        40
+      ]
+    },
+    "band_section.png": {
+      "width": 800,
+      "height": 44,
+      "corner_px": 18,
+      "nine_patch": true,
+      "slice_margins_px": [
+        64,
+        18,
+        24,
+        18
+      ]
+    },
+    "divider_rail.png": {
+      "width": 1200,
+      "height": 16,
+      "corner_px": 6,
+      "nine_patch": true,
+      "slice_margins_px": [
+        16,
+        6,
+        16,
+        6
+      ],
+      "horizontal_mode": "tile"
+    },
+    "frame_corner.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
     }
   }
 }
