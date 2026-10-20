@@ -554,7 +554,7 @@
           note: 'ダートの内側の7ハロンの芝。ホームストレッチの中ほどから内へ斜めのシュート', approx: true },
       ],
       dirt: [
-        { id: '周回', lap: 1609, straight: 280.1, use: [1200, 1600, 1700, 1800, 2000],
+        { id: '周回', lap: 1609, straight: 280.1, use: [1200, 1400, 1600, 1700, 1800, 2000],
           segs: [['S', 280.1], ['C', 128, 128, 180, 3], ['S', 402.3], ['C', 128, 128, 180, 1], ['S', 122.2]],
           elev: [[0, 0], [1609, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/america/delmar.html', 'https://www.jairs.jp/contents/courses/us.html', 'https://en.wikipedia.org/wiki/Del_Mar_Fairgrounds'],
@@ -735,7 +735,7 @@
           note: 'ダートの内側の芝（2020年から）。幅21m', approx: true },
       ],
       dirt: [
-        { id: '周回', lap: 2000, straight: 500, use: [1800],
+        { id: '周回', lap: 2000, straight: 500, use: [1200, 1600, 1800],
           segs: [['S', 500], ['C', 130, 130, 180, 3], ['S', 591.6], ['C', 130, 130, 180, 1], ['S', 91.6]],
           elev: [[0, 0], [2000, 0]],
           src: ['https://www.jairs.jp/contents/courses/saudi.html', 'https://en.wikipedia.org/wiki/King_Abdulaziz_Racetrack', 'https://ja.wikipedia.org/wiki/%E3%82%AD%E3%83%B3%E3%82%B0%E3%82%A2%E3%83%96%E3%83%89%E3%82%A5%E3%83%AB%E3%82%A2%E3%82%B8%E3%83%BC%E3%82%BA%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
@@ -1098,6 +1098,15 @@
           elev: [[0, 0], [1609, 0]],
           src: ['https://en.wikipedia.org/wiki/Oaklawn_Park_Race_Track'],
           note: '左回り1マイルのダートの楕円（アーカンソーダービー）。形の細かい数は出典に無い', approx: true },
+      ],
+    },
+    'パークスレーシング': {
+      dirt: [
+        { id: '周回', lap: 1609, straight: 296.9, use: [1800],
+          segs: [['S', 296.9], ['C', 128, 128, 180, 3], ['S', 402.3], ['C', 128, 128, 180, 1], ['S', 105.4]],
+          elev: [[0, 0], [1609, 0]],
+          src: ['https://letsgoracingparx.com/visit/track-info/', 'https://en.wikipedia.org/wiki/Parx_Casino_and_Racing'],
+          note: '左回り1マイルのダートの楕円（ペンシルベニアダービー）。直線974フィート。7ハロンと1マイル1/4のシュート。コーナーの半径は出典に無い', approx: true },
       ],
     },
   };

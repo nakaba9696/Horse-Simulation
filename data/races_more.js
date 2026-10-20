@@ -135,6 +135,23 @@
     // スキラッチS（コーフィールド・1000m）：ブラックキャビアが2010年・2011年に勝った（en.wikipedia「Black Caviar」の成績の表）。10月の2週。古い年の形は確かめきれていない
     { name: 'スキラッチステークス', short: 'スキラッチS', grade: 'G2', region: '海外', country: '豪', course: 'コーフィールド', surface: '芝', dist: 1000, month: 10, week: 2, age: '3+', weight: '別定', prize: 1000, from: 2000, to: 9999, uncertain: true },
   );
+  // ---- 重賞の一覧（2025年の番組）を見直して足したもの（2026-10-20。出典で確かめた年だけを持つ） ----
+  add.push(
+    // サウジダービー（3歳・ダ1600m）：2022年から国際G3。2025年は2月22日（en.wikipedia「Saudi Derby」）
+    { name: 'サウジダービー', short: 'サウジダービー', grade: 'G3', region: '海外', country: 'サウジ', course: 'キングアブドゥルアジーズ', surface: 'ダ', dist: 1600, month: 2, week: 4, age: '3', weight: '定量', prize: 9000, from: 2022, to: 9999 },
+    // リヤドダートスプリント（ダ1200m）：2022年からG3、2025年からG2。2025年は2月22日（en/ja.wikipedia「Riyadh Dirt Sprint」）
+    { name: 'リヤドダートスプリント', short: 'リヤドダートスプリント', grade: 'G3', region: '海外', country: 'サウジ', course: 'キングアブドゥルアジーズ', surface: 'ダ', dist: 1200, month: 2, week: 4, age: '3+', weight: '定量', prize: 10000, from: 2022, to: 2024 },
+    { name: 'リヤドダートスプリント', short: 'リヤドダートスプリント', grade: 'G2', region: '海外', country: 'サウジ', course: 'キングアブドゥルアジーズ', surface: 'ダ', dist: 1200, month: 2, week: 4, age: '3+', weight: '定量', prize: 12000, from: 2025, to: 9999 },
+    // ペンシルベニアダービー（3歳・ダ9ハロン）：2017年からG1。最後の土曜（2025年は9月27日）。en/ja.wikipedia「Pennsylvania Derby」
+    { name: 'ペンシルベニアダービー', short: 'ペンシルベニアダービー', grade: 'G1', region: '海外', country: '米', course: 'パークスレーシング', surface: 'ダ', dist: 1800, month: 9, week: 4, age: '3', weight: '定量', prize: 6000, from: 2017, to: 9999, note: '2020年は行っていない' },
+    // シガーマイル（アケダクト・ダ1マイル）：1990年からG1、2023年からG2。2025年は12月6日（en.wikipedia「Cigar Mile Handicap」）。アケダクトは2025年で閉場するので2025年まで
+    { name: 'シガーマイルハンデキャップ', short: 'シガーマイルH', grade: 'G2', region: '海外', country: '米', course: 'アケダクト', surface: 'ダ', dist: 1600, month: 12, week: 1, age: '3+', weight: 'ハンデ', prize: 3000, from: 2023, to: 2025 },
+    // ブリーダーズカップの2歳の芝と牝馬のスプリント（2024・2025年はデルマー。2025年は2歳戦が10月31日、ほかが11月1日で、暦では BC の週にそろえる）。en.wikipedia「2025 Breeders' Cup」
+    { name: 'ブリーダーズカップジュヴェナイルターフ', short: 'BCジュヴェナイルターフ', grade: 'G1', region: '海外', country: '米', course: 'デルマー', surface: '芝', dist: 1600, month: 11, week: 1, age: '2', weight: '馬齢', prize: 5000, from: 2024, to: 2025 },
+    { name: 'ブリーダーズカップジュヴェナイルフィリーズターフ', short: 'BCジュヴェナイルフィリーズターフ', grade: 'G1', region: '海外', country: '米', course: 'デルマー', surface: '芝', dist: 1600, month: 11, week: 1, age: '2', sex: '牝', weight: '馬齢', prize: 5000, from: 2024, to: 2025 },
+    { name: 'ブリーダーズカップジュヴェナイルターフスプリント', short: 'BCジュヴェナイルターフスプリント', grade: 'G1', region: '海外', country: '米', course: 'デルマー', surface: '芝', dist: 1000, month: 11, week: 1, age: '2', weight: '馬齢', prize: 5000, from: 2024, to: 2025, note: '2022年からG1' },
+    { name: 'ブリーダーズカップフィリー＆メアスプリント', short: 'BCフィリー＆メアスプリント', grade: 'G1', region: '海外', country: '米', course: 'デルマー', surface: 'ダ', dist: 1400, month: 11, week: 1, age: '3+', sex: '牝', weight: '定量', prize: 5000, from: 2024, to: 2025 },
+  );
   // ブリーダーズカップターフスプリント（2012年からG1）：開催地は BC マイルと同じ。距離は開催地の芝コースで変わる（デルマーは5ハロン＝1000m）
   const BCTS_DIST = { 'デルマー': 1000, 'キーンランド': 1100, 'サンタアニタ': 1300, 'チャーチルダウンズ': 1000 };
   for (const r of HS.DATA.races.filter(x => x.name === 'ブリーダーズカップマイル' && (x.to || 9999) >= 2012)) {

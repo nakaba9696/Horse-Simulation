@@ -82,6 +82,7 @@
     // 世界の有名な重賞を足したときに増やした競馬場（data/races_more.js。おおよその値）
     'ヘイドック': C('海外', '左', { lap: 2600, straight: 600, slope: '平', speed: -0.02 }, null, { country: '英' }),
     'オークローンパーク': C('海外', '左', null, { lap: 1609, straight: 350, slope: '平', speed: 0.02 }, { country: '米' }),
+    'パークスレーシング': C('海外', '左', null, { lap: 1609, straight: 297, slope: '平', speed: 0.02 }, { country: '米' }),
   };
   // その月にオープン（OP・リステッド）を開く競馬場（おおよその開催）
   HS.DATA.meets = {
