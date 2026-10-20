@@ -6,7 +6,7 @@
 #   レーティング：総合と部門（短距離・マイル・中距離・長距離・ダート）。式は HSRating（godot/core/hs_rating.gd）
 #   血統・名鑑：2代の血統表と、史実馬の名鑑
 # 厩舎（stable）から UiFlow.program_id の馬で開く。もどると厩舎の同じ行へ
-# 殿堂（データの殿堂タブ）から UiFlow.hall_id で開くと、殿堂の写し（HSHall）を読むだけの画面（戦績・殿堂の記録・レーティング・血統）。もどるとデータへ
+# 殿堂（データの殿堂タブ）から UiFlow.hall_id で開くと、殿堂の写し（HSHall.open。1走ごとの記録は別ファイルから読む）を読むだけの画面（戦績・殿堂の記録・レーティング・血統）。もどるとデータへ
 class_name UiHorseScreen
 extends UiScreen
 
@@ -160,7 +160,7 @@ static func _setup_hall_view() -> void:
 func _build_hall(args: PackedStringArray) -> void:
 	hall_mode = true
 	tabs_ = HALL_TABS
-	h = HSHall.by_id(UiFlow.hall_id)
+	h = HSHall.open(UiFlow.hall_id)   # 1走ごとの記録は別ファイルから（読めなければ記録なし）
 	var rt = HSRating.of(h)
 	make_band("殿", String(h.name), "%s・%s・殿堂入り（%s引退）" % [String(h.sex), String(HSU.or_(h.get("coat"), "")), _yl(h.retiredY)],
 		[["戦績", record_text(h)], ["トロフィー", "%d" % (h.trophies as Array).size()], ["レーティング", "%d" % int(rt.v) if rt != null else "－"]])
