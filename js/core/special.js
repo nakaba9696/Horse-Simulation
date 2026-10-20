@@ -106,11 +106,17 @@
   // 強さの下限は無い（持ち主の決定 2026-10-16「スペシャルホースは別に強さの下限はないです」。前は評価92以上）。
   // SP.WITH_BIG を true にすると、名鑑の無い大レース（SP.bigWins）の勝ち馬も入る（名鑑を書くまでは入れない）
   SP.WITH_BIG = false;
+  // 1989年からの隠し馬（香港の三冠だけ。data/trophy_horses.js の modern）の名前
+  SP.MODERN = [];
+  for (const xs of Object.values(HS.DATA.trophyHorses || {})) for (const x of xs) if (x.modern && !SP.MODERN.includes(x.name)) SP.MODERN.push(x.name);
+  SP.isModern = d => SP.MODERN.includes(d.name);
   let pool = null;
   SP.pool = function () {
     if (pool) return pool;
     const prof = new Set((HS.DATA.profiles || []).map(f => HS.normName(f.name))); // 名鑑と史実馬は小さいカナをそろえて比べる（ホスピタリテイ＝ホスピタリティ）
     pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d) && (prof.has(HS.normName(d.name)) || (SP.WITH_BIG && SP.bigWins(d).length))).concat(HS.DATA.legendsExtra || []);
+    // 香港の三冠の隠し馬は1989年からの馬でもよい（data/trophy_horses.js の modern。持ち主の決定 2026-10-20）
+    for (const n of SP.MODERN) { const d = (HS.DATA.historic || []).find(x => x.name === n); if (d && !pool.includes(d)) pool.push(d); }
     return pool;
   };
   SP.data = name => SP.pool().find(d => d.name === name) || null;
@@ -147,8 +153,9 @@
 
   // 自分の馬 h が、このレースでグループ g にリーチをかけているか
   SP.reach = (h, g, race) => h.owner === 'P' && (!g.finals || g.finals.includes(race.short)) && g.legs(h, race);
-  // 出てこられるか：ふつうはまだ店に並んでいない名馬だけ。伝説級（again）は、自分のお手馬（引退していない）になっていなければ何度でも
-  SP.canAppear = (g, d, un) => g.again ? !W.mine().some(x => x.name === d.name && x.loc !== 'retired') : !un.includes(d.name);
+  // 出てこられるか：ふつうはまだ店に並んでいない名馬だけ。伝説級（again）は、自分のお手馬（引退していない）になっていなければ何度でも。
+  // 1989年からの隠し馬（SP.isModern）は、その年に世界で走っている（入厩・牧場の）ときは出さない（同じ馬が2頭にならないように）
+  SP.canAppear = (g, d, un) => (!SP.isModern(d) || !HS.Eraless.activeNames().has(d.name)) && (g.again ? !W.mine().some(x => x.name === d.name && x.loc !== 'retired') : !un.includes(d.name));
   // このレースに出てくるスペシャルホース
   SP.pending = function (h, race) {
     const G = W.get(), un = G.unlocked || [];

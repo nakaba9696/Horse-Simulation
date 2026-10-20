@@ -1169,6 +1169,7 @@ static func migrate(g: Dictionary) -> void:
 	if not g.get("edits"): g.edits = {}
 	if not g.get("bond"): g.bond = {}
 	if g.get("dc"): HSSeason.dc_upgrade(g)
+	HSTrophy.migrate_removed(g)   # 外したトロフィー（仕様書に無い5つ・豪州2歳三冠）の記録を消す
 	if g.get("eraless") and not g.get("gfTrophy"):   # 前のセーブ（GF ごとのトロフィーより前）：勝った GF の区分のトロフィーを付ける
 		HSTrophy.migrate_gf(g)
 		g.gfTrophy = 1.0

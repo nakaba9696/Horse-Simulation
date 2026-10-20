@@ -1144,6 +1144,7 @@
     g.farmLevel = g.farmLevel || 1;
     g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; g.lineup = g.lineup || {}; g.unlocked = g.unlocked || []; if (g.eraless && !g.shopKeys) g.shopKeys = HS.Eraless ? HS.Eraless.migrateKeys(g) : []; /* 前のセーブは、自分の馬の勝ち鞍で馬の店を開けておく */ g.trophies = g.trophies || {}; g.hallOwn = g.hallOwn || []; if (g.eraless && !g.startYear) g.startYear = 2025; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {}; g.bond = g.bond || {}; /* 絆：馬ごとの、自分で乗った回数 */
     if (g.dc && HS.Season && HS.Season.dcUpgrade) HS.Season.dcUpgrade(g); // 前の形の招待（12月2〜4週に GF を走っていた頃）を、GF の週の形に
+    if (HS.Trophy && HS.Trophy.migrateRemoved) HS.Trophy.migrateRemoved(g); // 外したトロフィー（仕様書に無い5つ・豪州2歳三冠）の記録を消す
     if (g.eraless && !g.gfTrophy && HS.Trophy && HS.Trophy.migrateGF) { HS.Trophy.migrateGF(g); g.gfTrophy = 1; } // 前のセーブ（GF ごとのトロフィーより前）：勝った GF の区分のトロフィーを付ける
     if (g.eraless && !g.gfShop && HS.Eraless && HS.Eraless.gfKeys) { for (const k of HS.Eraless.gfKeys(g)) if (!g.shopKeys.includes(k)) g.shopKeys.push(k); g.gfShop = 1; } // 前のセーブ（GF の馬の段より前）：自分の馬が勝った GF の区分を開けておく
     for (const h of Object.values(g.horses)) {

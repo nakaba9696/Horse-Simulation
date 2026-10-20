@@ -8,8 +8,8 @@ static func trophies_of(h: Dictionary) -> Array:
 	var tr: Dictionary = HSU.or_(G.get("trophies"), {})
 	for id in tr:
 		var v = tr[id]
-		if not v: continue
-		var label = HSTrophy.by()[id].label if HSTrophy.by().has(id) else id
+		if not v or not HSTrophy.by().has(id): continue   # 外したトロフィー（前のセーブ）は数えない
+		var label = HSTrophy.by()[id].label
 		if (v.hid == h.id) if v.get("hid") else (v.horse == h.name):
 			out.append({ id = id, label = label, y = v.y, bonus = HSU.or_(v.get("bonus"), 0.0) })
 		else:
