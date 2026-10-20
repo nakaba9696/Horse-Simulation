@@ -821,7 +821,7 @@ func _stamina(M: Dictionary, x: float, y: float) -> void:
 			_cell(cx, y + 13, 23.0 * frac, 17, _a(col, blink), 6)
 		else:
 			_cell(cx, y + 13, 23, 17, OFF)
-	# 道悪（馬場が良でない）：升の下に泥がかかり、脚がなくなるのが速い馬（HSSim.ground_fx の e が 1 より大きい）は、いちばん先の升から泥のしずくが垂れる（文字は出さない。JS の ride.js と同じ）
+	# 道悪（馬場が良でない）：升の下に泥がかかり、いちばん先の升から泥のしずくが垂れる（HSSim.ground_fx の e。スタミナの減りは全馬共通で、道悪の段・距離で速くなる。文字は出さない）
 	var mud := _mud_fx()
 	if bool(mud.wet) and nb > 0 and not bool(M.done):
 		for i in nb:

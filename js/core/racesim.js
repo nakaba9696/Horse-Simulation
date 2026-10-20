@@ -13,7 +13,7 @@
     v *= 1 + Math.max(0, 1600 - dist) / 1600 * 0.04; // 短距離はもう少し速い
     if (surface === 'ダ') v *= 0.955;
     const g = { '良': 0, '稍重': 1, '重': 2, '不良': 3 }[ground] || 0;
-    if (surface === '芝') v *= 1 - [0, 0.006, 0.015, 0.03][g];
+    if (surface === '芝') v *= 1 - [0, 0.004, 0.0075, 0.011][g]; // 芝の道悪は馬場そのものも少し遅い（全馬のスピードの下がりは S.groundDrop。docs/BALANCE.md「14」）
     else v *= 1 + [0, 0.004, 0.007, 0.009][g];
     v *= 1 + (courseAdj || 0);
     // 出だしの加速を速くした分（約2秒）、走りの速さを少し落として走破タイムを保つ
@@ -54,9 +54,8 @@
     if (D < horse.distMin) distPen = (horse.distMin - D) / 100 * 1.4;
     if (D > horse.distMax) distPen = (D - horse.distMax) / 100 * 1.2;
     const surfPen = 0; // 芝・ダートの違いは能力（芝スピードなど）に入っている
-    // 馬場の状態：強さの上下は小さく（道悪の効きはスタミナの減りと脚の切れで。S.groundFx）
-    const gl = S.GROUND.lv[race.ground] || 0;
-    const groundAdj = gl ? -gl * S.mudM((horse.apt && horse.apt.heavy) || 50) * S.GROUND.pw : 0;
+    // 馬場の状態：稍重・重・不良では全馬のスピード（強さの点）が下がり、道悪の適性が高いほど下がりにくい（S.groundDrop）
+    const groundAdj = -S.groundDrop(horse, race);
     // 休み明け（12週以上あいた）は少し割り引く（鉄砲駆けの馬は別に足す）
     const layoff = horse.lastRaceW != null && wIdx != null && wIdx - horse.lastRaceW >= 12 ? 1.2 : 0;
     // 疲労の下げ（段階ごと。強い馬ほど小さい）。ctx.travel＝このレースへの移動の疲れ（国が変わるとき。js/core/fatigue.js）
@@ -182,34 +181,40 @@
     return { mult: pos.mult + (S.STYLE_MULT[t] - pos.mult) * k, gap: pos.gap + (S.STYLE_GAP[t] - pos.gap) * k, jiyu: to < i ? -1 : 1 };
   };
   S.KIRE = { s0: 0.03, s1: 0.0035, r: 60, a0: 0.85, a1: 0.05, c0: 0.95, c1: 0, cS: 0.035, z: 0.0015, top: 2.2 };
-  // 馬場の状態（持ち主の決定 2026-10-20「馬場の状態　スタミナ消費や脚の切れに影響をだしてほしい　道悪苦手な馬は大きく影響受けて欲しい」）。数は docs/BALANCE.md「14. 馬場の状態」
-  // 苦手さ m：道悪の適性（apt.heavy）が mid より低いほど大きい。x＝(mid−適性)/span として m＝x×(q＋(1−q)×x)（少し苦手なだけなら小さく、はっきり苦手なら大きく。上限 mMax）。
-  // mid より高い馬は得をする（good 上がるごとに gain、上限 gain）。pw＝強さ（点）の上下：−馬場の段×m×pw
-  // e＝スタミナの減りの増え（苦手さ 1・2000m のとき。良・稍重・重・不良）。距離 /2000 を掛ける（dLo〜dHi）。k＝終いの伸び（脚の切れ）の鈍り（苦手さ 1・切れの重み 1 のとき）
-  // 切れの重み＝kw0＋kw1×(切れ−1)：切れる馬ほど損が大きい。内ラチの荒れ・通り道の違いは入れない
-  S.GROUND = { lv: { '良': 0, '稍重': 1, '重': 2, '不良': 3 }, mid: 75, bad: 45, span: 30, q: 0.25, mMax: 2.2, good: 25, gain: 0.15, pw: 0.4,
-    e: { '芝': [0, 0.06, 0.13, 0.22], 'ダ': [0, 0.05, 0.1, 0.17] }, k: { '芝': [0, 0.1, 0.2, 0.32], 'ダ': [0, 0.07, 0.14, 0.24] },
+  // 馬場の状態（持ち主の決定 2026-10-20「馬場の状態　スタミナ消費や脚の切れに影響をだしてほしい」、同日「道悪のパラメータ　高いほど重馬場でスピードが減りにくいにする…スタミナの減り、切れは道悪関係なく全馬共通で」）。数は docs/BALANCE.md「14. 馬場の状態」
+  // スピード：稍重・重・不良では全馬の強さ（点。巡航と終いの速さの元）が下がり、道悪の適性（apt.heavy）で効き方 s が変わる。
+  //   s：ref より上は 1−(適性−ref)/up（下限 0）、ref より下は 1＋(ref−適性)/dn（上限 sMax。苦手な側は少し急）。
+  //   90 はほとんど下がらない（0.11）、66 は標準（1）、35 は大きく下がる（2.41）、25 は 2.86。下がり＝sp[芝ダ][段]×s
+  // スタミナの減り（e）と終いの伸び（k）は全馬共通（道悪の適性は掛けない）。e＝スタミナの減りの増え（距離 /2000 を掛ける。dLo〜dHi）。
+  //   k＝終いの伸び（脚の切れ）の鈍り（切れの重み 1 のとき）。切れの重み＝kw0＋kw1×(切れ−1)：切れる馬ほど損が大きい。内ラチの荒れ・通り道の違いは入れない
+  // mid・bad は印（S.mudLabel）の境目
+  S.GROUND = { lv: { '良': 0, '稍重': 1, '重': 2, '不良': 3 }, mid: 75, bad: 45, ref: 66, up: 27, dn: 22, sMax: 3,
+    sp: { '芝': [0, 2, 4, 6], 'ダ': [0, 1.5, 3, 4.5] },
+    e: { '芝': [0, 0.009, 0.019, 0.031], 'ダ': [0, 0.007, 0.014, 0.024] }, k: { '芝': [0, 0.014, 0.028, 0.046], 'ダ': [0, 0.01, 0.02, 0.034] },
     dLo: 0.6, dHi: 1.6, kw0: 0.5, kw1: 0.15, kMin: 0.35 };
-  // 道悪の苦手さ（正＝苦手・負＝得意）
-  S.mudM = function (heavy) {
+  // 道悪でのスピードの下がりやすさ（1＝ふつう。大きいほど下がる）
+  S.mudS = function (heavy) {
     const G = S.GROUND, a = heavy || 50;
-    if (a >= G.mid) return -Math.min(G.gain, (a - G.mid) / G.good * G.gain);
-    const x = (G.mid - a) / G.span;
-    return Math.min(G.mMax, x * (G.q + (1 - G.q) * x));
+    return a >= G.ref ? Math.max(0, 1 - (a - G.ref) / G.up) : Math.min(G.sMax, 1 + (G.ref - a) / G.dn);
   };
-  // 道悪の得手不得手の印（出走表・パドック・馬の詳しい画面と同じ境目）：bad より下は苦手（苦手さ 1 より大きい）・mid 以上は得意
+  // 道悪で下がる強さ（点。0 以上）
+  S.groundDrop = function (horse, race) {
+    const G = S.GROUND, gl = G.lv[race.ground] || 0;
+    if (!gl) return 0;
+    return G.sp[race.surface === 'ダ' ? 'ダ' : '芝'][gl] * S.mudS((horse.apt && horse.apt.heavy) || 50);
+  };
+  // 道悪の得手不得手の印（出走表・パドック・馬の詳しい画面と同じ境目）：bad より下は苦手・mid 以上は得意
   S.mudLabel = heavy => { const a = heavy || 50; return a < S.GROUND.bad ? '苦手' : a >= S.GROUND.mid ? '得意' : 'ふつう'; };
-  // この馬のこの馬場での効き：e＝スタミナの減りの倍率・k＝終いの伸びの倍率
+  // この馬場での効き：e＝スタミナの減りの倍率・k＝終いの伸びの倍率（全馬共通。切れと距離だけで変わる）・s＝スピードの下がりやすさ
   S.groundFx = function (horse, race) {
     const G = S.GROUND, gl = G.lv[race.ground] || 0;
-    if (!gl) return { e: 1, k: 1, m: 0 };
+    if (!gl) return { e: 1, k: 1, s: 0 };
     const sf = race.surface === 'ダ' ? 'ダ' : '芝';
-    const m = S.mudM((horse.apt && horse.apt.heavy) || 50);
     const kire = U.clamp(horse.kire || 4, 1, 8);
     const dF = U.clamp(race.dist / 2000, G.dLo, G.dHi);
-    const e = 1 + G.e[sf][gl] * m * dF;
-    const k = Math.max(G.kMin, 1 - G.k[sf][gl] * m * (G.kw0 + G.kw1 * (kire - 1)));
-    return { e, k, m };
+    const e = 1 + G.e[sf][gl] * dF;
+    const k = Math.max(G.kMin, 1 - G.k[sf][gl] * (G.kw0 + G.kw1 * (kire - 1)));
+    return { e, k, s: S.mudS((horse.apt && horse.apt.heavy) || 50) };
   };
 
   // 本体。runners: [{horse, jockey, weight, num, frame, rider?}]。rider==='P' の馬はプレイヤーが乗る（opts.ride のとき操作を受け付ける）
@@ -239,7 +244,7 @@
       const vc = v0 * (1 + 0.0012 * (A - 85));
       const sta = pw.cur.sta, guts = pw.cur.guts, mind = pw.cur.mind, slopeP = pw.cur.slope;
       const has = id => H.has(h, id);
-      // 馬場の状態：道悪ほどスタミナの減りが速く（Ds を割る）、終いの伸びが鈍る。道悪の苦手な馬ほど大きく
+      // 馬場の状態：道悪ほどスタミナの減りが速く（Ds を割る）、終いの伸びが鈍る（全馬共通）
       const gx = S.groundFx(h, race);
       const Ds = Math.max(800, (h.distMax + 300 + (sta - 75) * 12) * S.DS) / gx.e;
       // 脚の切れ：切れる馬は終いの伸びが大きく、ズブい馬は早めに動いて長く脚を使う

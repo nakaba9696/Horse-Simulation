@@ -1395,7 +1395,7 @@ require('./extra_gf.js')(check, assert, HS); // グランドフェスティバ�
 require('./extra_trophy.js')(check, assert, HS); // トロフィー（仕様書の表・お金・引退の能力）・足したレース・トロフィーの隠し馬（入れ替わり）
 require('./extra_oponly.js')(check, assert, HS); // レースは OP 以上だけ・G1 の獲得賞金の条件・海外の仮の条件・前のセーブの条件戦の予約
 require('./extra_oneride.js')(check, assert, HS); // おまかせ騎乗は無い・1つのレースに自分が乗るのは1頭（自分の馬・依頼）
-require('./extra_ground.js')(check, assert, HS); // 馬場の状態（道悪でスタミナの減りが速い・切れが鈍る・苦手な馬が大きく損・走破タイム）
+require('./extra_ground.js')(check, assert, HS); // 馬場の状態（スタミナの減り・切れは全馬共通・スピードの下がりは道悪の適性で変わる・走破タイム）
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
 require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
 require('./extra_gdgame.js')(check, assert); // Godot 版の週の流れを本物の画面で自動で遊ぶ

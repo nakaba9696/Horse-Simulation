@@ -1,6 +1,6 @@
 // 史実馬の道悪の向き（apt.heavy）。史実で道悪の得手不得手がはっきりしている馬だけ（持ち主 2026-10-20「能力に道悪入ってないの？」）。
 // 決め方は docs/BALANCE.md「14-6. 史実馬の道悪の適性」。出典は名鑑・名馬の解説（data/profiles*.js・data/famous*.js。JBIS・netkeiba・ja/en.wikipedia で確かめた史実）と各レースの記録。値は運で決めない。
-// 段：得意 90（S.GROUND.mid 75 以上・道悪○ H.MUD_HEAVY 86 以上）／苦手 35（S.GROUND.bad 45 より下。苦手さ 1.67）。ここに無い史実馬は 66（ふつう）。
+// 段：得意 90（S.GROUND.mid 75 以上・道悪○ H.MUD_HEAVY 86 以上）／苦手 35（S.GROUND.bad 45 より下。道悪でのスピードの下がりがふつうの 2.41 倍。docs/BALANCE.md「14-1」）。ここに無い史実馬は 66（ふつう）。
 // 得意＝重・不良（海外は Heavy・Sloppy・Muddy）の G1・八大競走を勝った、道悪で大差勝ちした、道悪巧者と呼ばれた。苦手＝苦手と言われた、良なら上位の馬が道悪の大レースで大敗した。
 // js/core/datafix.js が史実馬の heavy に入れ、得意の馬には特殊能力の道悪○も付ける。why：根拠（1行）
 (function () {
