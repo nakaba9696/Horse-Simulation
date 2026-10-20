@@ -461,12 +461,6 @@ static func desc_of(card: Dictionary) -> Dictionary:
 		"dt": 0.1, "me": me, "horses": horses, "card": card, "record": rec.t if rec else null,
 	}
 
-# 条件戦の札の名前（重賞は格の札）
+# 格の札の名前（重賞は格・オープンは OP、リステッドは L。レースは OP 以上だけ）
 static func class_label(race: Dictionary) -> String:
-	if race.get("graded"):
-		return HSRaces.grade_badge(race)
-	match String(HSU.or_(race.get("cls"), "")):
-		"newcomer": return "新馬"
-		"maiden": return "未勝利"
-		"OP": return "OP"
-	return "条件"
+	return HSRaces.grade_badge(race)

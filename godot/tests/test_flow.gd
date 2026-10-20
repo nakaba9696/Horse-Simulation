@@ -16,6 +16,7 @@ func run(t) -> void:
 	UiFlow.no_save = false
 	var rode := 0
 	var autos := 0
+	var own_rode := false   # 自分の馬（店で買った馬）に1度は自分で乗る（戦績からリプレイを開く確かめのため。レースが OP 以上だけになって、買った馬の出走が少ない週がある）
 	for wk in WEEKS:
 		var G = HSWorld.G
 		var w0 := HSWorld.w_idx()
@@ -34,7 +35,9 @@ func run(t) -> void:
 			t.eq(d.horses.size(), cur.card.runners.size(), "flow: 出走表の一式の頭数")
 			t.ok(bool(d.horses[d.me].mine) and String(d.horses[d.me].id) == String(cur.runner.horse.id), "flow: 自分の馬の印")
 			t.ok(d.track.pts.size() > 5 * 100, "flow: コースの形（1m ごと）")
-			if (wk + k) % 2 == 0:
+			var own: bool = cur.runner.horse.get("owner") == "P"
+			if (wk + k) % 2 == 0 or (own and not own_rode):
+				own_rode = own_rode or own
 				var L := ViewLive.new("", d)
 				var res := _ride(L)
 				t.ok(res.has("results") and res.results.size() == d.horses.size(), "flow: 乗ったレースの結果")
@@ -85,12 +88,12 @@ func run(t) -> void:
 	var made := HSOriginal.make(male.id, female.id, "テストノホシ")
 	t.ok(made.has("horse") and made.horse.name == "テストノホシ" and made.horse.get("original"), "flow: オリジナルホースが生まれる")
 	t.ok(HSOriginal.make(male.id, female.id, "").has("err"), "flow: 牝馬は1年に1頭")
-	# 出走の優先順：表に無い格（新馬戦）は JS と同じく NaN で、乱数は1回引く
+	# 出走の優先順：オープンは獲得賞金の順（乱数は1回引く。レースは OP 以上だけで、クラスの差は無い）
 	var r1 := HSRng.new(5.0)
 	var r2 := HSRng.new(5.0)
-	r2.next()
-	var pr := HSRaces.priority(made.horse, {"graded": false, "cls": "newcomer", "name": "2歳新馬"}, G.year, r1)
-	t.ok(is_nan(pr) and r1.next() == r2.next(), "flow: 新馬戦の優先順は NaN（乱数は1回）")
+	var pr := HSRaces.priority(made.horse, {"graded": false, "cls": "OP", "name": "2歳オープン"}, G.year, r1)
+	var pr2 := float(HSU.or_(made.horse.get("earn"), 0.0)) + r2.next() * 500.0
+	t.ok(pr == pr2 and r1.next() == r2.next(), "flow: オープンの優先順は獲得賞金の順（乱数は1回）")
 	# 画面を組めるか（ホーム・番組表・店・週の結果・タイトル・厩舎・生産・データ・馬主・GF）
 	UiFlow.report = HSWorld.finish_week({})
 	UiFlow.program_id = HSWorld.mine()[0].id if HSWorld.mine().size() else ""

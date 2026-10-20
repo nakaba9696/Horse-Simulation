@@ -455,10 +455,11 @@ static func ai_choose(h: Dictionary, races: Array, wIdx: float, r: HSRng) -> Var
 		.filter(func(rc): return (h.apt.dirt if rc.surface == "ダ" else h.apt.turf) >= 70) \
 		.filter(func(rc): return not rc.get("graded") or c >= float(GRADE_NEED.get(rc.grade, 72.0)) - (6.0 if year - h.born <= 3 else 0.0))
 	if not cand.size(): return null
-	var cls := HSHorse.class_of(h)
-	return r.weighted(cand, func(rc): return float(HSRaces.GRADE_RANK[rc.grade] * 3) if rc.get("graded") else (4.0 if rc.get("cls") == cls else 1.0))
+	# レースは OP 以上だけ。重賞に出られる強さの馬は、オープンを軽く見る（オープンは週に多いので、重さ1）
+	var opW := 1.0 if c >= float(GRADE_NEED.G3) - (6.0 if year - h.born <= 3 else 0.0) else 4.0
+	return r.weighted(cand, func(rc): return float(HSRaces.GRADE_RANK[rc.grade] * 3) if rc.get("graded") else opW)
 
-# その場限りの馬の強さ（クラス・格・年齢から）
+# その場限りの馬の強さ（格・年齢・月から）
 static func filler_level(race: Dictionary, _year: float) -> float:
 	var m: float = race.month
 	if race.get("region") == "海外": return 86.0
@@ -468,10 +469,11 @@ static func filler_level(race: Dictionary, _year: float) -> float:
 		if race.get("age") == "2": return float({ G1 = 71.0, G2 = 68.0, G3 = 66.0 }.get(gr, 66.0))
 		if race.get("age") == "3" and m <= 6: return float({ G1 = 77.0, G2 = 74.0, G3 = 71.0 }.get(gr, 71.0))
 		return float({ G1 = 81.0, G2 = 78.0, G3 = 76.0 }.get(gr, 76.0))
-	var base := float({ newcomer = 52.0, maiden = 54.0, C1 = 62.0, C2 = 67.0, C3 = 72.0, OP = 75.0 }.get(race.get("cls"), 60.0))
-	if race.get("age") == "2": return base - 6.0 + (2.0 if m >= 10 else 0.0)
-	if race.get("age") == "3" and m <= 4: return base - 3.0
-	return base
+	# オープン（レースは OP 以上だけ）：2歳は6月 58 から月に1ずつ上がり、3歳は春は低め、古馬は G3 の少し下。リステッドは1上
+	var L := 1.0 if race.get("listed") else 0.0
+	if race.get("age") == "2": return 52.0 + minf(12.0, maxf(6.0, m)) + L
+	if race.get("age") == "3": return (68.0 if m <= 4 else (70.0 if m <= 6 else 72.0)) + L
+	return 73.0 + L
 
 # ---------- 週の流れ ----------
 # 1. prepare_week：今週のレースの出走表を作る。G は変えない（同じ状態なら何度呼んでも同じ）
@@ -1201,6 +1203,16 @@ static func migrate(g: Dictionary) -> void:
 		if g.mode == "jockey" and h.get("parked"): h.erase("parked")
 		# 故障は無くなった（持ち主の仕様書「故障はなしにする」）：前のセーブで故障していた馬は治った扱い
 		if h.has("injury"): h.erase("injury")
+	# レースが OP 以上だけになる前のセーブ（world.js と同じ）：条件戦（鍵が -c…）の予約・出走登録・騎乗を外す。デビュー戦の予約は、その週の2歳オープンに出る
+	g.reserve = g.reserve.filter(func(x): return not HSRaces.is_old_key(x.get("key")))
+	for x in g.reserve:
+		if x.get("debut") and x.get("label") == "新馬戦": x.label = "デビュー戦"
+	var ents = g.get("entries")
+	if ents:
+		for k in ents.keys():
+			if HSRaces.is_old_key(k): ents.erase(k)
+	for k in g.rides.keys():
+		if HSRaces.is_old_key(k): g.rides.erase(k)
 	for rc in HSU.or_(g.records.get("course"), {}).values():
 		if rc.get("rode") == null: rc.rode = HSU.truthy(rc.get("mine")) and g.mode == "jockey"
 	g.v = SAVE_VERSION

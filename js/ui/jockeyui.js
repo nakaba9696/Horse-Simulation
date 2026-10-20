@@ -310,7 +310,7 @@
     const sel = document.getElementById('debut-week'); if (!sel) return;
     const [y, m, w] = sel.value.split('-').map(Number);
     const err = T.reserveDebut(d.id, y, m, w);
-    if (err) App.toast(err); else { App.toast(`新馬戦（${W.yLabel(y)}${m}月${w}週）を予約した`); App.save(); }
+    if (err) App.toast(err); else { App.toast(`デビュー戦（${W.yLabel(y)}${m}月${w}週）を予約した`); App.save(); }
     App.render();
   };
   App.act.unreserve = d => { T.unreserve(d.id, d.key); App.save(); App.render(); };

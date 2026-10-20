@@ -76,13 +76,13 @@ func _ready() -> void:
 	if args.has("--setup=celebrate"):
 		celebrate("トロフィーを手にした", "三冠", "サンプルホース・ボーナス賞金 5億円")
 	elif args.has("--setup=scene"):
-		owner_scene({"oid": "makino", "kind": "m1", "horse": "サンプルホース", "race": "3歳未勝利", "reward": "お礼 300万円"})
+		owner_scene({"oid": "makino", "kind": "m1", "horse": "サンプルホース", "race": "3歳オープン", "reward": "お礼 300万円"})
 	elif args.has("--setup=meet"):
 		# 縁ができたときの場面（初めて声をかけてくる）
-		owner_scene({"oid": "sengoku", "kind": "meet", "horse": "サンプルホース", "race": "2歳未勝利", "reward": ""})
+		owner_scene({"oid": "sengoku", "kind": "meet", "horse": "サンプルホース", "race": "2歳オープン", "reward": ""})
 	elif args.has("--setup=meet_yuni"):
 		# 絵の無い人（コードで描いた顔）の出会い
-		owner_scene({"oid": "yuni", "kind": "meet", "horse": "サンプルホース", "race": "2歳新馬", "reward": ""})
+		owner_scene({"oid": "yuni", "kind": "meet", "horse": "サンプルホース", "race": "2歳オープン", "reward": ""})
 	elif args.has("--setup=scene_violaine"):
 		# 課題をやり終えた場面（G2 の課題・勝負服）
 		owner_scene({"oid": "violaine", "kind": "m3", "horse": "サンプルホース", "race": "目黒記念", "reward": "お礼 1,000万円・ヴィオレーヌ・ド・サン＝クレールさんの勝負服を自分の馬に着せられる"})

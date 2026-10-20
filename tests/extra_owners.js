@@ -153,7 +153,7 @@ module.exports = function (check, assert, HS) {
     assert(O.of('sengoku').pts === 0, '1600m の勝ちで千石さんの好感度が上がった');
     O.onResult(race({ dist: 1200 }), { pos: 1, horse }); O.meetCheck();
     assert(!O.known('sengoku') && O.of('sengoku').pts > 0, '1200m の1勝で、好感度が上がらないか、すぐ出会った');
-    O.onResult(race({ dist: 1200, name: '2歳未勝利', age: '2' }), { pos: 1, horse }); O.meetCheck();
+    O.onResult(race({ dist: 1200, name: '2歳オープン', age: '2' }), { pos: 1, horse }); O.meetCheck();
     assert(O.known('sengoku') && O.of('sengoku').knownAt.y === G.year, '1200m の2勝で千石さんと縁ができない');
     assert(O.known('yuni'), '2歳のレースの勝ちでユニと縁ができない（2歳・3歳のレースは2つ勝っている）');
     assert(!O.known('takarada') && !O.known('takenouchi'), 'ジャンルの違う馬主とも縁ができた');
@@ -185,7 +185,7 @@ module.exports = function (check, assert, HS) {
   check('owners: 8つのジャンルの依頼がそのジャンルに寄る（7割以上。OP・G3 の段階）', () => {
     newGame(47);
     const t = {};
-    for (let i = 0; i < (QUICK ? 16 : 40); i++) {
+    for (let i = 0; i < (QUICK ? 16 : 52); i++) {
       const cards = W.cards();
       for (const stage of [0, 1]) for (const ofr of O.generate(cards, `s${i}`, { stage, all: true })) {
         const c = cards.find(c => c.race.key === ofr.raceKey), h = c.runners.find(x => x.horse.id === ofr.horseId).horse;

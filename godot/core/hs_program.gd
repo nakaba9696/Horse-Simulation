@@ -1,4 +1,4 @@
-# 番組表（js/core/program.js の HS.Program と同じ）：1頭の馬について、今週から1年先までの週ごとのレース（重賞と条件戦）と、
+# 番組表（js/core/program.js の HS.Program と同じ）：1頭の馬について、今週から1年先までの週ごとのレース（重賞とオープン。レースは OP 以上だけ）と、
 # 出られるか・適性・出走登録と予約の状態をまとめる。画面はこの行を読んで描くだけ。今週は出走登録、来週から先は出走の予約（HSSeason.reserve）
 class_name HSProgram
 
@@ -24,11 +24,11 @@ static func weeks(n: int) -> Array:
 			if m > 12:
 				m = 1.0; y += 1.0
 	return out
-# その週のレース。今週は世界の一覧（グランドフェスティバルなども入る）、先の週は重賞と条件戦（種と日付で決まる）
+# その週のレース。今週は世界の一覧（グランドフェスティバルなども入る）、先の週は重賞とオープン（種と日付で決まる）
 static func races_of(wk: Dictionary) -> Array:
 	if wk.i == 0: return HSWorld.week_races()
 	return HSRaces.of_week(HSWorld.G.seed, wk.y, wk.m, wk.w)
-# 出られない理由（出られるなら null）。今週は入厩まで、先の週は年齢・性と、いまの勝ち星・移動（連闘で別の国へは行けない）で見る
+# 出られない理由（出られるなら null）。今週は入厩まで、先の週は年齢・性と、いまの獲得賞金（G1）・移動（連闘で別の国へは行けない）で見る
 static func why(h: Dictionary, race: Dictionary, wk: Dictionary) -> Variant:
 	var G = HSWorld.G
 	if wk.i == 0:
@@ -58,7 +58,7 @@ static func rows(h: Dictionary, o: Dictionary = {}) -> Array:
 			if not state:
 				if o.get("kind") == "graded" and not race.get("graded"): continue
 				if o.get("surf") and race.surface != o.surf: continue
-				if w and w != HSFatigue.WHY and (o.get("show") != "all" or not race.get("graded")): continue # 条件戦は「すべて」でも出られないものは出さない。移動が間に合わないものは理由を見せる
+				if w and w != HSFatigue.WHY and (o.get("show") != "all" or not race.get("graded")): continue # オープンは「すべて」でも出られないものは出さない。移動が間に合わないものは理由を見せる
 			var dist := fit_dist(h, race.dist); var surf := fit_surf(h, race.surface)
 			var can = null
 			if not (w or state): can = "enter" if wk.i == 0 else (null if busyKey else "reserve")

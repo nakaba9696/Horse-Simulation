@@ -21,7 +21,7 @@ JS 版は遊べる見本として残し、遊びの決まり・データ・模�
 | `godot/core/hs_sort.gd`（`HSSort`） | JS（V8）の `Array.prototype.sort` と同じ並べ替え（TimSort）。比べる関数が乱数を引く所（出走の優先順）でも、比べる回数と順が JS と同じ |
 | `godot/core/hs_json.gd`（`HSJson`） | セーブの JSON の読み書き。長い桁の小数を正しく読む（JS の JSON.parse と同じ値）。JS 版のセーブを読める |
 | `godot/core/hs_world.gd`（`HSWorld`） | 世界（`HS.World`。新しいゲーム・週の流れ prepare_week → cards → finish_week・AI の出走・出走表・結果・調教・暦・市場・表彰・セーブ・古いセーブの直し） |
-| `godot/core/hs_races.gd`・`hs_ped.gd`・`hs_program.gd` | 週のレース（`HS.Races`）・血統（`HS.Ped`）・番組表（`HS.Program`。1年先までのレースと出られるか・条件戦の予約） |
+| `godot/core/hs_races.gd`・`hs_ped.gd`・`hs_program.gd` | 週のレース（`HS.Races`）・血統（`HS.Ped`）・番組表（`HS.Program`。1年先までのレースと出られるか・オープンの予約） |
 | `godot/core/hs_rating.gd`（`HSRating`） | レーティング（`HS.Rating`。1走の値を `annotate` でレースの結果に付け、`h.results[].rt` に残す。馬の値＝良かった3走の平均・部門ごと）。式の並びは JS と同じで、世界の進行の一致テストで確かめる |
 | `godot/core/hs_jockey.gd`・`hs_season.gd`・`hs_eraless.gd`・`hs_special.gd`・`hs_owners.gd`・`hs_trophy.gd`・`hs_hall.gd`・`hs_racerec.gd`・`hs_original.gd`・`hs_edits.gd`・`hs_datafix.gd` | 騎手のゲーム・シーズンと GF（season.js と dream.js）・年代なしと馬の店・スペシャルホース・馬主・トロフィー・殿堂・お手馬のレースの記録（racerec.js）・オリジナルホース・エディット |
 | `godot/data/*.json` | `node tools/export_godot.js` が書き出す（生成物。手で直さない） |
@@ -87,7 +87,7 @@ data/*.js（正）→ index.html の並びで読む → fictional.js（騎手の
 3. `node tools/golden_world.js` → `godot/tests/golden/world.json`・`world_save.json`：決まった遊び方（店でいちばん安い馬を買う・馬主の最初の依頼を受ける・GF に出る・自分の馬の1レースを決まった乗り方で乗る）で週を進め、毎週のセーブ（G）の指紋・出走表の指紋・依頼・乗ったレースの着順を書く。
    - new：新しいゲームから 4 週。late：JS で 46 週遊んだセーブ（JS のセーブそのもの）を読んで、12月3週から 4 週（GF・年度表彰・年明けの史実馬のデビューをまたぐ）。
    - gf：11月4週のセーブに手を加え（1頭を4歳・前の年の GF（中長距離）の勝ち馬に）、12月1週の招待から年明けまで 7 週。
-   - craft（番組表の行の指紋と、条件戦の予約も通す）：late の続きのセーブに手を加え（週の初めの操作に、重賞の勝ちを足す・馬主の好感度を足す、も使う）（1頭を5歳・能力120・G1を4勝・トロフィー2つ、もう1頭を牝馬に）、JS が読み直したものを Godot も読み、8週。週の初めの操作（予約・引退・オリジナルホースを作る）も同じ列で行う。フェブラリーSにスペシャルホース（G1を5勝した名馬・歴代の勝ち馬）が出て、引退で殿堂入り、オリジナルホースが生まれる。
+   - craft（番組表の行の指紋と、オープンの予約も通す）：late の続きのセーブに手を加え（週の初めの操作に、重賞の勝ちを足す・馬主の好感度を足す、も使う）（1頭を5歳・能力120・G1を4勝・トロフィー2つ、もう1頭を牝馬に）、JS が読み直したものを Godot も読み、8週。週の初めの操作（予約・引退・オリジナルホースを作る）も同じ列で行う。フェブラリーSにスペシャルホース（G1を5勝した名馬・歴代の勝ち馬）が出て、引退で殿堂入り、オリジナルホースが生まれる。
    - 指紋は、辞書の項目を名前の順に並べ、null の項目を除き、-0 を 0 にした並べ方（JSON に書いて読み直したのと同じ）。
 4. `sh godot/tests/run.sh`（headless）が `godot/tests/test_*.gd` を回す。C++ の模擬（`godot/native/bin`）があれば、模擬の 54 本と数学・乱数を C++ と GDScript の両方で比べ、世界の進行・フリーレース・並列は C++ で回す。無ければ「C++ の模擬が無いので飛ばした」と出して GDScript だけで比べる。`node tests/run.js` は、Godot があればこれを呼ぶ（無ければ「飛ばした」と出す）。Godot の場所は `GODOT=`・PATH の `godot`・`/home/user/godot-bin/godot` の順に探す。
 

@@ -142,10 +142,10 @@ static func reserve(id: String, race: Dictionary) -> Variant:
 	var G = HSWorld.G
 	var h = HSWorld.horse(id)
 	if not h or h.get("owner") != "P": return "持ち馬ではない"
-	if not race.get("graded") and not (race.get("cls") and race.get("region") == "JRA"): return "予約できるのは重賞と条件戦だけ"
+	if not race.get("graded") and not (race.get("cls") and race.get("region") == "JRA"): return "予約できるのは重賞とオープンだけ"
 	var why = static_ineligible(h, race, race.year)
 	if not why: why = HSFatigue.travel_why(h, race)   # 連闘で別の国へは予約できない
-	if not why and not race.get("graded"): # 条件戦は勝ち星の条件もいまの成績で見る（番組表 hs_program.gd）
+	if not why and not (race.get("graded") and race.get("grade") != "G1"): # G1 は獲得賞金の条件もいまの賞金で見る（番組表 hs_program.gd と同じ）
 		why = HSRaces.ineligible(h, race, race.year)
 	if why: return why
 	if not G.get("reserve"): G.reserve = []
@@ -183,12 +183,12 @@ static func reserve_debut(id: String, y: float, m: float, w: float) -> Variant:
 	if not debut_weeks(h).any(func(x): return x.y == y and x.m == m and x.w == w): return "その週は予約できない"
 	G.reserve = HSU.or_(G.get("reserve"), []).filter(func(x): return not (x.id == id and x.get("debut")))
 	if G.reserve.any(func(x): return x.id == id and x.y == y and x.m == m and x.w == w): return "その週はもう予約している"
-	G.reserve.append({ id = id, key = "debut:%s-%s-%s" % [HSU.num(y), HSU.num(m), HSU.num(w)], y = y, m = m, w = w, label = "新馬戦", debut = true })
+	G.reserve.append({ id = id, key = "debut:%s-%s-%s" % [HSU.num(y), HSU.num(m), HSU.num(w)], y = y, m = m, w = w, label = "デビュー戦", debut = true })
 	_sort_reserve(G)
 	return null
 static func debut_race(h: Dictionary) -> Variant:
 	var G = HSWorld.G
-	var list: Array = HSWorld.week_races().filter(func(r): return r.get("cls") == "newcomer" and not HSRaces.ineligible(h, r, G.year))
+	var list: Array = HSWorld.week_races().filter(func(r): return not r.get("graded") and not r.get("invite") and r.get("age") == "2" and not HSRaces.ineligible(h, r, G.year))
 	var mid: float = (h.distMin + h.distMax) / 2.0
 	var score := func(r): return float(HSU.or_(h.apt.dirt if r.surface == "ダ" else h.apt.turf, 50.0)) * 3.0 - absf(r.dist - HSU.mn(mid, 1800.0)) / 20.0
 	list = HSU.stable_sort(list, func(a, b): return score.call(a) > score.call(b))
@@ -212,7 +212,7 @@ static func apply_reserves() -> void:
 		if x.get("debut"):
 			var r = debut_race(h)
 			if not r:
-				HSWorld.news("%sの予約していた新馬戦が、この週にはない。" % h.name, "warn"); continue
+				HSWorld.news("%sの予約していたデビュー戦（2歳オープン）が、この週にはない。" % h.name, "warn"); continue
 			key = r.key
 		var err = HSWorld.enter(x.id, key)
 		if err: HSWorld.news("%sは予約していた%sに出られない（%s）。" % [h.name, x.label, err], "warn")

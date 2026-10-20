@@ -133,12 +133,12 @@
   function stableCard(h, farm) {
     const ent = W.entryOf(h.id);
     const race = ent && W.raceByKey(ent.raceKey);
-    const cls = H.className(H.classOf(h), W.get().year);
+    const cls = `本賞金 ${U.money(h.earn || 0)}`; // レースは OP 以上だけで、クラスは無い。G1 の条件の賞金（1着賞金と重賞2着の4割）を見せる
     return `<div class="card" data-act="horse" data-id="${h.id}">
       ${UI.thumb(h)}
       <div class="grow">
         <div class="row"><span class="nm ell">${e(W.displayName(h))}</span>${UI.histMark(h)}${h.auto ? '<span class="chip">おまかせ</span>' : ''}</div>
-        <div class="sub">${UI.age(h)}・${cls}・${h.starts || 0}戦${h.wins || 0}勝・${U.money(h.prize || 0)}</div>
+        <div class="sub">${UI.age(h)}・${h.starts || 0}戦${h.wins || 0}勝・${cls}</div>
         <div class="row small">${UI.condTag(h)}<span class="grow">${UI.fatigue(h)}</span></div>
         <div class="small">${farm ? '<span class="muted">牧場で休養中</span>' : race ? `次走：${UI.gradeTag(race)} <b>${e(R.label(race))}</b>` : '<span class="muted">今週は出走なし</span>'}</div>
       </div></div>`;
@@ -153,7 +153,7 @@
     const mine = h.owner === 'P';
     const tab = st.htab || (h.loc === 'stable' ? 'train' : 'info');
     const tabs = [['info', '能力'], (h.loc === 'stable' || (G.mode === 'jockey' && h.loc === 'farm')) && mine ? ['train', G.mode === 'jockey' ? '番組表・次走' : '調教・出走'] : null, ['results', '戦績'], ['ped', '血統']].filter(Boolean);
-    const cls = H.className(H.classOf(h), G.year);
+    const cls = `本賞金 ${U.money(h.earn || 0)}`; // G1 の出走の条件に使う賞金（クラスは無い）
     let body = '';
     if (tab === 'info') body = infoTab(h, wIdx);
     else if (tab === 'train') body = G.mode === 'jockey' && UI.programTab ? UI.programTab(h, st) : trainTab(h, wIdx, st); // 騎手のゲームは番組表（js/ui/program.js）
@@ -166,7 +166,7 @@
       <div class="hero mt"><canvas width="960" height="480" data-art="portrait" data-id="${h.id}"></canvas>
         <div class="plate"><div class="row"><span class="nm">${e(W.displayName(h))}</span>${UI.histMark(h)}</div>
         <div class="pd">${UI.age(h)}　${e(h.coat || '')}　父 ${e(h.sire || '不明')}　母 ${e(h.dam || '不明')}${P.parents(h.dam)[0] ? `（母父 ${e(P.parents(h.dam)[0])}）` : ''}</div>
-        <div class="pd">${h.loc === 'stud' ? `種付け料 ${U.money(h.studFee)}` : `${cls}・${h.starts || 0}戦${h.wins || 0}勝（${h.w2 || 0}-${h.w3 || 0}）・獲得 ${U.money(h.prize || 0)}`}</div></div></div>
+        <div class="pd">${h.loc === 'stud' ? `種付け料 ${U.money(h.studFee)}` : `${h.starts || 0}戦${h.wins || 0}勝（${h.w2 || 0}-${h.w3 || 0}）・獲得 ${U.money(h.prize || 0)}・${cls}`}</div></div></div>
       ${mine ? actionsBar(h) : ''}</div>
       <div class="hz-r"><div class="tabs">${tabs.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-act="htab" data-tab="${k}">${l}</button>`).join('')}</div>
       ${body}</div></div>`;
@@ -283,7 +283,7 @@
         <tr><th></th><th>レース</th><th>条件</th><th class="hide-sm">馬場</th><th></th></tr>
         ${elig.map(r => {
           const on = ent && ent.raceKey === r.key;
-          return `<tr class="${on ? 'mine' : ''}"><td>${UI.gradeTag(r) || '<span class="small muted">条件</span>'}</td>
+          return `<tr class="${on ? 'mine' : ''}"><td>${UI.gradeTag(r)}</td>
             <td><b>${e(R.label(r))}</b><div class="small muted">${r.course} ${r.surface}${r.dist}m ${fit(r)}</div></td>
             <td class="small">${ageCond(r)}${r.region === '海外' ? `<br><span style="color:var(--warn)">遠征費 ${U.money(W.travelCost(r))}</span>` : ''}</td>
             <td class="small hide-sm">${r.ground}</td>
@@ -291,8 +291,8 @@
         }).join('')}</table></div>` : '<div class="panel empty">今週は出られるレースがありません。</div>'}
       ${ent ? `<div class="panel mt"><div class="row"><span>騎手</span><select class="grow" data-act-change="jockey" data-id="${h.id}">${W.ridersForPlayer(G.year).map(j => `<option ${j.name === ent.jockey ? 'selected' : ''} value="${e(j.name)}">${e(j.name)}（腕 ${U.grade(j.skill)}・${j.region === '外国' ? '短期免許' : j.region}）</option>`).join('')}</select></div></div>` : ''}
       ${jm && !(h.starts > 0) && HS.Season.debutWeeks(h).length ? (() => { const dw = HS.Season.debutWeeks(h), cur = rsv.find(x => x.debut); return `<h2 class="sec">デビュー戦の予約</h2>
-      <div class="panel row wrap">${cur ? `<span>新馬戦：<b>${W.yLabel(cur.y)}${cur.m}月${cur.w}週</b></span><button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(cur.key)}">予約取消</button>` : `<select id="debut-week">${dw.map(x => `<option value="${x.y}-${x.m}-${x.w}">${W.yLabel(x.y)}${x.m}月${x.w}週</option>`).join('')}</select><button class="btn sm gold" data-act="reserve-debut" data-id="${h.id}">新馬戦を予約</button>`}<span class="small muted">その週の新馬戦から、馬場と距離の合うものに出ます。</span></div>`; })() : ''}
-      <h2 class="sec">この先の重賞（出られるもの）${jm ? '<span class="r">1年先まで予約できる（勝ち上がりなどの条件はその週に確かめる）</span>' : ''}</h2>
+      <div class="panel row wrap">${cur ? `<span>デビュー戦：<b>${W.yLabel(cur.y)}${cur.m}月${cur.w}週</b></span><button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(cur.key)}">予約取消</button>` : `<select id="debut-week">${dw.map(x => `<option value="${x.y}-${x.m}-${x.w}">${W.yLabel(x.y)}${x.m}月${x.w}週</option>`).join('')}</select><button class="btn sm gold" data-act="reserve-debut" data-id="${h.id}">デビュー戦を予約</button>`}<span class="small muted">その週の2歳オープンから、馬場と距離の合うものに出ます。</span></div>`; })() : ''}
+      <h2 class="sec">この先の重賞（出られるもの）${jm ? '<span class="r">1年先まで予約できる（G1 の獲得賞金の条件はその週にも確かめる）</span>' : ''}</h2>
       <div class="panel"><table class="t">${upcoming.map(r => { const on = rsv.some(x => x.key === r.key); const busy = !on && rsv.some(x => x.y === r.year && x.m === r.month && x.w === r.week);
         return `<tr class="${on ? 'lead-me' : ''}"><td class="small muted">${r.month}月${r.week}週<br>${r.inWeeks}週後</td><td>${UI.gradeTag(r)}</td><td><b>${e(R.label(r))}</b></td><td class="small">${r.course}${r.surface}${r.dist}m</td>${jm ? `<td>${on ? `<button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(r.key)}">予約取消</button>` : busy ? '' : `<button class="btn sm gold" data-act="reserve" data-id="${h.id}" data-key="${e(r.key)}">予約</button>`}</td>` : ''}</tr>`; }).join('') || '<tr><td class="muted">なし</td></tr>'}</table></div>`;
   }
