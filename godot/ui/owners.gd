@@ -71,21 +71,7 @@ func build() -> void:
 	_preview(0)
 
 static func _face(oid: String, mood: String, w: float, h: float) -> Control:
-	var o = HSOwners.by(oid)
-	var fr := PanelContainer.new()
-	fr.add_theme_stylebox_override("panel", UiTheme.box(Color(o.silks.base), Color(o.silks.sub), 2, 10, Vector4(0, 0, 0, 0)))
-	fr.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
-	fr.custom_minimum_size = Vector2(w, h)
-	fr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var p := UiScreen.owner_face_path(oid, mood)
-	if p != "":
-		var tr := TextureRect.new()
-		tr.texture = load(p)
-		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		tr.custom_minimum_size = Vector2(w, h)
-		fr.add_child(tr)
-	return fr
+	return UiScreen.owner_face(HSOwners.by(oid), mood, w, h)
 
 # 出会いの点（4つの印）
 static func _pips(oid: String) -> String:

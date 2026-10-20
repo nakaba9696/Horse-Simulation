@@ -3,7 +3,7 @@
 // キンチェムを思わせるモチーフ（花輪・ハンガリー・無敗・栗色の髪・汽車の旅・黒い猫・「わたしの宝もの」）を持つが、キンチェム本人ではない。
 // 名前・馬の化身とは書かない。騎乗依頼の馬主（data/owners.js）とは別で、依頼はしない。GF の場面（招待・GF の週・全部勝ったあと）に現れる。
 // 会話はすべて下書き（持ち主が全部チェックする）。一覧は docs/OWNERS_DRAFT.md（node tools/owners_draft.js）。
-// 仕組みは js/core/gfhost.js（どの場面のひと言を出すか）。顔は js/ui/ownerface.js（Godot 版は tools/owner_faces.js が SVG で書き出す）。
+// 仕組みは js/core/gfhost.js（どの場面のひと言を出すか）。顔は js/ui/ownerface.js（Godot 版では使わない。絵が無いあいだは顔を出さない）。
 //   lines：場面ごとのひと言（wait 招待の前・invite 招待が届いた・week GF の週・win 自分の馬が GF を勝った・lose 負けた・
 //          allclear 全部の GF を勝ったとき・kincsem 全部勝ったあと、無敗の牝馬が出てくる GF・wreath GF を全部勝ったとき（GF の全制覇）、花輪をもう一つ渡してアイテムを渡す）。
 //          {me}＝騎手の名前・{race}＝GF の名前・{horse}＝勝った馬

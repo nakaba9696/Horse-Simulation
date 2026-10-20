@@ -96,20 +96,7 @@ const MOOD := {"win": "joy", "bigwin": "joy", "good": "smile", "lose": "sad", "d
 const KICK := {"meet": "新しいオーナーから声がかかった", "job": "騎乗依頼が届いた", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞", "wreath": "GF 全制覇の花輪"}
 
 static func _face(oid: String, mood: String, w: float, h: float) -> Control:
-	var o = HSGFHost.data() if oid == "gfhost" else HSOwners.by(oid)
-	var fr := PanelContainer.new()
-	fr.add_theme_stylebox_override("panel", UiTheme.box(Color(o.silks.base), Color(o.silks.sub), 2, 10, Vector4(0, 0, 0, 0)))
-	fr.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
-	fr.custom_minimum_size = Vector2(w, h)
-	var p := UiScreen.owner_face_path(oid, mood)
-	if p != "":
-		var tr := TextureRect.new()
-		tr.texture = load(p)
-		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		tr.custom_minimum_size = Vector2(w, h)
-		fr.add_child(tr)
-	return fr
+	return UiScreen.owner_face(HSGFHost.data() if oid == "gfhost" else HSOwners.by(oid), mood, w, h)
 
 # 依頼で乗った馬のオーナーのひと言（着順でうれしい・くやしい）
 func _react_card(x: Dictionary) -> PanelContainer:
