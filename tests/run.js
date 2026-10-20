@@ -107,6 +107,7 @@ check('profiles: スペシャルホースは全頭に名鑑（年代・戦績・
   HS.U.ERA = HS.Eraless.ERA;
   const SP = HS.Special, bad = [];
   for (const { d } of SP.list()) {
+    if (SP.isModern(d)) continue; // 香港の三冠の隠し馬（1989年からの馬。ふだんは店やデビューに出る馬）は名鑑が無くてもよい
     if (!/^\d{4}(〜\d{4})?年$/.test(d.years || '')) bad.push(d.name + ':年代');
     if (!/^\d+戦\d+勝/.test(d.record || '')) bad.push(d.name + ':戦績');
     if (!(d.mainWins || []).length) bad.push(d.name + ':主な勝鞍');
@@ -915,7 +916,7 @@ check('hall: トロフィーを2つ以上手にした自分の馬は、引退し
   W.buy(shop[0]); W.buy(shop[1]);
   const [a, b] = W.mine();
   a.results = [{ y: G.year, m: 5, w: 4, race: '日本ダービー', course: '東京', surface: '芝', dist: 2400, pos: 1, n: 18, time: 143.5, jockey: 'テスト騎手' }]; a.starts = 1; a.wins = 1;
-  G.trophies = { triple: { y: G.year, horse: a.name, hid: a.id, bonus: 1 }, autumn: { y: G.year, horse: a.name, bonus: 1 }, spring: { y: G.year, horse: b.name, hid: b.id, bonus: 1 } }; // autumn は前のセーブの形（名前だけ）
+  G.trophies = { triple: { y: G.year, horse: a.name, hid: a.id, bonus: 1 }, uk3: { y: G.year, horse: a.name, bonus: 1 }, us3: { y: G.year, horse: b.name, hid: b.id, bonus: 1 } }; // uk3 は前のセーブの形（名前だけ）
   assert(HL.trophiesOf(a).length === 2 && HL.eligible(a) && !HL.eligible(b), 'トロフィーの数え方が違う');
   assert(!(J.retire(a.id) || {}).err && !(J.retire(b.id) || {}).err, '引退できない');
   const x = HL.byId(a.id);
