@@ -266,6 +266,246 @@
         0,
         0
       ]
+    },
+    "icon_horse.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_horseshoe.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_trophy.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_money.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_calendar.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_turf.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_dirt.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_stable.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_farm.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_shop.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_data.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_owner.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_race.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_settings.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_back.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_lock.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_star.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_crown.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_laurel.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "icon_saddle.png": {
+      "width": 64,
+      "height": 64,
+      "corner_px": 0,
+      "nine_patch": false,
+      "slice_margins_px": [
+        0,
+        0,
+        0,
+        0
+      ]
     }
   }
 }
