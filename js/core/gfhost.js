@@ -1,6 +1,9 @@
 // グランドフェスティバルを開いている一族の人（data/gfhost.js）：GF の場面で出すひと言を選ぶ（出す場所だけ用意。台詞は下書き）
 // 場面：wait 招待の前・invite 招待が届いた・week GF の週・kincsem 全部の GF を勝ったあと（無敗の牝馬が出てくる）。
 // win・lose・allclear は、GF の結果の場面ができたら使う（GF の係と相談）。乱数は使わず、年と GF の区分から決まる。
+// 初めて GF を勝ったとき：勝った馬に花輪をかける場面で、アイテム（一族の花輪。1頭の馬からオリジナルホースを作れる数＋1。js/core/original.js）を渡す
+//   （持ち主の決定 2026-10-20「生産可能数＋1はイロナのアイテム」。イロナは依頼をしないので、もらうきっかけは GF の初めての勝ち）。
+//   印は G.owners.flags.wreath（騎手のゲームのセーブ）。場面はオーナーの場面の列（kind wreath・oid gfhost。js/ui/ownersui.js が見せる）
 // Godot 版は godot/core/hs_gfhost.gd（同じ選び方）
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
@@ -23,5 +26,29 @@
     const t = set[U.hash(`gfhost:${scene}:${G ? G.year : 0}:${cat || ''}`) % set.length];
     const vars = { me: J && J.me && J.me() ? J.me().name : '', race: cat && T && T.gfName ? T.gfName(cat) : 'グランドフェスティバル' };
     return String(t).replace(/\{(\w+)\}/g, (m, k) => vars[k] != null ? vars[k] : '');
+  };
+  // 花輪（アイテム）をもらったか
+  F.hasItem = function () { const G = W.get(); return !!(G && G.owners && G.owners.flags && G.owners.flags.wreath); };
+  F.fill = function (t, vars) {
+    const J = HS.Jockey;
+    vars = Object.assign({ me: J && J.me && J.me() ? J.me().name : '' }, vars || {});
+    return String(t).replace(/\{(\w+)\}/g, (m, k) => vars[k] != null ? vars[k] : '');
+  };
+  // 花輪の場面の会話
+  F.sceneLines = function (vars) { const d = F.data(); return d && d.lines && d.lines.wreath ? d.lines.wreath.map(t => F.fill(t, vars)) : []; };
+  // 週の終わり（js/core/owners.js の O.afterWeek から）：自分の乗った馬が初めて GF を勝ったら、花輪とアイテム
+  F.afterWeek = function (rep) {
+    const G = W.get(), d = F.data(), O = HS.Owners;
+    if (!d || !d.item || !rep || !O || !O.on() || F.hasItem()) return;
+    for (const r of rep.races || []) {
+      if (r.race.grade !== 'GF' || !r.sim) continue;
+      const me = r.sim.results.find(x => x.rider === 'P');
+      if (!me || me.pos !== 1 || !me.horse) continue;
+      const s = O.state(), label = HS.Races.label(r.race);
+      s.flags.wreath = { y: G.year, horse: me.horse.name, race: label };
+      W.news(`${d.name}さんから${d.item.name}を受け取った（${d.item.text}）。`, 'g1');
+      s.queue.push({ oid: d.id, kind: 'wreath', horse: me.horse.name, race: label, reward: `${d.item.name}（${d.item.text}）`, y: G.year });
+      return;
+    }
   };
 })();

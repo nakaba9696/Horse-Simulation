@@ -2,7 +2,7 @@
 # 1. 今週することの札：「レースへ（n鞍に騎乗）」か「次の週へ」。金で大きく、最初のカーソル
 # 2. 帯：騎手名・所属と減量・評判／暦・リーディング・今年の勝ち・資金
 # 3. コマンドの札：番組表・馬の店・セーブ・タイトルへ（よく使うものほど左）
-# 4. 右：騎乗依頼（馬主の顔・ひと言・レース・馬・受ける／断る）→ 12月のグランドフェスティバルの招待 → 今週の騎乗 → ニュース。左下：お手馬
+# 4. 右：騎乗依頼（オーナーの顔・ひと言・レースと時期・依頼の馬・見送る）→ 12月のグランドフェスティバルの招待 → 今週の騎乗 → ニュース。左下：お手馬
 extends UiScreen
 
 var b_main: Button
@@ -94,7 +94,7 @@ func _build_hero() -> void:
 	var ch := HBoxContainer.new()
 	ch.add_theme_constant_override("separation", 12)
 	v.add_child(ch)
-	for c in [["番組表", "program"], ["厩舎", "stable"], ["馬の店", "shop"], ["生産", "breed"], ["データ", "data"], ["馬主", "owners"], ["セーブ", "save"], ["タイトルへ", "title"]]:
+	for c in [["番組表", "program"], ["厩舎", "stable"], ["馬の店", "shop"], ["生産", "breed"], ["データ", "data"], ["オーナー", "owners"], ["セーブ", "save"], ["タイトルへ", "title"]]:
 		var b := UiScreen.button(c[0], false, 0, 52, 17)
 		UiScreen.compact(b)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -294,9 +294,9 @@ func _build_right() -> void:
 	right.add_child(UiScreen.section("騎乗依頼", "%d件" % offers.size()))
 	if offers.is_empty():
 		if HSOwners.known_list().is_empty():
-			right.add_child(_note_panel("まだ騎乗依頼をくれる馬主はいない。自分の馬で結果を出すと声がかかる（条件は馬主の画面）"))
+			right.add_child(_note_panel("まだ騎乗依頼をくれるオーナーはいない。オーナーのジャンルのレースで勝つと出会いの点がたまる（%s）" % HSOwners.POINT_TEXT))
 		else:
-			right.add_child(_note_panel("今週の騎乗依頼はありません"))
+			right.add_child(_note_panel("いま来ている騎乗依頼はない。ミッションのレースが近づくと届く（予定はオーナーの画面）"))
 	for o in offers.slice(0, 3):
 		var c = _offer_card(o)
 		if c: right.add_child(c)
@@ -347,28 +347,34 @@ static func face_tex(oid: String, mood := "base") -> Texture2D:
 	var p := UiScreen.owner_face_path(oid, mood)
 	return load(p) if p != "" else null
 
-# 依頼の札：顔（丸く切らずに胸から上の角丸）・名前と間柄・ひと言・レース・馬・受ける／断る
+# 依頼の札（ミッション）：顔（胸から上の角丸）・名前と段階・ひと言・レースと時期・依頼の馬・見送る（自分の馬に乗る）
 func _offer_card(o: Dictionary) -> Variant:
-	var card = HSWorld.card_of(o.raceKey)
-	if not card: return null
-	var x = null
-	for r in card.runners:
-		if r.horse.id == o.horseId: x = r; break
-	if not x: return null
 	var ow = HSOwners.by(o.oid)
-	var race: Dictionary = card.race
-	var h: Dictionary = x.horse
-	var acc := HSOwners.accepted(o.raceKey)
+	if not ow: return null
+	var race = HSWorld.race_by_key(o.raceKey) if o.now else null
+	if race == null:
+		var d = HSOwners.race_data(String(o.race))
+		if not d: return null
+		race = d.duplicate(); race.year = o.y; race.graded = d.get("grade") != null
+	var x = null
+	if o.now:
+		var card = HSWorld.card_of(o.raceKey)
+		if card:
+			for r in card.runners:
+				if r.horse.id == o.horseId: x = r; break
+	var h = x.horse if x else HSWorld.horse(o.horseId)
+	if not h: return null
+	var riding := HSOwners.accepted(o.raceKey)
 	var p := PanelContainer.new()
-	var sb := UiTheme.box(UiTheme.SURFACE, UiTheme.LINE_GOLD if acc else UiTheme.LINE, 1, UiTheme.R_PANEL, Vector4(10, 8, 14, 8))
-	if acc:
+	var sb := UiTheme.box(UiTheme.SURFACE, UiTheme.LINE_GOLD if riding else UiTheme.LINE, 1, UiTheme.R_PANEL, Vector4(10, 8, 14, 8))
+	if riding:
 		sb.border_width_left = 3
 		sb.border_color = UiTheme.GOLD
 	p.add_theme_stylebox_override("panel", sb)
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 12)
 	p.add_child(hb)
-	var tex := face_tex(o.oid, "smile" if acc else "base")
+	var tex := face_tex(o.oid, "smile" if riding else "base")
 	if tex:
 		var fr := PanelContainer.new()
 		var fs := UiTheme.box(Color(ow.silks.base), Color(ow.silks.sub), 2, 10, Vector4(0, 0, 0, 0))
@@ -391,10 +397,8 @@ func _offer_card(o: Dictionary) -> Variant:
 	who.add_child(UiTheme.label(String(ow.name), 16))
 	who.add_child(UiScreen.owner_sign_chip(ow, 11))
 	who.add_child(UiTheme.chip(HSOwners.stage_label(o.oid), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
-	if o.get("best"):
-		who.add_child(UiTheme.chip("いちばんの馬", UiTheme.SURFACE_3, UiTheme.WARN, 11))
 	v.add_child(who)
-	var line := HSOwners.line(o.oid, "offer", float(o.line), {"horse": h.name, "race": HSRaces.label(race)}, {"race": race, "horse": h})
+	var line := HSOwners.job_line(o.oid, { k = o.k, horse = h.name, race = HSRaces.label(race), retry = o.retry, y = o.y })
 	var say := UiTheme.label("「%s」" % line, 13, UiTheme.MUTED)
 	say.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	say.max_lines_visible = 2
@@ -408,39 +412,33 @@ func _offer_card(o: Dictionary) -> Variant:
 	rn.clip_text = true
 	rn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rl.add_child(rn)
+	rl.add_child(UiTheme.chip("今週" if o.now else "%s月%s週・あと%d週" % [HSU.num(o.m), HSU.num(o.w), int(o.inWeeks)], UiTheme.GOLD_DIM if o.now else UiTheme.SURFACE_3, UiTheme.ON_GOLD if o.now else UiTheme.GOLD_BRIGHT, 11))
 	v.add_child(rl)
 	var hl := HBoxContainer.new()
 	hl.add_theme_constant_override("separation", 8)
 	hl.add_child(UiTheme.label(String(h.name), 15, UiTheme.GOLD_BRIGHT))
-	hl.add_child(UiTheme.label("%s%d%s" % ["セ" if h.get("gelding") else h.sex, int(HSWorld.G.year - float(h.born)), "・%d番人気" % int(x.pop) if x.get("pop") else ""], 13, UiTheme.MUTED))
+	hl.add_child(UiTheme.label("%s%d%s" % ["セ" if h.get("gelding") else h.sex, int(float(o.y) - float(h.born)), "・%d番人気" % int(x.pop) if x and x.get("pop") else ""], 13, UiTheme.MUTED))
 	hl.add_child(UiScreen.spacer())
 	var bh := HBoxContainer.new()
 	hl.add_child(bh)
 	v.add_child(hl)
 	bh.add_theme_constant_override("separation", 8)
-	var rk: String = o.raceKey
-	var hid: String = o.horseId
-	if acc:
-		bh.add_child(UiTheme.chip("受けた", UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
-		var bc := UiScreen.button("取り消す", false, 110, 34, 14)
-		bc.pressed.connect(func(): HSOwners.unaccept(rk); UiFlow.save(); _rebuild())
-		bh.add_child(bc)
-	else:
-		var clash = HSOwners.clash(o)
-		var ba := UiScreen.button("依頼の馬に乗る" if clash else "受ける", false, 130, 34, 15)
-		ba.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT)
-		ba.pressed.connect(func():
-			var err = HSOwners.accept(rk, hid)
-			if err: toast(String(err), "bad")
-			else: UiFlow.save(); _rebuild("受けた：%s" % HSRaces.label(race)))
-		bh.add_child(ba)
-		var bd := UiScreen.button("断る", false, 90, 34, 14)
-		bd.pressed.connect(func():
-			var line2 := HSOwners.line(o.oid, "decline", float(o.line), {"horse": h.name, "race": HSRaces.label(race)}, {"race": race, "horse": h})
-			var err = HSOwners.decline(rk)
-			if err: toast(String(err), "bad")
-			else: UiFlow.save(); _rebuild("%s「%s」" % [ow.name, line2]))
-		bh.add_child(bd)
+	var clash = HSOwners.clash(o)
+	if clash:
+		var cl := UiTheme.label("自分の馬「%s」は出走を取り消した（依頼が先）" % clash.name, 12, UiTheme.WARN)
+		cl.clip_text = true
+		cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.add_child(cl)
+	if riding:
+		bh.add_child(UiTheme.chip("依頼の馬に乗る", UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
+	var oid: String = o.oid
+	var bd := UiScreen.button("自分の馬に乗る" if clash else "見送る（来年）", false, 150 if clash else 130, 34, 14)
+	bd.pressed.connect(func():
+		var line2 := HSOwners.line(oid, "decline", float(o.line), {"horse": h.name, "race": HSRaces.label(race)}, {"race": race, "horse": h})
+		var err = HSOwners.decline(oid)
+		if err: toast(String(err), "bad")
+		else: UiFlow.save(); _rebuild("%s「%s」" % [ow.name, line2]))
+	bh.add_child(bd)
 	return p
 
 # 12月1週：グランドフェスティバルの招待（GF の画面で出す馬を選ぶ）

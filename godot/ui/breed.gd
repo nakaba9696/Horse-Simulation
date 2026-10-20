@@ -128,6 +128,7 @@ func _col(v: VBoxContainer, title: String, list: Array, is_sire: bool) -> void:
 			l1.add_child(UiTheme.chip(("引退で能力 最大+%s" if h.get("potUp") else "ボーナス +%s") % HSU.num(h.parentBonus), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 11))
 		if not is_sire and h.get("foalY") == G.year:
 			l1.add_child(UiTheme.chip("今年は産んだ", UiTheme.SURFACE_3, UiTheme.MUTED, 11))
+		l1.add_child(UiTheme.chip("仔はあと%d頭" % HSOriginal.foals_left(h), UiTheme.SURFACE_3, UiTheme.MUTED, 11))   # 1頭の馬から作れる数（作り終えた親は牧場を去る）
 		nv.add_child(l1)
 		var sk := HSOriginal.skills_of(h).map(func(id): return HSSkills.label(String(id)))
 		var l2 := UiTheme.label("%d戦%d勝・%s・%s　%s" % [int(HSU.or_(h.get("starts"), 0.0)), int(HSU.or_(h.get("wins"), 0.0)), HSHorse.style_text(h), HSHorse.dist_label(h.distMin, h.distMax), "・".join(sk)], 12, UiTheme.MUTED)

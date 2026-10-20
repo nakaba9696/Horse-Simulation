@@ -50,10 +50,9 @@ static func record(race: Dictionary, sim: Dictionary, runners: Array) -> void:
 	var meR = null
 	for x in sim.results:
 		if x.get("rider") == "P": meR = x; break
-	var s := HSOwners.state()
-	var a = s.week.acc.get(race.key) if s.get("week") else null
+	var a = HSOwners.job_of_race(race.key)   # ミッションの依頼の馬で乗ったか
 	if not a: return
-	if not meR or meR.horse.id != a.horseId: return
+	if not meR or meR.horse.id != a.j.hid: return
 	var ex = null
 	for x in runners:
 		if x.get("rider") == "P": ex = x; break

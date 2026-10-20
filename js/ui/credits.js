@@ -9,7 +9,7 @@
     { what: '空・木・画面の背景', title: 'Poly Haven の HDRI・3D モデル', by: 'Greg Zaal・Jarod Guest・Rob Tuytel ほか', lic: 'CC0', url: 'https://polyhaven.com/' },
     { what: '芝・ダート・草地の質感', title: 'ambientCG', by: 'Lennart Demes', lic: 'CC0', url: 'https://ambientcg.com/' },
     { what: '3D の描画', title: 'three.js r128', by: 'three.js authors', lic: 'MIT', url: 'https://threejs.org/' },
-    { what: '馬主の顔', title: 'このゲームの持ち主が作った絵', by: '持ち主', lic: '' },
+    { what: 'オーナーの顔', title: 'このゲームの持ち主が作った絵', by: '持ち主', lic: '' },
   ];
   const e = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   C.html = function () {

@@ -56,10 +56,18 @@ func _ready() -> void:
 						st.known = true; st.stage = float(plan[o.id][0]); st.pts = plan[o.id][1]; st.rides = 12.0; st.wins = 3.0
 						if st.stage >= HSOwners.WEAR_STAGE: st.got.t2 = { y = HSWorld.G.year }
 						if st.stage >= HSOwners.DONE: st.got.item = { y = HSWorld.G.year }
+				# ミッションの予定（千石さんの依頼は今週に届いたことにする）
+				HSOwners.plan_missing()
+				var sj = HSOwners.of("sengoku").get("job")
+				if sj: sj.at = minf(sj.at, HSWorld.w_idx())
+				HSOwners.tick()
+				HSOwners.state().queue = []
 			if OS.get_cmdline_user_args().has("--setup=met2"):
-				# 撮影の見本：縁があるのは2人だけ（馬主の一覧で、縁のある馬主とまだの馬主が並ぶ）
+				# 撮影の見本：縁があるのは2人だけ（オーナーの一覧で、縁のあるオーナーとまだのオーナーが並ぶ）
 				for o in HSOwners.LIST():
 					HSOwners.of(String(o.id)).known = String(o.id) in ["sengoku", "makino"]
+				HSOwners.of("yuni").pts = 2.0
+				HSOwners.plan_missing()
 		else:
 			UiFlow.go.call_deferred(get_tree(), "title")
 			return
@@ -368,7 +376,7 @@ func celebrate(kicker: String, title: String, sub: String, on_done := Callable()
 	open_modal(box, b, done, 0.88)
 	create_tween().tween_property(t, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
-# 馬主の看板の特徴の札（短距離好きなど。js/ui/ownersui.js の signChip と同じ）：勝負服の2色のうち暗いほうをさらに暗くした地に白い字、縁は明るいほう
+# オーナーの看板の特徴の札（短距離好きなど。js/ui/ownersui.js の signChip と同じ）：勝負服の2色のうち暗いほうをさらに暗くした地に白い字、縁は明るいほう
 static func owner_sign_chip(o: Dictionary, size := 12) -> PanelContainer:
 	var a := Color(String(o.silks.base))
 	var b := Color(String(o.silks.sub))
@@ -381,7 +389,7 @@ static func owner_sign_chip(o: Dictionary, size := 12) -> PanelContainer:
 	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	return p
 
-# まだ縁の無い馬主の顔（伏せて「？」）
+# まだ縁の無いオーナーの顔（伏せて「？」）
 static func owner_q_face(w: float, h: float) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.SUNK, UiTheme.LINE_STRONG, 2, 10, Vector4(0, 0, 0, 0)))
@@ -393,19 +401,21 @@ static func owner_q_face(w: float, h: float) -> PanelContainer:
 	p.add_child(q)
 	return p
 
-# 馬主の顔の絵：持ち主の絵（webp）、無ければコードで描いた顔（svg。tools/owner_faces.js）。どちらも無ければ ""
+# オーナーの顔の絵：持ち主の絵（webp）、無ければコードで描いた顔（svg。tools/owner_faces.js）。どちらも無ければ ""
 static func owner_face_path(oid: String, mood: String) -> String:
 	for ext in ["webp", "svg"]:
 		var p := "res://assets/owners/%s_%s.%s" % [oid, mood, ext]
 		if ResourceLoader.exists(p): return p
 	return ""
 
-# 馬主のご褒美の場面（js/ui/ownersui.js の ownerScene）：胸から上の顔・何が起きたか・名前と立場・台詞・ご褒美・「ありがとうございます」
-# 縁ができたとき（kind "meet"）は、初めて声をかけてくる場面（看板の特徴・次の週から依頼が来る・「よろしくお願いします」）
-# 課題をやり終えたとき（kind "m1"〜"m5"）は、お礼と、次の依頼（課題）を出す
-const OWNER_KICK := {"meet": "新しい馬主から声がかかった", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞"}
+# オーナーの場面（js/ui/ownersui.js の ownerScene）：胸から上の顔・何が起きたか・名前と立場・台詞・ご褒美・「ありがとうございます」
+# 縁ができたとき（kind "meet"）は、初めて声をかけてくる場面（看板の特徴・最初のミッション・「よろしくお願いします」）
+# 依頼が届いたとき（kind "job"）は、依頼の馬とレース。ミッションをやり終えたとき（kind "m1"〜"m5"）は、お礼と次のミッション
+# 初めて GF を勝ったとき（kind "wreath"）は、GF の一族の人（イロナ）の花輪とアイテム
+const OWNER_KICK := {"meet": "新しいオーナーから声がかかった", "job": "騎乗依頼が届いた", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞", "wreath": "初めての花輪"}
 func owner_scene(q: Dictionary, on_done := Callable()) -> void:
-	var o = HSOwners.by(String(q.oid))
+	var host: bool = q.get("kind") == "wreath"
+	var o = HSGFHost.data() if host else HSOwners.by(String(q.oid))
 	if o == null:
 		if on_done.is_valid(): on_done.call()
 		return
@@ -437,9 +447,10 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	nh.add_theme_constant_override("separation", 12)
 	nh.add_child(UiTheme.title(String(o.name), 34))
 	nh.add_child(UiTheme.label(String(o.get("title", "")), 14, UiTheme.MUTED))
-	nh.add_child(owner_sign_chip(o, 14))
+	if not host: nh.add_child(owner_sign_chip(o, 14))
 	v.add_child(nh)
-	var lines := HSOwners.scene_lines(String(q.oid), String(q.kind), {"horse": q.get("horse", ""), "race": q.get("race", "")})
+	var vars := {"horse": q.get("horse", ""), "race": q.get("race", "")}
+	var lines: Array = HSGFHost.scene_lines(vars) if host else ([HSOwners.job_line(String(q.oid), q)] if q.get("kind") == "job" else HSOwners.scene_lines(String(q.oid), String(q.kind), vars))
 	var labs: Array = []
 	for t in lines:
 		var l := UiTheme.label("「%s」" % t, 17)
@@ -454,27 +465,30 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 		v.add_child(rl)
 		labs.append(rl)
 	if meet:
-		var ml := UiTheme.label("次の週から騎乗依頼が来る", 18, UiTheme.GOLD_BRIGHT)
-		ml.modulate.a = 0.0
-		v.add_child(ml)
-		labs.append(ml)
-		var nl := UiTheme.label("%sの馬主。%s" % [HSOwners.sign_label(o), o.get("note", "")], 13, UiTheme.MUTED)
+		var nl := UiTheme.label("%sのオーナー。%s" % [HSOwners.sign_label(o), o.get("note", "")], 13, UiTheme.MUTED)
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		nl.custom_minimum_size.x = 520
 		nl.modulate.a = 0.0
 		v.add_child(nl)
 		labs.append(nl)
-	# 次の依頼（課題）：出会いなら OP の課題、m1〜m4 なら次の段階の課題
-	var k := 0 if meet else (int(String(q.kind).substr(1)) if String(q.kind) in ["m1", "m2", "m3", "m4"] else -1)
-	if k >= 0 and o.get("missions") and k < o.missions.size():
-		var mi: Dictionary = o.missions[k]
-		var al := UiTheme.label("「%s」\n次の依頼（%s）：%s" % [HSOwners.fill_(String(mi.say), {}), HSOwners.STAGES[k].label, mi.text], 15, UiTheme.IVORY)
+	# 届いた依頼の中身／次のミッション（出会いなら OP の段階、m1〜m4 なら次の段階）と、その予定
+	var note := ""
+	if not host and q.get("kind") == "job":
+		note = "依頼（%s）：%sで%sを勝つ（%s）" % [HSOwners.STAGES[int(q.k)].label, q.horse, q.race, q.get("date", "")]
+	elif not host:
+		var k := 0 if meet else (int(String(q.kind).substr(1)) if String(q.kind) in ["m1", "m2", "m3", "m4"] else -1)
+		if k >= 0 and HSOwners.mission_of(o, k):
+			var sj = HSOwners.of(String(q.oid)).get("job")
+			note = "次のミッション（%s）：%s" % [HSOwners.STAGES[k].label, HSOwners.mission_text(o, k)]
+			if sj and sj.k == k: note += "\n%sのレース。依頼はその%d週前に届く" % [HSOwners.job_date(sj), int(HSOwners.LEAD)]
+	if note != "":
+		var al := UiTheme.label(note, 15, UiTheme.IVORY)
 		al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		al.custom_minimum_size.x = 520
 		al.modulate.a = 0.0
 		v.add_child(al)
 		labs.append(al)
-	var b := UiScreen.button("よろしくお願いします" if meet else "ありがとうございます", true, 300, 54, 20)
+	var b := UiScreen.button("よろしくお願いします" if (meet or q.get("kind") == "job") else "ありがとうございます", true, 300, 54, 20)
 	var done := func():
 		close_modal()
 		if on_done.is_valid(): on_done.call()
