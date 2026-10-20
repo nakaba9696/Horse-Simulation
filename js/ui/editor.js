@@ -42,7 +42,7 @@
     return v;
   }
   // 伸びきったときの芝・ダートの総合力（強さの数はこの2つだけ。持ち主の決定 2026-10-20「評価＝芝やダートの総合力」）
-  const fhOf = d => E.fhOfPot(info(d).pot);
+  const fhOf = d => { const x = info(d); return E.fhOfPot(x.pot, x); };
   const order = arr => v => { const i = arr.indexOf(v); return i < 0 ? 99 : i; };
   // 一覧の列。dir：最初に押したときの向き（1＝小さい順、-1＝大きい順）
   const COLS = [
@@ -153,7 +153,7 @@
     // 能力の値を持たない馬は、今の自動の作り方で作った値を初めの値として出す（持ち主の決定 2026-10-20）
     const now = E.horseOf(d);
     const pot = now.pot;
-    const fh0 = E.fhOfPot(pot);
+    const fh0 = E.fhOfPot(pot, now);
     const kire = now.kire, health = now.health, skills = now.skills;
     const span = [d.born + 2, d.retire];
     const riders = (HS.DATA.jockeys || []).filter(j => j.from <= span[1] && (j.to || 9999) >= span[0]).map(j => j.name);
@@ -202,10 +202,11 @@
     const $ = s => bg.querySelector(s);
     const formPot = () => { const p = {}; for (const k of H.STATS) p[k] = +$('#ed-p-' + k).value; return p; };
     // 能力を動かすたびに、芝・ダートの総合力を出し直す
-    const syncFh = () => { const f = E.fhOfPot(formPot()); $('#ed-fh-t').textContent = f.turf; $('#ed-fh-d').textContent = f.dirt; };
+    const syncFh = () => { const f = E.fhOfPot(formPot(), { distMin: +$('#ed-dmin').value || now.distMin, distMax: +$('#ed-dmax').value || now.distMax }); $('#ed-fh-t').textContent = f.turf; $('#ed-fh-d').textContent = f.dirt; };
     $('#ed-a-heavy').oninput = () => { $('#ed-av-heavy').textContent = $('#ed-a-heavy').value; };
     $('#ed-health').oninput = () => { $('#ed-hv').textContent = $('#ed-health').value; };
     for (const k of H.STATS) $('#ed-p-' + k).oninput = () => { $('#ed-pv-' + k).textContent = $('#ed-p-' + k).value; syncFh(); };
+    for (const id of ['#ed-dmin', '#ed-dmax']) $(id).addEventListener('change', syncFh); // 距離の向きでスタミナの重みが変わる
     $('#ed-coat').onchange = () => HS.Art.portrait($('#ed-cv'), { coat: $('#ed-coat').value, name: d.name });
     $('[data-x=save]').onclick = () => {
       const next = E.build(d, {

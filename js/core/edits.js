@@ -65,7 +65,7 @@
   // いまのデータ d（編集を当てたもの）から作った馬。能力の値を持たない馬は、今の自動の作り方の値が初めの値になる
   E.horseOf = d => HS.Horse.fromHistoric(d, 'x');
   // 能力の値から芝・ダートの総合力（式は js/core/season.js の総合力のまま）
-  E.fhOfPot = pot => ({ turf: HS.Season.fhOf(pot, '芝'), dirt: HS.Season.fhOf(pot, 'ダ') });
+  E.fhOfPot = (pot, d) => ({ turf: HS.Season.fhOf(pot, '芝', d), dirt: HS.Season.fhOf(pot, 'ダ', d) }); // d：距離の向き（distMin・distMax）。無ければ 2000m とみる
   // 画面で入れた値（form）を、1頭の編集にまとめる。form.pot は能力の値（整数）。
   // 能力は、書き換えていなければ（自動の値を丸めたのと同じなら）残さない。前の版の編集の rating・turf・dirt・temper は引き継ぐ
   E.build = function (d, form) {
