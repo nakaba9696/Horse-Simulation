@@ -604,7 +604,7 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 	for e in entr:
 		runners.append({ horse = e.horse, jockey = jockey(e.jockeyName) if e.get("jockeyName") else null, mine = HSU.truthy(e.get("mine")), legend = HSU.truthy(e.get("legend")) })
 	while runners.size() < want:
-		var born: float = year - (2.0 if race.get("age") == "2" else (3.0 if race.get("age") == "3" else 3.0 + r.int_(0, 3)))
+		var born: float = year - (2.0 if race.get("age") == "2" else (3.0 if race.get("age") == "3" else (4.0 if race.get("age") == "4" else 3.0 + r.int_(0, 3))))
 		var foreign: bool = race.get("region") == "海外" and r.chance(0.85)
 		var sire = pick_sire(r, born - 1.0)
 		var fo := { level = lvl + r.normal(0.0, 1.5), surface = race.surface, dist = race.dist, born = born }

@@ -16,7 +16,7 @@ module.exports = function (check, assert, HS) {
   // 出会いの場面は見たことにする
   const meetOne = id => { O.meet(id, { horse: 'テストホース', race: 'テストのレース' }); O.state().queue = []; };
   const raceData = name => O.raceData(name);
-  const R_AGES = ['2', '3', '3+', '4+'];
+  const R_AGES = ['2', '3', '3+', '4', '4+'];
   const R_label = d => HS.Races.label(d);
   const ageOk = (r, a) => (r.age === '2' ? a === 2 : r.age === '3' ? a === 3 : r.age === '3+' ? a >= 3 : r.age === '4+' ? a >= 4 : a >= 2);
 

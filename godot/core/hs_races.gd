@@ -137,6 +137,7 @@ static func ineligible_base(horse: Dictionary, race: Dictionary, year: float) ->
 	if ra == "3" and age != 3: return "年齢"
 	if ra == "3+" and age < 3: return "年齢"
 	if ra == "4+" and age < 4: return "年齢"
+	if ra == "4" and age != 4: return "年齢"
 	if age < 2: return "年齢"
 	if race.get("sex") == "牝" and horse.get("sex") != "牝": return "牝馬限定"
 	if race.get("noGelding") and horse.get("gelding"): return "せん馬は出られない"

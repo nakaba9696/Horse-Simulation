@@ -157,6 +157,14 @@ module.exports = function (check, assert, HS) {
     return `豪州の2歳 G1 ${au.length}（出られない）・2歳 ${two.name}・古馬 ${old.name}（${U.money(R.g1Need(old, G.year))}）・${g2.grade} ${g2.name}`;
   });
 
+  check('oponly: 4歳限定（香港ダービー）は4歳の馬だけが出られる', () => {
+    const R = HS.Races, d = (HS.DATA.races || []).find(r => r.name === '香港ダービー' && r.from <= 2025 && 2025 <= (r.to || 9999));
+    assert(d && d.age === '4', '2025年の香港ダービーが4歳限定でない');
+    for (const [age, ok] of [[3, false], [4, true], [5, false]]) {
+      const why = R.ineligibleBase({ born: 2025 - age, sex: '牡' }, d, 2025);
+      assert((why !== '年齢') === ok, `${age}歳: ${why}`);
+    }
+  });
   check('oponly: 前のセーブの条件戦（鍵 -c…）の予約・出走登録・騎乗が外れ、デビュー戦の予約は残る。セーブの往復で変わらない', () => {
     W.newGame({ seed: 25, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
     const G = W.get();

@@ -112,6 +112,7 @@
     if (race.age === '3' && age !== 3) return '年齢';
     if (race.age === '3+' && age < 3) return '年齢';
     if (race.age === '4+' && age < 4) return '年齢';
+    if (race.age === '4' && age !== 4) return '年齢'; // 4歳限定（香港ダービーなど）
     if (age < 2) return '年齢';
     if (race.sex === '牝' && horse.sex !== '牝') return '牝馬限定';
     if (race.noGelding && horse.gelding) return 'せん馬は出られない';

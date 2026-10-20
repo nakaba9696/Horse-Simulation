@@ -30,7 +30,7 @@ check('races: 項目の値', () => {
     assert(['G1', 'G2', 'G3'].includes(r.grade), `grade ${r.name}`);
     assert(['JRA', '地方', '海外'].includes(r.region), `region ${r.name}`);
     assert(r.month >= 1 && r.month <= 12 && r.week >= 1 && r.week <= 4, `日付 ${r.name}`);
-    assert(['2', '3', '3+', '4+'].includes(r.age), `age ${r.name}`);
+    assert(['2', '3', '3+', '4', '4+'].includes(r.age), `age ${r.name}`);
     assert(r.dist >= 800 && r.dist <= 4000, `dist ${r.name}`);
     assert(r.from <= (r.to || 9999), `from/to ${r.name}`);
   }

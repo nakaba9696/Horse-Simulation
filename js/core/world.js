@@ -483,7 +483,7 @@
     const used = new Set(W.usedNames());
     const runners = entr.map(e => ({ horse: e.horse, jockey: e.jockeyName ? W.jockey(e.jockeyName) : null, mine: !!e.mine, legend: !!e.legend }));
     while (runners.length < want) {
-      const born = year - (race.age === '2' ? 2 : race.age === '3' ? 3 : 3 + r.int(0, 3));
+      const born = year - (race.age === '2' ? 2 : race.age === '3' ? 3 : race.age === '4' ? 4 : 3 + r.int(0, 3));
       const foreign = race.region === '海外' && r.chance(0.85);
       const sire = W.pickSire(r, born - 1);
       const f = H.makeFiller(r, { level: lvl + r.normal(0, 1.5), surface: race.surface, dist: race.dist, born, sex: race.sex === '牝' ? '牝' : undefined, foreign, sireName: foreign ? null : sire && sire.name });

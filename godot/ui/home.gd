@@ -281,7 +281,7 @@ func _build_lower() -> void:
 		left.add_child(pw[0])
 
 static func _age_cond(r: Dictionary) -> String:
-	var s: String = {"2": "2歳", "3": "3歳", "3+": "3歳以上", "4+": "4歳以上"}.get(String(HSU.or_(r.get("age"), "")), "")
+	var s: String = {"2": "2歳", "3": "3歳", "3+": "3歳以上", "4": "4歳", "4+": "4歳以上"}.get(String(HSU.or_(r.get("age"), "")), "")
 	if r.get("sex") == "牝": s += "牝"
 	return s
 

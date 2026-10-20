@@ -264,7 +264,7 @@ func _row(h: Dictionary, r: Dictionary) -> Button:
 
 static func _cond(race: Dictionary) -> String:
 	var a := String(HSU.or_(race.get("age"), ""))
-	var s: String = {"2": "2歳", "3": "3歳", "3+": "3歳以上", "4+": "4歳以上"}.get(a, "")
+	var s: String = {"2": "2歳", "3": "3歳", "3+": "3歳以上", "4": "4歳", "4+": "4歳以上"}.get(a, "")
 	if race.get("sex") == "牝": s += "牝"
 	return s
 

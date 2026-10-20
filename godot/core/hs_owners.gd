@@ -217,6 +217,7 @@ static func can_run(h: Variant, j: Dictionary) -> bool:
 	if ra == "3" and age != 3: return false
 	if ra == "3+" and age < 3: return false
 	if ra == "4+" and age < 4: return false
+	if ra == "4" and age != 4: return false
 	if age < 2 or age >= 9: return false
 	if d.get("sex") == "牝" and h.get("sex") != "牝": return false
 	if HSU.truthy(h.get("retireYear")) and h.retireYear < j.y: return false
@@ -454,7 +455,7 @@ static func _fit_r(k: String, r: Dictionary) -> float:
 		"local": return 1.0 if r.get("region") == "地方" else 0.0
 		"classic": return 1.0 if (r.get("age") == "3" and r.get("graded")) else 0.0
 		"young": return 1.0 if r.get("age") == "2" else 0.0
-		"veteran": return 1.0 if (r.get("age") == "3+" or r.get("age") == "4+") else 0.0
+		"veteran": return 1.0 if (r.get("age") == "3+" or r.get("age") == "4+" or r.get("age") == "4") else 0.0
 		"usa": return 1.0 if (r.get("region") == "海外" and r.get("country") == "米") else 0.0
 		"europe": return 1.0 if (r.get("region") == "海外" and EU.has(r.get("country"))) else 0.0
 		"aus": return 1.0 if (r.get("region") == "海外" and AUS.has(r.get("country"))) else 0.0

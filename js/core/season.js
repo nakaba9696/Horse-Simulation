@@ -138,6 +138,7 @@
     if (race.age === '3' && age !== 3) return '年齢';
     if (race.age === '3+' && age < 3) return '年齢';
     if (race.age === '4+' && age < 4) return '年齢';
+    if (race.age === '4' && age !== 4) return '年齢';
     if (age < 2) return '年齢';
     if (age === 2 && race.month < 6) return 'デビュー前'; // 2歳の競走は6月から
     if (race.sex === '牝' && h.sex !== '牝') return '牝馬限定';

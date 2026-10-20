@@ -153,6 +153,7 @@ static func static_ineligible(h: Dictionary, race: Dictionary, year: float) -> V
 	if ra == "3" and age != 3: return "年齢"
 	if ra == "3+" and age < 3: return "年齢"
 	if ra == "4+" and age < 4: return "年齢"
+	if ra == "4" and age != 4: return "年齢"
 	if age < 2: return "年齢"
 	if age == 2 and race.month < 6: return "デビュー前"
 	if race.get("sex") == "牝" and h.get("sex") != "牝": return "牝馬限定"
