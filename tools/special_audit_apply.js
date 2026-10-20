@@ -1,11 +1,14 @@
-// 見直しの一覧（docs/SPECIAL_AUDIT.json）で持ち主が採った案を data/horse_fix.js に書く。
-// adopt が true の馬：adoptSet（値を変えて採るとき）か proposal.set を書く。adopt が false の馬：前に書いた値を消す（--keep で残す）。
+// 見直しの一覧（docs/SPECIAL_AUDIT.json）で持ち主が付けた採否を data/horse_fix.js に書く（2回目からの見直し。1回目は tools/special_audit.js --apply-owner）。
+//   adopt: true  ＝ 案（proposal.set）を採る
+//   target: 数    ＝ 得意な馬場の総合力をこの値に（adopt より先。adopt が true なら特殊能力などの案も一緒に）
+//   adopt: false ＝ 採らない（前に書いた値を消す。--keep で残す）
 //   node tools/special_audit_apply.js            # 書く
 //   node tools/special_audit_apply.js --dry      # 書かずに何が変わるかだけ出す
-//   node tools/special_audit_apply.js 採否.json  # 別のファイル（見直しのページから書き出したもの）を読む。形は docs/SPECIAL_AUDIT.json と同じか、[{name, adopt, adoptSet}] の並び
+//   node tools/special_audit_apply.js 採否.json  # 見直しのページから書き出したもの（[{name, adopt, target, note}] の並びか、docs/SPECIAL_AUDIT.json と同じ形）
 // 書いたあと：node tools/special_audit.js && node tools/special_list.js && node tools/export_godot.js && node tools/golden_race.js && node tools/golden_world.js、そして node tests/run.js
 const fs = require('fs'), path = require('path');
-const ROOT = path.join(__dirname, '..');
+const { load, ROOT } = require('../tests/load.js');
+const A = require('./special_audit.js');
 const args = process.argv.slice(2);
 const dry = args.includes('--dry'), keep = args.includes('--keep');
 const inFile = args.find(a => !a.startsWith('--')) || path.join(ROOT, 'docs', 'SPECIAL_AUDIT.json');
@@ -13,31 +16,32 @@ const audit = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'SPECIAL_AUDIT.
 const input = JSON.parse(fs.readFileSync(inFile, 'utf8'));
 const picks = Array.isArray(input) ? input : input.horses;
 const byName = new Map(audit.horses.map(h => [h.name, h]));
-const KEYS = ['rating', 'pot', 'turf', 'dirt', 'style', 'distMin', 'distMax', 'skills', 'kire']; // js/core/datafix.js の HS.FIX_KEYS と同じ
+const STRENGTH = ['rating', 'pot'];
 
-// いまの data/horse_fix.js を読む
-const FIX = path.join(ROOT, 'data', 'horse_fix.js');
-globalThis.HS = { DATA: {} };
-require('vm').runInThisContext(fs.readFileSync(FIX, 'utf8'));
-const fix = Object.assign({}, globalThis.HS.DATA.horseFix || {});
-
+const HS = load(); HS.U.ERA = HS.Eraless.ERA;
+const kit = A.makeKit(HS);
+const fix = A.readFix();
 const log = [];
 for (const p of picks) {
-  if (p.adopt == null) continue;
+  if (p.adopt == null && p.target == null) continue;
   const a = byName.get(p.name);
-  if (!a) { log.push(`？ ${p.name}：一覧に無い`); continue; }
-  if (p.adopt === false) { if (!keep && fix[p.name]) { delete fix[p.name]; log.push(`− ${p.name}：前に採った値を消した`); } continue; }
-  const set = p.adoptSet || (a.proposal && a.proposal.set);
-  if (!set) { log.push(`？ ${p.name}：案が無い`); continue; }
-  const bad = Object.keys(set).filter(k => !KEYS.includes(k));
-  if (bad.length) { log.push(`？ ${p.name}：書けない値 ${bad.join('・')}`); continue; }
-  fix[p.name] = Object.assign({}, fix[p.name] || {}, set, { why: (a.proposal && a.proposal.why) || p.why || '' });
+  const d = kit.SP.data(p.name) || HS.DATA.historic.find(x => x.name === p.name);
+  if (!a || !d) { log.push(`？ ${p.name}：一覧に無い`); continue; }
+  if (p.adopt === false && p.target == null) { if (!keep && fix[p.name]) { delete fix[p.name]; log.push(`− ${p.name}：前に採った値を消した`); } continue; }
+  const prop = (a.proposal && a.proposal.set) || {};
+  const set = {};
+  if (p.adopt === true) for (const [k, v] of Object.entries(prop)) if (p.target == null || !STRENGTH.includes(k)) set[k] = v;
+  let why = (a.proposal && a.proposal.why) || '';
+  if (p.target != null) {
+    const surf = kit.mainSurf(kit.build(d, set).f);
+    const b = kit.solve(d, set, surf, p.target);
+    if (b.cost) Object.assign(set, b.s);
+    why = `持ち主の見直しで総合力 ${p.target}${p.note ? `（メモ：${p.note}）` : ''}${p.adopt === true && why ? '。' + why : ''}`;
+  }
+  if (!Object.keys(set).length) { log.push(`＝ ${p.name}：いまの値のまま`); continue; }
+  fix[p.name] = Object.assign({}, fix[p.name] || {}, set, { why });
   log.push(`＋ ${p.name}：${JSON.stringify(set)}`);
 }
-const lines = Object.keys(fix).sort().map(n => `    ${JSON.stringify(n)}: ${JSON.stringify(fix[n])},`);
-const src = fs.readFileSync(FIX, 'utf8');
-const head = src.slice(0, src.indexOf('HS.DATA.horseFix = {') + 'HS.DATA.horseFix = {'.length);
-const out = head + '\n' + lines.join('\n') + (lines.length ? '\n' : '') + '  };\n})();\n';
 console.log(log.join('\n') || '採否の付いた案はありません');
 if (dry) console.log('（--dry：書いていない）');
-else { fs.writeFileSync(FIX, out); console.log(`data/horse_fix.js：${Object.keys(fix).length}頭`); }
+else { A.writeFix(fix); console.log(`data/horse_fix.js：${Object.keys(fix).length}頭`); }

@@ -571,7 +571,8 @@ check('skills: 系統を1つずつ回して選ぶ・一気系は1レースに1�
   assert(suna > none, `砂かぶり×が損になっていない（${suna.toFixed(2)}・なし ${none.toFixed(2)}）`);
   // 史実馬にも付く
   const hs = D.historic.slice(0, 3000).map((d, i) => H.fromHistoric(d, 't' + i));
-  for (const id of ['jiyu', 'leftB', 'sunaB']) assert(hs.some(x => x.skills.includes(id)), `${H.SKILLS[id].label}を持つ史実馬がいない`);
+  // 砂かぶり×は運で付けていたが、運はやめた（持ち主の決定 2026-10-20）。勝ち鞍から決まる自在・左回り×は史実馬にいる
+  for (const id of ['jiyu', 'leftB']) assert(hs.some(x => x.skills.includes(id)), `${H.SKILLS[id].label}を持つ史実馬がいない`);
   return `一気系 ${ikki}/40 で1つずつ・砂かぶり× 平均着順 ${none.toFixed(2)}→${suna.toFixed(2)}`;
 });
 check('sim: ペース：スローは前・ハイは後ろが有利、平均ペースは脚質がおおむね釣り合う', () => {

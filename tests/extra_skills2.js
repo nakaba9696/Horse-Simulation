@@ -101,10 +101,12 @@ module.exports = function (check, assert, HS) {
     const race = g => ({ course: '東京', surface: '芝', dist: 2000, grade: 'G2', month: 5, ground: g });
     assert(S.skillAdj({ skills: ['mud'] }, race('重'), null, {}) > 0 && S.skillAdj({ skills: ['mud'] }, race('不良'), null, {}) > 0 && S.skillAdj({ skills: ['mud'] }, race('良'), null, {}) === 0 && S.skillAdj({ skills: ['mud'] }, race('稍重'), null, {}) === 0, '道悪○');
     assert(S.skillAdj({ skills: ['outer'] }, race('良'), null, { frame: 8 }) > 0 && S.skillAdj({ skills: ['outer'] }, race('良'), null, { frame: 7 }) > 0 && S.skillAdj({ skills: ['outer'] }, race('良'), null, { frame: 3 }) === 0, '外枠○');
-    // 史実馬にも付き、前からの特性（運の並び）は変わらない：道悪○・外枠○を外すと前と同じ
+    // 運では付けない（持ち主の決定 2026-10-20）：手で決めた表の無い史実馬には外枠○が付かず、道悪○はデータの道悪の向き（86 以上）か手の表だけ
     const hs = D.historic.slice(0, 2500).map((d, i) => H.fromHistoric(d, 't' + i));
+    const auto = D.historic.slice(0, 2500).map((d, i) => [d, hs[i]]).filter(([d]) => !Array.isArray(d.skills));
     const nMud = hs.filter(x => x.skills.includes('mud')).length, nOut = hs.filter(x => x.skills.includes('outer')).length;
-    assert(nMud > 0.02 * hs.length && nMud < 0.12 * hs.length && nOut > 0.02 * hs.length && nOut < 0.12 * hs.length, `道悪○ ${nMud}・外枠○ ${nOut}／${hs.length}`);
+    assert(!auto.some(([, x]) => x.skills.includes('outer')), '運で外枠○が付いた');
+    assert(auto.filter(([, x]) => x.skills.includes('mud')).every(([d]) => (d.heavy || 0) >= H.MUD_HEAVY), '道悪の向きの無い馬に運で道悪○が付いた');
     assert(hs.filter(x => x.skills.includes('mud')).every(x => x.apt.heavy >= H.MUD_HEAVY), '道悪○の馬の道悪の適性が低い');
     return `史実馬 ${hs.length}頭のうち 道悪○ ${nMud}・外枠○ ${nOut}`;
   });
@@ -117,7 +119,8 @@ module.exports = function (check, assert, HS) {
       for (const id of K.of(h).filter(x => !K.isUnique(x)).concat(H.shownSkills(h))) { if (K.isBad(id)) b.bad++; else b.good++; }
     });
     const g = st => by[st].good / by[st].n, bd = st => by[st].bad / by[st].n;
-    assert(g('逃げ') >= 2.9 && g('追込') >= 2.9, `逃げ ${g('逃げ').toFixed(2)}・追込 ${g('追込').toFixed(2)}（前は 2.8・2.6）`);
+    // 能力の運をやめてから（持ち主の決定 2026-10-20）は 2.73・2.78。足す前（2.8・2.6）より追込は増え、どちらも先行より多い
+    assert(g('逃げ') >= 2.65 && g('追込') >= 2.7, `逃げ ${g('逃げ').toFixed(2)}・追込 ${g('追込').toFixed(2)}（前は 2.8・2.6）`);
     assert(g('先行') < 2.45 && g('先行') < g('差し') && g('先行') < g('逃げ') && g('先行') < g('追込'), `先行 ${g('先行').toFixed(2)} が増えた`);
     for (const st of H.STYLES) assert(bd(st) < 0.6, `${st}の弱み ${bd(st).toFixed(2)}`);
     // どの新しい能力も、その脚質の史実馬のうち5〜60％が持つ（弱みは少なめ）

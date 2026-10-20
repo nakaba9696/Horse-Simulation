@@ -161,7 +161,12 @@ static func cap(p: Dictionary) -> int:
 static func of(h: Variant, w_idx: Variant) -> Array:
 	if not h: return []
 	_uniques()
-	if h.get("trigFixed"): return h.trigFixed.filter(func(id): return BY.has(id)) # オリジナルホースは親から受け継いだもの（無くした特殊能力は外す）
+	# オリジナルホースは親から受け継いだもの（無くした特殊能力は外す）。逸話で決めた名馬（データの trig）は、固有の能力を先頭に
+	if h.get("trigFixed"):
+		var t: Array = h.trigFixed.filter(func(id): return BY.has(id))
+		var u0 = unique_of(h)
+		if u0 != null and not t.has(u0): return [u0] + t
+		return t
 	var p := stats(h, w_idx)
 	var ok: Array = []
 	for g in ORDER:

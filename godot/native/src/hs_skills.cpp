@@ -3,6 +3,7 @@
 #include "hs_math.h"
 #include "hs_var.h"
 #include <mutex>
+#include <algorithm>
 
 using namespace godot;
 
@@ -251,6 +252,9 @@ std::vector<int> skills_of(const Dictionary &h, const Variant &w_idx) {
 	if (tf.booleanize()) {
 		Array a = tf;
 		for (int i = 0; i < a.size(); i++) { int id = skill_id(a[i]); if (def_of(id)) out.push_back(id); } // 無くした特殊能力は外す
+		// 逸話で決めた名馬（データの trig）は、固有の能力を先頭に（オリジナルホースは unique_of が -1）
+		int u0 = unique_of(h);
+		if (u0 >= 0 && std::find(out.begin(), out.end(), u0) == out.end()) out.insert(out.begin(), u0);
 		return out;
 	}
 	double spd, sta, guts, mind, slope;

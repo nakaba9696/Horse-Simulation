@@ -148,7 +148,8 @@
   // この馬の発動する特殊能力（id の並び）
   K.of = function (h, wIdx) {
     if (!h) return [];
-    if (h.trigFixed) return h.trigFixed.filter(id => K.BY[id]); // オリジナルホースは親から受け継いだもの（無くした特殊能力は外す）
+    // オリジナルホースは親から受け継いだもの（無くした特殊能力は外す）。逸話で決めた名馬（データの trig）は、固有の能力を先頭に
+    if (h.trigFixed) { const t = h.trigFixed.filter(id => K.BY[id]), u0 = K.uniqueOf(h); return u0 && !t.includes(u0) ? [u0].concat(t) : t; }
     const p = K.stats(h, wIdx);
     const u = K.uniqueOf(h); // data/uniques.js にある名馬は、固有の能力を先頭に（持てる数とは別）
     // 系統を1つずつ回して取る（爆発 → 損 → 速さ → 気性 → 根性 → 爆発…）。系統の中は表の順
