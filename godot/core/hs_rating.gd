@@ -7,8 +7,8 @@
 class_name HSRating
 
 const BASE := 110.0
-const FH0 := 62.0
-const PER_FH := 1.25
+const FH0 := 63.0
+const PER_FH := 1.5
 const MIN := 40.0
 const MAX := 150.0
 const GAP_CAP := 12.0

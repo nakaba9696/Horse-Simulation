@@ -87,7 +87,7 @@
     return {
       kind, key, name: d.name, born: d.born, sex: d.sex === 'セ' || d.gelding ? 'セ' : d.sex, country: d.country && d.country !== '日' ? d.country : '日',
       surface: d.surface || (h.apt && h.apt.dirt > h.apt.turf ? 'ダ' : '芝'), distMin: h.distMin, distMax: h.distMax, style: h.style, kire: h.kire || 4,
-      turf: T ? T.fhOf(pot, '芝') : 0, dirt: T ? T.fhOf(pot, 'ダ') : 0, pot: Object.assign({}, pot), skills: (h.skills || []).slice(),
+      turf: T ? T.fhOf(pot, '芝', h) : 0, dirt: T ? T.fhOf(pot, 'ダ', h) : 0, pot: Object.assign({}, pot), skills: (h.skills || []).slice(),
     };
   };
   FR.rowsOf = function (tab, snap) {

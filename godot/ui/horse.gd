@@ -331,7 +331,7 @@ func _stat() -> void:
 	var pk := HSSeason.fh_peak(h)
 	var fr := HBoxContainer.new()
 	fr.add_theme_constant_override("separation", 10)
-	fr.add_child(UiScreen.section("総合力"))
+	fr.add_child(UiScreen.section("総合力", "その馬場のスピードとスタミナから"))
 	fr.add_child(UiScreen.spacer())
 	for x in [["いま 芝", now.turf, true], ["ダ", now.dirt, true], ["完成 芝", pk.turf, false], ["ダ", pk.dirt, false]]:
 		fr.add_child(UiTheme.label(String(x[0]), 14, UiTheme.MUTED))
@@ -677,7 +677,7 @@ static func fatigue_label(x: Dictionary, size := 14) -> Label:
 	var v := HSFatigue.view(x)
 	return UiTheme.label("%s %d" % [String(v.label), int(v.value)], size, Color(String(v.color)))
 
-# レーティングの札（総合力に直した段の色で塗る：レーティング 110＝総合力 62）
+# レーティングの札（総合力に直した段の色で塗る：レーティング 110＝総合力 63）
 static func rating_chip(v: float, big := false) -> PanelContainer:
 	if v < 0.0:
 		return UiTheme.chip("－", UiTheme.SUNK, UiTheme.FAINT, 17 if big else 14, 48.0 if big else 34.0)

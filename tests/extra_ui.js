@@ -86,13 +86,13 @@ module.exports = function (check, assert, HS) {
     const ctx = vm.createContext({ HS: { U: HS.U, UI: {}, App: {} }, document: { addEventListener() {}, getElementById() { return null; } } });
     vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/ui/uikit.js'), 'utf8'), ctx, { filename: 'js/ui/uikit.js' });
     const K = ctx.HS.UI.kit;
-    const cases = [[44, 'fh', 0], [44.4, 'fh', 0], [44.5, 'fh', 1], [45, 'fh', 1], [54, 'fh', 1], [55, 'fh', 2], [64, 'fh', 2], [65, 'fh', 3], [74, 'fh', 3], [75, 'fh', 4], [99, 'fh', 4],
+    const cases = [[50, 'fh', 0], [50.4, 'fh', 0], [50.5, 'fh', 1], [51, 'fh', 1], [60, 'fh', 1], [61, 'fh', 2], [65, 'fh', 2], [66, 'fh', 3], [80, 'fh', 3], [81, 'fh', 4], [99, 'fh', 4],
       [59, 'stat', 0], [60, 'stat', 1], [74, 'stat', 1], [75, 'stat', 2], [84, 'stat', 2], [85, 'stat', 3], [94, 'stat', 3], [94.6, 'stat', 4], [95, 'stat', 4], [120, 'stat', 4],
       [2, 'kire', 0], [3, 'kire', 1], [4, 'kire', 1], [5, 'kire', 2], [6, 'kire', 2], [7, 'kire', 3], [8, 'kire', 4]];
     for (const [v, kind, t] of cases) assert(K.tier(v, kind) === t, `段が違う ${kind} ${v} → ${K.tier(v, kind)}（${t}）`);
     assert(/class="u-num t3 big"/.test(K.num(66, '総合力', true, 'fh')), '札に段の印が付かない');
     assert(/u-num t3/.test(K.num(66, '総合力', false, 40, 85)) && /u-num t3/.test(K.num(86)), '前の呼び方（lo・hi）の段');
-    assert(/t0[^]*t2/.test(K.fh(40, 58)), '総合力の芝・ダの札に段の印');
+    assert(/t0[^]*t2/.test(K.fh(40, 62)), '総合力の芝・ダの札に段の印');
     // Godot の UiTheme と同じ境目・同じ色
     const gd = fs.readFileSync(path.join(ROOT, 'godot/ui/theme.gd'), 'utf8');
     const arr = n => { const m = gd.match(new RegExp(`const ${n} := \\[([^\\]]*)\\]`)); assert(m, `theme.gd に ${n} が無い`); return m[1]; };
