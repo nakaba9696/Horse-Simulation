@@ -164,7 +164,13 @@ const AU2_WHY := "豪州の2歳 G1 には出られない"
 const ABROAD2_WHY := "海外の G1 を一度勝つと出られる"
 static func abroad_ok() -> bool:
 	var G = HSWorld.G
-	return G != null and HSU.truthy(G.get("abroadG1"))
+	if G == null: return false
+	if HSU.truthy(G.get("abroadG1")): return true
+	for h in HSU.or_(G.get("horses"), {}).values():
+		if h.get("owner") != "P": continue
+		for w in HSU.or_(h.get("gradedWins"), []):
+			if w.get("grade") == "G1" and w.get("region") == "海外": return true
+	return false
 static func abroad_why(horse: Dictionary, race: Dictionary, year: float) -> Variant:
 	if race.get("grade") != "G1": return null
 	if race.get("age") == "2":

@@ -1201,9 +1201,6 @@
     // オリジナルホースのインブリードの因子（G.origFactor）と血統（G.pedExtra）：前のセーブは牧場にいる馬から足す（js/core/inbreed.js）
     if (HS.Inbreed) HS.Inbreed.migrate(g);
     // 前の版のエディット（瞬発力などの数値）は、遊ぶときに H.fromHistoric が読み替える
-    // 前のセーブ：自分の馬が海外の G1 を勝っていれば、海外の2歳 G1 に出られる（持ち主の決定 2026-10-20）
-    // 立っていないときだけ見て、勝っていれば立てる（無ければ足さない。セーブの往復で中身を変えない）
-    if (!g.abroadG1 && Object.values(g.horses || {}).some(h => h.owner === 'P' && (h.gradedWins || []).some(w => w.grade === 'G1' && w.region === '海外'))) g.abroadG1 = true;
     g.v = SAVE_VERSION;
   };
   W.saveLocal = function () { try { localStorage.setItem(W.SAVE_KEY, W.serialize()); return true; } catch (e) { return false; } };

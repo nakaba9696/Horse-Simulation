@@ -137,11 +137,9 @@ module.exports = function (check, assert, HS) {
     assert(R.ineligibleBase(Object.assign(mk(2, 0), { owner: 'AI' }), two, G.year) === null, 'AI の馬が2歳の海外 G1 に出られない');
     G.abroadG1 = true;
     assert(R.ineligibleBase(mk(2, 0), two, G.year) === null, `海外の G1 を勝ったあとも2歳の海外 G1 に出られない（${two.name}）`);
-    // 自分の馬が海外の G1 を勝つと G.abroadG1 が立つ（world.js）。前のセーブは migrate で勝ち鞍から立てる
-    const g0 = JSON.parse(JSON.stringify(G)); delete g0.abroadG1;
-    const mine = Object.values(g0.horses).find(h => h.owner === 'P') || Object.values(g0.horses)[0];
-    mine.owner = 'P'; mine.gradedWins = [{ y: G.year, race: old.name, grade: 'G1', region: '海外' }];
-    W.migrate(g0); assert(g0.abroadG1 === true, '前のセーブで海外の G1 を勝った馬がいるのに出られない');
+    // 印が無くても、自分の馬が海外の G1 を勝っていれば出られる（前のセーブ）
+    G.abroadG1 = false; const mine = W.mine()[0] || Object.values(G.horses).find(h => h.owner === 'P');
+    if (mine) { const keepW = mine.gradedWins; mine.gradedWins = [{ y: G.year, race: old.name, grade: 'G1', region: '海外' }]; assert(R.ineligibleBase(mk(2, 0), two, G.year) === null, '海外の G1 を勝った馬がいるのに出られない'); mine.gradedWins = keepW; }
     assert((R.ineligibleBase(mk(ages(old), 0), old, G.year) || '').startsWith(R.G1_WHY), `海外の G1 に賞金0で出られる（${old.name}）`);
     assert(R.ineligibleBase(mk(ages(old), R.g1Need(old, G.year)), old, G.year) === null, '海外の G1 に賞金が足りるのに出られない');
     assert(R.ineligibleBase(mk(ages(g2), 0), g2, G.year) === null, `海外の G2・G3 に賞金0で出られない（${g2.name}）`);

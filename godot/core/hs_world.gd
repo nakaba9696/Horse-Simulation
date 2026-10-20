@@ -1253,11 +1253,5 @@ static func migrate(g: Dictionary) -> void:
 		if rc.get("rode") == null: rc.rode = HSU.truthy(rc.get("mine")) and g.mode == "jockey"
 	# オリジナルホースのインブリードの因子（G.origFactor）と血統（G.pedExtra）：前のセーブは牧場にいる馬から足す（hs_inbreed.gd）
 	HSInbreed.migrate(g)
-	# 前のセーブ：自分の馬が海外の G1 を勝っていれば、海外の2歳 G1 に出られる（world.js と同じ）
-	if not HSU.truthy(g.get("abroadG1")):
-		for h in HSU.or_(g.get("horses"), {}).values():
-			if h.get("owner") != "P": continue
-			for w in HSU.or_(h.get("gradedWins"), []):
-				if w.get("grade") == "G1" and w.get("region") == "海外": g.abroadG1 = true
 	g.v = SAVE_VERSION
 	if g.mode == "jockey": g.owners = HSOwners.fill(g.get("owners"), g)   # owners.js の包み
