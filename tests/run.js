@@ -926,7 +926,7 @@ check('shop: 品ぞろえは走っていない馬から牡馬・牝馬それぞ�
   return `牡馬 ${n3.filter((n, i) => W.marketHistoric()[i].horse.sex !== '牝').length}・牝馬 ${E.STOCK}頭（開いている馬 ${E.market().length}頭から）`;
 });
 
-check('hall: トロフィーを1つ以上手にした自分の馬は、引退で殿堂入りを選ぶと殿堂入りし、記録が残る（選ばなければ入らない）', () => {
+check('hall: トロフィーを1つ以上手にした自分の馬は、引退すると案内なしで殿堂入りし、記録が残る', () => {
   const HL = HS.Hall, J = HS.Jockey;
   W.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
@@ -936,13 +936,13 @@ check('hall: トロフィーを1つ以上手にした自分の馬は、引退で
   const [a, b] = W.mine();
   a.results = [{ y: G.year, m: 5, w: 4, race: '日本ダービー', course: '東京', surface: '芝', dist: 2400, pos: 1, n: 18, time: 143.5, jockey: 'テスト騎手' }]; a.starts = 1; a.wins = 1;
   G.trophies = { triple: { y: G.year, horse: a.name, hid: a.id, bonus: 1 }, uk3: { y: G.year, horse: a.name, bonus: 1 }, us3: { y: G.year, horse: b.name, hid: b.id, bonus: 1 } }; // uk3 は前のセーブの形（名前だけ）
-  assert(HL.NEED === 1 && HL.trophiesOf(a).length === 2 && HL.eligible(a) && HL.eligible(b) && HL.ask(a) && HL.ask(b), 'トロフィーの数え方が違う（1つで殿堂入りの案内）');
-  // a は「はい」、b はトロフィー1つで案内が出るが「いいえ」
-  assert(!(J.retire(a.id, { hall: true }) || {}).err && !(J.retire(b.id, { hall: false }) || {}).err, '引退できない');
+  assert(HL.NEED === 1 && HL.trophiesOf(a).length === 2 && HL.eligible(a) && HL.eligible(b) && HL.will(a) && HL.will(b), 'トロフィーの数え方が違う（1つで殿堂入り）');
+  assert(!(J.retire(a.id) || {}).err && !(J.retire(b.id) || {}).err, '引退できない');
   const x = HL.byId(a.id);
-  assert(x && x.trophies.length === 2 && x.results.length === 1 && x.results[0].race === '日本ダービー' && !HL.byId(b.id), '殿堂の写しが違う（いいえでも入る）');
-  J.retire(a.id, { hall: true }); assert(G.hallOwn.length === 1, '二度入る');
-  const s1 = W.serialize(); W.load(s1); assert(W.get().hallOwn.length === 1, 'セーブの往復で殿堂が消える');
+  assert(x && x.trophies.length === 2 && x.results.length === 1 && x.results[0].race === '日本ダービー' && HL.byId(b.id), '殿堂の写しが違う（トロフィー1つでも入る）');
+  J.retire(a.id); assert(G.hallOwn.length === 2, '二度入る');
+  assert(!HL.will(W.horse(a.id) || a), '殿堂にいる馬にまた殿堂入りの印が付く');
+  const s1 = W.serialize(); W.load(s1); assert(W.get().hallOwn.length === 2, 'セーブの往復で殿堂が消える');
   return `${x.name}：トロフィー ${x.trophies.map(t => t.label).join('・')}`;
 });
 

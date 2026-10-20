@@ -15,8 +15,8 @@
     // まだ走っている・牧場にいる馬で、引退すれば殿堂入りする馬
     const cand = W.mine().filter(h => h.loc !== 'retired' && HL.eligible(h) && !HL.byId(h.id));
     const head = `<h2 class="sec">殿堂入りしたお手馬<span class="r">${list.length}頭</span></h2>
-      <div class="small muted">トロフィーを${HL.NEED}つ以上手にした自分の馬は、引退させるときに殿堂入りさせるかを選べます。札を押すと、その馬の記録を振り返れます。</div>`;
-    const candHtml = cand.length ? `<div class="panel gold mt">引退させるときに殿堂入りできる：${cand.map(h => `<b>${e(h.name)}</b>（トロフィー ${HL.trophiesOf(h).length}）`).join('・')}</div>` : '';
+      <div class="small muted">トロフィーを${HL.NEED}つ以上手にした自分の馬は、引退すると殿堂入りします。札を押すと、その馬の記録を振り返れます。</div>`;
+    const candHtml = cand.length ? `<div class="panel gold mt">引退すると殿堂入り：${cand.map(h => `<b>${e(h.name)}</b>（トロフィー ${HL.trophiesOf(h).length}）`).join('・')}</div>` : '';
     if (!list.length) return head + candHtml + `<div class="panel empty mt">まだ殿堂入りしたお手馬はいません。</div>`;
     return head + candHtml + `<div class="hall-cards mt">${list.map((x, k) => `<button class="hall-card" data-act="hallview" data-id="${e(x.id)}" style="--i:${Math.min(k, 12)}">
         ${thumb(x)}

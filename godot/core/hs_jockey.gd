@@ -125,12 +125,12 @@ static func week_start() -> void:
 	HSSeason.apply_reserves()
 	# グランドフェスティバルの招待は12月4週のあと（HSWorld.next_week → HSSeason.gf_stage）
 # 引退：年代なしのゲームは牧場に残してオリジナルホースの親にする
-# opts.hall：殿堂入りさせるか（条件を満たす馬は、引退の画面で聞く。HSHall.ask）。入らなければレースの記録は消える
-static func retire(id: String, opts: Dictionary = {}) -> Dictionary:
-	if HSOriginal.on(): return HSOriginal.retire(id, opts)
+# トロフィーを1つ以上手にした馬は案内なしで殿堂入り（HSHall.on_retire）。入らない馬のレースの記録は消える
+static func retire(id: String) -> Dictionary:
+	if HSOriginal.on(): return HSOriginal.retire(id)
 	var h = HSWorld.horse(id)
 	if not h: return { err = "持ち馬ではない" }
-	if h.get("owner") == "P" and opts.get("hall") == true: HSHall.on_retire(h)
+	if h.get("owner") == "P": HSHall.on_retire(h)
 	HSRaceRec.strip(h)
 	var r := HSWorld.retire(id)
 	if not r.has("err") and HSWorld.horse(id):

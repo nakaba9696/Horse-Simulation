@@ -281,14 +281,10 @@
     if (!isJ()) return retire0(d);
     const h = W.horse(d.id);
     const keep = HS.Original && HS.Original.on() && !h.gelding;
-    if (!(await App.confirm(`${e(h.name)}を引退させますか？${keep ? '（牧場に残り、オリジナルホースの親にできます）' : '（手もとを離れます）'}`, '引退させる'))) return;
-    // 殿堂入りの案内（トロフィー1つ以上。持ち主の決定 2026-10-20）。「いいえ」なら殿堂に入らず、レースの記録も消える
-    let hall = false;
-    if (HS.Hall && HS.Hall.ask(h)) {
-      const tro = HS.Hall.trophiesOf(h).map(t => t.label).join('・');
-      hall = await App.confirm(`${e(h.name)}を殿堂入りさせますか？<br><span class="small">トロフィー：${e(tro)}<br>殿堂入りすると、引退したあとも戦績と1走ごとの出走馬・ラップを殿堂で見られます。させないと、レースの記録は消えます。</span>`, 'はい', 'いいえ', true);
-    }
-    const r = J.retire(d.id, { hall }); if (r && r.err) { App.toast(r.err); return; }
+    // トロフィーを1つ以上手にした馬は案内なしで殿堂入りする（持ち主の決定 2026-10-20「殿堂入りは自動」）。確かめの文にそのことを添える
+    const hallNote = HS.Hall && HS.Hall.will(h) ? '<br>トロフィーを手にしたので、殿堂入りします。' : '';
+    if (!(await App.confirm(`${e(h.name)}を引退させますか？${keep ? '（牧場に残り、オリジナルホースの親にできます）' : '（手もとを離れます）'}${hallNote}`, '引退させる'))) return;
+    const r = J.retire(d.id); if (r && r.err) { App.toast(r.err); return; }
     if (r && r.hall) App.toast(`${h.name}が殿堂入りした`);
     App.save(); App.back();
   };
