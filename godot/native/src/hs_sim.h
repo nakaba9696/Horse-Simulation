@@ -151,6 +151,10 @@ godot::Variant ctl_lane(Sim &sim, double d);
 void ctl_hold(Sim &sim, bool on);
 void fire(Sim &sim, Runner &s, int id);
 double whip_eff(const Ctl &c);
+// 馬場の状態（HSSim.mud_m・ground_fx と同じ）
+struct GroundFx { double e, k, m; };
+double mud_m(double heavy);
+GroundFx ground_fx(const godot::Dictionary &horse, const godot::Dictionary &race);
 // 1頭の強さ（HSSim.power と同じ）
 godot::Dictionary power(const godot::Dictionary &horse, const godot::Dictionary &race, const godot::Variant &w_idx, const godot::Dictionary &ctx);
 

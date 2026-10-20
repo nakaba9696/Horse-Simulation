@@ -508,13 +508,16 @@
       let sel = rows.indexOf(runner); if (sel < 0) sel = 0;
       const tip = h.style === '逃げ' ? 'ハナを切って、そのまま粘らせてください。' : h.style === '先行' ? '好位につけて、直線で抜け出してください。' : h.style === '差し' ? '中団で脚をためて、直線勝負でお願いします。' : '後ろで脚をためて、最後に外から。';
       const kireTip = (h.kire || 4) >= 6 ? '切れる脚があるので、仕掛けは我慢してください。' : (h.kire || 4) <= 3 ? 'エンジンのかかりが遅いので、早めに動いてください。' : '';
+      // 道悪（馬場が良でないとき）：苦手ならスタミナが早くなくなり切れも鈍る、得意なら好材料（HS.Sim.groundFx）
+      const mud = card.race.ground && card.race.ground !== '良' ? HS.Sim.mudLabel((h.apt && h.apt.heavy) || 50) : null;
+      const mudTip = mud === '苦手' ? '道悪は苦手で、脚がなくなるのが早いです。道中はなるべく楽に運んでください。' : mud === '得意' ? '道悪は得意なので、この馬場はむしろ好材料です。' : '';
       const bg = App.modal(`<div class="paddock"><canvas class="pd-cv" width="720" height="250"></canvas>
           <button class="pd-nav l" data-d="-1" aria-label="前の馬">◀</button><button class="pd-nav r" data-d="1" aria-label="次の馬">▶</button>
           <div class="pd-band"></div></div>
         ${UI.entryTable(card)}
         ${UI.paddockOwner ? UI.paddockOwner(card, runner) : ''}
         <div class="panel mt offer"><div class="row"><b>${e(h.name)}</b><span class="small muted">${e(J.trainerOf(h))}調教師より</span></div>
-          <div class="comment">「${tip}${kireTip}」</div>
+          <div class="comment">「${tip}${kireTip}${mudTip}」</div>
           ${UI.hasSkills(h) ? `<div class="pd-myskills mt">${UI.skillList(h)}</div>` : ''}${UI.numStats(h, wIdx, { surface: card.race.surface })}</div>
         <div class="btns mt"><button class="btn gold" data-x="ride">ゲートイン</button></div>`, { noClose: true, scene: 'paddock' });
       const cv = bg.querySelector('.pd-cv'), ctx = cv.getContext('2d'), band = bg.querySelector('.pd-band');
@@ -525,7 +528,7 @@
       const pdImg = pdSrc ? (UI._pdImg || (UI._pdImg = Object.assign(new Image(), { src: pdSrc }))) : null;
       const show = () => {
         const x = rows[sel], m = UI.mood(x.horse, wIdx), me = x === runner;
-        band.innerHTML = `${UI.waku(x.frame, x.num)}<b class="nm ${me ? 'me' : ''}">${e(x.horse.name)}</b><span>${x.horse.gelding ? 'セ' : x.horse.sex}${W.get().year - x.horse.born}</span><span>${x.weight}kg</span><span>${e(x.jockey ? x.jockey.name : '')}</span><span>単勝 <b>${x.odds}</b>（${x.pop}番人気）</span><span class="md ${m.cls}">${m.text}</span>${x.horse.filler ? '' : `<span>疲労 ${UI.fatigueMark(x.horse, x.travel)}</span>`}<div class="pd-skills">${UI.hasSkills(x.horse) ? UI.skillChips(x.horse) : '<span class="small muted">特殊能力なし</span>'}</div>`;
+        band.innerHTML = `${UI.waku(x.frame, x.num)}<b class="nm ${me ? 'me' : ''}">${e(x.horse.name)}</b><span>${x.horse.gelding ? 'セ' : x.horse.sex}${W.get().year - x.horse.born}</span><span>${x.weight}kg</span><span>${e(x.jockey ? x.jockey.name : '')}</span><span>単勝 <b>${x.odds}</b>（${x.pop}番人気）</span><span class="md ${m.cls}">${m.text}</span>${x.horse.filler ? '' : `<span>疲労 ${UI.fatigueMark(x.horse, x.travel)}</span>`}${card.race.ground && card.race.ground !== '良' ? `<span>${e(card.race.ground)} ${UI.mudMark(x.horse)}</span>` : ''}<div class="pd-skills">${UI.hasSkills(x.horse) ? UI.skillChips(x.horse) : '<span class="small muted">特殊能力なし</span>'}</div>`;
         x0 = -80; t0 = performance.now();
       };
       const move = d => { sel = (sel + d + rows.length) % rows.length; show(); };
@@ -597,8 +600,14 @@
   };
   // 脚質の矢印（左から追込・差し・先行・逃げ。右が前。持ち主の指摘 2026-10-16）。光っているのがこの馬の脚質で、自由自在の馬は全部が光る
   UI.kyakuArrows = (st, h) => { const all = h && H.has(h, 'jiyu'); return `<span class="ka" title="${e(st)}${all ? '・自在' : ''}">${['追込', '差し', '先行', '逃げ'].map(k => `<i class="${all || k === st ? 'on' : ''}"></i>`).join('')}</span>`; };
+  // 道悪の得手不得手の印（得意・ふつう・苦手。HS.Sim.mudLabel）。馬場が良でないときに出走表とパドックに出す（持ち主の決定 2026-10-20「馬場の状態」）
+  UI.mudMark = h => {
+    const a = (h.apt && h.apt.heavy) || 50, lb = HS.Sim.mudLabel(a);
+    return `<span class="cmark mud" style="--c:${lb === '得意' ? 'var(--good)' : lb === '苦手' ? 'var(--bad)' : 'var(--muted)'}" title="道悪 ${Math.round(a)}"><i></i>${lb}</span>`;
+  };
   UI.entryTable = function (card) {
     const { race, runners } = card;
+    const wet = race.ground && race.ground !== '良'; // 道悪のときだけ、道悪の列を出す
     const G = race.free || !W.get() ? { year: race.year, month: race.month, week: race.week, seed: 0 } : W.get(); // フリーレースはセーブの年でなく、そのレースの年で
     const rows = runners.slice().sort((a, b) => a.num - b.num);
     const recent = h => (h.results || []).slice(-3).map(r => `<span class="${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos > 9 ? '×' : r.pos}</span>`).join('') || '<span class="muted">新</span>';
@@ -606,13 +615,13 @@
       <div class="entry-head"><div>${UI.gradeTag(race)} <b class="serif" style="font-size:20px">${e(race.short || race.name)}</b></div>
         <div class="small">${race.free ? '' : `${W.yLabel(G.year)}${race.month}月 `}${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　${(w => `${T.weatherIcon(w)}${w}`)(race.weather || T.weather(G.seed, G.year, G.month, G.week, race.course, race.ground))}・${race.ground}　${runners.length}頭</div></div>
       <div class="entry-top">${UI.courseSvg(race)}</div>
-      <div class="tblwrap mt"><table class="t entry-t"><tr><th>枠</th><th>馬名</th><th>脚質</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th>騎手</th><th>人気</th><th class="hide-sm">疲労</th><th>近走</th></tr>
+      <div class="tblwrap mt"><table class="t entry-t"><tr><th>枠</th><th>馬名</th><th>脚質</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th>騎手</th><th>人気</th>${wet ? '<th>道悪</th>' : ''}<th class="hide-sm">疲労</th><th>近走</th></tr>
       ${rows.map(x => { const me = x.rider === 'P' || x.mine; return `<tr class="${me ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td>
         <td class="nm">${e(x.horse.name)}${x.horse.legend ? ' <span class="chip legend">スペシャル</span>' : x.horse.hist ? ' <span class="chip hist">史</span>' : ''}</td>
         <td>${UI.kyakuArrows(x.horse.style, x.horse)}<div class="small muted">${e(H.styleText(x.horse))}</div></td>
         <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td>
         <td class="small">${x.allowance ? J.allowanceMark(x.allowance) : ''}${e(x.jockey ? x.jockey.name : '')}</td>
-        <td class="num">${x.pop}<div class="small muted">${x.odds}</div></td><td class="hide-sm">${x.horse.filler ? '<span class="muted">－</span>' : UI.fatigueMark(x.horse, x.travel)}</td><td class="recent">${recent(x.horse)}</td></tr>`; }).join('')}
+        <td class="num">${x.pop}<div class="small muted">${x.odds}</div></td>${wet ? `<td>${UI.mudMark(x.horse)}</td>` : ''}<td class="hide-sm">${x.horse.filler ? '<span class="muted">－</span>' : UI.fatigueMark(x.horse, x.travel)}</td><td class="recent">${recent(x.horse)}</td></tr>`; }).join('')}
       </table></div></div>`;
   };
 

@@ -786,6 +786,20 @@ func _poly_split(pts: Array, col: Color) -> void:
 	_poly([pts[0], pts[1], pts[2], pts[3]], col)
 	_poly([pts[0], pts[3], pts[4], pts[5]], col)
 
+# 道悪：{wet＝馬場が良でない, e＝自分の馬のスタミナの減りの倍率}（初めて描くときに決める）
+var _mud := {}
+func _mud_fx() -> Dictionary:
+	if _mud.is_empty():
+		var rr: Dictionary = race.race
+		var wet := String(rr.get("ground", "良")) != "良"
+		var e := 1.0
+		if wet:
+			var r = rv.me_runner()
+			var h: Dictionary = r.h if r != null else {"apt": {"heavy": float(race.horses[rv.me].get("heavy", 50.0))}, "kire": 4.0}
+			e = float(HSSim.ground_fx(h, {"ground": rr.ground, "surface": rr.surface, "dist": float(rr.dist)}).e)
+		_mud = {"wet": wet, "e": e}
+	return _mud
+
 # スタミナ：8つの斜めの升。減るほど緑→金→赤、残り2つで点滅、空なら赤い枠だけ
 func _stamina(M: Dictionary, x: float, y: float) -> void:
 	_tag("STAMINA", x, y + 8)
@@ -796,12 +810,28 @@ func _stamina(M: Dictionary, x: float, y: float) -> void:
 	_sta_prev = nb
 	var col := BAD if nb <= 2 else (WARN if nb <= 4 else GOOD)
 	var blink := 0.55 + 0.45 * sin(now / 0.11) if nb <= 2 and not bool(M.done) else 1.0
+	# いちばん先の升は、残りの割合だけ満たす（減っていく速さが見える）
+	var frac := clampf(E * 8.0 - (nb - 1), 0.08, 1.0) if nb > 0 else 0.0
 	for i in 8:
 		var cx := x + i * 27.0
-		if i < nb:
+		if i < nb - 1:
 			_cell(cx, y + 13, 23, 17, _a(col, blink), 6)
+		elif i == nb - 1:
+			_cell(cx, y + 13, 23, 17, OFF)
+			_cell(cx, y + 13, 23.0 * frac, 17, _a(col, blink), 6)
 		else:
 			_cell(cx, y + 13, 23, 17, OFF)
+	# 道悪（馬場が良でない）：升の下に泥がかかり、脚がなくなるのが速い馬（HSSim.ground_fx の e が 1 より大きい）は、いちばん先の升から泥のしずくが垂れる（文字は出さない。JS の ride.js と同じ）
+	var mud := _mud_fx()
+	if bool(mud.wet) and nb > 0 and not bool(M.done):
+		for i in nb:
+			_rect(x + i * 27.0 + 1.0, y + 24.0, 22.0 * frac if i == nb - 1 else 22.0, 6.0, Color(110 / 255.0, 74 / 255.0, 40 / 255.0, 0.85))
+		if float(mud.e) > 1.005:
+			var lx := x + (nb - 1) * 27.0 + 23.0 * frac - 3.0
+			var rate := 1.1 + (float(mud.e) - 1.0) * 9.0
+			for d in 3:
+				var u := fmod(now * rate + d / 3.0, 1.0)
+				_circle(lx - d * 5.0, y + 32.0 + u * 16.0, 3.2 - u * 1.4, Color(138 / 255.0, 95 / 255.0, 52 / 255.0, 0.95 * (1.0 - u * 0.7)))
 	if _sta_lost != null and now - float(_sta_lost.t) < 0.38:
 		var u: float = (now - float(_sta_lost.t)) / 0.38
 		_cell(x + int(_sta_lost.i) * 27.0, y + 13 - u * 4, 23, 17, Color(1, 1, 1, 1.0 - u), 12)

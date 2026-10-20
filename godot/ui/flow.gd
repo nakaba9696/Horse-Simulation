@@ -462,7 +462,8 @@ static func desc_of(card: Dictionary) -> Dictionary:
 			info.silks = sk
 		info.merge({"sex": String(h.sex), "age": int(age), "style": String(HSU.or_(h.get("style"), "先行")), "weight": float(x.weight), "mine": mine,
 			"jockey": String(x.jockey.name) if x.get("jockey") else "", "odds": float(HSU.or_(x.get("odds"), 0.0)), "pop": int(HSU.or_(x.get("pop"), 0)),
-			"capText": ft[(int(x.frame) - 1) % 8], "hist": HSU.truthy(h.get("hist")), "legend": HSU.truthy(x.get("legend")), "id": String(h.id)}, true)
+			"capText": ft[(int(x.frame) - 1) % 8], "hist": HSU.truthy(h.get("hist")), "legend": HSU.truthy(x.get("legend")), "id": String(h.id),
+			"heavy": float(HSU.or_(h.apt.get("heavy") if h.get("apt") is Dictionary else null, 50.0))}, true)   # 道悪の適性（出走表の道悪の印。HSSim.mud_label）
 		horses.append(info)
 	var grade := HSRaces.grade_badge(race)
 	var rec = HSWorld.course_record(race)
