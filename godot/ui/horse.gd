@@ -290,6 +290,7 @@ func _build_left() -> void:
 	v.add_child(sp)
 	b_prog = UiScreen.button("番組表（出走登録）", true, 0, 56, 20)
 	b_prog.pressed.connect(_program)
+	b_prog.set_meta("pad", "Y")   # Y でも番組表（押すボタンの印が付く）
 	v.add_child(b_prog)
 	var keep: bool = HSOriginal.on() and not h.get("gelding")
 	var br := UiScreen.danger_button("引退させる", 0, 44, 16)

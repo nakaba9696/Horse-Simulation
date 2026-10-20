@@ -79,7 +79,7 @@ func setup(view) -> void:
 	canvas.draw.connect(_draw_hud)
 	root.add_child(canvas)
 	# ゲートの中だけ：操作の案内（英語の短い合図）
-	gate_keys = UiTheme.keybar([["↑", "D-PAD ↑", "START"], ["← →", "D-PAD ← →", "LANE"], ["V", "BACK", "VIEW"], ["ESC", "START", "PAUSE"]], Input.get_connected_joypads().size() > 0)
+	gate_keys = UiTheme.keybar([["↑", "D-PAD ↑", "START"], ["← →", "D-PAD ← →", "LANE"], ["V", "BACK", "VIEW"], ["ESC", "START", "PAUSE"]], Input.get_connected_joypads().size() > 0, false)
 	root.add_child(gate_keys)
 	_build_board()
 

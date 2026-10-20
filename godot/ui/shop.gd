@@ -126,6 +126,7 @@ func _fill() -> void:
 		b.text = String(c[0]) + mark
 		b.focus_mode = Control.FOCUS_NONE
 		b.set_meta("pad", "Y")   # パッドは Y で並べ替えを回す
+		b.set_meta("no_glyph", true)   # 見出しごとには印を出さない（操作の案内に「Y 並べ替え」）
 		b.flat = true
 		b.add_theme_font_size_override("font_size", 11)
 		b.add_theme_color_override("font_color", UiTheme.GOLD if mark != "" else UiTheme.MUTED)
