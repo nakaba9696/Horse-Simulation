@@ -73,4 +73,29 @@ module.exports = function (check, assert, HS) {
     assert(l7 > l2 + 1, `切れ7 の損 ${l7.toFixed(2)}・切れ2 の損 ${l2.toFixed(2)}`);
     return `道悪45・差し：切れ2 ${k2.g.pos.toFixed(1)}→${k2.b.pos.toFixed(1)}・切れ7 ${k7.g.pos.toFixed(1)}→${k7.b.pos.toFixed(1)}`;
   });
+  // 史実馬の道悪の適性（data/mud.js。docs/BALANCE.md「14-6」）：史実で得手不得手がはっきりした馬だけ。ほかは 66
+  check('ground: 史実馬の道悪の適性（得意 90・苦手 35・ほかは 66）', () => {
+    const D = HS.DATA, SP = HS.Special;
+    const of = n => { const d = (SP && SP.data(n)) || D.historic.find(x => x.name === n); assert(d, `${n} がデータに無い`); return H.fromHistoric(d, 'mudtest'); };
+    const good = of('ブローザホーン'), bad = of('モンテプリンス'), plain = of('テイエムオペラオー');
+    assert(good.apt.heavy === 90 && S.mudLabel(good.apt.heavy) === '得意' && good.skills.includes('mud'), `ブローザホーンが得意でない ${good.apt.heavy} ${good.skills}`);
+    // 名馬の表で特殊能力を決めた馬にも道悪○が付く
+    const orf = of('オルフェーヴル');
+    assert(orf.apt.heavy === 90 && orf.skills.includes('mud') && orf.skills.includes('big'), `オルフェーヴル ${orf.apt.heavy} ${orf.skills}`);
+    assert(bad.apt.heavy === 35 && S.mudLabel(bad.apt.heavy) === '苦手' && !bad.skills.includes('mud'), `モンテプリンスが苦手でない ${bad.apt.heavy}`);
+    assert(S.groundFx(bad, race('不良')).e > 1.3, '苦手の馬が不良で大きく損をしない');
+    assert(plain.apt.heavy === 66 && S.mudLabel(66) === 'ふつう', `書いていない馬が 66 でない ${plain.apt.heavy}`);
+    // 表の馬は全部データにいて、表に無い史実馬は全員 66
+    const fix = D.mudFix || {};
+    for (const n of Object.keys(fix)) of(n);
+    let nG = 0, nB = 0, other = 0;
+    for (const d of D.historic) {
+      const h = H.fromHistoric(d, 'mudtest');
+      if (fix[d.name]) { if (h.apt.heavy === 90) nG++; else if (h.apt.heavy === 35) nB++; }
+      else if (h.apt.heavy !== 66) other++;
+    }
+    assert(other === 0, `表に無いのに 66 でない史実馬 ${other}頭`);
+    assert(Object.values(fix).every(f => f.why && (f.heavy === 90 || f.heavy === 35)), '表の値か根拠が無い');
+    return `表 ${Object.keys(fix).length}頭（史実馬の中で得意 ${nG}・苦手 ${nB}）`;
+  });
 };
