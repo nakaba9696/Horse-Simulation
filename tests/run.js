@@ -1384,6 +1384,7 @@ require('./extra_ui.js')(check, assert, HS); // 画面の仕組み：並べ替�
 require('./extra_feel.js')(check, assert, HS); // 騎乗の手ざわり（パッドの向き・状態の文字を出さない）
 require('./extra_fatigue.js')(check, assert, HS); // 疲労（格・激戦・回復・移動・連闘で別の国へ行けない）と、故障が無いこと
 require('./extra_edits.js')(check, assert, HS); // 競走馬エディット（能力を書き換える・総合力はその結果・前の版の書き出しを読む）
+require('./extra_review.js')(check, assert, HS); // 外部レビューの指摘：史実馬に自動の損な技を付けない・固有の技の速さが残る
 require('./extra_audit.js')(check, assert, HS); // スペシャルホースの総点検で採った値（data/horse_fix.js）と馬場の向き
 require('./extra_gate.js')(check, assert, HS); // スタートの目押し（数えを出さない・待つ秒は種から・GOOD の幅）と、騎手のゲームに放牧が無い
 require('./extra_records.js')(check, assert, HS); // お手馬のレースの記録（出走馬・ラップ）と殿堂入りの案内

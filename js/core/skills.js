@@ -160,7 +160,9 @@
       for (const g of ok) { if (g[round]) { any = true; if (out.length < cap) out.push(g[round].id); } }
       if (!any) break;
     }
-    return u ? [u].concat(out) : out;
+    // 史実馬は、損な技（ささり癖・馬込み× など）を能力の数から自動で付けない。逸話のある馬だけ trig に手で書く（外部レビューの指摘・持ち主の決定 2026-10-20）
+    const own = h.hist ? out.filter(id => !K.BY[id].bad) : out;
+    return u ? [u].concat(own) : own;
   };
   K.label = id => (K.BY[id] || H.SKILLS[id] || { label: id }).label;
   K.isBad = id => !!(K.BY[id] || H.SKILLS[id] || {}).bad;
@@ -239,7 +241,11 @@
   K.apply = function (sim, s, k) {
     const f = k.fx;
     const amp = k.ikki ? U.clamp(K.IKKI.a + K.IKKI.b * s.E, K.IKKI.lo, K.IKKI.hi) : 1;
-    if (f.spd) s.boost = { mul: 1 + f.spd * amp, until: sim.t + (f.sec || 1.5), id: k.id, free: !!f.free }; // free：脚を使わない速さ（スタートの能力）
+    // free：脚を使わない速さ（スタートの能力）。効き目が重なったら強いほう（倍率が高いほう。同じなら長く残るほう）を残す。固有の技の速さが、あとから出たふつうの技に上書きされない（外部レビューの指摘 2026-10-20）
+    if (f.spd) {
+      const b = { mul: 1 + f.spd * amp, until: sim.t + (f.sec || 1.5), id: k.id, free: !!f.free }, o = s.boost;
+      if (!(o && sim.t < o.until && (o.mul > b.mul || (o.mul === b.mul && o.until >= b.until)))) s.boost = b;
+    }
     if (f.free && k.at === 'start') s.easyStart = true; // 楽に位置を取れたので、出だし（距離の22%まで）の脚の使い方が軽い
     if (f.top) s.topAdd = (s.topAdd || 0) + f.top;
     if (f.E) s.E = U.clamp(s.E + f.E, -0.2, 1);

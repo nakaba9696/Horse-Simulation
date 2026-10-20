@@ -289,6 +289,8 @@ std::vector<int> skills_of(const Dictionary &h, const Variant &w_idx) {
 		if (!any) break;
 		round_++;
 	}
+	// 史実馬は、損な技（ささり癖・馬込み× など）を能力の数から自動で付けない。逸話のある馬だけ trig に手で書く（外部レビューの指摘・持ち主の決定 2026-10-20）
+	if (truthy(h.get("hist", Variant()))) out.erase(std::remove_if(out.begin(), out.end(), [](int id) { const Def *d = def_of(id); return d && d->bad; }), out.end());
 	if (u >= 0) out.insert(out.begin(), u);
 	return out;
 }
@@ -309,7 +311,12 @@ void skills_flags(Runner &s) {
 static void apply(Sim &sim, Runner &s, const Def &k) {
 	const Fx &f = k.fx;
 	double amp = k.ikki ? clamp(0.4 + 2.0 * s.E, 0.6, 1.6) : 1.0;
-	if (f.spd != 0.0) { s.boost.on = true; s.boost.mul = 1.0 + f.spd * amp; s.boost.until = sim.t + num_or(f.sec, 1.5); s.boost.id = -1; s.boost.free_ = f.free_; }
+	// 速さの効き目が重なったら強いほう（倍率が高いほう。同じなら長く残るほう）を残す（外部レビューの指摘 2026-10-20）
+	if (f.spd != 0.0) {
+		double mul = 1.0 + f.spd * amp, until = sim.t + num_or(f.sec, 1.5);
+		const Boost &o = s.boost;
+		if (!(o.on && sim.t < o.until && (o.mul > mul || (o.mul == mul && o.until >= until)))) { s.boost.on = true; s.boost.mul = mul; s.boost.until = until; s.boost.id = -1; s.boost.free_ = f.free_; }
+	}
 	if (f.free_ && k.at == AT_START) s.easyStart = true;
 	if (f.top != 0.0) s.topAdd = s.topAdd + f.top;
 	if (f.E != 0.0) s.E = clamp(s.E + f.E, -0.2, 1.0);
