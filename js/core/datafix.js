@@ -87,6 +87,16 @@
     if (s.kire == null && h.kire != null) s.kire = h.kire;
     if (!s.skills && h.skills) s.skills = h.skills.slice();
   }
+  // 史実馬の道悪の向き（data/mud.js。史実で得手不得手がはっきりした馬だけ。ほかは H.fromHistoric の 66）。
+  // 得意の馬は道悪○（特殊能力 'mud'）も付ける：名馬の表で特殊能力を決めた馬は H.histSkills2 が通らないので、ここで足す（境目は H.MUD_HEAVY と同じ 86）
+  {
+    const extra = new Map((D.legendsExtra || []).map(d => [d.name, d]));
+    for (const [n, f] of Object.entries(D.mudFix || {})) {
+      const h = byName.get(n) || byNorm.get(HS.normName(n)) || extra.get(n); if (!h) continue;
+      h.heavy = f.heavy;
+      if (f.heavy >= 86 && Array.isArray(h.skills) && !h.skills.includes('mud')) h.skills = h.skills.concat('mud');
+    }
+  }
   // 外国で調教された馬かどうか
   D.isForeign = h => !!(h.country && h.country !== '日');
 })();
