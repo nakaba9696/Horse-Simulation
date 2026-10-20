@@ -25,7 +25,7 @@ const SCENES := {
 static var rides: Array = []        # 今週自分が乗るレース [{card, runner}]
 static var ride_i := 0              # いま何鞍目か
 static var played := {}             # { raceKey: HSSim.finish の結果 }（自分で乗ったレース）
-static var ridden := {}             # { raceKey: "ride"｜"auto" }
+static var ridden := {}             # { raceKey: "ride" }（自分で乗ったレース。おまかせ騎乗は無い。持ち主の決定 2026-10-20）
 static var report = null            # 最後に締めた週（HSWorld.finish_week の戻り値）
 static var money0 := 0.0            # 週の初めの資金（週の結果で増減を出す）
 static var in_week := false         # 騎乗の列を回している間
@@ -92,7 +92,7 @@ static func _reset_week() -> void:
 	report = null
 
 # 撮影とテストの見本：決まった種の新しいゲームで、店のいちばん安い馬を買えるだけ（3頭まで）買い、
-# weeks 週をおまかせで進める（オーナーの依頼の馬には自分が乗る）。セーブは書かない
+# weeks 週を進める（オーナーの依頼の馬には自分が乗る。見本を作る道具なので、途中の週の騎乗は騎手の腕で自動に走らせる）。セーブは書かない
 static func demo(weeks := 0, seed := 7.0) -> void:
 	no_save = true
 	replay_dir = "user://demo_replays"   # 見本のリプレイは遊ぶときのものと混ぜない
@@ -237,20 +237,26 @@ static func begin_week() -> String:
 static func current() -> Variant:
 	return rides[ride_i] if in_week and ride_i < rides.size() else null
 
-# 騎乗を終えた（res＝HSSim.finish の結果）か、おまかせで乗る（res＝null）
-static func ride_done(res) -> String:
+# 騎乗を終えた（res＝HSSim.finish の結果）。おまかせ騎乗は無いので、結果の無いまま次へは進まない
+static func ride_done(res: Dictionary) -> String:
 	var r = current()
 	if r != null:
 		var key: String = r.card.race.key
-		if res != null:
-			played[key] = res
-			ridden[key] = "ride"
-			if desc is Dictionary and String(desc.race.get("key", "")) == key:
-				save_replay(desc, res)
-		else:
-			ridden[key] = "auto"
+		played[key] = res
+		ridden[key] = "ride"
+		if desc is Dictionary and String(desc.race.get("key", "")) == key:
+			save_replay(desc, res)
 		ride_i += 1
 	return "card" if current() != null else close_week()
+
+# まだ乗っていない自分の騎乗（今週の出走表で自分が乗るのに、結果の無いもの）の番号。無ければ -1。
+# 週の途中で出走を変えても見落とさないよう、締める前に今の出走表から数え直す
+static func next_unridden() -> int:
+	rides = HSJockey.my_rides()
+	for i in rides.size():
+		if not played.has(String(rides[i].card.race.key)):
+			return i
+	return -1
 
 static var trophies0: Array = []     # 週の初めに手にしていたトロフィー（週の結果の見せ場で、増えた分を出す）
 static var unlocked0: Array = []     # 週の初めに破っていたスペシャルホース
@@ -295,11 +301,16 @@ static func after_result() -> void:
 		s.queue = []
 	save()
 
-# 週を締める（乗らなかったレースはおまかせで走る）→ 週の結果
+# 週を締める → 週の結果。自分の騎乗が残っていれば締めずに、その出走表へ（おまかせ騎乗は無い。持ち主の決定 2026-10-20「おまかせ騎乗　なしにして」）
 static func close_week() -> String:
 	if not in_week:
 		money0 = float(HSWorld.G.player.money)
 		mark_news()
+	var left := next_unridden()
+	if left >= 0:
+		ride_i = left
+		in_week = true
+		return "card"
 	report = HSWorld.finish_week(played)
 	in_week = false
 	rides = []

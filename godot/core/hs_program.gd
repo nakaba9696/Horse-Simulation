@@ -34,10 +34,19 @@ static func why(h: Dictionary, race: Dictionary, wk: Dictionary) -> Variant:
 	if wk.i == 0:
 		if race.get("invite"): return "招待馬だけ"
 		if h.get("loc") != "stable": return "入厩前" if h.get("loc") == "farm" else "出られない"
-		return HSRaces.ineligible(h, race, G.year)
+		var w0 = HSRaces.ineligible(h, race, G.year)
+		return w0 if w0 else HSWorld.ride_taken(race.key, h.id)
 	var st = HSSeason.static_ineligible(h, race, race.year)
 	if st: return st
-	return HSRaces.ineligible(h, race, race.year)
+	var w1 = HSRaces.ineligible(h, race, race.year)
+	return w1 if w1 else mine_reserved(h, race)
+# 1つのレースに自分の馬は1頭まで（持ち主の決定 2026-10-20）：ほかのお手馬がそのレースを予約していれば、その理由
+static func mine_reserved(h: Dictionary, race: Dictionary) -> Variant:
+	if HSWorld.one_ride() and HSSeason.reserves().any(func(x): return x.key == race.key and x.id != h.id): return HSWorld.WHY_MINE
+	return null
+# 理由を見せて並べる「出られない」（移動が間に合わない・自分の騎乗とぶつかる）。ほかの理由のレースは表から外す
+static func shown_why(w: Variant) -> bool:
+	return w == HSFatigue.WHY or w == HSWorld.WHY_MINE or w == HSWorld.WHY_OFFER
 
 # o：{ weeks（既定は予約できる52週）, show: "ok"|"all", kind: "all"|"graded", surf: ""|"芝"|"ダ" }
 # 行：{ wk, race, why, dist, surf, fit（0〜6）, state: "entered"|"reserved"|null, can: "enter"|"reserve"|null, busy, others }
@@ -58,7 +67,7 @@ static func rows(h: Dictionary, o: Dictionary = {}) -> Array:
 			if not state:
 				if o.get("kind") == "graded" and not race.get("graded"): continue
 				if o.get("surf") and race.surface != o.surf: continue
-				if w and w != HSFatigue.WHY and (o.get("show") != "all" or not race.get("graded")): continue # オープンは「すべて」でも出られないものは出さない。移動が間に合わないものは理由を見せる
+				if w and not shown_why(w) and (o.get("show") != "all" or not race.get("graded")): continue # オープンは「すべて」でも出られないものは出さない。移動が間に合わない・ほかのお手馬や受けた依頼とぶつかるものは理由を見せる
 			var dist := fit_dist(h, race.dist); var surf := fit_surf(h, race.surface)
 			var can = null
 			if not (w or state): can = "enter" if wk.i == 0 else (null if busyKey else "reserve")

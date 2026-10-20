@@ -32,12 +32,16 @@
     if (wk.i === 0) {
       if (race.invite) return '招待馬だけ';
       if (h.loc !== 'stable') return h.loc === 'farm' ? '入厩前' : '出られない';
-      return R.ineligible(h, race, G.year);
+      return R.ineligible(h, race, G.year) || W().rideTaken(race.key, h.id);
     }
     const st = T().staticIneligible(h, race, race.year);
     if (st) return st;
-    return R.ineligible(h, race, race.year);
+    return R.ineligible(h, race, race.year) || P.mineReserved(h, race);
   };
+  // 1つのレースに自分の馬は1頭まで（持ち主の決定 2026-10-20）：ほかのお手馬がそのレースを予約していれば、その理由
+  P.mineReserved = (h, race) => W().oneRide() && T().reserves().some(x => x.key === race.key && x.id !== h.id) ? W().WHY_MINE : null;
+  // 理由を見せて並べる「出られない」（移動が間に合わない・自分の騎乗とぶつかる）。ほかの理由のレースは表から外す
+  P.shownWhy = why => why === HS.Fatigue.WHY || why === W().WHY_MINE || why === W().WHY_OFFER;
 
   // o：{ weeks（既定は予約できる52週）, show: 'ok'（出られるものだけ）|'all', kind: 'all'|'graded', surf: ''|'芝'|'ダ' }
   // 行：{ wk, race, why, dist, surf, fit（0〜6）, state: 'entered'|'reserved'|null, can: 'enter'|'reserve'|null, busy（その週はほかのレースを予約済み）, others（同じレースを予約したほかの自分の馬） }
@@ -56,7 +60,7 @@
         if (!state) {
           if (o.kind === 'graded' && !race.graded) continue;
           if (o.surf && race.surface !== o.surf) continue;
-          if (why && why !== HS.Fatigue.WHY && (o.show !== 'all' || !race.graded)) continue; // オープンは「すべて」でも出られないものは出さない（年齢違いで埋まる）。移動が間に合わないものは理由を見せる
+          if (why && !P.shownWhy(why) && (o.show !== 'all' || !race.graded)) continue; // オープンは「すべて」でも出られないものは出さない（年齢違いで埋まる）。移動が間に合わない・ほかのお手馬や受けた依頼とぶつかるものは理由を見せる
         }
         const dist = P.fitDist(h, race.dist), surf = P.fitSurf(h, race.surface);
         const can = why || state ? null : wk.i === 0 ? 'enter' : busyKey ? null : 'reserve';

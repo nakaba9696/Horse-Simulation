@@ -133,6 +133,7 @@ static func reserve(id: String, race: Dictionary) -> Variant:
 	if why: return why
 	if not G.get("reserve"): G.reserve = []
 	if G.reserve.any(func(x): return x.id == id and x.y == race.year and x.m == race.month and x.w == race.week): return "その週はもう予約している"
+	if HSWorld.one_ride() and G.reserve.any(func(x): return x.key == race.key and x.id != id): return HSWorld.WHY_MINE   # 1つのレースに自分の馬は1頭まで（持ち主の決定 2026-10-20）
 	G.reserve.append({ id = id, key = race.key, y = race.year, m = race.month, w = race.week, label = HSRaces.label(race) })
 	_sort_reserve(G)
 	return null
@@ -171,7 +172,7 @@ static func reserve_debut(id: String, y: float, m: float, w: float) -> Variant:
 	return null
 static func debut_race(h: Dictionary) -> Variant:
 	var G = HSWorld.G
-	var list: Array = HSWorld.week_races().filter(func(r): return not r.get("graded") and not r.get("invite") and r.get("age") == "2" and not HSRaces.ineligible(h, r, G.year))
+	var list: Array = HSWorld.week_races().filter(func(r): return not r.get("graded") and not r.get("invite") and r.get("age") == "2" and not HSRaces.ineligible(h, r, G.year) and not HSWorld.ride_taken(r.key, h.id))   # ほかのお手馬のデビュー戦とは別のレースに
 	var mid: float = (h.distMin + h.distMax) / 2.0
 	var score := func(r): return float(HSU.or_(h.apt.dirt if r.surface == "ダ" else h.apt.turf, 50.0)) * 3.0 - absf(r.dist - HSU.mn(mid, 1800.0)) / 20.0
 	list = HSU.stable_sort(list, func(a, b): return score.call(a) > score.call(b))

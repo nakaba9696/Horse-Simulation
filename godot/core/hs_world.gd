@@ -301,6 +301,7 @@ static func enter(horseId: String, raceKey: String, jockeyName: Variant = null) 
 	if not h or not race: return "レースが見つからない"
 	if h.get("loc") != "stable": return "入厩していない"
 	var why = HSRaces.ineligible(h, race, G.year)
+	if not why: why = ride_taken(raceKey, horseId)
 	if why: return why
 	if race.get("region") == "海外":
 		var cost := travel_cost(race)
@@ -313,6 +314,19 @@ static func unenter(horseId: String) -> void:
 	for k in G.entries.keys():
 		G.entries[k] = G.entries[k].filter(func(e): return e.horseId != horseId)
 		if not G.entries[k].size(): G.entries.erase(k)
+# 騎手のゲームは、1つのレースに自分が乗る馬1頭だけ（おまかせ騎乗は無い。持ち主の決定 2026-10-20「おまかせ騎乗　なしにして」。world.js の W.rideTaken）。
+# 自分の馬は1レース1頭まで。騎乗依頼を受けたレースには自分の馬を出せない（依頼のレースは依頼が先で自分の馬は取り消し。hs_owners.gd の apply_ride）
+const WHY_MINE := "ほかのお手馬が出る"
+const WHY_OFFER := "騎乗依頼を受けたレース"
+static func one_ride() -> bool:
+	return G != null and G.get("mode") == "jockey"
+# このレースの騎乗がふさがっている理由（ふさがっていなければ null）。horseId の馬自身の登録は数えない
+static func ride_taken(raceKey: String, horseId: String) -> Variant:
+	if not one_ride(): return null
+	for e in G.entries.get(raceKey, []):
+		if e.horseId != horseId: return WHY_MINE
+	var hid = HSU.or_(G.get("rides"), {}).get(raceKey)
+	return WHY_OFFER if hid and hid != horseId else null
 static func entry_of(horseId: String) -> Variant:
 	for k in G.entries:
 		for e in G.entries[k]:
@@ -489,6 +503,7 @@ static func prepare_week() -> Dictionary:
 	for h in mine():
 		sig.append("%s%s%s%s" % [h.id, h.get("loc"), "1" if h.get("auto") else "0", "s" if h.get("skipW") == wi else ""])
 	var key := "%s-%s-%s:%s:%s:%s" % [HSU.num(G.year), HSU.num(G.month), HSU.num(G.week), HSU.num(G.rngState), JSON.stringify(G.entries), ",".join(sig)]
+	if one_ride(): key += ":" + JSON.stringify(HSU.or_(G.get("rides"), {}))
 	if _week != null and _week.key == key: return _week
 	var r := HSRng.new(G.rngState)
 	var allRaces := week_races()
@@ -508,12 +523,22 @@ static func prepare_week() -> Dictionary:
 		if not rc: continue
 		if not field.has(rc.key): field[rc.key] = []
 		field[rc.key].append({ horse = h })
+	# プレイヤーの「おまかせ」の馬（出るレースを自動で選ぶ）。騎手のゲームでは、ほかの自分の馬・受けた依頼と同じレースを選んだら、残りのレースから選び直す（1レースに1頭。world.js と同じ）
+	var busy = null
+	if one_ride():
+		busy = {}
+		for k in field:
+			if field[k].any(func(x): return x.get("mine")): busy[k] = true
+		for k in HSU.or_(G.get("rides"), {}): busy[k] = true
 	for h in mine("stable"):
 		if not h.get("auto") or entry_of(h.id) or h.get("skipW") == wi: continue
 		var rc = ai_choose(h, races, wi, r)
+		if rc and busy != null and busy.has(rc.key):
+			rc = ai_choose(h, races.filter(func(x): return not busy.has(x.key)), wi, r)
 		if rc and rc.get("region") != "海外":
 			if not field.has(rc.key): field[rc.key] = []
 			field[rc.key].append({ horse = h, jockeyName = best_free_jockey(rc.key, h.id), mine = true, auto = true })
+			if busy != null: busy[rc.key] = true
 	for rc in allRaces:
 		if rc.get("invite"): field[rc.key] = HSSeason.dc_field(rc)
 	if G.get("eraless"):
@@ -1218,6 +1243,11 @@ static func migrate(g: Dictionary) -> void:
 			if HSRaces.is_old_key(k): ents.erase(k)
 	for k in g.rides.keys():
 		if HSRaces.is_old_key(k): g.rides.erase(k)
+	# 騎手のゲームは1つのレースに自分が乗る馬1頭だけ（持ち主の決定 2026-10-20。world.js と同じ）：同じレースに自分の馬が2頭いれば1頭目だけ、受けた依頼のレースの自分の馬は外す
+	if g.mode == "jockey" and ents:
+		for k in ents.keys():
+			if g.rides.get(k): ents.erase(k)
+			elif ents[k].size() > 1: ents[k] = ents[k].slice(0, 1)
 	for rc in HSU.or_(g.records.get("course"), {}).values():
 		if rc.get("rode") == null: rc.rode = HSU.truthy(rc.get("mine")) and g.mode == "jockey"
 	g.v = SAVE_VERSION

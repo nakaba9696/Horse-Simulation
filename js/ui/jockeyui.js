@@ -415,7 +415,7 @@
       <ul class="small"><li><b>馬の店</b>：デビュー前の史実馬を買う。2歳の4月から入厩し、厩舎の「番組表」で出るレースを選ぶ。</li>
         <li><b>騎乗依頼</b>：オーナーのジャンルのレースで勝つと出会いがあり、決まった馬とレースの依頼（ミッション）が来る。クリアするたびに大きなレースの依頼になる。</li>
         <li><b>騎乗</b>：↓で引いて脚をため、↑の連打でしごいて速さを上げる。ゴール前はムチ。前が壁なら進路を変える。</li>
-        <li>操作したくないレースは「おまかせ」で乗れる。</li><li>勝って評判を上げれば、強い馬と大きいレースの依頼が来る。</li></ul>
+        <li>自分の馬・受けた依頼の馬には、必ず自分で乗る。1つのレースに乗れるのは1頭だけ。</li><li>勝って評判を上げれば、強い馬と大きいレースの依頼が来る。</li></ul>
       <div class="btns"><button class="btn gold" data-act="close">はじめる</button></div>`);
   };
   act['offer-accept'] = d => { const err = J.accept(d.race, d.horse); if (err) return App.toast(err); App.save(); App.render(); };
@@ -434,9 +434,9 @@
     try {
       const rides = J.myRides();
       const played = {};
+      // 自分の騎乗は、全部自分で乗ってから週を締める（おまかせ騎乗は無い。持ち主の決定 2026-10-20「おまかせ騎乗　なしにして」）
       for (const { card, runner } of rides) {
-        const how = await paddock(card, runner);
-        if (how !== 'ride') continue;
+        await paddock(card, runner);
         App.inRace = true;
         const bg = App.modal('<div class="ride-holder"></div>', { wide: true, noClose: true });
         const AU = HS.Audio;
@@ -476,7 +476,10 @@
       App.toast('エラー：' + err.message);
     } finally { busy = false; }
   };
-  // パドック：1頭ずつ横から歩く姿（←→で切り替え）と、下の帯（馬番・馬名・性齢・斤量・騎手・単勝・気配）。出走表と、自分で乗るか・おまかせか
+  // まとめて進める（映像なし）は馬主のゲームだけ。騎手のゲームは自分の騎乗を飛ばせないので、1週ずつ
+  const many0 = App.nextMany;
+  App.nextMany = function (n) { return isJ() ? App.nextWeek() : many0(n); };
+  // パドック：1頭ずつ横から歩く姿（←→で切り替え）と、下の帯（馬番・馬名・性齢・斤量・騎手・単勝・気配）。出走表とゲートイン（おまかせ騎乗は無い。持ち主の決定 2026-10-20）
   // 気配は疲労の段階（js/core/fatigue.js）と、休み明け（12週以上あいた。模擬で少し割り引く）と気性から（調子は無い：持ち主の決定 2026-10-20）
   UI.mood = (h, wIdx) => {
     const st = HS.Fatigue.stage(h), mind = H.cur(h, wIdx).mind || 60;
@@ -506,7 +509,7 @@
         <div class="panel mt offer"><div class="row"><b>${e(h.name)}</b><span class="small muted">${e(J.trainerOf(h))}調教師より</span></div>
           <div class="comment">「${tip}${kireTip}」</div>
           ${UI.hasSkills(h) ? `<div class="pd-myskills mt">${UI.skillList(h)}</div>` : ''}${UI.numStats(h, wIdx, { surface: card.race.surface })}</div>
-        <div class="btns mt"><button class="btn gold" data-x="ride">ゲートイン（自分で乗る）</button><button class="btn" data-x="auto">おまかせで乗る</button></div>`, { noClose: true, scene: 'paddock' });
+        <div class="btns mt"><button class="btn gold" data-x="ride">ゲートイン</button></div>`, { noClose: true, scene: 'paddock' });
       const cv = bg.querySelector('.pd-cv'), ctx = cv.getContext('2d'), band = bg.querySelector('.pd-band');
       const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
       cv.width = 720 * dpr; cv.height = 250 * dpr; ctx.scale(dpr, dpr);
@@ -558,7 +561,6 @@
       show(); requestAnimationFrame(draw);
       const done = how => { alive = false; window.removeEventListener('keydown', key); App.closeModal(); res(how); };
       bg.querySelector('[data-x=ride]').onclick = () => done('ride');
-      bg.querySelector('[data-x=auto]').onclick = () => done('auto');
     });
   }
   // ---------- レース前の画面：出走表（脚質・人気・近走）・コース図。展開予想は出さない（持ち主の指摘 2026-10-17「レース前の展開予想もいらない。プレイヤーに判断させたい」） ----------

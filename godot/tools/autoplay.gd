@@ -1,4 +1,4 @@
-# 画面の流れを自動で遊ぶ（画面なしで動く）：新しいゲームから、週ごとにホーム → 出走表 → おまかせで乗る → 週の結果 → 次の週、を本物の画面で進める
+# 画面の流れを自動で遊ぶ（画面なしで動く）：新しいゲームから、週ごとにホーム → 出走表 → 決まった乗り方で乗る（UiFlow.bot_ride） → 週の結果 → 次の週、を本物の画面で進める
 #   godot --headless --path godot -s res://tools/autoplay.gd -- [--weeks=52] [--seed=1]
 # 初めに馬の店でいちばん安い馬を3頭買い、オーナーの依頼の馬には自分が乗る。12月の GF の招待は GF の画面で最初の馬を出す。
 # 見せ場・ご褒美の場面（小窓）は、遊ぶ人と同じくカーソルのあるボタンを押して閉じる。
@@ -144,13 +144,16 @@ func _tick() -> void:
 				cs.on_tab(1)
 			cs.on_back()
 		"race_card":
-			if acted.has("auto"): return
-			acted.auto = true
-			if cs.btn_auto == null:
-				_say("NG 出走表に「おまかせで乗る」が無い（%s）" % UiFlow.date_label())
+			if acted.get("ride") == cs.get_instance_id(): return   # 2鞍目の出走表は同じ名前の別の画面
+			acted.ride = cs.get_instance_id()
+			# おまかせ騎乗は無い（持ち主の決定 2026-10-20）：自分の騎乗は決まった乗り方（UiFlow.bot_ride）で乗る。騎乗の 3D の画面は開かない
+			var cur = UiFlow.current()
+			if cur == null or cs.btn_gate == null:
+				_say("NG 出走表に今週の騎乗・ゲートインが無い（%s）" % UiFlow.date_label())
 				_finish(false)
 				return
-			cs.btn_auto.pressed.emit()
+			var sim = HSWorld.start_sim(cur.card, {"ride": true})
+			UiFlow.go(self, UiFlow.ride_done(UiFlow.bot_ride(sim)))
 		"week_result":
 			if acted.has("next"): return
 			if now - scene_since < 0.8: return   # 見せ場が開くのを待つ

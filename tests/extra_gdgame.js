@@ -1,5 +1,5 @@
 // Godot 版の週の流れ（godot/ui）：Godot があれば、本物の画面で数週を自動で遊ぶ（godot/tools/autoplay.gd）
-//   ホーム → 出走表 → おまかせで乗る → 週の結果 → 次の週。ほかの画面（厩舎・番組表・データ・馬主・店・生産・GF）も巡回して戻る。
+//   ホーム → 出走表 → 決まった乗り方で乗る（おまかせ騎乗は無い） → 週の結果 → 次の週。ほかの画面（厩舎・番組表・データ・馬主・店・生産・GF）も巡回して戻る。
 //   止まった画面・実行時の誤り（SCRIPT ERROR）があれば落ちる。QUICK=1 のときは 6 週、ふだんは 10 週
 const { spawnSync } = require('child_process');
 const fs = require('fs');

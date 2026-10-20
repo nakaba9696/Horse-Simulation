@@ -251,7 +251,7 @@
     const h = G.horses[horseId], race = W.raceByKey(raceKey);
     if (!h || !race) return 'レースが見つからない';
     if (h.loc !== 'stable') return '入厩していない';
-    const why = R.ineligible(h, race, G.year);
+    const why = R.ineligible(h, race, G.year) || W.rideTaken(raceKey, horseId);
     if (why) return why;
     if (race.region === '海外') {
       const cost = W.travelCost(race);
@@ -264,6 +264,18 @@
   };
   W.unenter = function (horseId) {
     for (const k of Object.keys(G.entries)) { G.entries[k] = G.entries[k].filter(e => e.horseId !== horseId); if (!G.entries[k].length) delete G.entries[k]; }
+  };
+  // 騎手のゲームは、1つのレースに自分が乗る馬1頭だけ（おまかせ騎乗は無い。持ち主の決定 2026-10-20「おまかせ騎乗　なしにして」）。
+  // 自分の馬は1レース1頭まで。騎乗依頼を受けたレースには自分の馬を出せない（依頼のレースは依頼が先で自分の馬は取り消し。js/core/owners.js の O.applyRide）
+  W.WHY_MINE = 'ほかのお手馬が出る';
+  W.WHY_OFFER = '騎乗依頼を受けたレース';
+  W.oneRide = () => !!G && G.mode === 'jockey';
+  // このレースの騎乗がふさがっている理由（ふさがっていなければ null）。horseId の馬自身の登録は数えない
+  W.rideTaken = function (raceKey, horseId) {
+    if (!W.oneRide()) return null;
+    if ((G.entries[raceKey] || []).some(e => e.horseId !== horseId)) return W.WHY_MINE;
+    const hid = (G.rides || {})[raceKey];
+    return hid && hid !== horseId ? W.WHY_OFFER : null;
   };
   W.entryOf = function (horseId) {
     for (const [k, arr] of Object.entries(G.entries)) for (const e of arr) if (e.horseId === horseId) return { raceKey: k, jockey: e.jockey };
@@ -402,7 +414,7 @@
   W.prepareWeek = function () {
     // 出走登録・おまかせ・入厩が変わったら作り直す
     const mineSig = W.mine().map(h => `${h.id}${h.loc}${h.auto ? 1 : 0}${h.skipW === W.wIdx() ? 's' : ''}`).join(',');
-    const key = `${G.year}-${G.month}-${G.week}:${G.rngState}:${JSON.stringify(G.entries)}:${mineSig}`;
+    const key = `${G.year}-${G.month}-${G.week}:${G.rngState}:${JSON.stringify(G.entries)}:${mineSig}${W.oneRide() ? ':' + JSON.stringify(G.rides || {}) : ''}`;
     if (W._week && W._week.key === key) return W._week;
     const r = new U.RNG(G.rngState);
     const wIdx = W.wIdx();
@@ -420,11 +432,16 @@
       if (!rc) continue;
       (field[rc.key] = field[rc.key] || []).push({ horse: h });
     }
-    // プレイヤーの「おまかせ」の馬
+    // プレイヤーの「おまかせ」の馬（出るレースを自動で選ぶ）。騎手のゲームでは、ほかの自分の馬・受けた依頼と同じレースを選んだら、残りのレースから選び直す（1レースに1頭）
+    const busy = W.oneRide() ? new Set(Object.keys(field).filter(k => field[k].some(x => x.mine)).concat(Object.keys(G.rides || {}))) : null;
     for (const h of W.mine('stable')) {
       if (!h.auto || W.entryOf(h.id) || h.skipW === wIdx) continue;
-      const rc = W.aiChoose(h, races, wIdx, r);
-      if (rc && rc.region !== '海外') (field[rc.key] = field[rc.key] || []).push({ horse: h, jockeyName: W.bestFreeJockey(rc.key, h.id), mine: true, auto: true });
+      let rc = W.aiChoose(h, races, wIdx, r);
+      if (rc && busy && busy.has(rc.key)) rc = W.aiChoose(h, races.filter(x => !busy.has(x.key)), wIdx, r);
+      if (rc && rc.region !== '海外') {
+        (field[rc.key] = field[rc.key] || []).push({ horse: h, jockeyName: W.bestFreeJockey(rc.key, h.id), mine: true, auto: true });
+        if (busy) busy.add(rc.key);
+      }
     }
     // 招待のレース（グランドフェスティバル）は招待馬で組む
     for (const rc of allRaces) if (rc.invite && HS.Season) field[rc.key] = HS.Season.dcField(rc);
@@ -1172,6 +1189,11 @@
       for (const x of g.reserve) if (x.debut && x.label === '新馬戦') x.label = 'デビュー戦';
       for (const k of Object.keys(g.entries || {})) if (HS.Races.isOldKey(k)) delete g.entries[k];
       for (const k of Object.keys(g.rides)) if (HS.Races.isOldKey(k)) delete g.rides[k];
+    }
+    // 騎手のゲームは1つのレースに自分が乗る馬1頭だけ（持ち主の決定 2026-10-20）：前のセーブで同じレースに自分の馬が2頭いれば1頭目だけ残し、受けた依頼のレースに出ていた自分の馬は外す
+    if (g.mode === 'jockey') for (const k of Object.keys(g.entries || {})) {
+      if (g.rides[k]) delete g.entries[k];
+      else if (g.entries[k].length > 1) g.entries[k] = g.entries[k].slice(0, 1);
     }
     // コースレコードの「自分で乗って作ったか」（前の版のセーブには無い。騎手のゲームでは自分の馬＝自分が乗った馬）
     for (const rc of Object.values(g.records.course || {})) if (rc.rode == null) rc.rode = !!rc.mine && g.mode === 'jockey';

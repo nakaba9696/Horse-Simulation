@@ -22,7 +22,7 @@ const SHOTS = [
   ['12-free', () => { App.act.free(); }],
   ['13-free-course', () => { App.act.free(); if (App.act['fr-step']) App.act['fr-step']({ step: 'course' }); }],
   ['14-free-horses', () => { App.act.free(); if (App.act['fr-step']) App.act['fr-step']({ step: 'horses' }); }],
-  ['15-entry', () => { App.st.screen = 'game'; App.act.tab({ tab: 'home' }); const c = HS.World.cards().find(c => c.race.graded) || HS.World.cards()[0]; App.modal(HS.UI.entryTable(c) + '<div class="btns mt"><button class="btn gold">ゲートイン（自分で乗る）</button><button class="btn" data-act="close">おまかせで乗る</button></div>', { noClose: true, scene: 'paddock' }); }],
+  ['15-entry', () => { App.st.screen = 'game'; App.act.tab({ tab: 'home' }); const c = HS.World.cards().find(c => c.race.graded) || HS.World.cards()[0]; App.modal(HS.UI.entryTable(c) + '<div class="btns mt"><button class="btn gold" data-act="close">ゲートイン</button></div>', { noClose: true, scene: 'paddock' }); }],
   ['16-breed', () => { App.st.screen = 'game'; App.act.tab({ tab: 'breed' }); }],
   // オーナー：何人かと会い、段階をばらばらにしてから（千石さんの依頼は今週に届いたことにする）
   ['17-owners', () => { const O = HS.Owners; O.state().flags.overseas = { y: 1 }; [['makino', 1], ['sengoku', 3], ['yuni', 2], ['dakota', 0]].forEach(([id, s]) => { O.meet(id); O.of(id).stage = s; O.of(id).pts = O.STAGES[s].floor + 5; }); O.planMissing(); const j = O.of('sengoku').job; if (j) { j.at = Math.min(j.at, HS.World.wIdx()); O.tick(); } O.state().queue = []; App.st.screen = 'game'; App.act.owners(); }],

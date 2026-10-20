@@ -39,7 +39,6 @@ var video := {}
 var pad := false
 
 var flow := false        # 週の流れの中（その週の本当の出走表。UiFlow）
-var btn_auto: Button
 
 func _ready() -> void:
 	if UiFlow.current() == null and OS.get_cmdline_user_args().has("--setup=gf"):
@@ -395,17 +394,7 @@ func _build_right() -> void:
 	bh.add_child(btn_gate)
 	btn_paddock.pressed.connect(_open_paddock)
 	btn_gate.pressed.connect(_gate_in)
-	if flow:
-		# おまかせで乗る（小さく。docs/UI.md「出走表」4）
-		var ah := HBoxContainer.new()
-		ah.alignment = BoxContainer.ALIGNMENT_END
-		btn_auto = Button.new()
-		btn_auto.text = "おまかせで乗る"
-		btn_auto.custom_minimum_size = Vector2(170, 36)
-		btn_auto.add_theme_font_size_override("font_size", 14)
-		btn_auto.pressed.connect(_auto_ride)
-		ah.add_child(btn_auto)
-		right.add_child(ah)
+	# 「おまかせで乗る」は無い（自分の騎乗は必ず自分で乗る。持ち主の決定 2026-10-20「おまかせ騎乗　なしにして」）
 	var kb := HBoxContainer.new()
 	kb.alignment = BoxContainer.ALIGNMENT_END
 	keybar = UiTheme.keybar([["↑↓", "十字", "選ぶ"], ["Enter", "A", "決定"], ["Esc", "B", "もどる"]], pad)
@@ -420,10 +409,7 @@ func _build_right() -> void:
 		btn_paddock.focus_neighbor_top = btn_paddock.get_path_to(rows[sel])
 		btn_gate.focus_neighbor_left = btn_gate.get_path_to(btn_paddock)
 		btn_paddock.focus_neighbor_left = btn_paddock.get_path_to(rows[sel])
-		btn_gate.focus_neighbor_bottom = btn_gate.get_path_to(btn_auto if btn_auto else btn_gate)
-		if btn_auto:
-			btn_auto.focus_neighbor_top = btn_auto.get_path_to(btn_gate)
-			btn_auto.focus_neighbor_left = btn_auto.get_path_to(btn_paddock)
+		btn_gate.focus_neighbor_bottom = btn_gate.get_path_to(btn_gate)
 
 # 節の見出し（明朝・左に金の縦線）
 func _section(text: String) -> Control:
@@ -510,11 +496,6 @@ func _gate_in() -> void:
 	var tw := create_tween()
 	tw.tween_property(fade, "color:a", 1.0, 0.3)
 	tw.tween_callback(func(): get_tree().change_scene_to_file(RACE_SCENE))
-
-func _auto_ride() -> void:
-	var tw := create_tween()
-	tw.tween_property(fade, "color:a", 1.0, 0.2)
-	tw.tween_callback(func(): UiFlow.go(get_tree(), UiFlow.ride_done(null)))
 
 func _unhandled_input(ev: InputEvent) -> void:
 	if ev.is_action_pressed("ui_cancel"):

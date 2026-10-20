@@ -253,7 +253,7 @@ func _ride_card(r: Dictionary) -> PanelContainer:
 			if x.horse == me.horse: pop = x.get("pop")
 		if pop != null:
 			l2.add_child(UiTheme.label("%d番人気" % int(pop), 15, UiTheme.MUTED))
-		l2.add_child(UiTheme.label("自分で騎乗" if r.get("ridden") else "おまかせ", 13, UiTheme.FAINT))
+		if r.get("ridden"): l2.add_child(UiTheme.label("自分で騎乗", 13, UiTheme.FAINT))   # おまかせ騎乗は無い（持ち主の決定 2026-10-20）
 	v.add_child(l2)
 	var l3 := HBoxContainer.new()
 	l3.add_theme_constant_override("separation", 14)
