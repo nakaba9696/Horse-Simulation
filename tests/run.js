@@ -120,7 +120,7 @@ check('profiles: スペシャルホースは全頭に名鑑（年代・戦績・
   for (const d of D.historic || []) if (d.text && !d.record) bad.push(d.name + ':名鑑なし');
   for (const p of D.profiles || []) if (/……|どこか|ふと|まるで|です。|ます。/.test(p.text)) bad.push(p.name + ':避ける癖');
   assert(!bad.length, bad.slice(0, 10).join(', '));
-  const lens = SP.list().map(x => x.d.text.length);
+  const lens = SP.list().filter(x => !SP.isModern(x.d)).map(x => x.d.text.length);
   return `スペシャルホース ${SP.list().length}頭・解説 ${Math.min(...lens)}〜${Math.max(...lens)}字・名鑑 ${prof.size}頭`;
 });
 
