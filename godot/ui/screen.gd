@@ -21,6 +21,7 @@ var demo := -1
 var _modal: Control = null       # 小窓（確かめ・見せ場）。開いている間は Esc・B で閉じる
 var _modal_back: Callable
 var _modal_focus: Control = null
+var _modal_locked: Array = []    # 小窓の間、カーソルが乗らないようにした後ろの札 [札, 前の focus_mode]
 var _toast: PanelContainer
 var _toast_until := 0.0
 
@@ -28,6 +29,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	theme = UiTheme.get_theme()
 	pad = Input.get_connected_joypads().size() > 0
+	add_child(UiPad.new())   # パッドの A・B・十字キーの押しっぱなし・左スティック（ui/pad.gd）
 	_parse_args()
 	if needs_world() and not UiFlow.active():
 		if demo >= 0:
@@ -315,6 +317,13 @@ func open_modal(panel: Control, first: Control = null, on_cancel := Callable(), 
 	cc.add_child(panel)
 	_modal = dim
 	_modal_back = on_cancel
+	# 小窓の間は、カーソルが後ろの札へ抜けないように（十字キーは小窓の中だけを動く）
+	_modal_locked = []
+	for c in find_children("*", "Control", true, false):
+		var ctl := c as Control
+		if ctl.focus_mode != Control.FOCUS_NONE and not dim.is_ancestor_of(ctl):
+			_modal_locked.append([ctl, ctl.focus_mode])
+			ctl.focus_mode = Control.FOCUS_NONE
 	dim.modulate.a = 0.0
 	create_tween().tween_property(dim, "modulate:a", 1.0, 0.16)
 	if first:
@@ -325,6 +334,9 @@ func close_modal() -> void:
 		return
 	_modal.queue_free()
 	_modal = null
+	for x in _modal_locked:
+		if is_instance_valid(x[0]): (x[0] as Control).focus_mode = x[1]
+	_modal_locked = []
 	if is_instance_valid(_modal_focus) and _modal_focus.is_inside_tree():
 		_modal_focus.grab_focus()
 

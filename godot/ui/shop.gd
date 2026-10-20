@@ -125,6 +125,7 @@ func _fill() -> void:
 			mark = " ▲" if sort_dir > 0 else " ▼"
 		b.text = String(c[0]) + mark
 		b.focus_mode = Control.FOCUS_NONE
+		b.set_meta("pad", "Y")   # パッドは Y で並べ替えを回す
 		b.flat = true
 		b.add_theme_font_size_override("font_size", 11)
 		b.add_theme_color_override("font_color", UiTheme.GOLD if mark != "" else UiTheme.MUTED)
@@ -289,6 +290,7 @@ func _preview(i: int) -> void:
 	ph.add_child(UiScreen.spacer())
 	b_buy = UiScreen.button("詳しく見る", true, 150, 52, 19)
 	b_buy.focus_mode = Control.FOCUS_NONE
+	b_buy.set_meta("pad", "A")   # 行で A（詳しい小窓）と同じ
 	var k2 := i
 	b_buy.pressed.connect(func(): open_detail(k2))
 	ph.add_child(b_buy)

@@ -264,24 +264,29 @@ func _preview(i: int) -> void:
 	if h.loc == "retired":
 		var br := UiScreen.danger_button("放す", 110, 46, 16)
 		br.focus_mode = Control.FOCUS_NONE
+		br.set_meta("pad", "X")
 		br.pressed.connect(func(): confirm("%sを牧場から放しますか？（親にできなくなります）" % h.name, "放す", func(): _release(id)))
 		bh.add_child(br)
 		var bb := UiScreen.button("生産へ", true, 170, 50, 20)
 		bb.focus_mode = Control.FOCUS_NONE
+		bb.set_meta("pad", "A")   # 牧場のタブは行で A が生産
 		bb.pressed.connect(func(): go("breed"))
 		bh.add_child(bb)
 	else:
 		var keep: bool = HSOriginal.on() and not h.get("gelding")
 		var br := UiScreen.danger_button("引退させる", 140, 46, 16)
 		br.focus_mode = Control.FOCUS_NONE
+		br.set_meta("pad", "X")
 		br.pressed.connect(func(): retire_flow(id, _retired))
 		bh.add_child(br)
 		var bp := UiScreen.button("番組表", false, 120, 46, 16)
 		bp.focus_mode = Control.FOCUS_NONE
+		bp.set_meta("pad", "Y")
 		bp.pressed.connect(func(): _program(i))
 		bh.add_child(bp)
 		var bd := UiScreen.button("詳しく", true, 150, 50, 20)
 		bd.focus_mode = Control.FOCUS_NONE
+		bd.set_meta("pad", "A")   # 行で A と同じ
 		bd.pressed.connect(func(): _main(i))
 		bh.add_child(bd)
 	pv.add_child(bh)
