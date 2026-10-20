@@ -1,5 +1,5 @@
 # 騎乗の画面の上の表示（docs/FEEL.md 4・5）。ブラウザ版 js/ui/ride.js の hud() と同じ形を 960×600 の座標で描き、画面の大きさに合わせて広げる
-# 計器は4か所（左上＝順位と残り・上の真ん中＝ペース（チェックポイントを過ぎたときだけ）・右上＝時計・右＝馬群のレーダー）と左下の1つの塊（丸い計器・手綱の段・STAMINA・FIGHT・WHIP）
+# 計器は4か所（左上＝順位と残り・上の真ん中＝ペース（チェックポイントを過ぎたときだけ）・右上＝時計・右＝馬群のレーダー）と左下の1つの塊（脚質・丸い計器＝速さ・馬の頭＝折り合い・STAMINA・手綱 HOLD/PUSH）
 # 文字は短い英語の見出しと数だけ（日本語は馬名と特殊能力の名前だけ）。操作の結果は文字で出さず、光で返す
 # 画面の箱・計器は揺らさない（揺れは 3D のカメラだけ。view/race_view.gd の kick）
 # 字はにじまないように、座標だけを広げて、字の大きさは画面の大きさで作り直す
@@ -179,6 +179,7 @@ func _draw_hud() -> void:
 	_draw_whip()
 	if T >= 0.0 and fin == null:   # ゲートの中は数を出さない（目押し。持ち主の指摘 2026-10-17）
 		_top_left(rank, M)
+		_style_panel(M, rank)
 	if fin == null or float(fin.shown) < 0.0:
 		_draw_pace(M, T)
 		_timer(M, T)
@@ -337,15 +338,14 @@ static func _ease(u: float) -> float:
 	u = clampf(u, 0.0, 1.0)
 	return 1.0 - pow(1.0 - u, 3.0)
 
-# ---- 左上：順位と頭数、残りの帯（ハロンごとの目盛り） ----
+# ---- 左上：順位と残り（m）だけ（持ち主の指摘 2026-10-20「左上は順位と残りmだけ」）。残りの数の下に、スタートからゴールまでの細い帯 ----
 func _top_left(rank: int, M: Dictionary) -> void:
 	var x := 16.0
 	var y := 14.0
 	var w := 232.0
 	var D: float = rv.D
 	var meX: float = float(H[rv.me][0])
-	_glass(x, y, w, 100, 12)
-	_style_row(x + 12, y + 72, w - 24, M, rank, meX / D)
+	_glass(x, y, w, 66, 12)
 	var rc := WARN if rank == 1 else Color.WHITE
 	_outlined(str(rank), x + 14, y + 52, 50, rc, "left", 5)
 	var rw := _width(str(rank), 50, f_num)
@@ -356,8 +356,8 @@ func _top_left(rank: int, M: Dictionary) -> void:
 	var bx := x + 96
 	var bw := w - 110
 	var by := y + 46
-	_txt(str(int(rem)), x + w - 30, y + 30, 22, PALE if rem <= st else Color.WHITE, "right")
-	_txt("m", x + w - 14, y + 30, 12, LABEL, "right")
+	_txt(str(int(rem)), x + w - 30, y + 34, 24, PALE if rem <= st else Color.WHITE, "right")
+	_txt("m", x + w - 14, y + 34, 12, LABEL, "right")
 	_tag("TO GO", bx, y + 18)
 	_rect(bx, by, bw, 5, OFF)
 	var s0 := clampf(1.0 - st / D, 0.0, 1.0)
@@ -371,7 +371,16 @@ func _top_left(rank: int, M: Dictionary) -> void:
 	_glow_circle(bx + bw * pr, by + 2.5, 4, Color("bfffd6"), 6)
 	_circle(bx + bw * pr, by + 2.5, 4, Color.WHITE)
 
-# ---- 左上の板の下の段：脚質の矢印4つ（出走表・馬の店の UiStyleArrows と同じ形。左から 追込・差し・先行・逃げ。自分の脚質が赤く光る）----
+# ---- 左下（丸い計器の上）：脚質の板（持ち主の指摘 2026-10-20「脚質は左下に」）----
+func _style_panel(M: Dictionary, rank: int) -> void:
+	var w := 232.0
+	var h := 40.0
+	var x := 16.0
+	var y := VH - 18.0 - 112.0 - 12.0 - h
+	_glass(x, y, w, h, 10)
+	_style_row(x + 12, y + 8, w - 24, M, rank, float(H[rv.me][0]) / rv.D)
+
+# ---- 左下の脚質の板の中：脚質の矢印4つ（出走表・馬の店の UiStyleArrows と同じ形。左から 追込・差し・先行・逃げ。自分の脚質が赤く光る）----
 # 持ち主の指摘 2026-10-17「レース中　自分の馬の脚質見えるUIにして△4つならべるやつ」。文字は出さない。
 # 矢印の下の細い帯：その脚質の得意な位置（HSSim.ZONE。右ほど前）を金で、いまの位置（隊列の前から何割か）を点で。
 # 点は隊列が決まるまで（距離の HSSim.MISFIT_FROM まで）は白、そのあとは得意な位置の中なら緑、外れていれば金（外れていると折り合いを欠く）
@@ -508,31 +517,27 @@ func _kakari_edge(M: Dictionary) -> void:
 		return
 	_edge(Color(1, 60 / 255.0, 40 / 255.0, 0.22 + 0.14 * sin(now / 0.24)), VH * 0.42)
 
-# 競り合いの気合：相手のいる側の縁が脈打ち、気合が上がりきった瞬間に FIGHT
+# 競り合い（持ち主の指摘 2026-10-20「FIGHT いらない」）：文字も目盛りも出さない。並んだ相手のいる側の画面の縁だけが、控えめに橙に脈打つ。
+# 気合が乗りきった瞬間（fight_fx）は、その縁が一度だけ強く光って引く（揺れ・振動と一緒に）
 func _draw_fight(M: Dictionary) -> void:
 	var f: float = M.fight
-	if not bool(M.done) and f > 15.0 and bool(M.duel):
-		var k := clampf((f - 10.0) / 60.0, 0.0, 1.0)
-		var pulse := 0.6 + 0.4 * sin(now / 0.11)
-		var my_lane: float = float(H[rv.me][1])
-		var left_turn: bool = String(race.race.get("dir", "左")) == "左"
-		var side := 0 if (float(M.duel_lane) > my_lane) == (not left_turn) else 1
-		for s in 2:
-			var strong := s == side
-			var gw := VW * (0.2 if strong else 0.1)
-			var c0 := Color(1, (120.0 + 80.0 * k) / 255.0, 40 / 255.0, (0.5 if strong else 0.25) * k * pulse)
-			var c1 := Color(1, 140 / 255.0, 40 / 255.0, 0)
-			if s == 0:
-				_hgrad(0, 0, gw, VH, c0, c1)
-			else:
-				_hgrad(VW - gw, 0, gw, VH, c1, c0)
-	var age := now - _fight_t
-	if age < 1.1:
-		var a := age / 0.12 if age < 0.12 else ((1.1 - age) / 0.3 if age > 0.8 else 1.0)
-		var sc := 1.0 + 0.25 * maxf(0.0, 1.0 - age / 0.18)
-		_outlined("FIGHT", VW / 2.0, VH * 0.25, 40.0 * sc, _a(Color("ffb347"), a), "center", 7, f_num, a)
+	var flare := maxf(0.0, 1.0 - (now - _fight_t) / 0.6)
+	if bool(M.done) or not bool(M.duel) or (f <= 15.0 and flare <= 0.0):
+		return
+	var k := clampf((f - 10.0) / 60.0, 0.0, 1.0)
+	var pulse := 0.65 + 0.35 * sin(now / 0.16)
+	var my_lane: float = float(H[rv.me][1])
+	var left_turn: bool = String(race.race.get("dir", "左")) == "左"
+	var side := 0 if (float(M.duel_lane) > my_lane) == (not left_turn) else 1
+	var gw := VW * (0.12 + 0.06 * flare)
+	var c0 := Color(1, (120.0 + 80.0 * k) / 255.0, 40 / 255.0, minf(0.6, 0.3 * k * pulse + 0.45 * flare))
+	var c1 := Color(1, 140 / 255.0, 40 / 255.0, 0)
+	if side == 0:
+		_hgrad(0, 0, gw, VH, c0, c1)
+	else:
+		_hgrad(VW - gw, 0, gw, VH, c1, c0)
 
-# ムチ：打った側の端から短い光の筋（画面は揺らさない）
+# ムチ：画面の両端から短い光の筋（画面は揺らさない）。左右どちらで打っても効きは同じなので、打った側は見せない（持ち主の指摘 2026-10-20「ムチどっちで打っても変わらないから無駄な情報増やさないで」）
 func _draw_whip() -> void:
 	if _whip == null:
 		return
@@ -540,15 +545,15 @@ func _draw_whip() -> void:
 	if age > 0.38:
 		_whip = null
 		return
-	var right: bool = _whip.side == "R"
 	var u := age / 0.38
 	var k := (1.0 - u) * (1.0 - u)
-	var col := _a(Color("fff3b0") if bool(_whip.zone) else Color("ffd0bf"), 0.55 * k)
-	for i in 6:
-		var y := VH * (0.34 + i * 0.06)
-		var x0 := VW if right else 0.0
-		var len := VW * (0.07 + (i % 3) * 0.025) * _ease(minf(1.0, age / 0.09))
-		_line(x0, y, x0 - len if right else x0 + len, y - 6, col, 2.5)
+	var col := _a(Color("fff3b0") if bool(_whip.zone) else Color("ffd0bf"), 0.45 * k)
+	for right in [false, true]:
+		for i in 4:
+			var y := VH * (0.36 + i * 0.07)
+			var x0 := VW if right else 0.0
+			var len := VW * (0.06 + (i % 2) * 0.025) * _ease(minf(1.0, age / 0.09))
+			_line(x0, y, x0 - len if right else x0 + len, y - 6, col, 2.5)
 
 # 発動の札：真ん中に大きく出て（集中線・縁の光）、0.8 秒で右上へ退いて残る。得なものは水色、損なものは赤茶
 func _draw_skill() -> void:
@@ -667,38 +672,38 @@ func _pause_fx() -> void:
 	_outlined("PAUSE", VW / 2.0, VH * 0.44, 52, Color(1, 1, 1, a), "center", 7, f_num, a)
 	_txt("[START] / [ESC]  RESUME", VW / 2.0, VH * 0.44 + 34, 13, _a(PALE, a), "center")
 
-# ---- 左下の計器：丸い計器（外の輪＝速さ・内の輪＝気性・真ん中＝時速）と、その右に手綱の段・スタミナ・気合・ムチの手 ----
+# ---- 左下の計器：丸い計器（速さ・真ん中に時速）と、その右の板に 馬の頭（折り合い）・STAMINA・手綱（HOLD ◀ ▶ PUSH）----
+# 持ち主の指摘 2026-10-20「FIGHT・WHIP・縦のメーターは意味が分からない」「折り合いのゲージをもっと分かりやすく」「FIGHT いらない」「WHIP いらない」：
+# 気合の目盛りとムチの手の札は外した（競り合いは縁の光、ムチの持ち手は 3D の騎手の手で見える）。縦の ▲▼ は横の手綱の帯（左＝引く・右＝しごく）に、
+# 丸い計器の内の輪（気性）は馬の頭の絵に替えた（落ち着くと頭が下がって青、掛かると頭を上げて口を割り、赤く震える）
 func _meters(M: Dictionary) -> void:
 	var R := 56.0
 	var cx := 18.0 + R
 	var cy := VH - 18.0 - R
 	var px := cx + 20.0
-	var pw := 318.0
+	var pw := 352.0
 	var ph := 92.0
 	var py := cy - ph / 2.0 + 8.0
 	_glass(px, py, pw, ph, 12)
 	_dial(M, cx, cy, R)
 	var x0 := cx + R + 10.0
-	_rein(M, x0, py + 12.0, ph - 24.0)
-	var bx := x0 + 30.0
+	_temper(M, x0 + 32.0, py + ph / 2.0, 30.0)
+	var bx := x0 + 78.0
 	_stamina(M, bx, py + 10.0)
-	_fight_meter(M, bx, py + 50.0)
-	_whip_hand(M, bx + 190.0, py + 50.0)
+	_reins(M, bx, py + 52.0, 212.0)
 
+# 丸い計器：速さだけ（下の空いた 270° の 30 の目盛り。巡航の速さに金の目盛り。追い出すと縁が金に光る）
 func _dial(M: Dictionary, cx: float, cy: float, R: float) -> void:
-	var kakari: bool = bool(M.kakari) or bool(M.reinFight)
 	var spurt: bool = bool(M.spurting) and not bool(M.done)
-	# 盤（掛かると赤く、追い出すと金に縁が光る）
-	var halo := Color(1, 70 / 255.0, 50 / 255.0, 0.6 + 0.4 * sin(now / 0.12)) if kakari else (Color(1, 214 / 255.0, 90 / 255.0, 0.7) if spurt else Color(0, 0, 0, 0.6))
+	var halo := Color(1, 214 / 255.0, 90 / 255.0, 0.7) if spurt else Color(0, 0, 0, 0.6)
 	for k in 4:
-		_circle(cx, cy + (0 if kakari or spurt else 3), R + 2.0 + k * (5.0 if kakari or spurt else 3.0), _a(halo, 0.16))
+		_circle(cx, cy + (0 if spurt else 3), R + 2.0 + k * (5.0 if spurt else 3.0), _a(halo, 0.16))
 	var g0 := Color(34 / 255.0, 58 / 255.0, 46 / 255.0, 0.96)
 	var g1 := Color(5 / 255.0, 13 / 255.0, 10 / 255.0, 0.94)
 	for k in 6:
 		var q := k / 6.0
 		_circle(cx - R * 0.3 * q, cy - R * 0.4 * q, R * (1.0 - q * 0.85), g1.lerp(g0, q))
-	_arc(cx, cy, R - 0.5, 0, TAU, BAD.lightened(0.1) if kakari else LINE, 1.5)
-	# 外の輪：速さ（下が空いた 270°。巡航の速さに金の目盛り）
+	_arc(cx, cy, R - 0.5, 0, TAU, LINE, 1.5)
 	var a0 := PI * 0.75
 	var sweep := PI * 1.5
 	var N := 30
@@ -711,80 +716,120 @@ func _dial(M: Dictionary, cx: float, cy: float, R: float) -> void:
 		var col := OFF
 		if i < lit:
 			col = (PALE if spurt else CYAN) if over else Color("3a9cf0")
-		var r0 := R - 11.0
+		var r0 := R - 13.0
 		var r1 := R - 4.0
 		if i < lit and over:
 			_line(cx + cos(a) * r0, cy + sin(a) * r0, cx + cos(a) * r1, cy + sin(a) * r1, _a(WARN if spurt else CYAN, 0.3), 7.0)
-		_line(cx + cos(a) * r0, cy + sin(a) * r0, cx + cos(a) * r1, cy + sin(a) * r1, col, 3.4)
+		_line(cx + cos(a) * r0, cy + sin(a) * r0, cx + cos(a) * r1, cy + sin(a) * r1, col, 3.6)
 	var ac := a0 + sweep * cruise
-	_line(cx + cos(ac) * (R - 13), cy + sin(ac) * (R - 13), cx + cos(ac) * (R - 1), cy + sin(ac) * (R - 1), GOLD, 2)
-	# 内の輪：気性（青＝落ち着き → 緑 → 金 → 赤＝掛かり）
-	var ri := R - 19.0
+	_line(cx + cos(ac) * (R - 15), cy + sin(ac) * (R - 15), cx + cos(ac) * (R - 1), cy + sin(ac) * (R - 1), GOLD, 2)
+	var kmh := int(round(float(M.v) * 3.6))
+	_txt(str(kmh), cx, cy + 9, 30, PALE if spurt else Color.WHITE, "center", f_num)
+	_tag("km/h", cx, cy + 25, LABEL, "center")
+
+# 気性の段（0〜1）→ 色：落ち着き＝青・ふつう＝緑・高ぶり＝金・掛かり＝赤
+static func temper_col(tv: float, kakari: bool) -> Color:
+	if kakari or tv >= 0.75:
+		return BAD
+	return CALM if tv < 0.35 else (GOOD if tv < 0.55 else WARN)
+
+# 折り合い：丸い札の中に横向きの馬の頭。落ち着くほど頭が下がって前へ伸び（耳は前）、高ぶるほど頭が上がる。
+# 掛かる・手綱とケンカすると、頭を振り上げて口を割り、耳を絞り、白目をむいて赤く震える。札の縁の弧は気性の高さ（左下から右下へ）
+func _temper(M: Dictionary, cx: float, cy: float, r: float) -> void:
+	var kak: bool = bool(M.kakari) or bool(M.reinFight)
 	var tv := clampf(float(M.tension) / 100.0, 0.0, 1.0)
-	var segs := [[0.0, 0.35, CALM], [0.35, 0.55, GOOD], [0.55, 0.75, WARN], [0.75, 1.0, BAD]]
-	# 折り合っている間は輪全体が青く静かに光る
-	if not kakari and tv < 0.35 and not spurt:
-		_arc(cx, cy, ri, a0, a0 + sweep, _a(CALM, 0.18 + 0.08 * sin(now / 0.9)), 10)
-	for sg in segs:
+	var col := temper_col(tv, kak)
+	var calm := not kak and tv < 0.35
+	# 札：色の光（掛かると脈打つ。折り合うと静かに息づく）
+	var glow := 0.55 + 0.45 * sin(now / 0.1) if kak else (0.35 + 0.12 * sin(now / 0.9) if calm else 0.3)
+	for k in 3:
+		_circle(cx, cy, r + 2.0 + k * (4.0 if kak else 2.5), _a(col, 0.12 * glow / 0.5))
+	_circle(cx, cy, r, Color(5 / 255.0, 13 / 255.0, 10 / 255.0, 0.95))
+	_circle(cx, cy, r - 2.0, _a(col.darkened(0.55), 0.85))
+	# 縁の弧：気性の高さ（左下から時計回りに右下へ。4つの色の帯、今の所まで灯る）
+	var a0 := PI * 0.75
+	var sweep := PI * 1.5
+	for sg in [[0.0, 0.35, CALM], [0.35, 0.55, GOOD], [0.55, 0.75, WARN], [0.75, 1.0, BAD]]:
 		var s0: float = sg[0]
 		var s1: float = sg[1]
-		var c: Color = sg[2]
-		var al := 0.7 + 0.3 * sin(now / 0.09) if kakari and s0 >= 0.75 else 0.3
-		_arc(cx, cy, ri, a0 + sweep * s0 + 0.02, a0 + sweep * s1 - 0.02, _a(c, al), 4.5)
+		_arc(cx, cy, r + 0.5, a0 + sweep * s0 + 0.03, a0 + sweep * s1 - 0.03, _a(sg[2], 0.28), 3.0)
 		if tv > s0:
-			_arc(cx, cy, ri, a0 + sweep * s0 + 0.02, a0 + sweep * minf(tv, s1) - (0.02 if tv >= s1 else 0.0), _a(c, 0.95), 4.5)
-	# 光る玉（Godot 版は大きく）：高ぶるほど・掛かるほど不規則に震え、手綱とケンカすると大きく暴れる
-	var tremble := (0.09 if bool(M.kakari) else 0.0) + minf(0.08, float(M.surge) / 300.0) + (0.14 if bool(M.reinFight) else 0.0) + maxf(0.0, tv - 0.5) * 0.08
-	var at := a0 + sweep * tv + tremble * (sin(now / 0.043) * 0.6 + sin(now / 0.017 + 1.3) * 0.4)
-	var tcol := CALM if tv < 0.35 else (GOOD if tv < 0.55 else (WARN if tv < 0.75 else BAD))
-	var bxp := cx + cos(at) * ri
-	var byp := cy + sin(at) * ri
-	_glow_circle(bxp, byp, 5.0, tcol, 9.0)
-	_circle(bxp, byp, 5.4, tcol)
-	_circle(bxp, byp, 3.8, Color.WHITE)
-	# 真ん中：時速
-	var kmh := int(round(float(M.v) * 3.6))
-	_txt(str(kmh), cx, cy + 8, 26, PALE if spurt else Color.WHITE, "center", f_num)
-	_tag("km/h", cx, cy + 22, LABEL, "center")
+			_arc(cx, cy, r + 0.5, a0 + sweep * s0 + 0.03, a0 + sweep * minf(tv, s1) - (0.03 if tv >= s1 else 0.0), sg[2], 3.0)
+	# 頭：首の付け根を軸に回す（＋＝下げる）。掛かると不規則に振る
+	var shake := 0.0
+	if kak:
+		shake = 0.16 * sin(now / 0.045) + 0.09 * sin(now / 0.019 + 1.3)
+	elif tv > 0.55:
+		shake = 0.05 * sin(now / 0.07) * (tv - 0.55) / 0.45
+	var ang := lerpf(0.18, -0.45, tv) - (0.25 if kak else 0.0) + shake
+	var sc := r * 0.78
+	var piv := Vector2(cx - r * 0.3, cy + r * 0.62)
+	var P0 := Vector2(-0.3, 0.75)
+	var tf := func(v: Vector2) -> Vector2:
+		return piv + (v - P0).rotated(ang) * sc
+	var open := 0.22 if kak else 0.0
+	var head := [Vector2(-0.6, 0.78), Vector2(-0.45, 0.05), Vector2(-0.2, -0.4), Vector2(0.06, -0.42), Vector2(0.56, -0.06),
+		Vector2(0.6, 0.1), Vector2(0.42, 0.18 + open * 0.3), Vector2(0.08, 0.1 + open * 0.2), Vector2(-0.06, 0.3), Vector2(0.02, 0.78)]
+	var hp: Array = []
+	for v in head:
+		hp.append(tf.call(v))
+	var ivory := Color(1, 0.96, 0.86)
+	_poly(hp, ivory)
+	# 割った口（掛かり）
+	if open > 0.0:
+		_poly([tf.call(Vector2(0.62, 0.1)), tf.call(Vector2(0.24, 0.12)), tf.call(Vector2(0.6, 0.1 + open))], Color(0.25, 0.04, 0.03))
+	# 耳：落ち着くと前へ立ち、掛かると後ろへ絞る
+	var tip := Vector2(-0.12, -0.8).lerp(Vector2(-0.48, -0.6), clampf((tv - 0.35) / 0.5, 0.0, 1.0) if not kak else 1.0)
+	_poly([tf.call(Vector2(-0.22, -0.36)), tf.call(tip), tf.call(Vector2(-0.02, -0.4))], ivory)
+	# 目：掛かると白目をむく
+	var eye: Vector2 = tf.call(Vector2(0.04, -0.22))
+	if kak:
+		_circle(eye.x, eye.y, 2.6, Color.WHITE)
+		_circle(eye.x + 0.8, eye.y, 1.3, BAD.darkened(0.4))
+	else:
+		_circle(eye.x, eye.y, 1.7, Color(0.08, 0.1, 0.09))
+	# たてがみ（色の線）
+	canvas.draw_polyline(PackedVector2Array([tf.call(Vector2(-0.6, 0.72)) * K, tf.call(Vector2(-0.46, 0.08)) * K, tf.call(Vector2(-0.22, -0.36)) * K]), col.lightened(0.2), 2.5 * K, true)
 
-# 手綱の段：上に ▲ 4つ（しごく）、下に ▼ 4つ（引く）。押した瞬間に光る
-func _rein(M: Dictionary, x: float, y: float, h: float) -> void:
-	var mid := y + h / 2.0
+# 手綱：横の帯。真ん中から右へ金の升＝しごいた段（PUSH・↑）、左へ青の升＝引いた段（HOLD・↓）。押した瞬間に光る。
+# 拍子の合ったしごきは右の升が全部金にふくらむ。外れると最初の升だけ白く弱く
+func _reins(M: Dictionary, x: float, y: float, w: float) -> void:
 	var g: float = M.gear
-	var n := int(ceil(g * 4.0)) if g > 0.05 else (int(ceil(-g * 4.0)) if g < -0.05 else 0)
+	var n := int(ceil(absf(g) * 4.0)) if absf(g) > 0.05 else 0
 	var up_f := maxf(0.0, 1.0 - (now - _up_t) / 0.22)
 	var dn_f := maxf(0.0, 1.0 - (now - _down_t) / 0.22)
-	_rect(x, mid - 0.5, 16, 1, Color(1, 1, 1, 0.3))
+	var hold_c := Color("7fc8ff")
+	# 見出し：左に ▼ HOLD、右に PUSH ▲（十字キーの向きと同じ）
+	_poly([Vector2(x, y + 2), Vector2(x + 8, y + 2), Vector2(x + 4, y + 8)], _a(hold_c, 0.9 if g < -0.05 else 0.55))
+	_tag("HOLD", x + 12, y + 8, hold_c if g < -0.05 else LABEL)
+	_poly([Vector2(x + w - 8, y + 8), Vector2(x + w, y + 8), Vector2(x + w - 4, y + 2)], _a(WARN, 0.9 if g > 0.05 else 0.55))
+	_tag("PUSH", x + w - 12, y + 8, WARN if g > 0.05 else LABEL, "right")
+	var mid := x + w / 2.0
+	var cw := (w / 2.0 - 8.0 - 3.0 * 3) / 4.0
+	var cy := y + 14.0
 	for i in 4:
-		for up in [true, false]:
-			var on: bool = (g > 0.05 and i < n) if up else (g < -0.05 and i < n)
-			var yy: float = mid - 6.0 - i * 9.0 if up else mid + 6.0 + i * 9.0
-			var base := WARN if up else Color("7fc8ff")
-			var fl: float = up_f if up else dn_f
-			var col := base if on else Color(1, 1, 1, 0.13)
-			if not on and fl > 0.0 and i == 0:
-				col = Color(1, 1, 1, 0.2 + 0.6 * fl)
-			if up and _up_beat and fl > 0.0:
-				# 拍子が合った：全部の ▲ が金に光ってふくらむ
-				col = base.lerp(Color(1, 0.97, 0.8), 0.5 * fl)
-				fl = minf(1.0, fl * 1.6)
-			var pts: Array
-			if up:
-				pts = [Vector2(x + 8, yy - 5), Vector2(x + 16, yy + 2), Vector2(x + 12, yy + 2), Vector2(x + 8, yy - 1.5), Vector2(x + 4, yy + 2), Vector2(x, yy + 2)]
-			else:
-				pts = [Vector2(x + 8, yy + 5), Vector2(x + 16, yy - 2), Vector2(x + 12, yy - 2), Vector2(x + 8, yy + 1.5), Vector2(x + 4, yy - 2), Vector2(x, yy - 2)]
-			if on or fl > 0.0:
-				var gl := 1.5 + 2.5 * fl
-				var big: Array = []
-				for p in pts:
-					big.append(Vector2(x + 8, yy) + (p - Vector2(x + 8, yy)) * (1.0 + gl / 6.0))
-				_poly_split(big, _a(base, 0.25 + 0.3 * fl))
-			_poly_split(pts, col)
+		# 右（しごく）
+		var on_r := g > 0.05 and i < n
+		var cr := WARN if on_r else OFF
+		var glow_r := 6.0 if on_r else 0.0
+		if up_f > 0.0 and (_up_beat or i == 0):
+			cr = (WARN.lerp(Color(1, 0.97, 0.8), 0.5 * up_f)) if _up_beat else Color(1, 1, 1, 0.25 + 0.55 * up_f)
+			glow_r = 6.0 + 8.0 * up_f
+		_cell(mid + 6.0 + i * (cw + 3.0), cy, cw, 13, cr, glow_r)
+		# 左（引く）
+		var on_l := g < -0.05 and i < n
+		var cl := hold_c if on_l else OFF
+		var glow_l := 6.0 if on_l else 0.0
+		if dn_f > 0.0 and i == 0 and not on_l:
+			cl = Color(1, 1, 1, 0.25 + 0.55 * dn_f)
+			glow_l = 4.0
+		_cell(mid - 6.0 - (i + 1) * cw - i * 3.0, cy, cw, 13, cl, glow_l)
+	# 真ん中の手（白い丸）：段の分だけ左右へ寄る
+	var hx := mid + clampf(g, -1.0, 1.0) * (w / 2.0 - 10.0)
+	_rect(mid - 0.75, cy - 3, 1.5, 19, Color(1, 1, 1, 0.35))
+	_glow_circle(hx, cy + 6.5, 4.5, Color(1, 1, 1, 0.8), 5)
+	_circle(hx, cy + 6.5, 4.5, Color.WHITE)
 
-# 凹んだ形（▲ の山）は三角に分けて描く
-func _poly_split(pts: Array, col: Color) -> void:
-	_poly([pts[0], pts[1], pts[2], pts[3]], col)
-	_poly([pts[0], pts[3], pts[4], pts[5]], col)
 
 # 道悪：{wet＝馬場が良でない, e＝自分の馬のスタミナの減りの倍率}（初めて描くときに決める）
 var _mud := {}
@@ -837,46 +882,6 @@ func _stamina(M: Dictionary, x: float, y: float) -> void:
 		_cell(x + int(_sta_lost.i) * 27.0, y + 13 - u * 4, 23, 17, Color(1, 1, 1, 1.0 - u), 12)
 	if nb == 0 and not bool(M.done):
 		canvas.draw_rect(Rect2(_p(x - 2, y + 11), _p(8 * 27 + 4, 21)), Color(1, 90 / 255.0, 77 / 255.0, 0.5 + 0.5 * sin(now / 0.09)), false, 1.5 * K)
-
-# 気合（12の目盛り）。上がっている間は橙から金に燃え、火の粉が立つ。ひるむと青く沈む
-func _fight_meter(M: Dictionary, x: float, y: float) -> void:
-	var f: float = M.fight
-	var rising: bool = bool(M.duel) and f > 0.0
-	_tag("FIGHT", x, y + 8, Color("ffb347") if f >= 50.0 else LABEL)
-	var n := 12
-	var bw := 11.0
-	var gap := 3.0
-	var y0 := y + 13.0
-	var lit := int(ceil(f / 100.0 * n)) if f > 0.0 else 0
-	for i in n:
-		var bx := x + i * (bw + gap)
-		if i < lit:
-			var k := float(i) / (n - 1)
-			var al := 0.75 + 0.25 * sin(now / 0.06 + i * 1.7) if rising else 1.0
-			_cell(bx, y0, bw, 10, _a(Color("ff7a2e") if k < 0.5 else (Color("ffb347") if k < 0.85 else PALE), al), 6)
-		else:
-			_cell(bx, y0, bw, 10, OFF)
-	if rising and lit > 0:
-		for j in 7:
-			var ph := fposmod(now / 0.7 + j * 0.37, 1.0)
-			var px := x + fmod(j * 47.0, lit * (bw + gap)) + sin(now / 0.2 + j) * 2.0
-			_circle(px, y0 - 2.0 - ph * 14.0, 1.6 + (1.0 - ph) * 1.2, Color(1, 211 / 255.0, 77 / 255.0, (1.0 - ph) * 0.9) if j % 2 == 1 else Color(1, 138 / 255.0, 61 / 255.0, (1.0 - ph) * 0.9))
-	if f < 0.0:
-		_rect(x, y0, n * (bw + gap) * (-f / 100.0), 10, Color(110 / 255.0, 160 / 255.0, 230 / 255.0, 0.85))
-
-# ムチの手：L・R の札（持っている手が金。持ち替えの間は点滅）と、打った数の点（効きが落ちるほど暗く）
-func _whip_hand(M: Dictionary, x: float, y: float) -> void:
-	_tag("WHIP", x, y + 8)
-	for hd in [["L", 0.0], ["R", 22.0]]:
-		var on: bool = String(M.hand) == hd[0]
-		var a := 0.4 + 0.6 * absf(sin(now / 0.06)) if bool(M.swapping) else 1.0
-		var sb := Rect2(_p(x + hd[1], y + 12), _p(19, 18))
-		var col := _a(WARN, a) if on else OFF
-		canvas.draw_rect(sb, col)
-		_txt(String(hd[0]), x + hd[1] + 9.5, y + 25, 12, Color("2a2000") if on else Color(1, 1, 1, 0.4), "center")
-	var eff: float = M.eff
-	for i in mini(12, int(M.whips)):
-		_rect(x + (i % 6) * 7, y + 34 + int(i / 6) * 5, 5, 3, Color(1, (150.0 + 100.0 * eff) / 255.0, 100.0 * eff / 255.0, 0.35 + 0.65 * eff))
 
 # ---- 右：縦長の馬群レーダー。上が前。紫が自分、白い輪が照準。内ラチは回る向きの側 ----
 # 脇の金の括弧＝得意な位置（脚質）。前が塞がれていると自分の印の前に赤い線。近くの馬の特殊能力は輪が広がる
