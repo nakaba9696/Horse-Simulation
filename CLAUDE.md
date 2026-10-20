@@ -55,7 +55,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/core/hall.js`・`js/ui/hallui.js` | 殿堂（お手馬）：トロフィーを2つ以上手にした自分の馬は引退したときに殿堂入りし、記録の写し（`G.hallOwn`）を振り返れる | C |
 | `js/core/original.js` | オリジナルホース：引退させた牡馬・牝馬（それぞれ5頭まで牧場に残る）から仔を作る。能力は両親の値から、特殊能力は両親のもの（最大8つ）から4つまで、トロフィー・GF の勝ちでボーナス | C |
 | `js/core/pedigree.js` | 血統表・クロス・ニックス・系統・配合の評価・仔の誕生 | M |
-| `js/core/races.js` | 週ごとのレース（重賞と条件戦）・出走できるか・優先順 | M |
+| `js/core/races.js` | 週ごとのレース（重賞とオープン。OP 以上だけ）・出走できるか（G1 は獲得賞金・海外は仮の条件を `R.abroadWhy` の1か所で）・優先順。数は `docs/BALANCE.md`「8. 出走の条件」 | M |
 | `js/core/racesim.js` | レースの模擬（0.1秒刻み。S.create・S.step・S.finish）・プレイヤーの騎乗の操作（S.ctl）・実況・描画用のコマ | M |
 | `js/core/world.js` | 世界の状態・週の進行（W.prepareWeek → W.cards → W.finishWeek）・AI の出走・賞金・市場・配合・表彰・セーブ | C |
 | `data/owners.js`・`js/core/owners.js`・`js/ui/ownersui.js`・`js/ui/ownerface.js`・`css/owners.css` | 馬主のキャラクター（架空・8人。仕様書の8つのジャンルに1人ずつ。口調の表・場面ごとの台詞・段階ごとの課題・最後のアイテム）と騎乗依頼・好感度・依頼の段階（OP → G3 → G2 → G1 → お手馬）・店に頼む・名コンビ賞（`G.owners`）。会話は下書きで、一覧は `docs/OWNERS_DRAFT.md`（`node tools/owners_draft.js`）。画面はホームの依頼の札・馬主の一覧・課題の場面・パドックとレースの後のひと言。顔は持ち主が作った絵（`assets/owners_*.js`。札は丸い切り抜き・場面は胸から上・表情4つ）で、無い人・読めないときは SVG（`js/ui/ownerface.js`。Godot 版は `node tools/owner_faces.js` で書き出す）。GF を開いている一族の人（キンチェムモチーフ・依頼はしない）は `data/gfhost.js`・`js/core/gfhost.js` | C |
@@ -73,7 +73,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/core/edits.js`・`js/ui/editor.js` | 競走馬エディット（史実馬の書き換え・書き出し・読み込み） | U |
 | `css/style.css` | 見た目（深緑と金が既定、紺と金に切り替えられる） | U |
 | `js/ui/uikit.js`・`css/ui.css`・`docs/UI.md` | 画面の共通部品（見出しの帯・タブ・表の行・能力の数の札・値段・選び肢の札・操作の案内）と画面の決まり。騎乗の外の画面はこの部品で作る | U |
-| `js/core/listsort.js`・`js/core/program.js`・`js/ui/program.js` | 一覧の並べ替えと絞り込み（`HS.List`）／番組表（今週から1年先の重賞と条件戦・出られるか・適性・出走と予約）と厩舎の一覧 | U |
+| `js/core/listsort.js`・`js/core/program.js`・`js/ui/program.js` | 一覧の並べ替えと絞り込み（`HS.List`）／番組表（今週から1年先の重賞とオープン・出られるか・適性・出走と予約）と厩舎の一覧 | U |
 | `tests/` | 検証 | T |
 | `godot/core/`・`godot/data/`・`godot/tests/`・`tools/export_godot.js`・`tools/golden_race.js` | Godot 版の中身：データの書き出し・模擬（JS と同じ種で同じ結果）・一致テスト。[docs/GODOT.md](docs/GODOT.md) | C |
 
