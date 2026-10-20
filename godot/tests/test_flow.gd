@@ -1,5 +1,5 @@
 # 週の流れ（godot/ui/flow.gd の UiFlow と画面）の確かめ：決まった種の新しいゲームから数週を進める。
-# 毎週：店で馬を買う・馬主の依頼を受ける・今週の騎乗を出走表の一式（desc_of）→ 模擬の入れ口（ViewLive）で決まった乗り方で走る（1鞍おきにおまかせ）
+# 毎週：店で馬を買う・馬主の依頼を受ける・今週の騎乗を出走表の一式（desc_of）→ 決まった乗り方で走る（1鞍おきに模擬の入れ口 ViewLive と、模擬を直に回す UiFlow.bot_ride。おまかせ騎乗は無い）
 # → 週を締める（UiFlow.close_week）。週が1つ進むこと・乗ったレースが結果に入ること・セーブの往復で同じ状態に戻ること・画面を組めることを見る
 extends RefCounted
 
@@ -15,8 +15,9 @@ func run(t) -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(UiFlow.replay_dir.path_join(f)))
 	UiFlow.no_save = false
 	var rode := 0
-	var autos := 0
+	var lives := 0          # 模擬の入れ口（ViewLive）で乗った鞍。ほかは UiFlow.bot_ride（模擬を直に回す）
 	var own_rode := false   # 自分の馬（店で買った馬）に1度は自分で乗る（戦績からリプレイを開く確かめのため。レースが OP 以上だけになって、買った馬の出走が少ない週がある）
+	var card_checked := false
 	for wk in WEEKS:
 		var G = HSWorld.G
 		var w0 := HSWorld.w_idx()
@@ -27,6 +28,16 @@ func run(t) -> void:
 		var want := HSJockey.my_rides().size()
 		var nxt := UiFlow.begin_week()
 		t.eq(UiFlow.rides.size(), want, "flow: 騎乗の列は今週の騎乗と同じ数（%d週目）" % wk)
+		# 1つのレースに自分が乗るのは1頭（持ち主の決定 2026-10-20「おまかせ騎乗　なしにして」）
+		var keys := {}
+		for r in UiFlow.rides:
+			t.ok(not keys.has(r.card.race.key), "flow: 1つのレースの騎乗は1鞍（%s）" % r.card.race.key)
+			keys[r.card.race.key] = true
+			t.eq(r.card.runners.filter(func(x): return x.get("mine") or x.get("rider") == "P").size(), 1, "flow: 1つのレースに自分の馬・自分が乗る馬は1頭")
+		# 乗っていない騎乗が残っていると、週を締めずに出走表へ戻る（おまかせ騎乗は無い）
+		if nxt == "card":
+			t.eq(UiFlow.close_week(), "card", "flow: 乗っていない騎乗があると週を締めない")
+			t.ok(HSWorld.w_idx() == w0 and UiFlow.current() != null, "flow: 週は進まず、その鞍から乗る")
 		var k := 0
 		while nxt == "card":
 			var cur = UiFlow.current()
@@ -35,34 +46,49 @@ func run(t) -> void:
 			t.eq(d.horses.size(), cur.card.runners.size(), "flow: 出走表の一式の頭数")
 			t.ok(bool(d.horses[d.me].mine) and String(d.horses[d.me].id) == String(cur.runner.horse.id), "flow: 自分の馬の印")
 			t.ok(d.track.pts.size() > 5 * 100, "flow: コースの形（1m ごと）")
+			if not card_checked:
+				# 出走表の画面に「おまかせで乗る」が無い（ゲートインだけ）
+				card_checked = true
+				var sc = load("res://scenes/race_card.tscn").instantiate()
+				t.root.add_child(sc)
+				var labels: Array = sc.find_children("*", "Button", true, false).map(func(b): return String(b.text))
+				t.ok(sc.btn_gate != null and not labels.any(func(s): return s.contains("おまかせ")), "flow: 出走表にゲートインがあり、おまかせで乗るボタンが無い")
+				sc.free()
+				UiFlow.desc = d
 			var own: bool = cur.runner.horse.get("owner") == "P"
+			var res: Dictionary
 			if (wk + k) % 2 == 0 or (own and not own_rode):
 				own_rode = own_rode or own
-				var L := ViewLive.new("", d)
-				var res := _ride(L)
-				t.ok(res.has("results") and res.results.size() == d.horses.size(), "flow: 乗ったレースの結果")
-				nxt = UiFlow.ride_done(res)
-				rode += 1
+				res = _ride(ViewLive.new("", d))
+				lives += 1
 			else:
-				nxt = UiFlow.ride_done(null)
-				autos += 1
+				res = UiFlow.bot_ride(HSWorld.start_sim(cur.card, {"ride": true}))
+			t.ok(res.has("results") and res.results.size() == d.horses.size(), "flow: 乗ったレースの結果")
+			nxt = UiFlow.ride_done(res)
+			rode += 1
 			k += 1
 		t.eq(nxt, "result", "flow: 騎乗のあとは週の結果")
 		t.ok(UiFlow.report != null and HSWorld.w_idx() == w0 + 1, "flow: 週が1つ進む（%d週目）" % wk)
 		for r in UiFlow.report.races:
-			if UiFlow.ridden.get(r.race.key) == "ride":
-				t.ok(r.ridden, "flow: 自分で乗ったレースは結果に「乗った」と入る")
+			if r.get("ride"):
+				t.ok(r.ridden and UiFlow.ridden.get(r.race.key) == "ride", "flow: 自分が乗るレースは全部自分で乗っている（おまかせ騎乗は無い）")
 		# セーブの往復
 		var s1 := HSData.digest_save(HSJson.parse(HSWorld.serialize()))
 		t.ok(UiFlow.load_game(), "flow: セーブを読む")
 		t.eq(HSData.digest_save(HSJson.parse(HSWorld.serialize())), s1, "flow: セーブの往復で同じ状態（%d週目）" % wk)
 		t.ok(not UiFlow.save_info().is_empty(), "flow: タイトルに出すセーブの要点")
-	t.ok(rode > 0 and autos > 0, "flow: 自分で乗った鞍とおまかせの鞍がある（%d・%d）" % [rode, autos])
+	t.ok(rode > lives and lives > 0, "flow: 模擬の入れ口で乗った鞍と、直に回して乗った鞍がある（%d・%d）" % [lives, rode - lives])
 	# リプレイ：自分で乗ったレースが残り、記録の再生（ViewReplay）で読める
 	var rl := UiFlow.replay_list()
 	t.eq(rl.size(), rode, "flow: 自分で乗った鞍の数だけリプレイが残る")
 	if rl.size():
+		# 模擬の入れ口（ViewLive）で乗った鞍のリプレイ（自分の馬の値とムチが入る。UiFlow.bot_ride の鞍には入らない）
 		var rp := ViewReplay.new(UiFlow.replay_dir.path_join(String(rl[0].id) + ".json"))
+		for x in rl:
+			var q := ViewReplay.new(UiFlow.replay_dir.path_join(String(x.id) + ".json"))
+			if q.whips.size() > 0:
+				rp = q
+				break
 		t.ok(rp.n > 4 and rp.order.size() == rp.n and rp.end_t() > 30.0, "flow: リプレイを再生の入れ口で読める（%d頭・%.0f秒）" % [rp.n, rp.end_t()])
 		var m0 := rp.me_at(5.0)
 		var m1 := rp.me_at(rp.end_t() - 10.0)
@@ -130,7 +156,7 @@ func run(t) -> void:
 	HSWorld.G = null
 	UiFlow._reset_week()
 	UiFlow.no_save = false
-	print("    flow: %d 週・自分で %d 鞍・おまかせ %d 鞍 %.1f 秒" % [WEEKS, rode, autos, (Time.get_ticks_msec() - t0) / 1000.0])
+	print("    flow: %d 週・自分で %d 鞍（模擬の入れ口 %d）%.1f 秒" % [WEEKS, rode, lives, (Time.get_ticks_msec() - t0) / 1000.0])
 
 # 馬の店（持ち主の仕様書「クリックですぐ購入にしない」）：行を押すと詳しい小窓、「買う」で確かめ、確かめの「買う」で買う。
 # 見える総合力はいまの値（HSEraless.shop_fh）

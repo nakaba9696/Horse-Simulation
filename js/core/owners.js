@@ -1,6 +1,6 @@
 // 馬主と騎乗依頼（持ち主の仕様書 docs/SPEC.md「騎乗依頼」2026-10-19 が正本）
 // 世界の AI の馬の一部を、架空の馬主（data/owners.js）が持つ。縁のある馬主から、毎週「この馬でこのレースに」と依頼が来る。
-// 受けると出走表で自分が乗る（G.rides。おまかせも可）。騎手の取り分は賞金の5%（jockey.js）と、ここで払う騎乗料。
+// 受けると出走表で自分が乗る（G.rides。おまかせ騎乗は無い。自分の馬が出るレースには依頼が来ない）。騎手の取り分は賞金の5%（jockey.js）と、ここで払う騎乗料。
 // 馬主は8つのジャンル（地方・短距離・クラシック・長距離・牝馬・米・欧州・豪州）に1人ずつ。クラシック系は秘書のユニ（ふつうの優秀なナビゲーター）。キンチェムモチーフの人物は GF の一族の人として別に作った（data/gfhost.js・js/core/gfhost.js）。
 //
 // 好感度（pts。0〜100）は、その人のジャンルのレースで勝つと上がる（自分の馬でも依頼の馬でも）。ある程度たまると出会いの場面になり、
@@ -268,6 +268,7 @@
     const per = {};
     for (const c of cards) {
       const race = c.race;
+      if (c.runners.some(x => x.mine)) continue; // 自分の馬が出るレースには依頼が来ない（1レースに乗れるのは1頭。持ち主の決定 2026-10-20）
       const ranked = c.runners.slice().sort((a, b) => H.overall(H.cur(b.horse, wIdx)) - H.overall(H.cur(a.horse, wIdx)));
       ranked.forEach((x, k) => {
         if (x.mine || x.horse.owner === 'P' || x.horse.legend) return;
@@ -309,7 +310,9 @@
   };
   const wkKey = () => { const g = G(); return `${g.year}-${g.month}-${g.week}`; };
   const cardHas = (cards, raceKey, horseId) => { const c = cards.find(c => c.race.key === raceKey); return !!(c && c.runners.some(x => x.horse.id === horseId)); };
+  const mineIn = (cards, raceKey) => { const c = cards.find(c => c.race.key === raceKey); return !!(c && c.runners.some(x => x.mine)); };
   // 今週の依頼（週の初めに一度だけ作り、セーブに残す。断った依頼・走れなくなった依頼は除く）
+  // 依頼を作ったあとで自分の馬をそのレースに出したら、受けていない依頼は見せない（自分の馬に乗るので、依頼の馬には乗れない）
   O.offers = function () {
     if (!O.on()) return [];
     const s = O.state(), g = G();
@@ -323,11 +326,11 @@
       if (g.rides && g.rides[rk] === a.horseId) J.cancel(rk);
     }
     const fresh = W.cards();
-    return s.week.list.filter(o => cardHas(fresh, o.raceKey, o.horseId) && !s.week.dec.includes(o.raceKey));
+    return s.week.list.filter(o => cardHas(fresh, o.raceKey, o.horseId) && !s.week.dec.includes(o.raceKey) && (s.week.acc[o.raceKey] || !mineIn(fresh, o.raceKey)));
   };
   O.offerOf = (raceKey) => O.offers().find(o => o.raceKey === raceKey) || null;
   O.accepted = raceKey => { const s = O.state(); return !!(s.week && s.week.key === wkKey() && s.week.acc[raceKey]); };
-  // 自分の馬が同じレースに出るか（出るなら、受けるとその馬には別の騎手が乗る）
+  // 自分の馬が同じレースに出るか。1レースに乗れるのは1頭なので、ふつうは無い（O.offers が見せない）。前のセーブとテストのために残す
   O.clash = function (o) {
     const c = W.cardOf(o.raceKey); if (!c) return null;
     const x = c.runners.find(x => x.mine && x.horse.id !== o.horseId);

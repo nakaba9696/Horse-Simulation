@@ -74,7 +74,6 @@
     const x = card.runners.find(r => r.horse.id === o.horseId); if (!x) return '';
     const ow = O.by(o.oid), h = x.horse, race = card.race;
     const acc = O.accepted(o.raceKey);
-    const clash = O.clash(o);
     const line = O.line(o.oid, 'offer', o.line, { horse: h.name, race: R.label(race) }, { race, horse: h });
     const fee = Math.round(O.FEE[O.classOf(race)] * U.priceIndex(W.get().year) / 10) * 10;
     const wIdx = W.prepareWeek().wIdx;
@@ -86,9 +85,8 @@
         <div class="own-race">${raceLine(race, x)}</div>
         <div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark ? UI.histMark(h) : ''}<span class="small muted">${h.gelding ? 'セ' : h.sex}${W.get().year - h.born}・${e(h.style)}・${x.pop ? `${x.pop}番人気（${x.odds}倍）` : ''}・騎乗料 ${U.money(fee)}</span></div>
         ${UI.numStats ? UI.numStats(h, wIdx, { surface: race.surface }) : ''}
-        ${clash ? `<div class="own-clash">同じレースに自分の馬「${e(clash.name)}」が出る。受けると「${e(clash.name)}」には別の騎手が乗る。</div>` : ''}
         <div class="btns">${acc ? `<span class="chip mine">受けた</span><button class="btn sm" data-act="own-cancel" data-race="${e(o.raceKey)}">取り消す</button>`
-          : `<button class="btn sm gold" data-act="own-accept" data-race="${e(o.raceKey)}" data-horse="${e(h.id)}">${clash ? '依頼の馬に乗る' : '受ける'}</button><button class="btn sm" data-act="own-decline" data-race="${e(o.raceKey)}">断る</button>`}
+          : `<button class="btn sm gold" data-act="own-accept" data-race="${e(o.raceKey)}" data-horse="${e(h.id)}">受ける</button><button class="btn sm" data-act="own-decline" data-race="${e(o.raceKey)}">断る</button>`}
           ${W.horse(h.id) ? `<button class="btn sm" data-act="horse" data-id="${e(h.id)}">馬を見る</button>` : ''}</div>
       </div></div>`;
   };

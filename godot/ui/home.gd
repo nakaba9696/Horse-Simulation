@@ -426,8 +426,7 @@ func _offer_card(o: Dictionary) -> Variant:
 		bc.pressed.connect(func(): HSOwners.unaccept(rk); UiFlow.save(); _rebuild())
 		bh.add_child(bc)
 	else:
-		var clash = HSOwners.clash(o)
-		var ba := UiScreen.button("依頼の馬に乗る" if clash else "受ける", false, 130, 34, 15)
+		var ba := UiScreen.button("受ける", false, 130, 34, 15)   # 自分の馬が出るレースの依頼は来ない（1レースに乗れるのは1頭）
 		ba.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT)
 		ba.pressed.connect(func():
 			var err = HSOwners.accept(rk, hid)

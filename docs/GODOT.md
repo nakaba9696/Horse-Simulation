@@ -60,7 +60,7 @@ HSOwners.offers() → HSOwners.accept(raceKey, horseId)   # 馬主の依頼
 HSSeason.dc_pending_list() → HSSeason.dc_choose(cat, id) / dc_decline(cat)   # 12月の GF
 for r in HSJockey.my_rides():           # 今週自分が乗るレース
 	var sim = HSWorld.start_sim(r.card, { ride = true })   # → HSSim.step … → HSSim.finish(sim)
-var report := HSWorld.finish_week({ r.card.race.key: 結果 })   # 乗らなかったレースはおまかせで走る
+var report := HSWorld.finish_week({ r.card.race.key: 結果 })   # 画面の流れ（UiFlow.close_week）は自分の騎乗を全部乗ってから締める。結果の無いレースを模擬が自動で走らせるのは、テストと見本を作る道具だけ
 var json := HSWorld.serialize()         # セーブ（JS 版でも読める）
 ```
 - 関数の名前は JS の `W.prepareWeek` → `HSWorld.prepare_week` のように小文字と `_` にした。引数と戻り値は JS と同じ。

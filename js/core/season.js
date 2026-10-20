@@ -135,6 +135,7 @@
     if (why) return why;
     G.reserve = G.reserve || [];
     if (G.reserve.some(x => x.id === id && x.y === race.year && x.m === race.month && x.w === race.week)) return 'その週はもう予約している';
+    if (W.oneRide() && G.reserve.some(x => x.key === race.key && x.id !== id)) return W.WHY_MINE; // 1つのレースに自分の馬は1頭まで（持ち主の決定 2026-10-20）
     G.reserve.push({ id, key: race.key, y: race.year, m: race.month, w: race.week, label: HS.Races.label(race) });
     G.reserve.sort((a, b) => (a.y - b.y) || (a.m - b.m) || (a.w - b.w));
     return null;
@@ -175,7 +176,7 @@
   };
   T.debutRace = function (h) {
     const W = HS.World, G = W.get(), R = HS.Races;
-    const list = W.weekRaces().filter(r => !r.graded && !r.invite && r.age === '2' && !R.ineligible(h, r, G.year));
+    const list = W.weekRaces().filter(r => !r.graded && !r.invite && r.age === '2' && !R.ineligible(h, r, G.year) && !W.rideTaken(r.key, h.id)); // ほかのお手馬のデビュー戦とは別のレースに
     const mid = (h.distMin + h.distMax) / 2;
     const score = r => ((r.surface === 'ダ' ? h.apt.dirt : h.apt.turf) || 50) * 3 - Math.abs(r.dist - Math.min(mid, 1800)) / 20;
     list.sort((a, b) => score(b) - score(a));

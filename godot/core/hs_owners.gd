@@ -306,6 +306,7 @@ static func generate(cs: Array, key: String, opts: Dictionary = {}) -> Array:
 	var per := {}
 	for c in cs:
 		var race: Dictionary = c.race
+		if _mine_in_card(c): continue   # 自分の馬が出るレースには依頼が来ない（1レースに乗れるのは1頭。持ち主の決定 2026-10-20）
 		var ranked: Array = HSU.stable_sort(c.runners, func(a, b): return HSHorse.overall(HSHorse.cur(a.horse, wIdx)) > HSHorse.overall(HSHorse.cur(b.horse, wIdx)))
 		for k in ranked.size():
 			var x = ranked[k]
@@ -357,6 +358,13 @@ static func _card_has(cs: Array, raceKey: String, horseId: String) -> bool:
 	for c in cs:
 		if c.race.key == raceKey: return c.runners.any(func(x): return x.horse.id == horseId)
 	return false
+static func _mine_in_card(c: Dictionary) -> bool:
+	return c.runners.any(func(x): return HSU.truthy(x.get("mine")))
+static func _mine_in(cs: Array, raceKey: String) -> bool:
+	for c in cs:
+		if c.race.key == raceKey: return _mine_in_card(c)
+	return false
+# 今週の依頼。依頼を作ったあとで自分の馬をそのレースに出したら、受けていない依頼は見せない（自分の馬に乗るので、依頼の馬には乗れない）
 static func offers() -> Array:
 	if not on(): return []
 	var s := state(); var g = HSWorld.G
@@ -369,13 +377,14 @@ static func offers() -> Array:
 		s.week.acc.erase(rk)
 		if g.get("rides") and g.rides.get(rk) == a.horseId: HSJockey.cancel(rk)
 	var fresh := HSWorld.cards()
-	return s.week.list.filter(func(o): return _card_has(fresh, o.raceKey, o.horseId) and not s.week.dec.has(o.raceKey))
+	return s.week.list.filter(func(o): return _card_has(fresh, o.raceKey, o.horseId) and not s.week.dec.has(o.raceKey) and (s.week.acc.has(o.raceKey) or not _mine_in(fresh, o.raceKey)))
 static func offer_of(raceKey: String) -> Variant:
 	for o in offers():
 		if o.raceKey == raceKey: return o
 	return null
 static func accepted(raceKey: String) -> bool:
 	var s := state(); return s.get("week") != null and s.week.key == _wk_key() and s.week.acc.has(raceKey)
+# 自分の馬が同じレースに出るか。1レースに乗れるのは1頭なので、ふつうは無い（offers が見せない）。前のセーブのために残す
 static func clash(o: Dictionary) -> Variant:
 	var c = HSWorld.card_of(o.raceKey)
 	if not c: return null

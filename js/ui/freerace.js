@@ -153,7 +153,7 @@
       const card = FR.build({ course: f.course, surface: f.surface, dist: f.dist, ground: f.ground, weather: f.weather, entries: f.picks, ride: f.ride, seed: f.seed, n: f.n }, f.snap);
       if (!card) return App.toast('出る馬を選んでください');
       const how = await new Promise(res => {
-        const bg = App.modal(`${UI.entryTable(card)}<div class="btns mt">${card.ride ? '<button class="btn gold" data-x="ride">ゲートイン（自分で乗る）</button><button class="btn" data-x="watch">おまかせで見る</button>' : '<button class="btn gold" data-x="watch">レースを見る</button>'}<button class="btn" data-x="no">もどる</button></div>`, { noClose: true, scene: 'paddock' });
+        const bg = App.modal(`${UI.entryTable(card)}<div class="btns mt">${card.ride ? '<button class="btn gold" data-x="ride">ゲートイン</button>' : '<button class="btn gold" data-x="watch">レースを見る</button>'}<button class="btn" data-x="no">もどる</button></div>`, { noClose: true, scene: 'paddock' });
         bg.querySelectorAll('[data-x]').forEach(b => { b.onclick = () => { App.closeModal(); res(b.dataset.x); }; });
       });
       if (how === 'no') return;
