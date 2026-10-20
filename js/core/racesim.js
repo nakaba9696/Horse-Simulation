@@ -242,7 +242,9 @@
       me: -1, ctl: null, _byX: null,
       checkAt: D >= 2400 ? 1200 : D >= 1600 ? 1000 : 600, check: null, skillFx: [],
       gateWait: 0,
+      marks: S.lapMarks(D), splits: null, lapN: 0, // ラップ：200m ごとの区切り（ゴールから数える。最初は端数）と、先頭が過ぎた時刻（S.lapMarks）
     };
+    sim.splits = sim.marks.map(() => null);
     // 終いの伸びの上限はペースで変わる：スローは脚が余っても伸びきれない（早めに動いて余った脚を使う）。ハイは脚の残りで決まる
     sim.top = S.KIRE.top * U.clamp(1 + (paceF - 1) * S.PACE_TOP, 0.55, 1.6);
     if (HS.Skills) { HS.Skills.setup(sim); for (const s of st) HS.Skills.flags(s); }
@@ -658,12 +660,19 @@
       s.x += dx;
       S.moodOut(sim, s, s.me ? c : null);
       if (s.t600 == null && s.x >= D - 600) s.t600 = t - DT + (D - 600 - xPrev) / Math.max(0.1, s.x - xPrev) * DT;
+      // ラップ：区切りをいちばん早く過ぎた馬の時刻（この刻みで過ぎた馬のうち早いほう）
+      for (let k = sim.lapN; k < sim.marks.length && sim.marks[k] <= s.x; k++) {
+        if (sim.marks[k] <= xPrev) continue;
+        const tc = t - DT + (sim.marks[k] - xPrev) / Math.max(0.1, s.x - xPrev) * DT;
+        if (sim.splits[k] == null || tc < sim.splits[k]) sim.splits[k] = tc;
+      }
       if (s.x >= D) {
         s.finishT = t - DT + (D - xPrev) / Math.max(0.1, s.x - xPrev) * DT;
         s.done = true; sim.finished++;
         if (sim.winnerT == null) sim.winnerT = s.finishT;
       }
     }
+    while (sim.lapN < sim.marks.length && sim.splits[sim.lapN] != null) sim.lapN++;
     if (HS.Skills && sim.step % 2 === 1) HS.Skills.step(sim, order, DT * 2);
     // スキルの発動（見せるため）：直線に入ったら、このレースで効いている特殊能力
     for (const s of st) {
@@ -757,6 +766,13 @@
     k.lastLeader = k.lastLeader ? lead : k.lastLeader;
   };
 
+  // ラップの区切り：ゴールから200mごと（距離が200で割り切れないときは、最初の区切りが端数）。ゴールそのものは入れない（最後は勝ち時計まで）
+  S.lapMarks = function (D) {
+    const out = [];
+    let m = D % 200; if (m < 1) m = 200;
+    for (; m < D - 0.5; m += 200) out.push(m);
+    return out;
+  };
   // 結果をまとめる
   S.finish = function (sim) {
     const { st, D, opts, events } = sim;
@@ -782,6 +798,9 @@
     else if (second && second.lengths >= 5) finishText = `${win.horse.name}、圧勝！ ${second.margin}馬身突き放してゴール！`;
     S.say(sim, winner.finishT, finishText, 'finish');
     events.sort((a, b) => a.t - b.t);
-    return { results, events, frames: opts.frames ? sim.frames : null, D, straight: sim.straight, lap: sim.geo.lap, winnerTime: win.time };
+    // ラップの通過の時刻（先頭が区切りを過ぎた時刻。過ぎなかった区切りから先は無い）
+    const splits = [];
+    for (const x of sim.splits) { if (x == null) break; splits.push(x); }
+    return { results, events, frames: opts.frames ? sim.frames : null, D, straight: sim.straight, lap: sim.geo.lap, winnerTime: win.time, splits };
   };
 })();

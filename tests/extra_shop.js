@@ -1,5 +1,5 @@
 // 確かめ：馬の店の決まり（持ち主の仕様書 2026-10-19「店」）とレーティング（「お手馬画面」「ゲームメニュー画面」）
-//   店の馬の年齢は月で変わる（6〜12月は2歳・1〜5月は3歳）・見える評価値と値段はいまの総合力・同じ完成の強さなら晩成が安い
+//   店の馬の年齢は月で変わる（6〜12月は2歳・1〜5月は3歳）・見える評価値と値段はいまの総合力（評価点）だけ・評価点が同じなら晩成ほど少し高い（持ち主の決定 2026-10-20）
 //   レーティング：1走の値＝負かした相手の評価＋着差、馬の値＝良かった3走の平均、部門ごと
 // 店で選んでも買わず確かめで買う、は Godot の画面のテスト（godot/tests/test_flow.gd の _shop）が確かめる
 // run.js から module.exports(check, assert, HS) で呼ぶ
@@ -25,34 +25,48 @@ module.exports = function (check, assert, HS) {
     return Object.entries(ages).map(([m, a]) => `${m}月 ${a}歳`).join('・');
   });
 
-  check('shop: 見える評価値と値段はいまの総合力。同じ完成の強さなら晩成ほど安く、早熟ほど高い', () => {
+  check('shop: 値段はいまの評価点（総合力）だけで決まり、評価点が同じなら晩成ほど少し高い（持ち主の決定 2026-10-20）', () => {
     W.newGame({ seed: 32, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
     const G = W.get();
     const wi = W.wIdx();
-    // 店の値段は、いまの総合力から（同じ馬なら E.priceOf と同じ）
+    // 店の値段は、いまの評価点から（同じ馬なら E.priceOf と同じ）
     for (const it of E.shop()) assert(it.price === E.priceOf(it.horse, it.legend, wi), `${it.horse.name} の値段がいまの値の式と違う`);
-    // 同じ史実馬の成長型だけを替える（完成の強さは同じ）
+    // いまの評価点と成長型だけで決まる：同じ評価点・同じ成長型なら、生まれ年や時期が違っても同じ値段
+    const shop = E.shop().filter(it => !it.legend);
+    const seen = new Map();
+    for (const it of shop) {
+      const k = E.shopValue(it.horse, wi) + ':' + it.horse.growth;
+      if (seen.has(k)) assert(seen.get(k) === it.price, `同じ評価点・成長型で値段が違う（${k}）`); else seen.set(k, it.price);
+    }
+    // 成長型の掛け：早熟 < 早め < 普通 < 遅め < 晩成
+    const gs = ['早熟', '早め', '普通', '遅め', '晩成'];
+    for (let i = 1; i < gs.length; i++) assert(E.GROWTH_PRICE[gs[i]] > E.GROWTH_PRICE[gs[i - 1]], '成長型の掛けの並び');
+    // 同じ評価点の馬（評価点を決めて値段を出す）：晩成ほど少し高い
     const d0 = E.pool().find(d => d.growth === '普通' && d.rating >= 85);
+    const same = {};
+    const orig = E.shopValue;
+    try {
+      E.shopValue = () => 60;
+      for (const g of gs) same[g] = E.priceOf({ growth: g }, false, wi);
+    } finally { E.shopValue = orig; }
+    assert(same['晩成'] > same['普通'] && same['普通'] > same['早熟'] && same['晩成'] / same['早熟'] < 1.4, `同じ評価点60：${JSON.stringify(same)}`);
+    // 同じ史実馬の成長型だけを替える（完成の強さは同じ）：いま強い早熟が高く、いま弱い晩成が安い（いまの評価点で決まるため）
     const out = [];
     for (const [m, age] of [[6, 2], [1, 3]]) {
       G.month = m;
       const w = W.wIdx();
-      const pr = {};
+      const pr = {}, fh = {};
       for (const g of ['早熟', '普通', '晩成']) {
         const h = H.fromHistoric(E.shift(Object.assign({}, d0, { growth: g }), (G.year - age) - d0.born), 'test:' + g);
         const pk = T.fhPeak(h), now = E.shopFh(h, w);
         assert(Math.max(now.turf, now.dirt) <= Math.max(pk.turf, pk.dirt), `${g} のいまの値が完成より上`);
-        pr[g] = E.priceOf(h, false, w);
+        pr[g] = E.priceOf(h, false, w); fh[g] = E.shopValue(h, w);
       }
       assert(pr['晩成'] < pr['普通'] && pr['普通'] < pr['早熟'], `${m}月：晩成 ${pr['晩成']}・普通 ${pr['普通']}・早熟 ${pr['早熟']}`);
-      out.push(`${m}月 早熟${pr['早熟']}・普通${pr['普通']}・晩成${pr['晩成']}`);
+      out.push(`${m}月 早熟${pr['早熟']}(${fh['早熟']})・普通${pr['普通']}(${fh['普通']})・晩成${pr['晩成']}(${fh['晩成']})`);
     }
-    // 普通の馬の値段は、6月の2歳と翌年1月の3歳で大きく変わらない（時期の補い）
-    G.month = 6; const h2 = H.fromHistoric(E.shift(d0, (G.year - 2) - d0.born), 't2'); const p6 = E.priceOf(h2, false, W.wIdx());
-    G.year += 1; G.month = 1; const p1 = E.priceOf(h2, false, W.wIdx()); G.year -= 1;
-    assert(p1 / p6 > 0.5 && p1 / p6 < 2, `普通の馬の値段が時期で大きく変わる（6月 ${p6}・翌1月 ${p1}）`);
     G.month = 1;
-    return `${d0.name}（完成は同じ）${out.join(' ／ ')}（万円）`;
+    return `評価点60 早熟${same['早熟']}・普通${same['普通']}・晩成${same['晩成']}万円 ／ ${d0.name}（完成は同じ）${out.join(' ／ ')}（万円・かっこは評価点）`;
   });
 
   check('rating: 1走の値は負かした相手の評価＋着差。馬の値は良かった3走の平均で、部門ごとにも出せる', () => {

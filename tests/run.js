@@ -926,7 +926,7 @@ check('shop: 品ぞろえは走っていない馬から牡馬・牝馬それぞ�
   return `牡馬 ${n3.filter((n, i) => W.marketHistoric()[i].horse.sex !== '牝').length}・牝馬 ${E.STOCK}頭（開いている馬 ${E.market().length}頭から）`;
 });
 
-check('hall: トロフィーを2つ以上手にした自分の馬は、引退したときに殿堂入りし、記録が残る', () => {
+check('hall: トロフィーを1つ以上手にした自分の馬は、引退で殿堂入りを選ぶと殿堂入りし、記録が残る（選ばなければ入らない）', () => {
   const HL = HS.Hall, J = HS.Jockey;
   W.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
@@ -936,11 +936,12 @@ check('hall: トロフィーを2つ以上手にした自分の馬は、引退し
   const [a, b] = W.mine();
   a.results = [{ y: G.year, m: 5, w: 4, race: '日本ダービー', course: '東京', surface: '芝', dist: 2400, pos: 1, n: 18, time: 143.5, jockey: 'テスト騎手' }]; a.starts = 1; a.wins = 1;
   G.trophies = { triple: { y: G.year, horse: a.name, hid: a.id, bonus: 1 }, uk3: { y: G.year, horse: a.name, bonus: 1 }, us3: { y: G.year, horse: b.name, hid: b.id, bonus: 1 } }; // uk3 は前のセーブの形（名前だけ）
-  assert(HL.trophiesOf(a).length === 2 && HL.eligible(a) && !HL.eligible(b), 'トロフィーの数え方が違う');
-  assert(!(J.retire(a.id) || {}).err && !(J.retire(b.id) || {}).err, '引退できない');
+  assert(HL.NEED === 1 && HL.trophiesOf(a).length === 2 && HL.eligible(a) && HL.eligible(b) && HL.ask(a) && HL.ask(b), 'トロフィーの数え方が違う（1つで殿堂入りの案内）');
+  // a は「はい」、b はトロフィー1つで案内が出るが「いいえ」
+  assert(!(J.retire(a.id, { hall: true }) || {}).err && !(J.retire(b.id, { hall: false }) || {}).err, '引退できない');
   const x = HL.byId(a.id);
-  assert(x && x.trophies.length === 2 && x.results.length === 1 && x.results[0].race === '日本ダービー' && !HL.byId(b.id), '殿堂の写しが違う');
-  J.retire(a.id); assert(G.hallOwn.length === 1, '二度入る');
+  assert(x && x.trophies.length === 2 && x.results.length === 1 && x.results[0].race === '日本ダービー' && !HL.byId(b.id), '殿堂の写しが違う（いいえでも入る）');
+  J.retire(a.id, { hall: true }); assert(G.hallOwn.length === 1, '二度入る');
   const s1 = W.serialize(); W.load(s1); assert(W.get().hallOwn.length === 1, 'セーブの往復で殿堂が消える');
   return `${x.name}：トロフィー ${x.trophies.map(t => t.label).join('・')}`;
 });
@@ -1330,6 +1331,7 @@ require('./extra_ui.js')(check, assert, HS); // 画面の仕組み：並べ替�
 require('./extra_feel.js')(check, assert, HS); // 騎乗の手ざわり（パッドの向き・状態の文字を出さない）
 require('./extra_fatigue.js')(check, assert, HS); // 疲労（格・激戦・回復・移動・連闘で別の国へ行けない）と、故障が無いこと
 require('./extra_gate.js')(check, assert, HS); // スタートの目押し（数えを出さない・待つ秒は種から・GOOD の幅）と、騎手のゲームに放牧が無い
+require('./extra_records.js')(check, assert, HS); // お手馬のレースの記録（出走馬・ラップ）と殿堂入りの案内
 require('./extra_skills2.js')(check, assert, HS); // 逃げ・追込の能力・道悪○・外枠○・伝説級の固有の能力
 require('./extra_shop.js')(check, assert, HS); // 馬の店の年齢・値段（いまの総合力・晩成が安い）とレーティング
 require('./extra_gf.js')(check, assert, HS); // グランドフェスティバル（6つ・GF の週・連戦・伝説級の担当・店と牧場・トロフィー・キンチェム）

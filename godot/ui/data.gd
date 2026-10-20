@@ -43,6 +43,9 @@ func build() -> void:
 	list.add_theme_constant_override("separation", 4)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(list)
+	if OS.get_cmdline_user_args().has("--setup=hall_view"):
+		UiHorseScreen._setup_hall_view()   # 撮影の見本：殿堂入りした馬が1頭いる
+		UiFlow.focus["data_tab"] = "hall"
 	var k := TABS.map(func(x): return x[0]).find(String(UiFlow.focus.get("data_tab", "me")))
 	tab = maxi(0, k)
 	_fill()
@@ -239,11 +242,16 @@ func _hall() -> void:
 	var own := HSHall.list()
 	list.add_child(UiScreen.section("殿堂（お手馬）", "%d頭" % own.size()))
 	if own.is_empty():
-		_empty("まだいません。トロフィーを2つ以上手にした馬は、引退すると殿堂入りします")
+		_empty("まだいません。トロフィーを%dつ以上手にした馬は、引退させるときに殿堂入りさせられます" % HSHall.NEED)
 	for x in own:
 		var tl: Array = x.trophies.map(func(t): return String(t.label) if t is Dictionary else String(t))
-		_row([[String(x.name), 260, UiTheme.GOLD_BRIGHT], ["・".join(tl), 0, UiTheme.IVORY], ["%d戦%d勝・G1 %d勝" % [int(HSU.or_(x.get("starts"), 0.0)), int(HSU.or_(x.get("wins"), 0.0)), int(HSU.or_(x.get("g1"), 0.0))], 220, UiTheme.MUTED, R],
+		var b := _row([[String(x.name), 260, UiTheme.GOLD_BRIGHT], ["・".join(tl), 0, UiTheme.IVORY], ["%d戦%d勝・G1 %d勝" % [int(HSU.or_(x.get("starts"), 0.0)), int(HSU.or_(x.get("wins"), 0.0)), int(HSU.or_(x.get("g1"), 0.0))], 220, UiTheme.MUTED, R],
 			["%s引退" % yl(x.retiredY), 120, UiTheme.MUTED, R]], true, 44)
+		var hid := String(x.id)
+		# 行を押すと、その馬の戦績と1走ごとの記録（馬の画面を殿堂の写しで開く）
+		b.pressed.connect(func():
+			UiFlow.hall_id = hid
+			go("horse"))
 	var hall: Array = HSU.or_(HSWorld.G.records.get("hall"), [])
 	list.add_child(UiScreen.section("冠を手にした馬", "%d頭" % hall.size()))
 	if hall.is_empty():

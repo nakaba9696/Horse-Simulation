@@ -151,6 +151,9 @@ class Sim:
 	var skillFx: Array = []
 	var top: float
 	var gateWait := 0.0
+	var marks: Array = []    # ラップの区切り（JS の sim.marks。lap_marks）
+	var splits: Array = []   # 先頭が区切りを過ぎた時刻（まだなら null）
+	var lapN := 0
 
 # ---------- 調整の値（JS の S.〜 と同じ） ----------
 static var OONIGE := { early = 1.02, mid = 1.02, kick = 0.5, lead = 0.055 }
@@ -513,6 +516,9 @@ static func _create_gd(race: Dictionary, runners: Array, w_idx: Variant, rng: HS
 			sim.ctl = c
 			s.delay = 99.0; s.late = false
 	sim.gateWait = gate_wait_of(rng)
+	sim.marks = lap_marks(sim.D)
+	sim.splits = []
+	sim.splits.resize(sim.marks.size())
 	say(sim, 0.0, "スタートしました！", "start")
 	for s: Runner in st:
 		if s.late: say(sim, 0.6, "%s、出遅れた！" % s.h.name, "trouble")
@@ -898,10 +904,19 @@ static func _step_gd(sim: Sim) -> bool:
 		s.x += dx
 		mood_out(sim, s, c if s.me else null)
 		if s.t600 == null and s.x >= D - 600: s.t600 = t - DT + (D - 600.0 - xPrev) / maxf(0.1, s.x - xPrev) * DT
+		# ラップ：区切りをいちばん早く過ぎた馬の時刻（JS と同じ）
+		var lk := sim.lapN
+		while lk < sim.marks.size() and float(sim.marks[lk]) <= s.x:
+			var mk := float(sim.marks[lk])
+			if mk > xPrev:
+				var tc := t - DT + (mk - xPrev) / maxf(0.1, s.x - xPrev) * DT
+				if sim.splits[lk] == null or tc < float(sim.splits[lk]): sim.splits[lk] = tc
+			lk += 1
 		if s.x >= D:
 			s.finishT = t - DT + (D - xPrev) / maxf(0.1, s.x - xPrev) * DT
 			s.done = true; sim.finished += 1
 			if sim.winnerT == null: sim.winnerT = s.finishT
+	while sim.lapN < sim.marks.size() and sim.splits[sim.lapN] != null: sim.lapN += 1
 	if sim.step % 2 == 1: HSSkills.step(sim, order, DT * 2.0)
 	for s: Runner in st:
 		if s.done or s.passive == null: continue
@@ -1000,6 +1015,16 @@ static func commentary(sim: Sim) -> void:
 		if closer and closer.v > lead.v + 0.4: say(sim, t, "外から%sが猛然と追い込む！" % closer.h.name, "duel")
 	k.lastLeader = lead if k.lastLeader else k.lastLeader
 
+# ラップの区切り（JS の S.lapMarks）：ゴールから200mごと。最初は端数。ゴールそのものは入れない
+static func lap_marks(D: float) -> Array:
+	var out: Array = []
+	var m := fmod(D, 200.0)
+	if m < 1.0: m = 200.0
+	while m < D - 0.5:
+		out.append(m)
+		m += 200.0
+	return out
+
 # 結果をまとめる
 static func _finish_gd(sim: Sim) -> Dictionary:
 	var st := sim.st; var D := sim.D; var opts := sim.opts; var events := sim.events
@@ -1028,4 +1053,8 @@ static func _finish_gd(sim: Sim) -> Dictionary:
 	elif second and second.lengths >= 5: finishText = "%s、圧勝！ %s馬身突き放してゴール！" % [win.horse.name, second.margin]
 	say(sim, winner.finishT, finishText, "finish")
 	sim.events = HSU.stable_sort(events, func(a, b): return a.t < b.t)
-	return { results = results, events = sim.events, frames = sim.frames if opts.get("frames") else null, D = D, straight = sim.straight, lap = sim.geo.get("lap"), winnerTime = win.time }
+	var splits: Array = []
+	for x in sim.splits:
+		if x == null: break
+		splits.append(x)
+	return { results = results, events = sim.events, frames = sim.frames if opts.get("frames") else null, D = D, straight = sim.straight, lap = sim.geo.get("lap"), winnerTime = win.time, splits = splits }

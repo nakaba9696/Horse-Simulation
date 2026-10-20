@@ -33,6 +33,7 @@ static var program_back := "home"   # 番組表からもどる画面（厩舎・
 static var replay_back := "data"    # リプレイを見終えてもどる画面（お手馬の戦績から開くと horse）
 static var focus := {}              # 画面ごとのカーソルの記憶 { 画面: 札の名前 }
 static var program_id := ""         # 番組表で見ている馬
+static var hall_id := ""            # 殿堂から開いたお手馬（馬の画面を殿堂の写しで開く。空ならいまの馬）
 static var desc = null              # いま走るレースの見た目の一式（desc_of）
 static var news_head = null         # 週の初めのいちばん新しいニュース（週の結果で、増えた分だけ出す）
 

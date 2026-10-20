@@ -185,6 +185,7 @@ function runCase(race, k) {
     paceF: hex(sim.paceF), gateWait: hex(sim.gateWait), steps: sim.step, bumps, final: sha(stateStr(sim)), hashes, checkpoints,
     results: res.results.map(x => ({ pos: x.pos, num: x.num, time: hex(x.time), margin: x.margin, lengths: hex(x.lengths), last3f: x.last3f == null ? null : hex(x.last3f), endE: hex(x.endE), power: hex(x.power), late: x.late, blocked: x.blocked })),
     winnerTime: U.time(res.winnerTime),
+    splits: res.splits.map(hex), // ラップの通過の時刻（先頭が200mごとの区切りを過ぎた時刻）
     events: res.events.map(e => [hex(e.t), e.text, e.kind]),
     skillFx: sim.skillFx.map(f => [hex(f.t), f.i, f.id]),
     frames: res.frames ? sha(JSON.stringify(res.frames.map(f => [hex(f.t), f.p.map(p => p.map(hex))]))) : null,

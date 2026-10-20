@@ -298,10 +298,12 @@
         return `<tr class="${on ? 'lead-me' : ''}"><td class="small muted">${r.month}月${r.week}週<br>${r.inWeeks}週後</td><td>${UI.gradeTag(r)}</td><td><b>${e(R.label(r))}</b></td><td class="small">${r.course}${r.surface}${r.dist}m</td>${jm ? `<td>${on ? `<button class="btn sm" data-act="unreserve" data-id="${h.id}" data-key="${e(r.key)}">予約取消</button>` : busy ? '' : `<button class="btn sm gold" data-act="reserve" data-id="${h.id}" data-key="${e(r.key)}">予約</button>`}</td>` : ''}</tr>`; }).join('') || '<tr><td class="muted">なし</td></tr>'}</table></div>`;
   }
   function resultsTab(h) {
-    const rs = h.results.slice().reverse();
+    const rs = h.results.map((r, i) => [r, i]).reverse();
     if (!rs.length) return '<div class="panel empty">まだ走っていません。</div>';
-    return `<div class="tblwrap mt"><table class="t"><tr><th>日付</th><th>レース</th><th>距離</th><th>着</th><th class="hide-sm">人気</th><th>タイム</th><th class="hide-sm">上がり</th><th class="hide-sm">騎手</th></tr>
-      ${rs.map(r => `<tr><td class="small">${UI.ym(r.y, r.m)}</td><td>${r.grade ? `<span class="grade ${r.grade.startsWith('Jpn') ? 'Jpn' : r.grade}">${r.grade}</span> ` : ''}${e(r.race)}<div class="small muted">${r.course} ${r.ground}</div></td><td class="small">${r.surface}${r.dist}</td>
+    const mine = h.owner === 'P';
+    // 自分の馬は、行を押すとそのレースの出走馬・ラップ（js/ui/hallui.js の UI.raceRecModal）
+    return `${mine ? '<div class="small muted mt">行を押すと、そのレースの出走馬とラップを見られます（引退すると消えます。殿堂入りした馬は殿堂に残ります）。</div>' : ''}<div class="tblwrap mt"><table class="t"><tr><th>日付</th><th>レース</th><th>距離</th><th>着</th><th class="hide-sm">人気</th><th>タイム</th><th class="hide-sm">上がり</th><th class="hide-sm">騎手</th></tr>
+      ${rs.map(([r, i]) => `<tr${mine ? ` class="click" data-act="racerec" data-id="${h.id}" data-i="${i}"` : ''}><td class="small">${UI.ym(r.y, r.m)}</td><td>${r.grade ? `<span class="grade ${r.grade.startsWith('Jpn') ? 'Jpn' : r.grade}">${r.grade}</span> ` : ''}${e(r.race)}<div class="small muted">${r.course} ${r.ground}</div></td><td class="small">${r.surface}${r.dist}</td>
         <td class="num ${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos}<span class="small muted">/${r.n}</span></td><td class="num hide-sm">${r.pop || ''}</td><td class="num small">${U.time(r.time)}${r.pos > 1 ? `<div class="muted">${e(r.margin)}</div>` : ''}</td><td class="num small hide-sm">${r.last3f ? r.last3f.toFixed(1) : ''}</td><td class="small hide-sm">${e(r.jockey || '')}</td></tr>`).join('')}
     </table></div>`;
   }
