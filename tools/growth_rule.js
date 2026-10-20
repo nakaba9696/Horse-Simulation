@@ -5,7 +5,8 @@ const G = module.exports = {};
 
 // その年のそのレースの月（暦から。無ければ6月とみなす）
 G.monthOf = (D, race, year) => {
-  const r = D.races.find(x => x.name === race && x.from <= year && year <= (x.to || 9999));
+  const on = x => x.name === race && x.from <= year && year <= (x.to || 9999);
+  const r = D.races.find(on) || (D.histRaces || []).find(on); // 暦に無ければ史実の勝ち鞍の記録のためのレース（data/hist_races.js）
   return r ? r.month : 6;
 };
 G.atOf = (age, month) => age + (month - 4) / 12;

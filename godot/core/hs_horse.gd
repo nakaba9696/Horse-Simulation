@@ -319,9 +319,16 @@ static func win_races(d: Dictionary) -> Array:
 	var out: Array = []
 	for w in HSU.or_(d.get("wins"), []):
 		var y := float(w.substr(0, 4)); var n: String = w.substr(4)
+		var hit = null
 		for x in _race_by_name.get(n, []):
 			if x.from <= y and y <= float(HSU.or_(x.get("to"), 9999.0)):
-				out.append(x); break
+				hit = x; break
+		# 暦にその年の形が無ければ、史実の勝ち鞍の記録のためのレース（data/hist_races.js。遊ぶ番組には出ない）。JS の H.winRaces と同じ
+		if hit == null:
+			for x in HSData.d().get("histRaces", []):
+				if x.name == n and x.from <= y and y <= float(HSU.or_(x.get("to"), 9999.0)):
+					hit = x; break
+		if hit != null: out.append(hit)
 	return out
 
 static func _geo(r: Dictionary) -> Variant:
