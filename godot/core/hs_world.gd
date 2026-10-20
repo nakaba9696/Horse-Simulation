@@ -817,6 +817,7 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 		if res.pos == 1: h.earn = float(HSU.or_(h.get("earn"), 0.0)) + pr
 		if res.pos == 2 and race.get("graded"): h.earn = float(HSU.or_(h.get("earn"), 0.0)) + HSMath.round_js(pr * 0.4)
 		if res.pos == 1 and h.get("owner") == "P" and G.get("eraless"): HSEraless.unlock_win(race)
+		if res.pos == 1 and h.get("owner") == "P" and race.get("grade") == "G1" and race.get("region") == "海外": G.abroadG1 = true   # 海外の2歳 G1 に出られるようになる（world.js と同じ）
 		if race.get("graded") and res.pos == 1:
 			var gw := { y = year, race = race.name, short = race.get("short"), grade = race.get("grade"), region = race.get("region") }
 			h.gradedWins.append(gw)
@@ -1252,5 +1253,13 @@ static func migrate(g: Dictionary) -> void:
 		if rc.get("rode") == null: rc.rode = HSU.truthy(rc.get("mine")) and g.mode == "jockey"
 	# オリジナルホースのインブリードの因子（G.origFactor）と血統（G.pedExtra）：前のセーブは牧場にいる馬から足す（hs_inbreed.gd）
 	HSInbreed.migrate(g)
+	# 前のセーブ：自分の馬が海外の G1 を勝っていれば、海外の2歳 G1 に出られる（world.js と同じ）
+	if g.get("abroadG1") == null:
+		var ab := false
+		for h in HSU.or_(g.get("horses"), {}).values():
+			if h.get("owner") != "P": continue
+			for w in HSU.or_(h.get("gradedWins"), []):
+				if w.get("grade") == "G1" and w.get("region") == "海外": ab = true
+		g.abroadG1 = ab
 	g.v = SAVE_VERSION
 	if g.mode == "jockey": g.owners = HSOwners.fill(g.get("owners"), g)   # owners.js の包み

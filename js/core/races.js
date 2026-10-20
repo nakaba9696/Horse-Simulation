@@ -133,13 +133,18 @@
     const need = R.g1Need(race, year), earn = horse.earn || 0;
     return earn >= need ? null : `${R.G1_WHY}（あと${U.money(need - earn)}）`;
   };
-  // 海外のレースの出走条件（仮。持ち主の決定待ち「海外のG1、特に2歳については条件未定」）：ここだけ差し替えればよい
-  // いまは：豪州の2歳 G1 は出られない（持ち主の決定 2026-10-20「豪州の2歳 G1 には出られない」）・ほかの2歳の G1 は無条件・ほかの G1 は JRA の G1 と同じ獲得賞金・G2 と G3 は無条件
+  // 海外のレースの出走条件：ここだけ差し替えればよい
+  // 豪州の2歳 G1 は出られない（持ち主の決定 2026-10-20「豪州の2歳 G1 には出られない」）・ほかの2歳の G1 は、自分の馬は一度海外の G1 を勝つ（G.abroadG1）といつでも出られる（持ち主の決定 2026-10-20「一度海外G1制覇すればいつでもでれるように」。AI の馬は無条件）・ほかの G1 は JRA の G1 と同じ獲得賞金・G2 と G3 は無条件
   // （外国で調教されている馬はここに来ない。R.ineligibleBase で先に通す）
   R.AU2_WHY = '豪州の2歳 G1 には出られない';
+  R.ABROAD2_WHY = '海外の G1 を一度勝つと出られる';
+  R.abroadOk = () => { const G = HS.World && HS.World.get && HS.World.get(); return !!(G && G.abroadG1); };
   R.abroadWhy = function (horse, race, year) {
     if (race.grade !== 'G1') return null;
-    if (race.age === '2') return (race.country || (HS.DATA.courses[race.course] || {}).country) === '豪' ? R.AU2_WHY : null;
+    if (race.age === '2') {
+      if ((race.country || (HS.DATA.courses[race.course] || {}).country) === '豪') return R.AU2_WHY;
+      return horse.owner === 'P' && !R.abroadOk() ? R.ABROAD2_WHY : null;
+    }
     return R.g1Why(horse, race, year);
   };
 

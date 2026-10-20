@@ -116,7 +116,7 @@ module.exports = function (check, assert, HS) {
     return `要る額 ${out.join('・')}・30週の G1 ${g1s}レースに条件を満たした馬 ${runners}頭`;
   });
 
-  check('oponly: 海外の G1 の条件は仮で、1か所（R.abroadWhy）で決まる。豪州の2歳 G1 は出られない・ほかの2歳の海外 G1 は無条件・ほかは JRA の G1 と同じ賞金', () => {
+  check('oponly: 海外の G1 の条件は1か所（R.abroadWhy）で決まる。豪州の2歳 G1 は出られない・ほかの2歳の海外 G1 は海外の G1 を一度勝つと出られる（AI の馬は無条件）・ほかは JRA の G1 と同じ賞金', () => {
     W.newGame({ seed: 24, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
     const G = W.get();
     const base = W.all().find(h => h.hist && !h.foreignTrained && h.sex !== '牝');
@@ -131,7 +131,17 @@ module.exports = function (check, assert, HS) {
     const old = raceOf(G, r => r.region === '海外' && r.grade === 'G1' && r.age !== '2' && !r.sex);
     const g2 = raceOf(G, r => r.region === '海外' && r.grade !== 'G1' && !r.sex);
     assert(two && old && g2, '海外のレースが無い');
-    assert(R.ineligibleBase(mk(2, 0), two, G.year) === null, `2歳の海外 G1 に賞金0で出られない（${two.name}）`);
+    // 2歳の海外 G1：自分の馬は、海外の G1 を一度勝つまで出られない。勝ったあとはいつでも（持ち主の決定 2026-10-20）。AI の馬は無条件
+    G.abroadG1 = false;
+    assert(R.ineligibleBase(mk(2, 1e6), two, G.year) === R.ABROAD2_WHY, `海外の G1 を勝つ前に2歳の海外 G1 に出られる（${two.name}）`);
+    assert(R.ineligibleBase(Object.assign(mk(2, 0), { owner: 'AI' }), two, G.year) === null, 'AI の馬が2歳の海外 G1 に出られない');
+    G.abroadG1 = true;
+    assert(R.ineligibleBase(mk(2, 0), two, G.year) === null, `海外の G1 を勝ったあとも2歳の海外 G1 に出られない（${two.name}）`);
+    // 自分の馬が海外の G1 を勝つと G.abroadG1 が立つ（world.js）。前のセーブは migrate で勝ち鞍から立てる
+    const g0 = JSON.parse(JSON.stringify(G)); delete g0.abroadG1;
+    const mine = Object.values(g0.horses).find(h => h.owner === 'P') || Object.values(g0.horses)[0];
+    mine.owner = 'P'; mine.gradedWins = [{ y: G.year, race: old.name, grade: 'G1', region: '海外' }];
+    W.migrate(g0); assert(g0.abroadG1 === true, '前のセーブで海外の G1 を勝った馬がいるのに出られない');
     assert((R.ineligibleBase(mk(ages(old), 0), old, G.year) || '').startsWith(R.G1_WHY), `海外の G1 に賞金0で出られる（${old.name}）`);
     assert(R.ineligibleBase(mk(ages(old), R.g1Need(old, G.year)), old, G.year) === null, '海外の G1 に賞金が足りるのに出られない');
     assert(R.ineligibleBase(mk(ages(g2), 0), g2, G.year) === null, `海外の G2・G3 に賞金0で出られない（${g2.name}）`);

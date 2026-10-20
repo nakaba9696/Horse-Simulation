@@ -686,6 +686,7 @@
       if (res.pos === 1) h.earn = (h.earn || 0) + pr;
       if (res.pos === 2 && race.graded) h.earn = (h.earn || 0) + Math.round(pr * 0.4);
       if (res.pos === 1 && h.owner === 'P' && G.eraless && HS.Eraless) HS.Eraless.unlockWin(race);
+      if (res.pos === 1 && h.owner === 'P' && race.grade === 'G1' && race.region === '海外') G.abroadG1 = true; // 海外の2歳 G1 に出られるようになる（js/core/races.js の R.abroadWhy）
       if (race.graded && res.pos === 1) { h.gradedWins.push({ y: year, race: race.name, short: race.short, grade: race.grade, region: race.region }); if (h.owner === 'P' && HS.Season) { HS.Season.onWin(h, race, year); if (gf && HS.Season.onGFWin) HS.Season.onGFWin(h, race); } }
       if (race.trialFor && res.pos <= (race.trialTop || 2)) { h.rights = h.rights || {}; h.rights[race.trialFor] = year; }
       const entry = { y: year, m: race.month, w: race.week, race: race.short || race.name, grade: R.gradeBadge(race), course: race.course, surface: race.surface, dist: race.dist, ground: race.ground, pos: res.pos, n: sim.results.length, time: Math.round(res.time * 10) / 10, margin: res.margin, last3f: res.last3f ? Math.round(res.last3f * 10) / 10 : null, jockey: res.jockey && res.jockey.name, pop: res.pop, rt: res.rt };
@@ -1200,6 +1201,8 @@
     // オリジナルホースのインブリードの因子（G.origFactor）と血統（G.pedExtra）：前のセーブは牧場にいる馬から足す（js/core/inbreed.js）
     if (HS.Inbreed) HS.Inbreed.migrate(g);
     // 前の版のエディット（瞬発力などの数値）は、遊ぶときに H.fromHistoric が読み替える
+    // 前のセーブ：自分の馬が海外の G1 を勝っていれば、海外の2歳 G1 に出られる（持ち主の決定 2026-10-20）
+    if (g.abroadG1 == null) g.abroadG1 = Object.values(g.horses || {}).some(h => h.owner === 'P' && (h.gradedWins || []).some(w => w.grade === 'G1' && w.region === '海外'));
     g.v = SAVE_VERSION;
   };
   W.saveLocal = function () { try { localStorage.setItem(W.SAVE_KEY, W.serialize()); return true; } catch (e) { return false; } };

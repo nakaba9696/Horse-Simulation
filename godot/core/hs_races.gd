@@ -158,9 +158,13 @@ static func g1_why(horse: Dictionary, race: Dictionary, year: float) -> Variant:
 	if rights and rights.get(race.name) == year: return null   # トライアルの優先出走権（その年のもの）
 	var need := g1_need(race, year); var earn := float(HSU.or_(horse.get("earn"), 0.0))
 	return null if earn >= need else "%s（あと%s）" % [G1_WHY, HSU.money(need - earn)]
-# 海外のレースの出走条件（仮。持ち主の決定待ち）：ここだけ差し替えればよい（js/core/races.js の R.abroadWhy と同じ）
-# いまは 豪州の2歳 G1 は出られない（持ち主の決定 2026-10-20）・ほかの2歳の G1 は無条件・ほかの G1 は JRA の G1 と同じ獲得賞金・G2 と G3 は無条件
+# 海外のレースの出走条件：ここだけ差し替えればよい（js/core/races.js の R.abroadWhy と同じ）
+# 豪州の2歳 G1 は出られない・ほかの2歳の G1 は、自分の馬は一度海外の G1 を勝つ（G.abroadG1）といつでも出られる（AI の馬は無条件）・ほかの G1 は JRA の G1 と同じ獲得賞金・G2 と G3 は無条件（持ち主の決定 2026-10-20）
 const AU2_WHY := "豪州の2歳 G1 には出られない"
+const ABROAD2_WHY := "海外の G1 を一度勝つと出られる"
+static func abroad_ok() -> bool:
+	var G = HSWorld.G
+	return G != null and HSU.truthy(G.get("abroadG1"))
 static func abroad_why(horse: Dictionary, race: Dictionary, year: float) -> Variant:
 	if race.get("grade") != "G1": return null
 	if race.get("age") == "2":
@@ -168,7 +172,8 @@ static func abroad_why(horse: Dictionary, race: Dictionary, year: float) -> Vari
 		if not c:
 			var cd = HSData.d().courses.get(race.get("course"))
 			c = cd.get("country") if cd else null
-		return AU2_WHY if c == "豪" else null
+		if c == "豪": return AU2_WHY
+		return ABROAD2_WHY if horse.get("owner") == "P" and not abroad_ok() else null
 	return g1_why(horse, race, year)
 
 # 出走の優先順（大きいほど先）
