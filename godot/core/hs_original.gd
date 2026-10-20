@@ -10,6 +10,10 @@ const POT_MAX := 118.0   # 能力の上限（仔を作るときと同じ）
 const FOALS := 3
 static func foals_max() -> int: return FOALS + (1 if HSGFHost.has_item() else 0)
 static func foals_left(h: Variant) -> int: return maxi(0, foals_max() - int(HSU.or_(h.get("origN"), 0.0) if h else 0.0))
+# 仔の能力の元：両親の平均のうち SOFT を超えた分は HERIT の割合だけ受け継ぐ（original.js と同じ。持ち主の決定 2026-10-20）
+const SOFT := 94.0
+const HERIT := 0.5
+static func inherit(avg: float) -> float: return SOFT + (avg - SOFT) * HERIT if avg > SOFT else avg
 
 static func on() -> bool:
 	var G = HSWorld.G
@@ -76,7 +80,7 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	var pot := {}
 	for k in HSHorse.STATS:
 		var a: float = HSU.or_(s.pot.get(k), 70.0); var b: float = m.pot[k] if m.pot.get(k) != null else a
-		pot[k] = HSMath.round_js(HSU.clamp((a + b) / 2.0 + rng.normal(0.0, 6.0) + bonus, 40.0, 118.0) * 10.0) / 10.0
+		pot[k] = HSMath.round_js(HSU.clamp(inherit((a + b) / 2.0) + rng.normal(0.0, 6.0) + bonus, 40.0, 118.0) * 10.0) / 10.0
 	var dMin := HSMath.round_js(HSU.clamp((s.distMin + m.distMin) / 2.0 + rng.normal(0.0, 150.0), 1000.0, 3600.0) / 100.0) * 100.0
 	var dMax := HSMath.round_js(HSU.clamp((s.distMax + m.distMax) / 2.0 + rng.normal(0.0, 150.0), 1200.0, 4000.0) / 100.0) * 100.0
 	if dMax < dMin + 400: dMax = HSU.mn(4000.0, dMin + 400.0)

@@ -172,7 +172,24 @@ static func pool() -> Array:
 	var prof := {}
 	for f in HSData.d().get("profiles", []): prof[HSDatafix.norm_name(f.name)] = true
 	_pool = HSData.d().get("historic", []).filter(func(d): return HSEraless.is_legend(d) and (prof.has(HSDatafix.norm_name(d.name)) or (WITH_BIG and big_wins(d).size()))) + HSData.d().get("legendsExtra", [])
+	# 香港の三冠の隠し馬は1989年からの馬でもよい（data/trophy_horses.js の modern。持ち主の決定 2026-10-20）
+	for n in modern():
+		for d in HSData.d().get("historic", []):
+			if d.name == n:
+				if not _pool.has(d): _pool.append(d)
+				break
 	return _pool
+# 1989年からの隠し馬（香港の三冠だけ。data/trophy_horses.js の modern）の名前
+static var _modern: Variant = null
+static func modern() -> Array:
+	if _modern == null:
+		_modern = []
+		var th: Dictionary = HSData.d().get("trophyHorses", {})
+		for xs in th.values():
+			for x in xs:
+				if x.get("modern") and not _modern.has(x.name): _modern.append(x.name)
+	return _modern
+static func is_modern(d: Dictionary) -> bool: return modern().has(d.name)
 static func data(name: String) -> Variant:
 	for d in pool():
 		if d.name == name: return d
@@ -209,7 +226,9 @@ static func list() -> Array:
 static func reach(h: Dictionary, g: Dictionary, race: Dictionary) -> bool:
 	return h.get("owner") == "P" and (g.finals == null or g.finals.has(race.get("short"))) and legs(g, h, race)
 # 出てこられるか：ふつうはまだ店に並んでいない名馬だけ。伝説級（again）は、自分のお手馬（引退していない）になっていなければ何度でも
+# 1989年からの隠し馬（is_modern）は、その年に世界で走っている（入厩・牧場の）ときは出さない（同じ馬が2頭にならないように）
 static func can_appear(g: Dictionary, d: Dictionary, un: Array) -> bool:
+	if is_modern(d) and HSEraless.active_names().has(d.name): return false
 	if g.get("again"): return not HSWorld.mine().any(func(x): return x.name == d.name and x.get("loc") != "retired")
 	return not un.has(d.name)
 static func pending(h: Dictionary, race: Dictionary) -> Array:

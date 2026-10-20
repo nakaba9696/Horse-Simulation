@@ -52,8 +52,8 @@ const SKILLS := {
 	right = { label = "右回り○", note = "右回りのコースで走る" },
 	small = { label = "小回り○", note = "直線の短いコースが得意" },
 	long = { label = "直線巧者", note = "長い直線で伸びる" },
-	summer = { label = "夏馬", note = "6〜8月に調子を上げる" },
-	winter = { label = "冬馬", note = "12〜2月に調子を上げる" },
+	summer = { label = "夏馬", note = "6〜8月のレースで走る" },
+	winter = { label = "冬馬", note = "12〜2月のレースで走る" },
 	hipace = { label = "ハイペース○", note = "流れが速いほど良い" },
 	slowpace = { label = "スローペース○", note = "上がりの勝負に強い" },
 	oonige = { label = "大逃げ", note = "後ろを大きく離して逃げる" },
@@ -168,13 +168,6 @@ static func class_name_of(cls: String, year: float) -> String:
 	return { maiden = "未勝利", C1 = "500万下" if old else "1勝クラス", C2 = "1000万下" if old else "2勝クラス", C3 = "1600万下" if old else "3勝クラス", OP = "オープン" }.get(cls, cls)
 const CLASS_RANK := { maiden = 0, C1 = 1, C2 = 2, C3 = 3, OP = 4 }
 
-# 調子（-100〜100）を表示に
-static func cond_label(c: float) -> Dictionary:
-	if c >= 60: return { text = "絶好調", icon = "⤴⤴", cls = "c5" }
-	if c >= 20: return { text = "好調", icon = "⤴", cls = "c4" }
-	if c > -20: return { text = "普通", icon = "→", cls = "c3" }
-	if c > -60: return { text = "不調", icon = "⤵", cls = "c2" }
-	return { text = "絶不調", icon = "⤵⤵", cls = "c1" }
 # 距離適性の幅を表示に
 static func dist_label(mn: float, mx: float) -> String:
 	var mid := (mn + mx) / 2.0
@@ -235,7 +228,7 @@ static func from_historic(d: Dictionary, id: Variant) -> Dictionary:
 		h.skills = sk
 	else:
 		h.skills = hist_skills(d, rng)
-	h.bonus = {}; h.cond = 0.0; h.fatigue = 0.0
+	h.bonus = {}; h.fatigue = 0.0
 	h.wins = 0.0; h.starts = 0.0; h.w2 = 0.0; h.w3 = 0.0; h.earn = 0.0; h.prize = 0.0; h.gradedWins = []; h.results = []
 	h.restUntil = 0.0; h.retireYear = HSU.or_(d.get("retire"), d.born + 5.0)
 	for k in ["turf", "dirt", "heavy"]:
@@ -366,23 +359,24 @@ static func make_filler(rng: HSRng, opts: Dictionary) -> Dictionary:
 	h.distMin = HSU.mx(1000.0, dist - 400.0 + rng.int_(0, 2) * 100.0); h.distMax = dist + 200.0 + rng.int_(0, 4) * 100.0
 	h.style = rng.weighted(STYLES, func(s): return _STYLE_W[s]); h.kire = float(rng.int_(2, 7)); h.skills = []
 	h.growth = "普通"; h.peakShift = 0.0; h.health = 60.0 + rng.int_(0, 30)
-	h.bonus = {}; h.cond = rng.normal(0.0, 30.0); h.fatigue = 0.0
+	h.bonus = {}; h.fatigue = 0.0
 	h.wins = 0.0; h.starts = 0.0; h.w2 = 0.0; h.w3 = 0.0; h.earn = 0.0; h.prize = 0.0; h.gradedWins = []; h.results = []
 	return split_surface(h, rng)
 
-# 調教のメニュー。gain＝伸びる能力、fat＝きつさ（調子への効き方。負は休ませる＝疲労が余分に抜ける）、cond＝調子への効き
+# 調教のメニュー。gain＝伸びる能力、fat＝きつさ（負は休ませる＝疲労が余分に抜ける）、course＝時計を出す所
+# 調子は無い（持ち主の決定 2026-10-20「調子のパラメータは無し。疲労だけにする」）
 # 疲労はレースでだけたまる（HSFatigue）。故障は無い（持ち主の仕様書「故障はなしにする」）
 const MENUS := {
-	"坂路(強め)": { gain = { spd = 0.3, dspd = 0.3, slope = 0.35 }, fat = 16.0, cond = 14.0, course = "坂路" },
-	"坂路(馬なり)": { gain = { spd = 0.12, dspd = 0.12, slope = 0.15 }, fat = 8.0, cond = 8.0, course = "坂路" },
-	"ウッド(強め)": { gain = { sta = 0.35, spd = 0.2 }, fat = 15.0, cond = 14.0, course = "ウッド" },
-	"ウッド(馬なり)": { gain = { sta = 0.15, spd = 0.1 }, fat = 7.0, cond = 8.0, course = "ウッド" },
-	"併せ馬": { gain = { guts = 0.4, spd = 0.1, dspd = 0.1 }, fat = 17.0, cond = 16.0, course = "ウッド" },
-	"ダート": { gain = { dspd = 0.3, dsta = 0.3, slope = 0.15 }, fat = 10.0, cond = 8.0, course = "ダート" },
-	"プール": { gain = { sta = 0.15, dsta = 0.15 }, fat = 2.0, cond = 4.0, course = "プール" },
-	"ゲート練習": { gain = { mind = 0.4 }, fat = 3.0, cond = 2.0, course = "ゲート" },
-	"軽め": { gain = {}, fat = -6.0, cond = 3.0, course = "軽め" },
-	"休養": { gain = {}, fat = -18.0, cond = -4.0, course = "休養" },
+	"坂路(強め)": { gain = { spd = 0.3, dspd = 0.3, slope = 0.35 }, fat = 16.0, course = "坂路" },
+	"坂路(馬なり)": { gain = { spd = 0.12, dspd = 0.12, slope = 0.15 }, fat = 8.0, course = "坂路" },
+	"ウッド(強め)": { gain = { sta = 0.35, spd = 0.2 }, fat = 15.0, course = "ウッド" },
+	"ウッド(馬なり)": { gain = { sta = 0.15, spd = 0.1 }, fat = 7.0, course = "ウッド" },
+	"併せ馬": { gain = { guts = 0.4, spd = 0.1, dspd = 0.1 }, fat = 17.0, course = "ウッド" },
+	"ダート": { gain = { dspd = 0.3, dsta = 0.3, slope = 0.15 }, fat = 10.0, course = "ダート" },
+	"プール": { gain = { sta = 0.15, dsta = 0.15 }, fat = 2.0, course = "プール" },
+	"ゲート練習": { gain = { mind = 0.4 }, fat = 3.0, course = "ゲート" },
+	"軽め": { gain = {}, fat = -6.0, course = "軽め" },
+	"休養": { gain = {}, fat = -18.0, course = "休養" },
 }
 const BONUS_CAP := 8.0
 
@@ -399,14 +393,11 @@ static func train(horse: Dictionary, menu_name: String, rng: HSRng, w_idx: float
 	var fat_before: float = HSU.or_(horse.get("fatigue"), 0.0)
 	var ease: float = m.fat * (0.8 + rng.next() * 0.4)
 	if ease < 0 and fat_before > 0: horse.fatigue = HSU.mx(0.0, fat_before + ease * REST_K)
-	var dc: float = m.cond * (1.0 - fat_before / 120.0) - fat_before * 0.25 + rng.normal(0.0, 8.0)
-	if m.fat < 0: dc += 6.0
-	horse.cond = HSU.clamp(float(HSU.or_(horse.get("cond"), 0.0)) * 0.85 + dc, -100.0, 100.0)
 	horse.trainWeeks = float(HSU.or_(horse.get("trainWeeks"), 0.0)) + 1.0
 	var time = null
 	var c := cur(horse, w_idx)
 	var sp: float = c.dspd if m.course == "ダート" else HSU.mx(c.spd, c.dspd)
-	var ability: float = (sp * 2.0 + c.slope) / 3.0 + (float(HSU.or_(horse.get("kire"), 4.0)) - 4.5) * 0.8 + horse.cond * 0.04 - float(HSU.or_(horse.get("fatigue"), 0.0)) * 0.03
+	var ability: float = (sp * 2.0 + c.slope) / 3.0 + (float(HSU.or_(horse.get("kire"), 4.0)) - 4.5) * 0.8 - float(HSU.or_(horse.get("fatigue"), 0.0)) * 0.03
 	if m.course == "坂路":
 		var hard := menu_name.contains("強め")
 		var t4 := 58.5 - ability * 0.075 - (1.6 if hard else 0.0) + rng.normal(0.0, 0.4)
@@ -424,18 +415,15 @@ static func train(horse: Dictionary, menu_name: String, rng: HSRng, w_idx: float
 
 const REST_K := 0.5   # 休ませるメニュー（fat が負）で、疲労が余分に抜ける割合
 
-# 牧場にいる週：疲労が多めに抜け（HSFatigue.REC.farm 倍）、調子がならされる
-static func rest(horse: Dictionary, rng: HSRng) -> void:
+# 牧場にいる週：疲労が多めに抜ける（HSFatigue.REC.farm 倍）
+static func rest(horse: Dictionary) -> void:
 	HSFatigue.weekly(horse, HSFatigue.REC.farm)
-	horse.cond = HSU.clamp(float(HSU.or_(horse.get("cond"), 0.0)) * 0.6 + rng.normal(0.0, 10.0), -60.0, 40.0)
 
-# 調教師のコメント（調子・疲れ・能力から）
+# 調教師のコメント（疲労の段階から）
 static func comment(horse: Dictionary, _w_idx: float = 0.0) -> String:
-	var st := HSFatigue.stage(horse); var c: float = HSU.or_(horse.get("cond"), 0.0)
+	var st := HSFatigue.stage(horse)
+	if st >= 4: return "使い詰めで、疲れが抜けきっていません。ここは休ませたいところです。"
 	if st >= 3: return "疲れが目立ちます。ここは無理をさせたくありません。"
 	if st >= 2: return "少し疲れが残っています。軽めにしておきたいところです。"
-	if c >= 60: return "動きは抜群。いつでも走れる状態です。"
-	if c >= 20: return "順調です。追い切りの反応も上々。"
-	if c > -20: return "可もなく不可もなく、といったところです。"
-	if c > -60: return "どうも覇気がありません。調整を工夫します。"
-	return "状態はかなり悪いです。立て直しに時間が要ります。"
+	if st >= 1: return "疲れはほとんど抜けました。普段どおり走れます。"
+	return "疲れは抜けて、いつでも走れる状態です。"

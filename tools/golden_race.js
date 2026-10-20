@@ -72,7 +72,7 @@ function fieldOf(race, k, m) {
     const roll = m.next();
     if (roll < 0.55) {
       let d; do d = m.pick(pool); while (used.has(d.name)); used.add(d.name);
-      const set = { born: year - m.int(2, 6), cond: Math.round(m.normal(0, 30)), fatigue: m.int(0, 30) };
+      const set = { born: year - m.int(2, 6), fatigue: m.int(0, 30) };
       if (m.chance(0.4)) set.lastRaceW = H.weekIndex(year, race.month, race.week || 1) - m.int(2, 20);
       if (m.chance(0.3)) set.bonus = { spd: Math.round(m.float(0, 5) * 100) / 100, guts: Math.round(m.float(0, 3) * 100) / 100 }; // Godot は長い桁の小数を読み違えるので、入力の小数は短く
       const spec = { kind: 'hist', name: d.name, set };

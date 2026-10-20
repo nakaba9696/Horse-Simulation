@@ -8,7 +8,8 @@ const CROP := 110
 const AGES := [2.0, 3.0, 4.0, 5.0, 6.0]
 
 static func _last_year(d: Dictionary) -> float: return float(HSU.or_(d.get("retire"), d.born + 5.0))
-static func is_pool(d: Dictionary) -> bool: return _last_year(d) >= 1989 and d.born <= 2023
+# noDebut：血統表の母などとしてだけ持つ馬（持ち主の決定 2026-10-20）
+static func is_pool(d: Dictionary) -> bool: return _last_year(d) >= 1989 and d.born <= 2023 and not d.get("noDebut", false)
 static func is_legend(d: Dictionary) -> bool: return _last_year(d) < 1989
 static var _pool: Variant = null
 static var _pc: Variant = null
@@ -45,9 +46,11 @@ static func spawn(d: Dictionary, age: float, at_start: bool) -> Variant:
 	if h: G.lineup[d.name] = off
 	return h
 # ランダムに n 頭（走っていない馬から）
+# 倒した隠し馬（G.unlocked。香港の三冠の隠し馬は1989年からの馬）は、店にいつも並ぶので、デビューに選ばない
 static func pick(n: int, rng: HSRng) -> Array:
 	var act := active_names()
-	var free: Array = pool().filter(func(d): return not act.has(d.name))
+	var un: Array = HSU.or_(HSWorld.G.get("unlocked"), [])
+	var free: Array = pool().filter(func(d): return not act.has(d.name) and not un.has(d.name))
 	var out: Array = []
 	var i := 0
 	while i < n and free.size():
@@ -210,8 +213,9 @@ static func market() -> Array:
 	var G = HSWorld.G
 	var act := active_names()
 	var items: Array = []
+	var un: Array = HSU.or_(G.get("unlocked"), [])   # 倒した隠し馬は下で（1989年からの隠し馬が二重に並ばないように）
 	for d in pool():
-		if is_open(d) and not act.has(d.name): items.append(_item_of(d, false))
+		if is_open(d) and not act.has(d.name) and not un.has(d.name): items.append(_item_of(d, false))
 	for name in HSU.or_(G.get("unlocked"), []):
 		var d = HSSpecial.data(name)
 		if d and not act.has(d.name): items.append(_item_of(d, true))
@@ -224,7 +228,8 @@ static func restock(reroll: bool) -> Array:
 	var n: float = (float(HSU.or_(s.get("n"), 0.0)) if (s and s.y == G.year and s.m == G.month) else 0.0) + (1.0 if reroll else 0.0)
 	var rng := HSRng.new(float(HSU.to_u32((G.seed * 131.0 + G.year * 12.0 + G.month) * 7.0 + n * 7919.0)))
 	var act := active_names()
-	var free: Array = pool().filter(func(d): return is_open(d) and not act.has(d.name))
+	var un: Array = HSU.or_(G.get("unlocked"), [])
+	var free: Array = pool().filter(func(d): return is_open(d) and not act.has(d.name) and not un.has(d.name))
 	var names: Array = []
 	for side in [false, true]:
 		var list: Array = free.filter(func(d): return (d.get("sex") == "牝") == side)
@@ -244,9 +249,10 @@ static func shop() -> Array:
 	var byName := {}
 	for d in pool(): byName[d.name] = d
 	var items: Array = []
+	var un: Array = HSU.or_(G.get("unlocked"), [])
 	for name in G.shopStock.names:
 		var d = byName.get(name)
-		if d and not act.has(name): items.append(_item_of(d, false))
+		if d and not act.has(name) and not un.has(name): items.append(_item_of(d, false))
 	for name in HSU.or_(G.get("unlocked"), []):
 		var d = HSSpecial.data(name)
 		if d and not act.has(d.name): items.append(_item_of(d, true))

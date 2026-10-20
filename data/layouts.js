@@ -501,6 +501,11 @@
           elev: [[0, 0], [1810, 0]],
           src: ['https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://en.wikipedia.org/wiki/Saratoga_Race_Course', 'https://www.jairs.jp/contents/courses/us.html'],
           note: '1マイル1/8の楕円。1コーナーにウィルソンシュート（1マイル）', approx: true },
+        { id: 'シュート', lap: 1400, straight: 348.7, open: true, use: [1400],
+          segs: [['S', 348.7], ['C', 144, 144, 180, 3], ['S', 598.9]],
+          elev: [[0, 0], [1400, 0]],
+          src: ['https://en.wikipedia.org/wiki/Saratoga_Race_Course', 'https://en.wikipedia.org/wiki/Chute_(racecourse)'],
+          note: '7ハロン。1コーナーの終わり近くのシュートから向正面へ出て、3〜4コーナーを回るワンターン。直線とコーナーは周回と同じ', approx: true },
       ],
     },
     'アケダクト': {

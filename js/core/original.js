@@ -16,6 +16,12 @@
   O.FOALS = 3;
   O.foalsMax = () => O.FOALS + (HS.GFHost && HS.GFHost.hasItem && HS.GFHost.hasItem() ? 1 : 0);
   O.foalsLeft = h => Math.max(0, O.foalsMax() - ((h && h.origN) || 0));
+  // 仔の能力の元：両親の平均のうち SOFT を超えた分は HERIT の割合だけ受け継ぐ（強い両親の仔ほど親に届きにくい）。
+  // 選んで重ねるだけでは史実の名馬の上（総合力80前後）で止まり、そこから上はトロフィーを集めた親から（持ち主の決定 2026-10-20
+  // 「上げすぎなくていいよ すぐ総合力99ができてもつまらないし」。総合力90台は何世代も重ねて、99はやりこみの果てに）
+  O.SOFT = 94;
+  O.HERIT = 0.5;
+  O.inherit = avg => avg > O.SOFT ? O.SOFT + (avg - O.SOFT) * O.HERIT : avg;
 
   O.on = () => { const G = W.get(); return !!(G && G.eraless); };
   O.retired = sex => W.mine().filter(h => h.loc === 'retired' && (sex === '牝' ? h.sex === '牝' : h.sex !== '牝'));
@@ -82,7 +88,7 @@
     const pot = {};
     for (const k of H.STATS) {
       const a = (s.pot[k] || 70), b = (m.pot[k] != null ? m.pot[k] : a);
-      pot[k] = Math.round(U.clamp((a + b) / 2 + rng.normal(0, 6) + bonus, 40, 118) * 10) / 10;
+      pot[k] = Math.round(U.clamp(O.inherit((a + b) / 2) + rng.normal(0, 6) + bonus, 40, 118) * 10) / 10;
     }
     const avg = (a, b) => (a + b) / 2;
     let dMin = Math.round(U.clamp(avg(s.distMin, m.distMin) + rng.normal(0, 150), 1000, 3600) / 100) * 100;

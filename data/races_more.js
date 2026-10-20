@@ -7,6 +7,7 @@
  *  - 年代なしのゲームは2025年の番組で走るので、いまの形（競馬場・距離・格）を出典で確かめて書いた。
  *    それより前の年の形（距離・競馬場の移り変わり）は確かめきれていない所があり、uncertain:true を付けた
  *  - 出典：en.wikipedia の各レースの記事（2026-10-19 に確認。施行日は記事の結果の表・参照の Racing Post の結果）
+ *  - ドイツのディアナ賞（独オークス）は外した（持ち主の決定 2026-10-20「格が高くないならディアナ賞をなくして欧州オークス三冠もなくしましょう」）
  *  - ブリーダーズカップターフスプリントは、ブリーダーズカップの開催地（暦の BC マイルの競馬場）に合わせて年ごとに作る
  */
 (function () {
@@ -77,7 +78,6 @@
     { name: 'ロワイヤリュー賞', short: 'ロワイヤリュー賞', grade: 'G1', region: '海外', country: '仏', course: 'ロンシャン', surface: '芝', dist: 2800, month: 10, week: 1, age: '3+', sex: '牝', weight: '定量', prize: 2500, from: FAMOUS_FROM, to: 9999, uncertain: true },
     { name: 'クリテリウムドサンクルー', short: 'クリテリウムドサンクルー', grade: 'G1', region: '海外', country: '仏', course: 'サンクルー', surface: '芝', dist: 2000, month: 10, week: 4, age: '2', weight: '定量', prize: 2500, from: FAMOUS_FROM, to: 9999, uncertain: true },
     { name: 'クリテリウムアンテルナシオナル', short: 'クリテリウムアンテルナシオナル', grade: 'G1', region: '海外', country: '仏', course: 'サンクルー', surface: '芝', dist: 1600, month: 10, week: 4, age: '2', weight: '定量', prize: 2500, from: FAMOUS_FROM, to: 9999, uncertain: true },
-    { name: 'ディアナ賞', short: 'ディアナ賞', grade: 'G1', region: '海外', country: '独', course: 'デュッセルドルフ', surface: '芝', dist: 2200, month: 8, week: 1, age: '3', sex: '牝', weight: '定量', prize: 2500, from: FAMOUS_FROM, to: 9999, uncertain: true, note: 'ドイツオークス' },
     // ---- 米国・カナダ ----
     { name: 'フロリダダービー', short: 'フロリダダービー', grade: 'G1', region: '海外', country: '米', course: 'ガルフストリームパーク', surface: 'ダ', dist: 1800, month: 3, week: 4, age: '3', weight: '定量', prize: 6000, from: FAMOUS_FROM, to: 9999, uncertain: true },
     { name: 'アーカンソーダービー', short: 'アーカンソーダービー', grade: 'G1', region: '海外', country: '米', course: 'オークローンパーク', surface: 'ダ', dist: 1800, month: 3, week: 4, age: '3', weight: '定量', prize: 6000, from: FAMOUS_FROM, to: 9999, uncertain: true },
@@ -105,6 +105,30 @@
     { name: 'ドバイゴールドカップ', short: 'ドバイゴールドカップ', grade: 'G2', region: '海外', country: 'UAE', course: 'メイダン', surface: '芝', dist: 3200, month: 3, week: 4, age: '4+', weight: '定量', prize: 6000, from: FAMOUS_FROM, to: 9999, uncertain: true },
     { name: '1351ターフスプリント', short: '1351ターフスプリント', grade: 'G2', region: '海外', country: 'サウジ', course: 'キングアブドゥルアジーズ', surface: '芝', dist: 1351, month: 2, week: 4, age: '3+', weight: '定量', prize: 12000, from: FAMOUS_FROM, to: 9999, uncertain: true },
     { name: 'レッドシーターフハンデキャップ', short: 'レッドシーターフH', grade: 'G2', region: '海外', country: 'サウジ', course: 'キングアブドゥルアジーズ', surface: '芝', dist: 3000, month: 2, week: 4, age: '4+', weight: 'ハンデ', prize: 18000, from: FAMOUS_FROM, to: 9999, uncertain: true },
+  );
+  // 史実馬の勝ち鞍に要る年（持ち主の決定 2026-10-20「重賞の勝ち鞍が記録から抜けている18頭は、出典で確かめて勝ち鞍を書き足す」）。
+  //  デビューする史実馬の勝ち鞍のうち、1995年からの重賞で暦に無かったもの。en.wikipedia の各レースの記事（2026-10-20 に確認）で
+  //  格付け・競馬場・距離が分かった年だけを持つ（今のゲームの番組（2025年）で走るのは、今も同じ形の G1 のホープフルS（米）とフォアゴーSだけ）
+  add.push(
+    // ダイヤモンドジュビリーS（2012年）。2002年からG1（ゴールデンジュビリーS）。2005年はヨークで行い、ゲームにヨークの芝1200m が無いので持たない。2014年までは3歳も出られた
+    { name: 'クイーンエリザベス2世ジュビリーステークス', short: 'QE2世ジュビリーS', grade: 'G1', region: '海外', country: '英', course: 'アスコット', surface: '芝', dist: 1200, month: 6, week: 3, age: '3+', weight: '定量', prize: 5000, from: 2002, to: 2004, note: 'ゴールデンジュビリーステークス' },
+    { name: 'クイーンエリザベス2世ジュビリーステークス', short: 'QE2世ジュビリーS', grade: 'G1', region: '海外', country: '英', course: 'アスコット', surface: '芝', dist: 1200, month: 6, week: 3, age: '3+', weight: '定量', prize: 5000, from: 2006, to: 2014, note: '2011年まではゴールデンジュビリーステークス、2012年からはダイヤモンドジュビリーステークス' },
+    // ウッドメモリアルS（アケダクト・9ハロン）：1974〜1994年と2002〜2016年がG1、1995〜2001年と2017年からはG2
+    { name: 'ウッドメモリアルステークス', short: 'ウッドメモリアルS', grade: 'G1', region: '海外', country: '米', course: 'アケダクト', surface: 'ダ', dist: 1800, month: 4, week: 1, age: '3', weight: '定量', prize: 4000, from: 2002, to: 2016 },
+    // ブルーグラスS（キーンランド・9ハロン）：1999〜2016年がG1。2007〜2014年は全天候型の馬場なので持たない（2015年からの形は上の FAMOUS_FROM の行）
+    { name: 'ブルーグラスステークス', short: 'ブルーグラスS', grade: 'G1', region: '海外', country: '米', course: 'キーンランド', surface: 'ダ', dist: 1800, month: 4, week: 1, age: '3', weight: '定量', prize: 4000, from: 1999, to: 2006 },
+    // セクレタリアトS（アーリントンパーク・芝10ハロン）：1984〜2021年がG1。10ハロンは2018年まで（1998・1999年は行っていない）
+    { name: 'セクレタリアトステークス', short: 'セクレタリアトS', grade: 'G1', region: '海外', country: '米', course: 'アーリントンパーク', surface: '芝', dist: 2000, month: 8, week: 2, age: '3', weight: '別定', prize: 3000, from: 2000, to: 2018 },
+    // ジョーハーシュターフクラシック（芝12ハロン）：1979年からG1。ベルモントで行ったのは1984〜2021年。2003年までの名前はターフクラシック
+    { name: 'ジョーハーシュターフクラシック', short: 'ジョーハーシュターフC', grade: 'G1', region: '海外', country: '米', course: 'ベルモント', surface: '芝', dist: 2400, month: 9, week: 4, age: '3+', weight: '別定', prize: 4000, from: 1984, to: 2021, note: '2003年まではターフクラシック' },
+    // ヴォスバーグS（ベルモント）：1991〜2019年がG1（2020年からG2）。6ハロンになったのは2004年から
+    { name: 'ヴォスバーグステークス', short: 'ヴォスバーグS', grade: 'G1', region: '海外', country: '米', course: 'ベルモント', surface: 'ダ', dist: 1200, month: 9, week: 4, age: '3+', weight: '別定', prize: 3000, from: 2004, to: 2019 },
+    // ホープフルS（米。サラトガ・2歳・7ハロン）：1973年からG1、7ハロンは1994年から。JRA のホープフルSと分けるため（米）を付ける
+    { name: 'ホープフルステークス（米）', short: 'ホープフルS（米）', grade: 'G1', region: '海外', country: '米', course: 'サラトガ', surface: 'ダ', dist: 1400, month: 9, week: 1, age: '2', weight: '馬齢', prize: 2500, from: 1994, to: 9999 },
+    // フォアゴーS（サラトガ・4歳以上・7ハロン）：2001年からG1、7ハロンに戻ったのは2003年から
+    { name: 'フォアゴーステークス', short: 'フォアゴーS', grade: 'G1', region: '海外', country: '米', course: 'サラトガ', surface: 'ダ', dist: 1400, month: 8, week: 4, age: '4+', weight: '別定', prize: 3000, from: 2003, to: 9999 },
+    // ジェロームH（ベルモント・3歳・1マイル）：1995年はG2（HorseRacingNation の1995年の結果・ja.wikipedia「フレンチデピュティ」）。ほかの年の格付けは確かめていない。今は格付けの無い特別戦
+    { name: 'ジェロームハンデキャップ', short: 'ジェロームH', grade: 'G2', region: '海外', country: '米', course: 'ベルモント', surface: 'ダ', dist: 1600, month: 9, week: 2, age: '3', weight: 'ハンデ', prize: 1500, from: 1995, to: 1995, uncertain: true, note: '施行の週は確かめていない' },
   );
   // ブリーダーズカップターフスプリント（2012年からG1）：開催地は BC マイルと同じ。距離は開催地の芝コースで変わる（デルマーは5ハロン＝1000m）
   const BCTS_DIST = { 'デルマー': 1000, 'キーンランド': 1100, 'サンタアニタ': 1300, 'チャーチルダウンズ': 1000 };

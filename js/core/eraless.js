@@ -13,7 +13,8 @@
   E.AGES = [2, 3, 4, 5, 6]; // 始めたときにいる世代
 
   const lastYear = d => d.retire || d.born + 5;
-  E.isPool = d => lastYear(d) >= 1989 && d.born <= 2023;
+  // noDebut：血統表の母などとしてだけ持つ馬（重賞を勝っていない名牝の母。持ち主の決定 2026-10-20「オリエンタルアートは登場する馬から外す」）
+  E.isPool = d => lastYear(d) >= 1989 && d.born <= 2023 && !d.noDebut;
   E.isLegend = d => lastYear(d) < 1989;
   let poolCache = null;
   E.pool = () => poolCache || (poolCache = (HS.DATA.historic || []).filter(E.isPool));
@@ -40,9 +41,10 @@
     return h;
   };
   // ランダムに n 頭（走っていない馬から）
+  // 倒した隠し馬（G.unlocked。香港の三冠の隠し馬は1989年からの馬）は、店にいつも並ぶので、デビューに選ばない
   E.pick = function (n, rng) {
-    const act = E.activeNames();
-    const free = E.pool().filter(d => !act.has(d.name));
+    const act = E.activeNames(), un = new Set(W.get().unlocked || []);
+    const free = E.pool().filter(d => !act.has(d.name) && !un.has(d.name));
     const out = [];
     for (let i = 0; i < n && free.length; i++) out.push(free.splice(rng.int(0, free.length - 1), 1)[0]);
     return out;
@@ -204,7 +206,8 @@
     const G = W.get();
     const act = E.activeNames();
     const items = [];
-    for (const d of E.pool()) if (E.isOpen(d) && !act.has(d.name)) items.push(itemOf(d, false));
+    const un = new Set(G.unlocked || []); // 倒した隠し馬は下で（1989年からの隠し馬が二重に並ばないように）
+    for (const d of E.pool()) if (E.isOpen(d) && !act.has(d.name) && !un.has(d.name)) items.push(itemOf(d, false));
     for (const name of G.unlocked || []) { const d = HS.Special && HS.Special.data(name); if (d && !act.has(d.name)) items.push(itemOf(d, true)); }
     return items;
   };
@@ -219,8 +222,8 @@
     const G = W.get();
     const n = (G.shopStock && G.shopStock.y === G.year && G.shopStock.m === G.month ? G.shopStock.n || 0 : 0) + (reroll ? 1 : 0);
     const rng = new U.RNG(((G.seed * 131 + G.year * 12 + G.month) * 7 + n * 7919) >>> 0);
-    const act = E.activeNames();
-    const free = E.pool().filter(d => E.isOpen(d) && !act.has(d.name));
+    const act = E.activeNames(), un = new Set(G.unlocked || []);
+    const free = E.pool().filter(d => E.isOpen(d) && !act.has(d.name) && !un.has(d.name));
     const names = [];
     for (const side of [false, true]) {
       const list = free.filter(d => isMare(d) === side);
@@ -237,7 +240,8 @@
     const act = E.activeNames();
     const byName = new Map(E.pool().map(d => [d.name, d]));
     const items = [];
-    for (const name of G.shopStock.names) { const d = byName.get(name); if (d && !act.has(name)) items.push(itemOf(d, false)); }
+    const un = new Set(G.unlocked || []);
+    for (const name of G.shopStock.names) { const d = byName.get(name); if (d && !act.has(name) && !un.has(name)) items.push(itemOf(d, false)); }
     for (const name of G.unlocked || []) { const d = HS.Special && HS.Special.data(name); if (d && !act.has(d.name)) items.push(itemOf(d, true)); }
     return items;
   };
