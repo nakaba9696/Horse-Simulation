@@ -13,7 +13,7 @@
   O.POT_MAX = 118;      // 能力の上限（仔を作るときと同じ）
   // 1頭の馬から作れる仔の数（仕様書「合わせる馬は何回かするといなくなる」。数は docs/BALANCE.md「10. オリジナルホース」）。
   // その数の仔を作った親は、牧場を去る（枠が空く）。GF の一族の人（イロナ）の花輪を持っていれば＋1（持ち主の決定 2026-10-20。js/core/gfhost.js）
-  O.FOALS = 3;
+  O.FOALS = 2;
   O.foalsMax = () => O.FOALS + (HS.GFHost && HS.GFHost.hasItem && HS.GFHost.hasItem() ? 1 : 0);
   O.foalsLeft = h => Math.max(0, O.foalsMax() - ((h && h.origN) || 0));
   // 仔の能力の元：両親の平均のうち SOFT を超えた分は HERIT の割合だけ受け継ぐ（強い両親の仔ほど親に届きにくい）。
