@@ -5,6 +5,7 @@ extends RefCounted
 # 新しいゲーム・セーブを読むと HSU.ERA（年代なし）が変わるので、終わったら元に戻す（あとのテストの模擬の年代がずれないように）
 func run(t) -> void:
 	var era = HSU.ERA
+	HSHall.set_dir("")   # 殿堂の記録は手元だけ（ファイルに書かない）
 	_run(t)
 	HSU.ERA = era
 
@@ -124,7 +125,8 @@ func _play(t, name: String, weeks: Array) -> void:
 		var rep := HSWorld.finish_week(played)
 		step.races = rep.races.size()
 		step.date = rep.date
-		step.g = HSData.digest_save(HSJson.parse(HSWorld.serialize()))
+		# 殿堂の写しの1走ごとの記録は Godot 版では別ファイル（HSHall）。JS 版は本体に持つので、戻してから比べる（持ち主の決定 2026-10-20）
+		step.g = HSData.digest_save(HSHall.with_recs(HSJson.parse(HSWorld.serialize())))
 		var ok := true
 		for k in want:
 			var a = step.get(k); var b = want[k]

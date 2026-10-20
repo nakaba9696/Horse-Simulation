@@ -2,6 +2,7 @@
 # 遊びの決まりは godot/core（HSWorld・HSJockey・HSOwners・HSProgram）を呼ぶだけで、ここでは作り直さない。
 # その週に自分が乗るレース（HSJockey.my_rides）を順に出走表 → 騎乗へ回し、結果（HSSim.finish）を played に集めて HSWorld.finish_week に渡す。
 # セーブは user://save.json（HSWorld.serialize。JS 版のセーブと同じ形）。週を締めるたびに自動で書く
+# 殿堂入りした馬の1走ごとの記録は、セーブの枠ごとの別ファイル user://hall/<枠>/<馬の id>.json（HSHall。枠はセーブのファイル名）
 class_name UiFlow
 extends RefCounted
 
@@ -44,6 +45,19 @@ static func active() -> bool:
 static func has_save() -> bool:
 	return FileAccess.file_exists(save_path)
 
+# セーブの枠（いまはセーブのファイル名。user://save.json なら save）と、その枠の殿堂の記録の置き場所
+static func slot() -> String:
+	return save_path.get_file().get_basename()
+static func hall_dir() -> String:
+	return "user://hall".path_join(slot())
+
+# セーブを消す：本体と、その枠の殿堂の記録
+static func delete_save() -> void:
+	if FileAccess.file_exists(save_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
+	HSHall.set_dir(hall_dir())
+	HSHall.clear()
+
 static var no_save := false         # 撮影の見本（demo）はセーブを書かない
 
 static func save() -> void:
@@ -61,6 +75,7 @@ static func load_game() -> bool:
 	if s.is_empty():
 		return false
 	no_save = false
+	HSHall.set_dir(hall_dir())
 	HSWorld.load_save(s)
 	_reset_week()
 	return active()
@@ -79,6 +94,8 @@ static func new_game(name: String, region: String, seed := -1.0) -> void:
 	if seed < 0.0:
 		seed = float(int(Time.get_unix_time_from_system()) % 1000000000)
 	no_save = false
+	HSHall.set_dir(hall_dir())
+	HSHall.clear()   # はじめから：その枠の前の殿堂の記録を片づける
 	HSWorld.new_game({"mode": "jockey", "seed": seed, "jockeyName": name, "region": region})
 	_reset_week()
 	save()
@@ -96,6 +113,7 @@ static func _reset_week() -> void:
 static func demo(weeks := 0, seed := 7.0) -> void:
 	no_save = true
 	replay_dir = "user://demo_replays"   # 見本のリプレイは遊ぶときのものと混ぜない
+	HSHall.set_dir("")   # 見本の殿堂の記録は手元だけ（セーブの枠のファイルに触らない）
 	HSWorld.new_game({"mode": "jockey", "seed": seed, "jockeyName": "新人騎手", "region": "美浦"})
 	_reset_week()
 	# 見本は、はじめから全員と縁がある形にする（依頼の札・出走表・騎乗の場面を撮れるように。ふだんの遊びでは出会いの点がたまると縁ができる）。
@@ -131,6 +149,7 @@ static func demo_ride(weeks := 1) -> bool:
 static func demo_gf() -> void:
 	no_save = true
 	replay_dir = "user://demo_replays"
+	HSHall.set_dir("")
 	HSWorld.load_save(FileAccess.get_file_as_string("res://tests/golden/world_gf.json"))
 	_reset_week()
 	var guard := 0

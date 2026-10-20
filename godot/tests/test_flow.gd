@@ -9,6 +9,8 @@ func run(t) -> void:
 	var t0 := Time.get_ticks_msec()
 	var era0 = HSU.ERA   # 世界の設定（年代なし）は、あとのテスト（模擬の一致）に残さない
 	UiFlow.save_path = "user://test_flow_save.json"
+	HSHall.set_dir(UiFlow.hall_dir())
+	HSHall.clear()   # 前に回したときの殿堂の記録を残さない
 	UiFlow.demo(0, 7.0)
 	UiFlow.replay_dir = "user://test_flow_replays"   # demo のあとで替える（demo は見本の置き場所にする）
 	for f in DirAccess.get_files_at(UiFlow.replay_dir) if DirAccess.dir_exists_absolute(UiFlow.replay_dir) else []:
@@ -165,8 +167,9 @@ func run(t) -> void:
 		sc.free()
 	_shop(t)
 	_horse(t)
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(UiFlow.save_path))
+	UiFlow.delete_save()   # セーブと、その枠の殿堂の記録
 	UiFlow.save_path = "user://save.json"
+	HSHall.set_dir("")
 	for f in DirAccess.get_files_at(UiFlow.replay_dir):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(UiFlow.replay_dir.path_join(f)))
 	UiFlow.replay_dir = "user://replays"
@@ -270,16 +273,21 @@ func _horse(t) -> void:
 	if x != null:
 		for r in HSU.or_(x.get("results"), []):
 			if r.has("rec"): gone = false
-	var kept := 0
+	var body_rec := 0
 	for r in HSHall.by_id(hid).results:
+		if r.has("rec"): body_rec += 1
+	var kept := 0
+	for r in HSHall.open(hid).results:
 		if HSRaceRec.has(r): kept += 1
-	t.ok(gone and kept == nrec, "hall: 引退で馬の記録は消え、殿堂の写しに残る（%d走）" % kept)
+	t.ok(gone and kept == nrec and nrec > 0, "hall: 引退で馬の記録は消え、殿堂の記録に残る（%d走）" % kept)
+	t.ok(body_rec == 0 and HSHall.dir == UiFlow.hall_dir() and FileAccess.file_exists(HSHall.path_of(hid)), "hall: 1走ごとの記録はセーブの本体に無く、枠の別ファイル（%s）にある" % HSHall.path_of(hid))
 	UiFlow.hall_id = hid
 	var hs = load("res://scenes/horse.tscn").instantiate()
 	t.root.add_child(hs)
 	t.ok(hs.hall_mode and hs.rows.size() == HSHall.by_id(hid).results.size(), "hall: 殿堂から馬の画面（戦績）を開ける")
 	for k in hs.tabs_.size(): hs.on_tab(1)
-	hs.race_detail(HSHall.by_id(hid).results[0])
+	t.ok(HSRaceRec.has(hs.h.results[0]), "hall: 殿堂の馬の画面は別ファイルの記録を読む")
+	hs.race_detail(hs.h.results[0])
 	t.ok(hs._modal != null, "hall: 殿堂の馬の1走の記録を開ける")
 	hs.close_modal()
 	hs.free()
