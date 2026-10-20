@@ -76,6 +76,12 @@
   }
 
   // ---------- 招待の画面（GF ひとつ）：出るなら1頭を選ぶ。出ないなら AI の馬だけで走る（結果は週のまとめから観戦できる） ----------
+  // GF を開いている一族の人（data/gfhost.js・js/core/gfhost.js）のひと言。台詞は下書き
+  UI.gfHostLine = function (scene, cat) {
+    const F = HS.GFHost, d = F && F.data(); if (!d || !HS.OwnerFace) return '';
+    const line = F.line(scene || F.scene(), cat); if (!line) return '';
+    return `<div class="row mt" style="justify-content:center;gap:10px"><span style="width:56px;height:56px;display:inline-block">${HS.OwnerFace.svg(d, 'smile', 56)}</span><div><div class="small muted">${e(d.name)}（${e(d.title)}）</div><div>「${e(line)}」</div></div></div>`;
+  };
   UI.dreamAsk = function (cat) {
     return new Promise(res => {
       const G = W.get(), wIdx = W.wIdx(), C = T.GF_BY[cat], x = G.dc && G.dc.gf && G.dc.gf[cat];
@@ -105,6 +111,7 @@
       const bg = App.modal(`<div class="dc-ask">
           <div class="dc-kicker">招待状</div>
           <h3 class="dc-title">${e(T.gfName(cat))}</h3>
+          ${UI.gfHostLine('invite', cat)}
           <div class="small center muted">${W.yLabel(G.year)} ${place(C)}・16頭。その年に${e(C.label)}で活躍した馬だけが走る、年末のドリームレース。</div>
           <div class="small center mt">出るなら、招待された自分の馬から<b>1頭</b>を選ぶ。出ない年は、ほかの馬だけで走る（結果は観戦できる）。</div>
           <div class="dc-cards mt">${list.map(card).join('')}</div>

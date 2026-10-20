@@ -12,10 +12,11 @@ const MOODS = { base: 'normal', smile: 'smile', joy: 'happy', sad: 'sad' };
 function build() {
   // ゲームの HS を汚さないよう、別の箱で読む
   const ctx = vm.createContext({});
-  for (const f of ['data/owners.js', 'js/ui/ownerface.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
+  for (const f of ['data/owners.js', 'data/gfhost.js', 'js/ui/ownerface.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
   const HS = ctx.HS;
   const files = {};
-  for (const o of HS.DATA.owners) {
+  // 騎乗依頼の馬主と、GF を開いている一族の人（data/gfhost.js）
+  for (const o of HS.DATA.owners.concat(HS.DATA.gfHost ? [HS.DATA.gfHost] : [])) {
     if (o.retired || o.portrait) continue;
     for (const [m, mood] of Object.entries(MOODS)) {
       // gradient の id が呼ぶたびに変わらないよう、毎回同じ数から描く

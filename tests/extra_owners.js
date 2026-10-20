@@ -83,7 +83,7 @@ module.exports = function (check, assert, HS) {
     return `${L.map(o => `${o.name.split(/[ ・]/)[0]}＝${O.signLabel(o)}`).join('・')}（外した人：${retired.join('・')}）`;
   });
 
-  check('owners: ジャンルは重ならない・秘書ユニの正体（キンチェムモチーフ）はほのめかすだけ（本人と書かない・明かす場面が無い）', () => {
+  check('owners: ジャンルは重ならない・秘書ユニはふつうのナビゲーター（正体の要素が無い）', () => {
     const L = O.list(), signs = L.map(o => O.signOf(o));
     assert(new Set(signs).size === signs.length, `ジャンルが重なる（${signs}）`);
     for (const o of L) {
@@ -94,12 +94,32 @@ module.exports = function (check, assert, HS) {
       assert(!AVOID.test(u.hint + u.text), `${o.name} の条件の文に避ける癖の語`);
       assert(!u.hint.includes(o.name.split(/[ ・]/)[0]), `${o.name} のヒントに名前が出ている`);
     }
+    // 持ち主の決定（2026-10-19・改め）「ナビゲータはナビゲータです」：ユニに正体の要素（花輪・ハンガリー・無敗の言い伝え・ほのめかしの一言・GF の場面）を持たせない
     const y = O.by('yuni');
-    const txt = JSON.stringify([y.scenes, y.hints, y.lines, y.note]);
-    assert((y.hints || []).length >= 3 && (y.scenes.gf || []).length >= 2, 'ユニのほのめかし（案内の一言・GF のころの場面）が無い');
-    assert(/花輪/.test(txt) && /ハンガリー/.test(txt), 'ユニのほのめかしに花輪・ハンガリーが無い');
-    assert(!/キンチェム|化身|生まれ変わり|正体|打ち明け|本当のこと/.test(txt) && !y.scenes.reveal, 'ユニが正体を明かしている・本人と言い切る');
-    return `8人・ユニのほのめかし ${y.hints.length}つ`;
+    const txt = JSON.stringify(y);
+    assert(!y.hints && !y.scenes.gf && !y.plans && !(y.face.extras || []).includes('hairpin'), 'ユニに正体のほのめかし（hints・GF の場面・花の髪留め）が残っている');
+    assert(!/花輪|ハンガリー|キンチェム|正体|負けたことがない|押し花|宝もの/.test(txt), `ユニの文に正体の要素が残っている（${txt.match(/花輪|ハンガリー|キンチェム|正体|負けたことがない|押し花|宝もの/)}）`);
+    return `8人・ユニはナビゲーター`;
+  });
+
+  check('owners: GF を開いている一族の人（キンチェムモチーフ・本人ではない）：顔・場面のひと言・GF の場面で選べる', () => {
+    const d = D.gfHost, F = HS.GFHost;
+    assert(d && d.name && d.title && d.note && d.face && d.face.extras.includes('wreath') && d.look && d.look.moods && d.voice && d.intro, '一族の人の項目が足りない');
+    assert(!D.owners.some(o => o.id === d.id || o.name === d.name), '一族の人が騎乗依頼の馬主と重なる');
+    for (const k of ['wait', 'invite', 'week', 'win', 'lose', 'allclear', 'kincsem']) assert((d.lines[k] || []).length >= 1, `一族の人の場面 ${k} が無い`);
+    const all = JSON.stringify([d.lines, d.hints, d.intro, d.note]);
+    assert(!/キンチェム|化身|生まれ変わり/.test(all), '一族の人をキンチェム本人と言い切る言葉がある');
+    assert(/花輪/.test(all) && /ハンガリー/.test(all), 'キンチェムを思わせるモチーフ（花輪・ハンガリー）が無い');
+    assert(!AVOID.test(all) && !/……/.test(all) && !/恋|結婚|キス/.test(all), '一族の人の文に避ける癖の語・恋愛の言葉');
+    for (const m of all.matchAll(/\{(\w+)\}/g)) assert(['me', 'race'].includes(m[1]), `一族の人の文に知らない差し込み {${m[1]}}`);
+    newGame(83);
+    const sc = F.scene();
+    assert(sc === 'wait', `はじめの場面が ${sc}`);
+    const ln = F.line('invite', 'classic');
+    assert(ln && !/\{/.test(ln) && ln === F.line('invite', 'classic'), `ひと言が選べない・決まらない（${ln}）`);
+    const f = path.join(__dirname, '..', 'godot', 'assets', 'owners', `${d.id}_base.svg`);
+    assert(fs.existsSync(f), 'Godot 版の顔の SVG が無い');
+    return `${d.name}：「${ln}」`;
   });
 
   check('owners: 課題の判定：どの課題も、満たす結果で通り、依頼の馬・お手馬・オリジナルホースの区別を間違えない', () => {
