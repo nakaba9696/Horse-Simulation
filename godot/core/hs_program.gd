@@ -28,7 +28,7 @@ static func weeks(n: int) -> Array:
 static func races_of(wk: Dictionary) -> Array:
 	if wk.i == 0: return HSWorld.week_races()
 	return HSRaces.of_week(HSWorld.G.seed, wk.y, wk.m, wk.w)
-# 出られない理由（出られるなら null）。今週は入厩・故障まで、先の週は年齢・性と、いまの勝ち星で見る
+# 出られない理由（出られるなら null）。今週は入厩まで、先の週は年齢・性と、いまの勝ち星・移動（連闘で別の国へは行けない）で見る
 static func why(h: Dictionary, race: Dictionary, wk: Dictionary) -> Variant:
 	var G = HSWorld.G
 	if wk.i == 0:
@@ -37,8 +37,7 @@ static func why(h: Dictionary, race: Dictionary, wk: Dictionary) -> Variant:
 		return HSRaces.ineligible(h, race, G.year)
 	var st = HSSeason.static_ineligible(h, race, race.year)
 	if st: return st
-	var h2: Dictionary = h.duplicate(); h2.injury = null
-	return HSRaces.ineligible(h2, race, race.year)
+	return HSRaces.ineligible(h, race, race.year)
 
 # o：{ weeks（既定は予約できる52週）, show: "ok"|"all", kind: "all"|"graded", surf: ""|"芝"|"ダ" }
 # 行：{ wk, race, why, dist, surf, fit（0〜6）, state: "entered"|"reserved"|null, can: "enter"|"reserve"|null, busy, others }
@@ -59,7 +58,7 @@ static func rows(h: Dictionary, o: Dictionary = {}) -> Array:
 			if not state:
 				if o.get("kind") == "graded" and not race.get("graded"): continue
 				if o.get("surf") and race.surface != o.surf: continue
-				if w and (o.get("show") != "all" or not race.get("graded")): continue # 条件戦は「すべて」でも出られないものは出さない
+				if w and w != HSFatigue.WHY and (o.get("show") != "all" or not race.get("graded")): continue # 条件戦は「すべて」でも出られないものは出さない。移動が間に合わないものは理由を見せる
 			var dist := fit_dist(h, race.dist); var surf := fit_surf(h, race.surface)
 			var can = null
 			if not (w or state): can = "enter" if wk.i == 0 else (null if busyKey else "reserve")

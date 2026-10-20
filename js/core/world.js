@@ -171,7 +171,7 @@
     const h = {
       id: newId(), name: name || '', sex: f.sex, born, sire: sireName, dam: damName, hist: false, owner: 'AI', loc: 'farm',
       pot: f.pot, apt: f.apt, distMin: f.distMin, distMax: f.distMax, growth: f.growth, peakShift: f.peakShift, style: f.style,
-      kire: f.kire, skills: f.skills || [], health: f.health, bonus: {}, cond: 0, fatigue: 0, injury: null,
+      kire: f.kire, skills: f.skills || [], health: f.health, bonus: {}, cond: 0, fatigue: 0,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [], restUntil: 0, coat: f.coat || '鹿毛',
     };
     return h;
@@ -344,13 +344,13 @@
   };
   // このプレイヤー以外の馬を、どのレースに出すか
   W.aiChoose = function (h, races, wIdx, r) {
-    if (h.loc !== 'stable' || h.injury) return null;
+    if (h.loc !== 'stable') return null;
     const year = G.year;
     const targets = h.hist ? W.histTargets(h, year) : [];
     const hit = races.find(rc => rc.graded && targets.includes(rc.name) && !R.ineligible(h, rc, year));
     if (hit) return hit;
     if (wIdx < (h.restUntil || 0)) return null;
-    if ((h.fatigue || 0) > 40) return null;
+    if (HS.Fatigue.stage(h) >= 2) return null; // 疲れ（段階2）より上は休む
     // 目標が近いなら休む
     if (targets.length) {
       const soon = W.upcomingSoon().some(rc => targets.includes(rc.name));
@@ -397,7 +397,7 @@
   // 3. W.finishWeek：レースを走らせ（騎乗したレースは played の結果を使う）、結果・調教・暦を進める
   W.prepareWeek = function () {
     // 出走登録・おまかせ・入厩が変わったら作り直す
-    const mineSig = W.mine().map(h => `${h.id}${h.loc}${h.auto ? 1 : 0}${h.skipW === W.wIdx() ? 's' : ''}${h.injury ? 'i' : ''}`).join(',');
+    const mineSig = W.mine().map(h => `${h.id}${h.loc}${h.auto ? 1 : 0}${h.skipW === W.wIdx() ? 's' : ''}`).join(',');
     const key = `${G.year}-${G.month}-${G.week}:${G.rngState}:${JSON.stringify(G.entries)}:${mineSig}`;
     if (W._week && W._week.key === key) return W._week;
     const r = new U.RNG(G.rngState);
@@ -408,7 +408,7 @@
     const field = {};
     for (const [k, arr] of Object.entries(G.entries)) {
       const race = W.raceByKey(k); if (!race) continue;
-      field[k] = arr.map(e => ({ horse: G.horses[e.horseId], jockeyName: e.jockey, mine: true })).filter(x => x.horse && x.horse.loc === 'stable' && !x.horse.injury);
+      field[k] = arr.map(e => ({ horse: G.horses[e.horseId], jockeyName: e.jockey, mine: true })).filter(x => x.horse && x.horse.loc === 'stable');
     }
     const aiHorses = W.all().filter(h => h.owner !== 'P' && h.loc === 'stable');
     for (const h of aiHorses) {
@@ -418,7 +418,7 @@
     }
     // プレイヤーの「おまかせ」の馬
     for (const h of W.mine('stable')) {
-      if (!h.auto || W.entryOf(h.id) || h.injury || h.skipW === wIdx) continue;
+      if (!h.auto || W.entryOf(h.id) || h.skipW === wIdx) continue;
       const rc = W.aiChoose(h, races, wIdx, r);
       if (rc && rc.region !== '海外') (field[rc.key] = field[rc.key] || []).push({ horse: h, jockeyName: W.bestFreeJockey(rc.key, h.id), mine: true, auto: true });
     }
@@ -500,6 +500,8 @@
     r.shuffle(runners);
     const n = runners.length;
     runners.forEach((x, i) => { x.num = i + 1; x.frame = W.frameOf(i + 1, n); x.weight = S.weightFor(x.horse, race, year); });
+    // 国が変わる馬は移動の疲れ（js/core/fatigue.js。このレースから効き、レースのあと疲労に残る）
+    for (const x of runners) { const tv = HS.Fatigue.travel(x.horse, race); if (tv > 0) x.travel = tv; }
     return { race, runners, excluded };
   };
 
@@ -554,7 +556,7 @@
       const { race, runners } = card;
       for (const id of card.excluded) { const h = G.horses[id]; if (h) news(`${h.name}は${R.label(race)}を除外された（賞金が足りない）。`, 'warn'); }
       // 遠征
-      for (const x of runners) if (x.mine && race.region === '海外') { const c = W.travelCost(race); G.player.money -= c; news(`${x.horse.name}の${R.label(race)}遠征費 ${U.money(c)}`, 'money'); x.horse.fatigue = Math.min(100, (x.horse.fatigue || 0) + 10); }
+      for (const x of runners) if (x.mine && race.region === '海外') { const c = W.travelCost(race); G.player.money -= c; news(`${x.horse.name}の${R.label(race)}遠征費 ${U.money(c)}`, 'money'); }
       const hasMine = runners.some(x => x.mine) || card.ride;
       const watch = hasMine || race.grade === 'G1' || !!race.invite;
       const sim = played[race.key] || S.run(race, runners, wIdx, new U.RNG(card.seed), { frames: watch });
@@ -649,7 +651,7 @@
         if (race.graded && (res.pos === 1 || (race.grade === 'G1' && res.pos <= 3)) && race.region === 'JRA') W.promote(h, race, res, wIdx);
         else continue;
       }
-      const gf = race.grade === 'GF'; // グランドフェスティバルは特別枠：出走数・勝ち数・疲れ・調子・休み・故障に数えない（賞金・勝ち鞍・成績は残る）
+      const gf = race.grade === 'GF'; // グランドフェスティバルは特別枠：出走数・勝ち数・疲れ・調子・休みに数えない（賞金・勝ち鞍・成績は残る）
       if (!gf) {
         h.starts = (h.starts || 0) + 1;
         if (res.pos === 1) h.wins = (h.wins || 0) + 1;
@@ -667,17 +669,12 @@
       // AI の馬は最近の成績だけ残す（セーブを小さく）
       const keep = h.owner === 'P' ? 80 : 12;
       while (h.results.length > keep) h.results.shift();
-      // 疲れ・調子・休み（GF は動かさない）
+      // 疲れ（js/core/fatigue.js：格×距離×激戦の度合い＋移動）・調子・休み（GF は動かさない）。故障は無い
       if (!gf) {
-        h.fatigue = Math.min(100, (h.fatigue || 0) + 18 + race.dist / 100 * 1.2 + (race.grade === 'G1' ? 6 : 0));
+        HS.Fatigue.afterRace(h, race, sim.results, res.pos - 1, x.travel);
         h.cond = (h.cond || 0) - 15;
         h.restUntil = wIdx + (race.grade === 'G1' ? 5 + rng.int(0, 4) : 3 + rng.int(0, 4));
         h.lastRaceW = wIdx;
-        // レース中の故障
-        if (rng.chance(0.006 * (1.4 - (h.health || 70) / 100) * (1 + (h.fatigue || 0) / 60))) {
-          const inj = H.injure(h, rng);
-          if (h.owner === 'P') news(`${h.name}が${R.label(race)}のあと${inj.name}を発症。全治${inj.weeks}週。`, 'warn');
-        }
       }
       if (h.owner === 'P') {
         const owner = Math.round(money * 0.8 + 30 * IDX());
@@ -733,34 +730,32 @@
     }
   };
 
-  // 調教・放牧・故障の回復
+  // 調教・放牧と疲労の回復（疲労は毎週、健康の値に応じて抜ける。レースに出た週も。js/core/fatigue.js）
   W.weeklyCare = function (wIdx, report) {
     const raced = new Set();
     for (const r of report.races) for (const x of r.runners) raced.add(x.horse.id);
     for (const h of W.all()) {
       if (h.loc === 'stable') {
-        if (h.injury) { H.rest(h, rng); continue; }
-        if (raced.has(h.id)) continue;
-        if (h.owner === 'P') {
-          const menu = G.mode === 'jockey' || h.auto || !h.menu ? W.autoMenu(h, wIdx) : h.menu; // 騎手のゲームでは調教は調教師にまかせる
-          const tr = H.train(h, menu, rng, wIdx);
-          h.lastTrain = { menu, time: tr.time, date: report.date };
-          if (tr.injury) news(`${h.name}が調教中に${tr.injury.name}。全治${tr.injury.weeks}週。`, 'warn');
-        } else {
-          // AI は軽く整える
-          h.fatigue = Math.max(0, (h.fatigue || 0) - H.recover(h, 10));
-          h.cond = U.clamp((h.cond || 0) * 0.8 + rng.normal(5, 15), -100, 100);
-          if (rng.chance(0.0015 * (1.3 - (h.health || 70) / 100))) H.injure(h, rng);
+        if (!raced.has(h.id)) {
+          if (h.owner === 'P') {
+            const menu = G.mode === 'jockey' || h.auto || !h.menu ? W.autoMenu(h, wIdx) : h.menu; // 騎手のゲームでは調教は調教師にまかせる
+            const tr = H.train(h, menu, rng, wIdx);
+            h.lastTrain = { menu, time: tr.time, date: report.date };
+          } else {
+            // AI は軽く整える
+            h.cond = U.clamp((h.cond || 0) * 0.8 + rng.normal(5, 15), -100, 100);
+          }
         }
+        HS.Fatigue.weekly(h);
       } else if (h.loc === 'farm') {
         H.rest(h, rng);
       }
     }
   };
   W.autoMenu = function (h, wIdx) {
-    const f = h.fatigue || 0;
-    if (f >= 60) return '休養';
-    if (f >= 40) return '軽め';
+    const st = HS.Fatigue.stage(h);
+    if (st >= 3) return '休養';
+    if (st >= 2) return '軽め';
     const toRest = (h.restUntil || 0) - wIdx;
     if (toRest > 2) return rng.pick(['プール', '軽め', 'ウッド(馬なり)']);
     if (toRest > 0) return rng.pick(['坂路(強め)', 'ウッド(強め)', '併せ馬']);
@@ -826,7 +821,7 @@
       if (h.owner === 'P') continue;
       if (h.loc === 'stable' || h.loc === 'farm') {
         const age = G.year - h.born;
-        if ((h.retireYear && h.retireYear < G.year && age >= 2) || age >= 9 || (h.injury && h.injury.severe && age >= 4)) delete G.horses[h.id];
+        if ((h.retireYear && h.retireYear < G.year && age >= 2) || age >= 9) delete G.horses[h.id];
       }
     }
     // プレイヤーの繁殖牝馬の年齢
@@ -910,7 +905,6 @@
     const age = G.year - h.born;
     if (age < 2 || (age === 2 && G.month < 4)) return '入厩は2歳の4月から';
     if (!h.name) return '先に名前を付けてください';
-    if (h.injury && h.injury.weeks > 0) { /* 故障中でも厩舎で治せる */ }
     h.loc = 'stable';
     return null;
   };
@@ -1161,6 +1155,8 @@
       h.skills = h.skills || [];
       // 騎手のゲームに放牧は無い（持ち主の指摘 2026-10-17「放牧いらない」）：前のセーブで放牧に出した馬は、次の週の頭に自動で入厩に戻す
       if (g.mode === 'jockey' && h.parked) delete h.parked;
+      // 故障は無くなった（持ち主の仕様書「故障はなしにする」）：前のセーブで故障していた馬は治った扱い
+      if ('injury' in h) delete h.injury;
     }
     // コースレコードの「自分で乗って作ったか」（前の版のセーブには無い。騎手のゲームでは自分の馬＝自分が乗った馬）
     for (const rc of Object.values(g.records.course || {})) if (rc.rode == null) rc.rode = !!rc.mine && g.mode === 'jockey';

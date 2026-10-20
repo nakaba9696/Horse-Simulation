@@ -107,6 +107,18 @@ double skill_adj(const Dictionary &horse, const Dictionary &race, const Variant 
 	return a;
 }
 
+// 疲労の段階と下げ（js/core/racesim.js の S.FATIGUE・S.fatiguePen と同じ）
+static const double FAT_AT[4] = { 15.0, 35.0, 55.0, 75.0 };
+static const double FAT_PEN[5] = { 0.0, 1.5, 4.0, 8.0, 13.0 };
+static const double FAT_STRONG = 86.0, FAT_TOP = 104.3, FAT_KEEP = 0.2;
+static double fatigue_pen(double fat, double a) {
+	int st = 0;
+	while (st < 4 && fat >= FAT_AT[st]) st++;
+	double p = FAT_PEN[st];
+	if (p == 0.0) return 0.0;
+	return p * clamp(1.0 - (a - FAT_STRONG) / (FAT_TOP - FAT_STRONG) * (1.0 - FAT_KEEP), FAT_KEEP, 1.0);
+}
+
 Dictionary power(const Dictionary &horse, const Dictionary &race, const Variant &w_idx, const Dictionary &ctx) {
 	Stats7 c0 = horse_cur(horse, (double)w_idx);
 	bool dirt = is_str(race.get("surface", Variant()), "ダ");
@@ -125,9 +137,10 @@ Dictionary power(const Dictionary &horse, const Dictionary &race, const Variant 
 	double groundAdj = gl * (num_or(apt.get("heavy", Variant()), 50.0) - 55.0) / 45.0 * 1.3;
 	Variant lrw = horse.get("lastRaceW", Variant());
 	double layoff = (lrw.get_type() != Variant::NIL && w_idx.get_type() != Variant::NIL && (double)w_idx - (double)lrw >= 12) ? 1.2 : 0.0;
-	double condAdj = num_or(horse.get("cond", Variant()), 0.0) / 100.0 * 3.0 - num_or(horse.get("fatigue", Variant()), 0.0) * 0.05 - layoff;
-	double jockAdj = 0.0;
 	bool ctxOk = !ctx.is_empty();
+	double trav = ctxOk ? num_or(ctx.get("travel", Variant()), 0.0) : 0.0; // このレースへの移動の疲れ（HSFatigue.travel）
+	double condAdj = num_or(horse.get("cond", Variant()), 0.0) / 100.0 * 3.0 - fatigue_pen(num_or(horse.get("fatigue", Variant()), 0.0) + trav, a) - layoff;
+	double jockAdj = 0.0;
 	if (ctxOk && ctx.get("jockey", Variant()).booleanize()) jockAdj = ((double)((Dictionary)ctx["jockey"])["skill"] - 75.0) * 0.06;
 	double wtAdj = 0.0;
 	if (ctxOk && ctx.get("weight", Variant()).booleanize()) wtAdj = -((double)ctx["weight"] - 56.0) * 1.4;

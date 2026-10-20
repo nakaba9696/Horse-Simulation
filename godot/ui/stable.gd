@@ -5,7 +5,7 @@
 # 決まりは HSJockey.retire・HSOriginal.release（godot/core）を呼ぶだけ
 extends UiScreen
 
-const COLS := [["馬名", 0], ["性齢", 52], ["戦績・近走", 112], ["調子", 84], ["疲労", 56], ["芝", 50], ["ダ", 50], ["次走", 210]]
+const COLS := [["馬名", 0], ["性齢", 52], ["戦績・近走", 112], ["調子", 84], ["疲労", 96], ["芝", 50], ["ダ", 50], ["次走", 170]]
 
 var tab := 0
 var list_v: VBoxContainer
@@ -117,12 +117,14 @@ func _fill() -> void:
 			rv.add_child(UiTheme.num_label(UiHorseScreen.recent_text(h, 3), 12, UiTheme.FAINT))
 			hb.add_child(rv)
 			var c: Dictionary = HSSeason.cond(h, wi)
-			var ct := "入厩前" if h.loc == "farm" else ("故障" if h.get("injury") else String(c.label))
-			var cl := UiTheme.label(ct, 13, Color(String(c.color)) if h.loc == "stable" and not h.get("injury") else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
+			var ct := "入厩前" if h.loc == "farm" else String(c.label)
+			var cl := UiTheme.label(ct, 13, Color(String(c.color)) if h.loc == "stable" else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
 			cl.custom_minimum_size.x = 84
 			hb.add_child(cl)
-			var fl := UiHorseScreen.fatigue_label(h, 15)
-			fl.custom_minimum_size.x = 56
+			# 疲労の段階（HSFatigue。万全・軽い疲れ・疲れ・疲れが濃い・使いすぎ）
+			var fv := HSFatigue.view(h)
+			var fl := UiTheme.label(String(fv.label) if h.loc == "stable" else "－", 13, Color(String(fv.color)) if h.loc == "stable" else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
+			fl.custom_minimum_size.x = 96
 			hb.add_child(fl)
 		else:
 			var sx := UiTheme.label(String(h.sex), 15, UiTheme.IVORY, HORIZONTAL_ALIGNMENT_CENTER)

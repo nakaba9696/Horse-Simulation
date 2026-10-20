@@ -206,7 +206,7 @@ static func horse_from_foal(f: Dictionary, sireName: Variant, damName: Variant, 
 	var h := {}
 	h.id = new_id(); h.name = HSU.or_(name, ""); h.sex = f.sex; h.born = born; h.sire = sireName; h.dam = damName; h.hist = false; h.owner = "AI"; h.loc = "farm"
 	h.pot = f.pot; h.apt = f.apt; h.distMin = f.distMin; h.distMax = f.distMax; h.growth = f.growth; h.peakShift = f.peakShift; h.style = f.style
-	h.kire = f.kire; h.skills = HSU.or_(f.get("skills"), []); h.health = f.health; h.bonus = {}; h.cond = 0.0; h.fatigue = 0.0; h.injury = null
+	h.kire = f.kire; h.skills = HSU.or_(f.get("skills"), []); h.health = f.health; h.bonus = {}; h.cond = 0.0; h.fatigue = 0.0
 	h.wins = 0.0; h.starts = 0.0; h.w2 = 0.0; h.w3 = 0.0; h.earn = 0.0; h.prize = 0.0; h.gradedWins = []; h.results = []; h.restUntil = 0.0; h.coat = HSU.or_(f.get("coat"), "鹿毛")
 	return h
 static func display_name(h: Dictionary) -> String:
@@ -434,13 +434,13 @@ static func hist_targets(h: Dictionary, year: float) -> Array:
 		if s.begins_with(pre): out.append(s.substr(4))
 	return out
 static func ai_choose(h: Dictionary, races: Array, wIdx: float, r: HSRng) -> Variant:
-	if h.get("loc") != "stable" or h.get("injury"): return null
+	if h.get("loc") != "stable": return null
 	var year: float = G.year
 	var targets: Array = hist_targets(h, year) if h.get("hist") else []
 	for rc in races:
 		if rc.get("graded") and targets.has(rc.name) and not HSRaces.ineligible(h, rc, year): return rc
 	if wIdx < float(HSU.or_(h.get("restUntil"), 0.0)): return null
-	if float(HSU.or_(h.get("fatigue"), 0.0)) > 40: return null
+	if HSFatigue.stage(h) >= 2: return null   # 疲れ（段階2）より上は休む
 	if targets.size():
 		if upcoming_soon().any(func(rc): return targets.has(rc.name)): return null
 	if not r.chance(0.35 if h.get("foreignTrained") else 0.5): return null
@@ -482,7 +482,7 @@ static func prepare_week() -> Dictionary:
 	var wi := w_idx()
 	var sig := PackedStringArray()
 	for h in mine():
-		sig.append("%s%s%s%s%s" % [h.id, h.get("loc"), "1" if h.get("auto") else "0", "s" if h.get("skipW") == wi else "", "i" if h.get("injury") else ""])
+		sig.append("%s%s%s%s" % [h.id, h.get("loc"), "1" if h.get("auto") else "0", "s" if h.get("skipW") == wi else ""])
 	var key := "%s-%s-%s:%s:%s:%s" % [HSU.num(G.year), HSU.num(G.month), HSU.num(G.week), HSU.num(G.rngState), JSON.stringify(G.entries), ",".join(sig)]
 	if _week != null and _week.key == key: return _week
 	var r := HSRng.new(G.rngState)
@@ -495,7 +495,7 @@ static func prepare_week() -> Dictionary:
 		var lst: Array = []
 		for e in G.entries[k]:
 			var hh = G.horses.get(e.horseId)
-			if hh and hh.get("loc") == "stable" and not hh.get("injury"): lst.append({ horse = hh, jockeyName = e.jockey, mine = true })
+			if hh and hh.get("loc") == "stable": lst.append({ horse = hh, jockeyName = e.jockey, mine = true })
 		field[k] = lst
 	for h in all():
 		if h.get("owner") == "P" or h.get("loc") != "stable": continue
@@ -504,7 +504,7 @@ static func prepare_week() -> Dictionary:
 		if not field.has(rc.key): field[rc.key] = []
 		field[rc.key].append({ horse = h })
 	for h in mine("stable"):
-		if not h.get("auto") or entry_of(h.id) or h.get("injury") or h.get("skipW") == wi: continue
+		if not h.get("auto") or entry_of(h.id) or h.get("skipW") == wi: continue
 		var rc = ai_choose(h, races, wi, r)
 		if rc and rc.get("region") != "海外":
 			if not field.has(rc.key): field[rc.key] = []
@@ -615,6 +615,10 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 	for i in n:
 		var x = runners[i]
 		x.num = float(i + 1); x.frame = frame_of(i + 1, n); x.weight = HSSim.weight_for(x.horse, race, year)
+	# 国が変わる馬は移動の疲れ（HSFatigue。このレースから効き、レースのあと疲労に残る）
+	for x in runners:
+		var tv := HSFatigue.travel(x.horse, race)
+		if tv > 0: x.travel = tv
 	return { race = race, runners = runners, excluded = excluded }
 
 # プレイヤーの騎乗を当てた出走表（人気つき）。騎乗が変わるまで使い回す
@@ -671,7 +675,7 @@ static func finish_week(played: Dictionary = {}) -> Dictionary:
 			if h: news("%sは%sを除外された（賞金が足りない）。" % [h.name, HSRaces.label(race)], "warn")
 		for x in runners:
 			if x.get("mine") and race.get("region") == "海外":
-				var c := travel_cost(race); G.player.money -= c; news("%sの%s遠征費 %s" % [x.horse.name, HSRaces.label(race), HSU.money(c)], "money"); x.horse.fatigue = HSU.mn(100.0, float(HSU.or_(x.horse.get("fatigue"), 0.0)) + 10.0)
+				var c := travel_cost(race); G.player.money -= c; news("%sの%s遠征費 %s" % [x.horse.name, HSRaces.label(race), HSU.money(c)], "money")
 		var hasMine: bool = runners.any(func(x): return x.get("mine")) or card.ride
 		var watch: bool = hasMine or race.get("grade") == "G1" or HSU.truthy(race.get("invite"))
 		var sim = played.get(race.key)
@@ -763,7 +767,7 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 		if h.get("filler"):
 			if race.get("graded") and (res.pos == 1 or (race.get("grade") == "G1" and res.pos <= 3)) and race.get("region") == "JRA": promote(h, race, res, wIdx)
 			else: continue
-		var gf: bool = race.get("grade") == "GF"   # GF は特別枠：出走数・勝ち数・疲れ・調子・休み・故障に数えない
+		var gf: bool = race.get("grade") == "GF"   # GF は特別枠：出走数・勝ち数・疲れ・調子・休みに数えない
 		if not gf:
 			h.starts = float(HSU.or_(h.get("starts"), 0.0)) + 1.0
 			if res.pos == 1: h.wins = float(HSU.or_(h.get("wins"), 0.0)) + 1.0
@@ -788,14 +792,12 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 		h.results.append(rr)
 		var keep := 80 if h.get("owner") == "P" else 12
 		while h.results.size() > keep: h.results.pop_front()
+		# 疲れ（HSFatigue：格×距離×激戦の度合い＋移動）・調子・休み（GF は動かさない）。故障は無い
 		if not gf:
-			h.fatigue = HSU.mn(100.0, float(HSU.or_(h.get("fatigue"), 0.0)) + 18.0 + race.dist / 100.0 * 1.2 + (6.0 if race.get("grade") == "G1" else 0.0))
+			HSFatigue.after_race(h, race, sim.results, int(res.pos) - 1, x.get("travel"))
 			h.cond = float(HSU.or_(h.get("cond"), 0.0)) - 15.0
 			h.restUntil = wIdx + (5.0 + rng.int_(0, 4) if race.get("grade") == "G1" else 3.0 + rng.int_(0, 4))
 			h.lastRaceW = wIdx
-			if rng.chance(0.006 * (1.4 - float(HSU.or_(h.get("health"), 70.0)) / 100.0) * (1.0 + float(HSU.or_(h.get("fatigue"), 0.0)) / 60.0)):
-				var inj := HSHorse.injure(h, rng)
-				if h.get("owner") == "P": news("%sが%sのあと%sを発症。全治%s週。" % [h.name, HSRaces.label(race), inj.name, HSU.num(inj.weeks)], "warn")
 		if h.get("owner") == "P":
 			var owner := HSMath.round_js(money * 0.8 + 30.0 * IDX())
 			G.player.money += owner
@@ -850,31 +852,27 @@ static func promote(f: Dictionary, race: Dictionary, _res: Dictionary, wIdx: flo
 		promoted = HSU.stable_sort(promoted, func(a, b): return HSHorse.overall(a.pot) < HSHorse.overall(b.pot))
 		for h in promoted.slice(0, promoted.size() - 160): G.horses.erase(h.id)
 
-# 調教・放牧・故障の回復
+# 調教・放牧と疲労の回復（疲労は毎週、健康の値に応じて抜ける。レースに出た週も。HSFatigue）
 static func weekly_care(wIdx: float, report: Dictionary) -> void:
 	var raced := {}
 	for r in report.races:
 		for x in r.runners: raced[x.horse.id] = true
 	for h in all():
 		if h.get("loc") == "stable":
-			if h.get("injury"):
-				HSHorse.rest(h, rng); continue
-			if raced.has(h.id): continue
-			if h.get("owner") == "P":
-				var menu: String = auto_menu(h, wIdx) if (G.mode == "jockey" or h.get("auto") or not h.get("menu")) else h.menu
-				var tr := HSHorse.train(h, menu, rng, wIdx)
-				h.lastTrain = { menu = menu, time = tr.time, date = report.date }
-				if tr.injury: news("%sが調教中に%s。全治%s週。" % [h.name, tr.injury.name, HSU.num(tr.injury.weeks)], "warn")
-			else:
-				h.fatigue = HSU.mx(0.0, float(HSU.or_(h.get("fatigue"), 0.0)) - HSHorse.recover(h, 10.0))
-				h.cond = HSU.clamp(float(HSU.or_(h.get("cond"), 0.0)) * 0.8 + rng.normal(5.0, 15.0), -100.0, 100.0)
-				if rng.chance(0.0015 * (1.3 - float(HSU.or_(h.get("health"), 70.0)) / 100.0)): HSHorse.injure(h, rng)
+			if not raced.has(h.id):
+				if h.get("owner") == "P":
+					var menu: String = auto_menu(h, wIdx) if (G.mode == "jockey" or h.get("auto") or not h.get("menu")) else h.menu
+					var tr := HSHorse.train(h, menu, rng, wIdx)
+					h.lastTrain = { menu = menu, time = tr.time, date = report.date }
+				else:
+					h.cond = HSU.clamp(float(HSU.or_(h.get("cond"), 0.0)) * 0.8 + rng.normal(5.0, 15.0), -100.0, 100.0)
+			HSFatigue.weekly(h)
 		elif h.get("loc") == "farm":
 			HSHorse.rest(h, rng)
 static func auto_menu(h: Dictionary, wIdx: float) -> String:
-	var f: float = HSU.or_(h.get("fatigue"), 0.0)
-	if f >= 60: return "休養"
-	if f >= 40: return "軽め"
+	var st := HSFatigue.stage(h)
+	if st >= 3: return "休養"
+	if st >= 2: return "軽め"
 	var toRest: float = float(HSU.or_(h.get("restUntil"), 0.0)) - wIdx
 	if toRest > 2: return rng.pick(["プール", "軽め", "ウッド(馬なり)"])
 	if toRest > 0: return rng.pick(["坂路(強め)", "ウッド(強め)", "併せ馬"])
@@ -931,7 +929,7 @@ static func new_year(report: Dictionary) -> void:
 		if h.get("owner") == "P": continue
 		if h.get("loc") == "stable" or h.get("loc") == "farm":
 			var age: float = G.year - h.born
-			if (h.get("retireYear") and h.retireYear < G.year and age >= 2) or age >= 9 or (h.get("injury") and h.injury.get("severe") and age >= 4): G.horses.erase(h.id)
+			if (h.get("retireYear") and h.retireYear < G.year and age >= 2) or age >= 9: G.horses.erase(h.id)
 	for h in mine("mare"):
 		if G.year - h.born >= 23:
 			news("%sは繁殖を引退した。" % h.name, "info"); G.horses.erase(h.id)
@@ -1190,6 +1188,8 @@ static func migrate(g: Dictionary) -> void:
 		if not h.get("skills"): h.skills = []
 		# 騎手のゲームに放牧は無い（world.js と同じ）：前のセーブで放牧に出した馬は、次の週の頭に自動で入厩に戻す
 		if g.mode == "jockey" and h.get("parked"): h.erase("parked")
+		# 故障は無くなった（持ち主の仕様書「故障はなしにする」）：前のセーブで故障していた馬は治った扱い
+		if h.has("injury"): h.erase("injury")
 	for rc in HSU.or_(g.records.get("course"), {}).values():
 		if rc.get("rode") == null: rc.rode = HSU.truthy(rc.get("mine")) and g.mode == "jockey"
 	g.v = SAVE_VERSION

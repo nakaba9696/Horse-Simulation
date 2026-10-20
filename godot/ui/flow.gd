@@ -175,6 +175,20 @@ static func bot_ride(sim) -> Dictionary:
 			break
 	return HSSim.finish(sim)
 
+# 撮影の見本（--setup=fatigue）：疲労の段階が並ぶように、自分の馬と今週走る馬に疲労を置く（決まった値）。1頭目は先週フランスで走ったことにする
+static func demo_fatigue() -> void:
+	var vals := [62.0, 24.0, 81.0, 40.0, 8.0, 57.0, 18.0, 0.0, 77.0, 33.0]
+	var k := 0
+	for h in HSWorld.mine():
+		h.fatigue = vals[k % vals.size()]; k += 1
+	for c in HSWorld.cards():
+		for x in c.runners:
+			if x.horse.get("filler") or x.horse.get("owner") == "P": continue
+			x.horse.fatigue = vals[k % vals.size()]; k += 1
+	var mine := HSWorld.mine("stable")
+	if mine.size():
+		mine[0].at = "仏"; mine[0].lastRaceW = HSWorld.w_idx() - 1.0
+
 static func demo_arg() -> int:
 	for a in OS.get_cmdline_user_args():
 		if a == "--demo": return 0

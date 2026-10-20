@@ -7,8 +7,8 @@
   const isJ = () => HS.Jockey && HS.Jockey.isMode();
 
   const clsLabel = r => r.graded ? UI.gradeTag(r) : `<span class="chip">${r.cls === 'newcomer' ? '新馬' : r.cls === 'maiden' ? '未勝利' : r.cls === 'OP' ? 'OP' : '条件'}</span>`;
-  // 牧場にいる馬の一言（騎手のゲームに放牧は無い。持ち主の指摘 2026-10-17「放牧いらない」）：入厩前の若駒・故障の休養・前のセーブで放牧に出していた馬（World.migrate が戻す）
-  const farmNote = h => h.injury ? `牧場で休養（あと${h.injury.weeks}週）` : h.parked ? '牧場（次の週に入厩）' : '入厩前（2歳の4月から入厩）';
+  // 牧場にいる馬の一言（騎手のゲームに放牧は無い。持ち主の指摘 2026-10-17「放牧いらない」）：入厩前の若駒・前のセーブで放牧に出していた馬（World.migrate が戻す）
+  const farmNote = h => h.parked ? '牧場（次の週に入厩）' : '入厩前（2歳の4月から入厩）';
   const nextLabel = h => { const n = P.next(h); return !n ? `<span class="muted">${h.auto ? 'おまかせ' : '未定'}</span>` : n.entered ? `今週 <b>${e(R.label(n.race))}</b>` : `${n.label} <b>${e(n.name)}</b>`; };
 
   UI.programTab = function (h, st) {
@@ -17,7 +17,7 @@
     const rows = P.rows(h, o);
     const wIdx = W.wIdx();
     const head = `<div class="pg-head"><span>距離 <b>${h.distMin}〜${h.distMax}m</b></span><span>芝 ${K.mark(P.fitSurf(h, '芝'))} ダート ${K.mark(P.fitSurf(h, 'ダ'))}</span><span>脚質 <b>${e(H.styleText(h))}</b></span>
-      ${h.loc === 'stable' ? `<span>調子 ${UI.condMark(h, wIdx)}</span>` : `<span class="muted">${h.loc === 'farm' ? farmNote(h) : ''}</span>`}
+      ${h.loc === 'stable' ? `<span>調子 ${UI.condMark(h, wIdx)}</span><span>疲労 ${UI.fatigueMark(h)}</span>` : `<span class="muted">${h.loc === 'farm' ? farmNote(h) : ''}</span>`}
       <span class="next">次走：${nextLabel(h)}</span></div>
       ${h.auto ? `<div class="panel small mt row"><span class="grow">おまかせ中：出るレースは自動で決まる。表から選ぶと、おまかせは切れる。</span><button class="btn sm" data-act="auto" data-id="${h.id}">おまかせを切る</button></div>` : ''}`;
     const filters = `<div class="u-segs mt">${K.seg('表示', [['ok', '出られるレース'], ['all', '出られない重賞も']], o.show, 'pg-set', 'pshow')}
@@ -70,12 +70,12 @@
       const fh = T.fhBoth(h, wIdx);
       return `<tr data-act="horse" data-id="${h.id}"${k === 0 ? ' data-autofocus' : ''}><td class="th">${UI.thumb(h)}</td>
         <td><div class="nm">${e(h.name)} ${UI.histMark(h)}${h.auto ? ' <span class="chip">おまかせ</span>' : ''}</div><div class="sub">${UI.age(h)}・${H.className(H.classOf(h), G.year)}・${h.starts || 0}戦${h.wins || 0}勝・${U.money(h.prize || 0)}</div>${UI.reachLine(h)}</td>
-        <td>${h.loc === 'stable' ? (h.injury ? `<span style="color:var(--bad)">故障（あと${h.injury.weeks}週）</span>` : UI.condMark(h, wIdx)) : `<span class="muted small">${farmNote(h)}</span>`}</td>
+        <td>${h.loc === 'stable' ? UI.condMark(h, wIdx) : `<span class="muted small">${farmNote(h)}</span>`}</td><td>${h.loc === 'stable' ? UI.fatigueMark(h) : ''}</td>
         <td>${K.fh(fh.turf, fh.dirt)}</td>
         <td class="next small">${nextLabel(h)}</td>
         <td class="r"><button class="btn sm gold" data-act="program" data-id="${h.id}">番組表</button></td></tr>`;
     };
-    const tbl = list => `<div class="u-tbox"><table class="u-t st-t"><tr><th></th><th>馬</th><th>調子</th><th>${T.FH_NAME}（いま）</th><th>次走</th><th></th></tr>${list.map(row).join('')}</table></div>`;
+    const tbl = list => `<div class="u-tbox"><table class="u-t st-t"><tr><th></th><th>馬</th><th>調子</th><th>疲労</th><th>${T.FH_NAME}（いま）</th><th>次走</th><th></th></tr>${list.map(row).join('')}</table></div>`;
     return K.band({ icon: 'stable', title: '厩舎', sub: '馬を押すと能力、「番組表」で次に出るレースを選ぶ', right: K.stat('お手馬', `${T.ownCount()} / ${T.MAX_OWN}`) + K.stat('毎月の費用', U.money(W.monthlyCost())) })
       + (inStable.length ? tbl(inStable) : '<div class="u-empty">入厩している馬がいません。馬の店で買った馬は、2歳の4月から自動で入厩します。</div>')
       + (farm.length ? `<h2 class="sec">牧場<span class="r">入厩前の馬</span></h2>${tbl(farm)}` : '');

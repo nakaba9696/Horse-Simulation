@@ -21,11 +21,10 @@
   ];
   T.gap = (h, wIdx) => h.lastRaceW != null && wIdx != null ? wIdx - h.lastRaceW : null;
   T.condLevel = function (h, wIdx) {
-    const f = h.fatigue || 0, c = h.cond || 0, gap = T.gap(h, wIdx);
-    if (f >= 60) return 7;
-    if (f >= 45) return 6;
-    if (f >= 32) return 5;
-    if (f >= 20) return 4;
+    // 疲労の段階（js/core/fatigue.js）：疲れ・疲れが濃い・使いすぎはそのまま、軽い疲れは「普通」まで
+    const st = HS.Fatigue.stage(h), c = h.cond || 0, gap = T.gap(h, wIdx);
+    if (st >= 2) return st + 3;
+    if (st === 1) return 4;
     if (gap != null && gap >= 24) return 0;
     if (gap != null && gap >= 12) return 1;
     if (c >= 15) return 2;
@@ -131,7 +130,7 @@
     const h = W.horse(id);
     if (!h || h.owner !== 'P') return '持ち馬ではない';
     if (!race.graded && !(race.cls && race.region === 'JRA')) return '予約できるのは重賞と条件戦だけ';
-    const why = T.staticIneligible(h, race, race.year) || (race.graded ? null : HS.Races.ineligible(Object.assign({}, h, { injury: null }), race, race.year)); // 条件戦は勝ち星の条件もいまの成績で見る（番組表 js/core/program.js）
+    const why = T.staticIneligible(h, race, race.year) || HS.Fatigue.travelWhy(h, race) || (race.graded ? null : HS.Races.ineligible(h, race, race.year)); // 条件戦は勝ち星の条件もいまの成績で見る（番組表 js/core/program.js）。連闘で別の国へは予約できない
     if (why) return why;
     G.reserve = G.reserve || [];
     if (G.reserve.some(x => x.id === id && x.y === race.year && x.m === race.month && x.w === race.week)) return 'その週はもう予約している';

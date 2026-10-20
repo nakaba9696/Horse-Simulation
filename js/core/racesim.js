@@ -20,6 +20,23 @@
     return dist / (dist / v + 2.4);
   };
 
+  // 疲労の段階と下げ（持ち主の仕様書 docs/SPEC.md「疲労」。数の表は docs/BALANCE.md の「疲労」）
+  // at＝段階の境目（疲労 0〜100）。pen＝段階ごとの強さの下げ（点。1点≒2000mで1馬身）。
+  // 強い馬は下げが小さい：能力の重み付きの値（S.power の base）が strong（総合力61ほど）から top（総合力85）へ上がるほど、keep（2割）まで縮む
+  S.FATIGUE = { at: [15, 35, 55, 75], pen: [0, 1.5, 4, 8, 13], strong: 86, top: 104.3, keep: 0.2 };
+  S.fatigueStage = function (fat) {
+    const at = S.FATIGUE.at;
+    let st = 0;
+    while (st < at.length && fat >= at[st]) st++;
+    return st;
+  };
+  S.fatiguePen = function (fat, a) {
+    const F = S.FATIGUE;
+    const p = F.pen[S.fatigueStage(fat)];
+    if (!p) return 0;
+    return p * U.clamp(1 - (a - F.strong) / (F.top - F.strong) * (1 - F.keep), F.keep, 1);
+  };
+
   // 1頭の、このレースでの強さ（点）を計算する。内訳も返す（人気・説明に使う）
   S.power = function (horse, race, wIdx, ctx) {
     const c0 = H.cur(horse, wIdx);
@@ -37,7 +54,8 @@
     const groundAdj = gl * ((horse.apt.heavy || 50) - 55) / 45 * 1.3;
     // 休み明け（12週以上あいた）は少し割り引く（鉄砲駆けの馬は別に足す）
     const layoff = horse.lastRaceW != null && wIdx != null && wIdx - horse.lastRaceW >= 12 ? 1.2 : 0;
-    const condAdj = (horse.cond || 0) / 100 * 3 - (horse.fatigue || 0) * 0.05 - layoff;
+    // 疲労の下げ（段階ごと。強い馬ほど小さい）。ctx.travel＝このレースへの移動の疲れ（国が変わるとき。js/core/fatigue.js）
+    const condAdj = (horse.cond || 0) / 100 * 3 - S.fatiguePen((horse.fatigue || 0) + ((ctx && ctx.travel) || 0), a) - layoff;
     const jockAdj = ctx && ctx.jockey ? (ctx.jockey.skill - 75) * 0.06 : 0;
     const wtAdj = ctx && ctx.weight ? -(ctx.weight - 56) * 1.4 : 0;
     const skillAdj = S.skillAdj(horse, race, wIdx, ctx);

@@ -235,7 +235,7 @@ static func from_historic(d: Dictionary, id: Variant) -> Dictionary:
 		h.skills = sk
 	else:
 		h.skills = hist_skills(d, rng)
-	h.bonus = {}; h.cond = 0.0; h.fatigue = 0.0; h.injury = null
+	h.bonus = {}; h.cond = 0.0; h.fatigue = 0.0
 	h.wins = 0.0; h.starts = 0.0; h.w2 = 0.0; h.w3 = 0.0; h.earn = 0.0; h.prize = 0.0; h.gradedWins = []; h.results = []
 	h.restUntil = 0.0; h.retireYear = HSU.or_(d.get("retire"), d.born + 5.0)
 	for k in ["turf", "dirt", "heavy"]:
@@ -366,22 +366,23 @@ static func make_filler(rng: HSRng, opts: Dictionary) -> Dictionary:
 	h.distMin = HSU.mx(1000.0, dist - 400.0 + rng.int_(0, 2) * 100.0); h.distMax = dist + 200.0 + rng.int_(0, 4) * 100.0
 	h.style = rng.weighted(STYLES, func(s): return _STYLE_W[s]); h.kire = float(rng.int_(2, 7)); h.skills = []
 	h.growth = "普通"; h.peakShift = 0.0; h.health = 60.0 + rng.int_(0, 30)
-	h.bonus = {}; h.cond = rng.normal(0.0, 30.0); h.fatigue = 0.0; h.injury = null
+	h.bonus = {}; h.cond = rng.normal(0.0, 30.0); h.fatigue = 0.0
 	h.wins = 0.0; h.starts = 0.0; h.w2 = 0.0; h.w3 = 0.0; h.earn = 0.0; h.prize = 0.0; h.gradedWins = []; h.results = []
 	return split_surface(h, rng)
 
-# 調教のメニュー。gain＝伸びる能力、fat＝疲れ、cond＝調子への効き、risk＝故障の危険
+# 調教のメニュー。gain＝伸びる能力、fat＝きつさ（調子への効き方。負は休ませる＝疲労が余分に抜ける）、cond＝調子への効き
+# 疲労はレースでだけたまる（HSFatigue）。故障は無い（持ち主の仕様書「故障はなしにする」）
 const MENUS := {
-	"坂路(強め)": { gain = { spd = 0.3, dspd = 0.3, slope = 0.35 }, fat = 16.0, cond = 14.0, risk = 1.4, course = "坂路" },
-	"坂路(馬なり)": { gain = { spd = 0.12, dspd = 0.12, slope = 0.15 }, fat = 8.0, cond = 8.0, risk = 0.6, course = "坂路" },
-	"ウッド(強め)": { gain = { sta = 0.35, spd = 0.2 }, fat = 15.0, cond = 14.0, risk = 1.3, course = "ウッド" },
-	"ウッド(馬なり)": { gain = { sta = 0.15, spd = 0.1 }, fat = 7.0, cond = 8.0, risk = 0.5, course = "ウッド" },
-	"併せ馬": { gain = { guts = 0.4, spd = 0.1, dspd = 0.1 }, fat = 17.0, cond = 16.0, risk = 1.4, course = "ウッド" },
-	"ダート": { gain = { dspd = 0.3, dsta = 0.3, slope = 0.15 }, fat = 10.0, cond = 8.0, risk = 0.8, course = "ダート" },
-	"プール": { gain = { sta = 0.15, dsta = 0.15 }, fat = 2.0, cond = 4.0, risk = 0.1, course = "プール" },
-	"ゲート練習": { gain = { mind = 0.4 }, fat = 3.0, cond = 2.0, risk = 0.1, course = "ゲート" },
-	"軽め": { gain = {}, fat = -6.0, cond = 3.0, risk = 0.2, course = "軽め" },
-	"休養": { gain = {}, fat = -18.0, cond = -4.0, risk = 0.0, course = "休養" },
+	"坂路(強め)": { gain = { spd = 0.3, dspd = 0.3, slope = 0.35 }, fat = 16.0, cond = 14.0, course = "坂路" },
+	"坂路(馬なり)": { gain = { spd = 0.12, dspd = 0.12, slope = 0.15 }, fat = 8.0, cond = 8.0, course = "坂路" },
+	"ウッド(強め)": { gain = { sta = 0.35, spd = 0.2 }, fat = 15.0, cond = 14.0, course = "ウッド" },
+	"ウッド(馬なり)": { gain = { sta = 0.15, spd = 0.1 }, fat = 7.0, cond = 8.0, course = "ウッド" },
+	"併せ馬": { gain = { guts = 0.4, spd = 0.1, dspd = 0.1 }, fat = 17.0, cond = 16.0, course = "ウッド" },
+	"ダート": { gain = { dspd = 0.3, dsta = 0.3, slope = 0.15 }, fat = 10.0, cond = 8.0, course = "ダート" },
+	"プール": { gain = { sta = 0.15, dsta = 0.15 }, fat = 2.0, cond = 4.0, course = "プール" },
+	"ゲート練習": { gain = { mind = 0.4 }, fat = 3.0, cond = 2.0, course = "ゲート" },
+	"軽め": { gain = {}, fat = -6.0, cond = 3.0, course = "軽め" },
+	"休養": { gain = {}, fat = -18.0, cond = -4.0, course = "休養" },
 }
 const BONUS_CAP := 8.0
 
@@ -396,18 +397,16 @@ static func train(horse: Dictionary, menu_name: String, rng: HSRng, w_idx: float
 		var room := HSU.mx(0.0, BONUS_CAP - c0) / BONUS_CAP
 		horse.bonus[k] = c0 + m.gain[k] * growth_room * room * (0.6 + rng.next() * 0.8)
 	var fat_before: float = HSU.or_(horse.get("fatigue"), 0.0)
-	horse.fatigue = HSU.clamp(fat_before + m.fat * (0.8 + rng.next() * 0.4) - recover(horse, 6.0), 0.0, 100.0)
+	var ease: float = m.fat * (0.8 + rng.next() * 0.4)
+	if ease < 0 and fat_before > 0: horse.fatigue = HSU.mx(0.0, fat_before + ease * REST_K)
 	var dc: float = m.cond * (1.0 - fat_before / 120.0) - fat_before * 0.25 + rng.normal(0.0, 8.0)
 	if m.fat < 0: dc += 6.0
 	horse.cond = HSU.clamp(float(HSU.or_(horse.get("cond"), 0.0)) * 0.85 + dc, -100.0, 100.0)
 	horse.trainWeeks = float(HSU.or_(horse.get("trainWeeks"), 0.0)) + 1.0
-	var injury = null
-	var riskP: float = m.risk * 0.004 * (1.0 + fat_before / 40.0) * (1.4 - float(HSU.or_(horse.get("health"), 70.0)) / 100.0)
-	if rng.chance(riskP): injury = injure(horse, rng)
 	var time = null
 	var c := cur(horse, w_idx)
 	var sp: float = c.dspd if m.course == "ダート" else HSU.mx(c.spd, c.dspd)
-	var ability: float = (sp * 2.0 + c.slope) / 3.0 + (float(HSU.or_(horse.get("kire"), 4.0)) - 4.5) * 0.8 + horse.cond * 0.04 - horse.fatigue * 0.03
+	var ability: float = (sp * 2.0 + c.slope) / 3.0 + (float(HSU.or_(horse.get("kire"), 4.0)) - 4.5) * 0.8 + horse.cond * 0.04 - float(HSU.or_(horse.get("fatigue"), 0.0)) * 0.03
 	if m.course == "坂路":
 		var hard := menu_name.contains("強め")
 		var t4 := 58.5 - ability * 0.075 - (1.6 if hard else 0.0) + rng.normal(0.0, 0.4)
@@ -421,34 +420,20 @@ static func train(horse: Dictionary, menu_name: String, rng: HSRng, w_idx: float
 	elif m.course == "ダート":
 		var t5 := 72.0 - ability * 0.08 + rng.normal(0.0, 0.5)
 		time = "ダート 5F %s" % HSMath.to_fixed(t5, 1)
-	return { menu = menu_name, time = time, injury = injury }
+	return { menu = menu_name, time = time }
 
-const INJURIES := [
-	{ name = "軽い捻挫", weeks = [3, 6], p = 5.0 }, { name = "ソエ", weeks = [4, 8], p = 4.0 }, { name = "球節炎", weeks = [8, 16], p = 3.0 },
-	{ name = "骨瘤", weeks = [6, 12], p = 2.0 }, { name = "屈腱炎", weeks = [36, 60], p = 1.0, severe = true }, { name = "骨折", weeks = [20, 40], p = 1.0, severe = true },
-]
-static func injure(horse: Dictionary, rng: HSRng) -> Dictionary:
-	var inj: Dictionary = rng.weighted(INJURIES, func(i): return i.p)
-	horse.injury = { name = inj.name, weeks = float(rng.int_(inj.weeks[0], inj.weeks[1])), severe = HSU.truthy(inj.get("severe")) }
-	horse.cond = HSU.mn(horse.cond, -30.0)
-	return horse.injury
+const REST_K := 0.5   # 休ませるメニュー（fat が負）で、疲労が余分に抜ける割合
 
-# 疲れの取れ方（健康が高いほど早い）。base＝健康70のときの1週の回復
-static func recover(horse: Dictionary, base: float) -> float:
-	return base * (0.65 + (horse.health if horse.get("health") != null else 70.0) / 200.0)
+# 牧場にいる週：疲労が多めに抜け（HSFatigue.REC.farm 倍）、調子がならされる
 static func rest(horse: Dictionary, rng: HSRng) -> void:
-	horse.fatigue = HSU.mx(0.0, float(HSU.or_(horse.get("fatigue"), 0.0)) - recover(horse, 22.0))
+	HSFatigue.weekly(horse, HSFatigue.REC.farm)
 	horse.cond = HSU.clamp(float(HSU.or_(horse.get("cond"), 0.0)) * 0.6 + rng.normal(0.0, 10.0), -60.0, 40.0)
-	if horse.get("injury"):
-		horse.injury.weeks -= 1.0
-		if horse.injury.weeks <= 0: horse.injury = null
 
 # 調教師のコメント（調子・疲れ・能力から）
 static func comment(horse: Dictionary, _w_idx: float = 0.0) -> String:
-	if horse.get("injury"): return "%sで休養中です。焦らず治しましょう。" % horse.injury.name
-	var f: float = HSU.or_(horse.get("fatigue"), 0.0); var c: float = HSU.or_(horse.get("cond"), 0.0)
-	if f >= 70: return "疲れが目立ちます。ここは無理をさせたくありません。"
-	if f >= 45: return "少し疲れが残っています。軽めにしておきたいところです。"
+	var st := HSFatigue.stage(horse); var c: float = HSU.or_(horse.get("cond"), 0.0)
+	if st >= 3: return "疲れが目立ちます。ここは無理をさせたくありません。"
+	if st >= 2: return "少し疲れが残っています。軽めにしておきたいところです。"
 	if c >= 60: return "動きは抜群。いつでも走れる状態です。"
 	if c >= 20: return "順調です。追い切りの反応も上々。"
 	if c > -20: return "可もなく不可もなく、といったところです。"

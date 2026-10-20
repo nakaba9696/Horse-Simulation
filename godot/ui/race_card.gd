@@ -1,6 +1,6 @@
 # 出走表（docs/UI.md「出走表（レースの前・パドック）」）：18頭が 1600×1000 の 1画面に収まる（持ち主「レース時の馬一覧もスクロールなしで全頭見れるようにしてね」）
 # 上の帯（1行）：レース番号・格・レース名（明朝）・競馬場・芝ダと距離・回り・天気・馬場・頭数
-# 表（1行 36px）：馬番（枠の色）・馬名・性齢・斤量・脚質の矢印（右ほど前。その馬の脚質が赤く光る）・騎手・人気（単勝）。自分の馬の行は左に金の線
+# 表（1行 36px）：馬番（枠の色）・馬名・性齢・斤量・脚質の矢印（右ほど前。その馬の脚質が赤く光る）・騎手・疲労の段階（HSFatigue。移動の疲れ込み）・人気（単勝）。自分の馬の行は左に金の線
 # 右：コース図（展開予想は出さない。持ち主の指摘 2026-10-17「プレイヤーに判断させたい」）・選んだ馬の札・「パドック」「ゲートイン」（金）・操作の案内。後ろはパドックを歩く馬（3D。選んだ馬をカメラが追う）
 # 操作：十字キー・矢印で選ぶ、A・Enter で決める、B・Esc で戻る（docs/UI.md 4）
 extends Node
@@ -22,6 +22,7 @@ var right: VBoxContainer
 var card: PanelContainer
 var card_name: Label
 var card_sub: Label
+var card_fat: Label             # 選んだ馬の疲労の段階（と、このレースへの移動の疲れ）
 var card_arrows: UiStyleArrows
 var card_stats: HFlowContainer   # 自分の馬の総合力と能力（段の色の札。docs/UI.md「能力の段」）
 var btn_paddock: Button
@@ -45,6 +46,8 @@ func _ready() -> void:
 		UiFlow.demo_gf_ride()   # 撮影の見本：グランドフェスティバルの出走表
 	elif UiFlow.current() == null and UiFlow.demo_arg() >= 0:
 		UiFlow.demo_ride(UiFlow.demo_arg())
+		if OS.get_cmdline_user_args().has("--setup=fatigue"):
+			UiFlow.demo_fatigue()   # 撮影の見本：疲労の段階が並ぶように
 	flow = UiFlow.current() != null
 	if flow:
 		race = UiFlow.desc_of(UiFlow.current().card)
@@ -219,7 +222,18 @@ func _stat(head: String, val: String) -> PanelContainer:
 	v.add_child(UiTheme.num_label(val, 17, UiTheme.IVORY))
 	return p
 
-const COLS := [["馬番", 44], ["馬名", 0], ["性齢", 52], ["斤量", 52], ["脚質", 118], ["騎手", 128], ["人気", 76]]
+const COLS := [["馬番", 44], ["馬名", 0], ["性齢", 52], ["斤量", 52], ["脚質", 118], ["騎手", 128], ["疲労", 84], ["人気", 76]]
+
+# 疲労の段階（週の流れの中の本当の出走表だけ。頭数合わせの馬・スペシャルホースは無し）。{ label, color, value, i, travel } か空
+func _fat_of(i: int) -> Dictionary:
+	if not flow or not race.has("card") or i >= race.card.runners.size(): return {}
+	var x: Dictionary = race.card.runners[i]
+	var h: Dictionary = x.horse
+	if h.get("filler") or h.get("legend"): return {}
+	var tv := float(HSU.or_(x.get("travel"), 0.0))
+	var v := HSFatigue.view(h, tv)
+	v.travel = tv
+	return v
 
 func _build_table() -> void:
 	table = PanelContainer.new()
@@ -295,8 +309,13 @@ func _build_table() -> void:
 		jl.custom_minimum_size.x = COLS[5][1]
 		jl.clip_text = true
 		h.add_child(jl)
+		var fv := _fat_of(i)
+		var fl := UiTheme.label(String(fv.label) if not fv.is_empty() else "－", 13, Color(String(fv.color)) if not fv.is_empty() else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
+		fl.custom_minimum_size.x = COLS[6][1]
+		fl.clip_text = true
+		h.add_child(fl)
 		var pv := HBoxContainer.new()
-		pv.custom_minimum_size.x = COLS[6][1]
+		pv.custom_minimum_size.x = COLS[7][1]
 		pv.add_theme_constant_override("separation", 4)
 		var pl := UiTheme.num_label(str(int(info[i].pop)), 17, UiTheme.GOLD_BRIGHT if int(info[i].pop) <= 3 else UiTheme.IVORY, HORIZONTAL_ALIGNMENT_RIGHT)
 		pl.custom_minimum_size.x = 24
@@ -353,6 +372,8 @@ func _build_right() -> void:
 	top.add_child(card_arrows)
 	card_sub = UiTheme.label("", 14, UiTheme.MUTED)
 	v.add_child(card_sub)
+	card_fat = UiTheme.label("", 14, UiTheme.MUTED)
+	v.add_child(card_fat)
 	card_stats = HFlowContainer.new()
 	card_stats.add_theme_constant_override("h_separation", 10)
 	card_stats.add_theme_constant_override("v_separation", 6)
@@ -425,6 +446,11 @@ func _select(i: int, animate: bool) -> void:
 	card_arrows.style = String(h.style)
 	card_arrows.queue_redraw()
 	card_sub.text = "%d番  %s%d  %s  %s  斤量%.1f  %s" % [int(h.num), h.sex, int(h.get("age", 4)), h.coat, h.style, float(h.weight), info[i].jockey]
+	var fv := _fat_of(i)
+	card_fat.visible = not fv.is_empty()
+	if not fv.is_empty():
+		card_fat.text = "疲労  %s（%d）%s" % [fv.label, int(fv.value), "　移動の疲れ +%d" % int(fv.travel) if float(fv.travel) > 0 else ""]
+		card_fat.add_theme_color_override("font_color", Color(String(fv.color)))
 	_fill_stats(i)
 	if animate:
 		card.modulate.a = 0.5

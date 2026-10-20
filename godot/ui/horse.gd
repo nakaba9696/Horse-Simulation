@@ -519,11 +519,10 @@ static func next_text(x: Dictionary) -> String:
 	if nx == null: return "おまかせ" if x.get("auto") else "未定"
 	return "今週 %s" % HSRaces.label(nx.race) if nx.get("entered") else "%s %s" % [nx.label, nx.name]
 
-# 疲労（いまは h.fatigue の 0〜100 をそのまま出す。段階は疲労の決まりの作り直しでそろえる）
+# 疲労の段階（HSFatigue：万全・軽い疲れ・疲れ・疲れが濃い・使いすぎ）と値
 static func fatigue_label(x: Dictionary, size := 14) -> Label:
-	var f := float(HSU.or_(x.get("fatigue"), 0.0))
-	var col := UiTheme.BAD if f >= 60.0 else (UiTheme.WARN if f >= 30.0 else UiTheme.MUTED)
-	return UiTheme.num_label("%d" % int(roundf(f)), size, col)
+	var v := HSFatigue.view(x)
+	return UiTheme.label("%s %d" % [String(v.label), int(v.value)], size, Color(String(v.color)))
 
 # レーティングの札（総合力に直した段の色で塗る：レーティング 110＝総合力 62）
 static func rating_chip(v: float, big := false) -> PanelContainer:

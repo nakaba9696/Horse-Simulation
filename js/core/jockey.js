@@ -147,7 +147,7 @@
     const g = G();
     for (const h of W.mine('farm')) {
       const age = g.year - h.born;
-      if (h.injury || h.parked || age < 2 || (age === 2 && g.month < 4)) continue;
+      if (h.parked || age < 2 || (age === 2 && g.month < 4)) continue;
       if (!W.toStable(h.id)) { if (h.auto == null) h.auto = true; W.news(`${h.name}が入厩した。`, 'info'); }
     }
     if (HS.Season) HS.Season.applyReserves(); // グランドフェスティバルの招待は12月4週のあと（W.nextWeek → HS.Season.gfStage）

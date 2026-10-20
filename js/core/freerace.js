@@ -130,7 +130,7 @@
   // ---------- 馬を写して、このレースの年に合わせる ----------
   const peakAge = h => { const p = H.PEAK[h.growth] || H.PEAK['普通']; return Math.round((p[0] + p[1]) / 2); };
   const fresh = (h, id) => {
-    h.id = id; h.cond = 0; h.fatigue = 0; h.injury = null; delete h.lastRaceW; h.results = (h.results || []).slice(-3);
+    h.id = id; h.cond = 0; h.fatigue = 0; delete h.at; delete h.lastRaceW; h.results = (h.results || []).slice(-3);
     return h;
   };
   // spec：{ kind: 'mine'|'hist'|'special', key: id か名前 }
