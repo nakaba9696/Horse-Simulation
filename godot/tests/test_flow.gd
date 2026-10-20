@@ -30,6 +30,18 @@ func run(t) -> void:
 					for x in oc.runners:
 						if x.get("rider") == "P": me = x; break
 				t.eq(me.horse.id if me else null, o.horseId, "flow: 依頼の馬に乗る（%d週目）" % wk)
+		var offers := HSOwners.offers()
+		# 自分の馬は番組表から出走登録する（1月の3歳はオープンが週に3つほどで、おまかせだけでは6週のうちに走らないことがある。
+		# 後ろの「戦績からリプレイ」の確かめに、自分の馬が自分で乗ったレースが要る）
+		if not own_rode:
+			for h in HSWorld.mine("stable"):
+				if HSWorld.entry_of(h.id) != null: continue
+				var row = null
+				for x in HSProgram.rows(h, {"weeks": 1}):
+					if x.can == "enter" and not (offers.size() and x.race.key == offers[0].raceKey): row = x; break
+				if row != null:
+					t.eq(HSWorld.enter(h.id, row.race.key), null, "flow: 番組表から自分の馬を出走登録（%d週目）" % wk)
+					break
 		var want := HSJockey.my_rides().size()
 		var nxt := UiFlow.begin_week()
 		t.eq(UiFlow.rides.size(), want, "flow: 騎乗の列は今週の騎乗と同じ数（%d週目）" % wk)

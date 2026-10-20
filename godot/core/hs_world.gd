@@ -472,11 +472,11 @@ static func filler_level(race: Dictionary, _year: float) -> float:
 		if race.get("age") == "2": return float({ G1 = 71.0, G2 = 68.0, G3 = 66.0 }.get(gr, 66.0))
 		if race.get("age") == "3" and m <= 6: return float({ G1 = 77.0, G2 = 74.0, G3 = 71.0 }.get(gr, 71.0))
 		return float({ G1 = 81.0, G2 = 78.0, G3 = 76.0 }.get(gr, 76.0))
-	# オープン（レースは OP 以上だけ）：2歳は6月 58 から月に1ずつ上がり、3歳は春は低め、古馬は G3 の少し下。リステッドは1上
+	# オープン（レースは OP 以上だけ）：2歳は6月 56 から月に1ずつ上がり、3歳は春は低め、古馬は G3 より6下。リステッドは1上
 	var L := 1.0 if race.get("listed") else 0.0
-	if race.get("age") == "2": return 52.0 + minf(12.0, maxf(6.0, m)) + L
-	if race.get("age") == "3": return (68.0 if m <= 4 else (70.0 if m <= 6 else 72.0)) + L
-	return 73.0 + L
+	if race.get("age") == "2": return 50.0 + minf(12.0, maxf(6.0, m)) + L
+	if race.get("age") == "3": return (64.0 if m <= 4 else (66.0 if m <= 6 else 69.0)) + L
+	return 70.0 + L
 
 # ---------- 週の流れ ----------
 # 1. prepare_week：今週のレースの出走表を作る。G は変えない（同じ状態なら何度呼んでも同じ）

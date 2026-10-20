@@ -386,11 +386,12 @@
       if (race.age === '3' && m <= 6) return { G1: 77, G2: 74, G3: 71 }[gr] || 71;
       return { G1: 81, G2: 78, G3: 76 }[gr] || 76;
     }
-    // オープン（レースは OP 以上だけ）：2歳は6月 58 から月に1ずつ上がり、3歳は春は低め、古馬は G3 の少し下。リステッドは1上
+    // オープン（レースは OP 以上だけ）：2歳は6月 56 から月に1ずつ上がり、3歳は春は低め、古馬は G3 より6下。リステッドは1上
+    // （仕様書の総合力の目安「46〜50 OP 馬相当」の馬が、ときどき勝てる強さ。docs/BALANCE.md「8-1」）
     const L = race.listed ? 1 : 0;
-    if (race.age === '2') return 52 + Math.min(12, Math.max(6, m)) + L;
-    if (race.age === '3') return (m <= 4 ? 68 : m <= 6 ? 70 : 72) + L;
-    return 73 + L;
+    if (race.age === '2') return 50 + Math.min(12, Math.max(6, m)) + L;
+    if (race.age === '3') return (m <= 4 ? 64 : m <= 6 ? 66 : 69) + L;
+    return 70 + L;
   };
 
   // ---------- 週を進める ----------
