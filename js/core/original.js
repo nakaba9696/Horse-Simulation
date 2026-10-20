@@ -1,26 +1,28 @@
 // オリジナルホース（騎手のゲーム・年代なし。持ち主の決定 2026-10-16）
 // 自分の馬を引退させると、牧場に残る（牡・牝それぞれ5頭まで）。引退した牡馬と牝馬を組み合わせて、オリジナルホース（仔）を作る。
 // 能力は両親の値をもとにばらつき、特殊能力は両親のもの（それぞれ最大4つ、合わせて最大8つ）から4つまで受け継ぐ（名馬の固有の能力も）。
-// トロフィーを手にした馬・グランドフェスティバルを勝った馬を親にすると、仔の能力にボーナスが付く
+// 引退したときに、手にしたトロフィーの数と種類で能力が上がる（持ち主の仕様書 2026-10-19。js/core/trophy.js の TR.points）。仔は両親の能力をもとに作るので、トロフィーを集めた親ほど良い仔になる
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const U = HS.U, H = HS.Horse, W = HS.World;
   const O = HS.Original = {};
   O.MAX_EACH = 5;       // 引退馬は牡・牝それぞれ5頭まで
   O.MAX_SKILLS = 4;     // 特殊能力の枠
-  O.BONUS_PER = 3;      // トロフィー・DC の勝ち1つあたりのボーナス（能力に足す）
+  O.BONUS_PER = 3;      // 前の版：トロフィー・GF の勝ち1つあたりの、仔へのボーナス（前のセーブの引退馬だけ。potUp の無い馬）
   O.BONUS_MAX = 12;
+  O.POT_MAX = 118;      // 能力の上限（仔を作るときと同じ）
 
   O.on = () => { const G = W.get(); return !!(G && G.eraless); };
   O.retired = sex => W.mine().filter(h => h.loc === 'retired' && (sex === '牝' ? h.sex === '牝' : h.sex !== '牝'));
 
-  // 親としてのボーナス：その馬で手にしたトロフィーと、グランドフェスティバルの勝ち（どの距離でも。前の名前ドリームクラシックも）
+  // 引退したときの能力の上がり：手にしたトロフィー（GF のトロフィーも）。by＝能力ごとの上がり、pts＝いちばん大きい上がり
   O.bonusOf = function (h) {
-    const G = W.get();
-    const tr = Object.entries(G.trophies || {}).filter(([id, t]) => !id.startsWith('gf:') && t.horse === h.name).length; // GF のトロフィーは下の GF の勝ちで数える（二重に数えない）
-    const dc = HS.Season.gfWins(h).length; // どの距離の GF でも数える
-    return { trophies: tr, dc, pts: Math.min(O.BONUS_MAX, (tr + dc) * O.BONUS_PER) };
+    const p = HS.Trophy.points(h);
+    return { trophies: p.n, by: p.by, pts: p.top };
   };
+  // 仔へのボーナス：前の版の引退馬（引退で能力が上がっていない馬）だけ。いまの引退馬は、上がった能力がそのまま仔の元になる
+  O.legacyBonus = h => (h && !h.potUp ? (h.parentBonus || 0) : 0);
+  O.childBonus = (s, m) => Math.min(O.BONUS_MAX, O.legacyBonus(s) + O.legacyBonus(m));
 
   // 引退：牡馬・牝馬は牧場に残る（せん馬は乗馬になる）
   O.retire = function (id) {
@@ -33,8 +35,11 @@
     if (h.gelding) { delete G.horses[id]; W.dirty(); W.news(`${h.name}は引退して乗馬になった。おつかれさま。`, 'info'); return { to: 'gone' }; }
     const b = O.bonusOf(h);
     h.loc = 'retired'; h.retiredY = G.year; h.auto = false; h.parentBonus = b.pts;
+    // トロフィーで能力が上がる（上がった分は potUp に残す）
+    h.potUp = {};
+    for (const k of H.STATS) { if (h.pot[k] == null) continue; const v = h.pot[k], up = Math.min(b.by[k] || 0, Math.max(0, O.POT_MAX - v)); h.potUp[k] = Math.round(up * 10) / 10; if (up > 0) h.pot[k] = Math.round((v + up) * 10) / 10; }
     W.dirty();
-    W.news(`${h.name}は引退し、牧場に残った。オリジナルホースの${h.sex === '牝' ? '母' : '父'}にできる${b.pts ? `（仔へのボーナス +${b.pts}）` : ''}。`, 'info');
+    W.news(`${h.name}は引退し、牧場に残った。オリジナルホースの${h.sex === '牝' ? '母' : '父'}にできる${b.pts ? `（トロフィー${b.trophies}つで能力が上がった。最大 +${b.pts}）` : ''}。`, 'info');
     return { to: 'retired' };
   };
   // 放す（牧場の枠を空ける）。放した馬は、また馬の店に並ぶことがある
@@ -67,7 +72,7 @@
     if (m.foalY === G.year) return { err: `${m.name}は今年もう仔を産んだ（来年また作れる）` };
     if (HS.Season && !HS.Season.canBuy()) return { err: `お手馬は${HS.Season.MAX_OWN}頭まで` };
     const rng = new U.RNG(U.hash(`orig:${G.seed}:${G.year}:${s.id}:${m.id}`));
-    const bonus = Math.min(O.BONUS_MAX, (s.parentBonus || 0) + (m.parentBonus || 0));
+    const bonus = O.childBonus(s, m); // 前の版の引退馬だけ（いまは引退で親の能力が上がっている）
     const pot = {};
     for (const k of H.STATS) {
       const a = (s.pot[k] || 70), b = (m.pot[k] != null ? m.pot[k] : a);

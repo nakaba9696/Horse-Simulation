@@ -241,16 +241,20 @@ static func mark_news() -> void:
 	var G = HSWorld.G
 	var n: Array = G.news
 	news_head = n[0] if n.size() else null
-	trophies0 = HSU.or_(G.get("trophies"), {}).keys()
+	trophies0 = HSTrophy.sig()   # 手にした馬ごと（2頭目からの馬も）
 	unlocked0 = HSU.or_(G.get("unlocked"), []).duplicate()
 
 # この週に手にしたトロフィー（[{id, label, horse, bonus}]）と、破ったスペシャルホースの名前
 static func week_trophies() -> Array:
 	var out: Array = []
-	var tr: Dictionary = HSU.or_(HSWorld.G.get("trophies"), {})
-	for id in tr:
-		if not trophies0.has(id):
-			out.append({"id": id, "label": HSTrophy.by()[id].label if HSTrophy.by().has(id) else id, "horse": tr[id].horse, "bonus": float(HSU.or_(tr[id].get("bonus"), 0.0))})
+	for k in HSTrophy.sig():
+		if trophies0.has(k): continue
+		var parts: PackedStringArray = String(k).split("|")
+		var id := parts[0]
+		for x in HSTrophy.holders(id):
+			if String(x.hid if x.hid else x.horse) == parts[1]:
+				out.append({"id": id, "label": HSTrophy.by()[id].label if HSTrophy.by().has(id) else id, "horse": x.horse, "bonus": float(x.bonus)})
+				break
 	return out
 
 static func week_beaten() -> Array:

@@ -62,13 +62,13 @@
     const sires = O.retired('牡'), dams = O.retired('牝');
     const ps = sires.find(h => h.id === st.osire), pd = dams.find(h => h.id === st.odam);
     const card = (h, role, on) => `<div class="card ${on ? 'sel' : ''}" data-act="orig-pick" data-role="${role}" data-id="${h.id}">${UI.thumb(h)}<div class="grow">
-        <div class="row"><span class="nm">${e(h.name)}</span>${h.hist ? UI.histMark(h) : ''}${h.parentBonus ? `<span class="chip crown">ボーナス +${h.parentBonus}</span>` : ''}${role === 'dam' && h.foalY === G.year ? '<span class="chip">今年は産んだ</span>' : ''}<button class="btn sm right" data-act="orig-release" data-id="${h.id}">放す</button></div>
+        <div class="row"><span class="nm">${e(h.name)}</span>${h.hist ? UI.histMark(h) : ''}${h.parentBonus ? `<span class="chip crown">${h.potUp ? `引退で能力 最大+${h.parentBonus}` : `ボーナス +${h.parentBonus}`}</span>` : ''}${role === 'dam' && h.foalY === G.year ? '<span class="chip">今年は産んだ</span>' : ''}<button class="btn sm right" data-act="orig-release" data-id="${h.id}">放す</button></div>
         <div class="sub">${h.starts || 0}戦${h.wins || 0}勝・${e(H.styleText(h))}・${H.distLabel(h.distMin, h.distMax)}</div>${potStats(h)}
         <div class="skills">${O.skillsOf(h).map(skillChip).join('')}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}</div></div>`;
     const cand = ps && pd ? O.candidates(ps, pd) : [];
-    const bonus = ps && pd ? Math.min(O.BONUS_MAX, (ps.parentBonus || 0) + (pd.parentBonus || 0)) : 0;
+    const bonus = ps && pd ? O.childBonus(ps, pd) : 0;
     return `<h2 class="sec">オリジナルホース<span class="r">お手馬 ${T.ownCount()}/${T.MAX_OWN}</span></h2>
-      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬・グランドフェスティバルを勝った馬を親にすると、仔の能力にボーナス。牝馬は1年に1頭。</div>
+      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬は、引退したときにトロフィーの数と種類で能力が上がるので、良い仔ができやすい。牝馬は1年に1頭。</div>
       ${ps && pd ? `<div class="panel gold mt"><b>${e(ps.name)} × ${e(pd.name)}</b>${bonus ? `<span class="chip crown" style="margin-left:6px">ボーナス +${bonus}</span>` : ''}
         <div class="small mt">受け継ぐ特殊能力の候補（${cand.length}つ${cand.length > O.MAX_SKILLS ? '。この中から4つ' : ''}）</div><div class="skills">${cand.map(skillChip).join('') || '<span class="small muted">なし</span>'}</div>
         <div class="row mt"><input id="orig-name" maxlength="12" placeholder="名前（空ならおまかせ）" class="grow"><button class="btn gold" data-act="orig-make">オリジナルホースを作る</button></div></div>`
@@ -98,7 +98,9 @@
   UI.condMark = (h, wIdx) => { const c = T.cond(h, wIdx != null ? wIdx : W.wIdx()); return `<span class="cmark" style="--c:${c.color}" title="調子"><i></i>${c.label}</span>`; };
   const condTag0 = UI.condTag;
   UI.condTag = h => isJ() ? UI.condMark(h) : condTag0(h);
-  UI.titleChips = h => (h.titles || []).map(l => `<span class="chip crown">👑 ${e(l)}</span>`).join('');
+  // 冠と、手にしたトロフィー（馬のデータから見られる。持ち主の仕様書 2026-10-19）
+  UI.trophyChips = h => (HS.Hall && W.get().eraless ? HS.Hall.trophiesOf(h) : []).map(t => `<span class="chip crown" title="${e(W.yLabel(t.y))}">🏆 ${e(t.label)}</span>`).join('');
+  UI.titleChips = h => (h.titles || []).map(l => `<span class="chip crown">👑 ${e(l)}</span>`).join('') + UI.trophyChips(h);
   UI.costOf = h => Math.round((h.loc === 'stable' ? 60 : h.loc === 'farm' ? 15 : 0) * U.priceIndex(W.get().year));
   // 成長の山を曲線で。横は年齢（1〜9歳）、縦は力の出し具合。●がいまの位置
   UI.growthCurve = function (h) {
@@ -133,7 +135,7 @@
         <div><div class="small muted">国内の順位</div><b>${rk && rk.pos ? `${rk.pos}位 <small class="muted">/ ${rk.n}頭</small>` : '－'}</b></div>
         <div><div class="small muted">調子</div>${UI.condMark(h, wIdx)}</div>
         <div><div class="small muted">成績</div><b>${h.starts || 0}戦${h.wins || 0}勝</b></div></div>
-      ${(h.titles || []).length ? `<div class="mt">${UI.titleChips(h)}</div>` : ''}
+      ${UI.titleChips(h) ? `<div class="mt">${UI.titleChips(h)}</div>` : ''}
       <div class="grrow mt"><div class="growth"><div class="small muted">成長の山（年齢）・●がいま</div>${bars}</div>
         ${!mine ? (() => { const hi = W.marketHistoric().findIndex(x => x.horse.id === h.id), fi = hi < 0 ? W.marketForeign().findIndex(x => x.horse.id === h.id) : -1; if (hi < 0 && fi < 0) return ''; const it = hi >= 0 ? W.marketHistoric()[hi] : W.marketForeign()[fi]; return `<div class="small"><div>馬の店の値段 <b>${U.money(it.price)}</b></div><button class="btn sm gold mt" data-act="buy" data-kind="${hi >= 0 ? 'hist' : 'fhist'}" data-i="${hi >= 0 ? hi : fi}">買う</button></div>`; })() : ''}
         ${mine ? `<div class="small"><div>総獲得賞金 <b>${U.money(h.prize || 0)}</b></div><div>値段 <b>${U.money(W.sellPrice(h))}</b></div><div>毎月の費用 <b>${U.money(UI.costOf(h))}</b></div></div>` : ''}</div>
@@ -360,12 +362,13 @@
             <div class="small">${e(g.note)}</div>${reach[g.id] ? `<div class="sp-reach small">リーチ：${reach[g.id].map(e).join('・')}</div>` : ''}
             <div class="small mt">${ms.map(d => `<a href="#" class="sp-nm ${un.includes(d.name) ? 'sp-got' : ''}" data-act="htext" data-name="${e(d.name)}">${e(d.name)}</a>`).join('・')}</div></details>`; }).join('')}</div>`;
     } else if (tab === 'trophy' && HS.Trophy) {
-      const tr = G.trophies || {};
-      const n = HS.Trophy.LIST.filter(t => tr[t.id]).length;
-      body = `<div class="small muted">勝ったレースの組み合わせで手にするトロフィー。${n} / ${HS.Trophy.LIST.length}</div>
-        <div class="list mt">${HS.Trophy.LIST.map(t => { const got = tr[t.id];
-          return `<div class="panel trophy ${got ? 'got' : ''}"><div class="row"><span class="cup">${got ? '🏆' : '🔒'}</span><b class="nm">${e(t.label)}</b><span class="right small muted">${got ? `${W.yLabel(got.y)}・${e(got.horse)}` : 'まだ'}</span></div>
-            <div class="small">${e(t.note)}</div></div>`; }).join('')}</div>`;
+      const TRx = HS.Trophy;
+      const n = TRx.LIST.filter(t => TRx.holders(t.id).length).length;
+      body = `<div class="small muted">勝ったレースの組み合わせなどで手にするトロフィー。手にした馬それぞれに付き、ボーナス賞金が入る。引退すると、手にしたトロフィーの数と種類で能力が上がる（オリジナルホースの親）。${n} / ${TRx.LIST.length}</div>
+        ${TRx.CATS.map(c => { const ts = TRx.LIST.filter(t => t.cat === c.id); if (!ts.length) return '';
+          return `<h2 class="sec">${e(c.label)}</h2><div class="list">${ts.map(t => { const hs = TRx.holders(t.id), got = hs.length > 0;
+            return `<div class="panel trophy ${got ? 'got' : ''}"><div class="row"><span class="cup">${got ? '🏆' : '🔒'}</span><b class="nm">${e(t.label)}</b><span class="right small muted">${got ? hs.map(x => `${W.yLabel(x.y)}・${e(x.horse)}`).join('／') : 'まだ'}</span></div>
+              <div class="small">${e(TRx.noteOf(t))}</div></div>`; }).join('')}</div>`; }).join('')}`;
     } else if (tab === 'hall') {
       const hall = (G.records.hall || []).slice().sort((a, b) => b.titles.length - a.titles.length || b.g1 - a.g1);
       body = UI.hallOwn() + `<h2 class="sec">冠を手にした馬</h2>` + (hall.length ? `<div class="small muted">冠（勝ったレースの組み合わせで付く称号）を手にした自分の馬。</div><div class="list mt">${hall.map(x => `<div class="panel"><div class="row"><b class="nm">${e(x.name)}</b><span class="small muted">${x.born}年生 ${x.sex}</span><span class="right small">${x.starts}戦${x.wins}勝・G1 ${x.g1}勝</span></div><div class="mt">${x.titles.map(l => `<span class="chip crown">👑 ${e(l)}</span>`).join('')}</div><div class="small muted">総獲得賞金 ${U.money(x.prize)}・${W.yLabel(x.since)}に冠</div></div>`).join('')}</div>` : '<div class="panel empty">まだ冠を手にした馬はいません。</div>');
@@ -447,7 +450,7 @@
         App.closeModal();
         App.inRace = false;
       }
-      const G0 = W.get(), tr0 = Object.keys(G0.trophies || {}), un0 = (G0.unlocked || []).slice();
+      const G0 = W.get(), tr0 = HS.Trophy ? HS.Trophy.sig() : [], un0 = (G0.unlocked || []).slice();
       const report = W.finishWeek(played);
       W.lastReport = report;
       App.save();
@@ -458,9 +461,9 @@
       if (UI.ownersAfterWeek) await UI.ownersAfterWeek(report); // 馬主のひと言とご褒美（js/ui/ownersui.js）
       // トロフィーを手にした・スペシャルホースを破った：大きな見せ場
       const G1 = W.get();
-      for (const id of Object.keys(G1.trophies || {}).filter(k => !tr0.includes(k))) {
-        const t = HS.Trophy && HS.Trophy.BY[id], got = G1.trophies[id];
-        if (t) await UI.celebrate({ kind: 'trophy', kicker: 'トロフィーを手にした', title: t.label, name: got.horse, sub: got.bonus ? `ボーナス賞金 ${U.money(got.bonus)}` : '' });
+      for (const k of (HS.Trophy ? HS.Trophy.sig() : []).filter(k => !tr0.includes(k))) {
+        const [id, who] = k.split('|'), t = HS.Trophy.BY[id], got = HS.Trophy.holders(id).find(x => (x.hid || x.horse) === who);
+        if (t && got) await UI.celebrate({ kind: 'trophy', kicker: 'トロフィーを手にした', title: t.label, name: got.horse, sub: got.bonus ? `ボーナス賞金 ${U.money(got.bonus)}` : '' });
       }
       const beat = (G1.unlocked || []).filter(n => !un0.includes(n));
       if (beat.length) await UI.celebrate({ kind: 'special', kicker: 'スペシャルホースを破った', title: beat.join('・'), sub: `${beat.join('・')}が馬の店に並ぶようになった` });

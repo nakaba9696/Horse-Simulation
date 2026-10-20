@@ -9,12 +9,29 @@ const lines = [];
 lines.push('# スペシャルホースの一覧', '');
 lines.push('`node tools/special_list.js` で `js/core/special.js` から作る（手で直さない）。', '');
 lines.push('1989年より前に走り終えた名馬が、条件のグループに入る。自分の馬がグループの条件にリーチをかける（あと1勝でそろう）と、そのグループの名馬が最後のレースに出てくる（1レースに最大4頭。大レースのグループからは強い順に2頭まで）。勝つと、出てきた名馬が馬の店に並ぶ。1頭が出てくる条件は1つだけ。（）の中は生年・国・競走生活の年・通算の戦績。年代・戦績・主な勝鞍・解説は data/profiles.js。', '');
-const combos = SP.GROUPS.filter(g => !g.race && SP.members(g).length);
+// ---- トロフィーと隠し馬の紐づけ（data/trophies.js・data/trophy_horses.js）。持ち主が見て直す表 ----
+const TR = HS.Trophy, RULE = TR.RULE;
+const th = HS.DATA.trophyHorses || {};
+lines.push('## トロフィーと隠し馬', '');
+lines.push('トロフィー（`data/trophies.js`）にリーチをかけて最後のレースに出ると、紐づけた隠し馬（`data/trophy_horses.js`）が出てくる。隠し馬は手持ちでない最低人気の馬と入れ替わる。勝つと店に並び、そのあとも、またそのトロフィーにリーチをかけたときだけ出てくる（自分のお手馬になっている間は出ない）。隠し馬は1989年より前に走り終えた馬だけ（持ち主の決定 2026-10-19）。直すときは `data/trophy_horses.js` の名前と理由を書き換える。', '');
+lines.push(`お金は難しさ（1〜6）で決まる（${RULE.TIER_MONEY.slice(1).map((m, i) => `${i + 1}：${HS.U.money(Math.round(m * HS.U.priceIndex() / 10) * 10)}`).join('・')}）。引退したときの能力の上がりは、トロフィーごとに「上がる能力」に ${RULE.TIER_PTS.slice(1).join('・')}（難しさ1〜6）、ほかの能力にその半分（1つの能力は ${RULE.CAP} まで）。`, '');
+lines.push(`ワンダーホースの着差：勝ったレースで2着につけた着差（馬身）を足す。1レースは ${RULE.WONDER_PER_RACE} 馬身まで（大差は ${RULE.WONDER_PER_RACE} 馬身）。GF は数えない。インモータルロード：G1 に出たときだけ数え、${RULE.IMMORTAL_STREAK} 回続けて勝つ（G1 で負けると0から。GF は数えない）。`, '');
+for (const c of TR.CATS) {
+  const ts = TR.LIST.filter(t => t.cat === c.id);
+  if (!ts.length) continue;
+  lines.push(`### ${c.label}`, '', '| トロフィー | 条件 | 難しさ | お金 | 引退で大きく上がる能力 | 出てくる隠し馬（理由） |', '|---|---|---|---|---|---|');
+  for (const t of ts) {
+    const hs = c.id === 'gf' ? `GF の担当の伝説級（${HS.Season.gfLegends(t.gf).map(d => d.name).join('・') || 'なし'}）` : (th[t.id] || []).map(x => `${x.name}（${x.why}）`).join('、') || '（いない）';
+    lines.push(`| ${t.label} | ${t.note} | ${t.tier} | ${HS.U.money(TR.money(t))} | ${t.focus.map(k => HS.Horse.STAT_LABEL[k]).join('・')} | ${hs} |`);
+  }
+  lines.push('');
+}
+const combos = SP.GROUPS.filter(g => !g.race && !g.trophy && SP.members(g).length);
 const races = SP.GROUPS.filter(g => g.race && SP.members(g).length).sort((a, b) => a.at - b.at);
-lines.push(`スペシャルホース ${SP.list().length}頭・条件の組み合わせのグループ ${combos.length}・大レースのグループ ${races.length}`, '');
+lines.push(`スペシャルホース ${SP.list().length}頭・トロフィー ${TR.LIST.length}（隠し馬のいるもの ${SP.GROUPS.filter(g => g.trophy && SP.members(g).length).length}）・条件の組み合わせのグループ ${combos.length}・大レースのグループ ${races.length}`, '');
 const yr = d => `${d.born}年生`;
 const row = d => `${d.name}（${yr(d)}${d.country ? '・' + d.country : ''}${d.years ? '・' + d.years : ''}${d.record ? '・' + d.record : ''}）`;
-lines.push('## 条件の組み合わせのグループ', '');
+lines.push('## 条件の組み合わせのグループ（トロフィーに当たらないもの）', '');
 for (const g of combos) {
   const ms = SP.members(g);
   lines.push(`### ${g.label}（${ms.length}頭）`, '', `条件：${g.note}`, '', ms.map(row).join('、'), '');

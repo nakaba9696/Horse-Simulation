@@ -445,6 +445,9 @@
     // 出走取消・重複の整理
     const seen = new Set();
     entr = entr.filter(e => e.horse && !seen.has(e.horse.id) && seen.add(e.horse.id));
+    // スペシャルホース（隠し馬）は、出走表ができてから手持ちでない最低人気の馬と入れ替わる（持ち主の仕様書 2026-10-19）
+    const legends = entr.filter(e => e.legend);
+    if (legends.length) entr = entr.filter(e => !e.legend);
     // 地方：JRA 所属は7頭まで
     const max = R.maxField(race);
     entr.sort((a, b) => ((b.legend ? 1 : 0) - (a.legend ? 1 : 0)) || (R.priority(b.horse, race, year, r) - R.priority(a.horse, race, year, r))); // スペシャルホースは必ず出る
@@ -467,6 +470,7 @@
       f.local = race.region === '地方' && !foreign;
       runners.push({ horse: f, jockey: null });
     }
+    if (legends.length) W.swapLegends(race, runners, legends, wIdx);
     // 騎手：プレイヤーの指名 → 史実馬の主戦 → 残りを強い馬から
     const taken = new Set(runners.filter(x => x.jockey).map(x => x.jockey.name));
     for (const x of runners) {
@@ -499,6 +503,17 @@
     return { race, runners, excluded };
   };
 
+  // スペシャルホースを、手持ちでない馬のうち人気の見込み（W.setOdds の見積もりから運の揺れを除いたもの）がいちばん低い馬と入れ替える。
+  // 入れ替える馬がいなければ足す
+  W.popEstimate = (h, race, wIdx) => S.power(h, race, wIdx).total + (h.hist && h.gradedWins.length ? 1.5 : 0);
+  W.swapLegends = function (race, runners, legends, wIdx) {
+    for (const lg of legends) {
+      const x = { horse: lg.horse, jockey: null, mine: false, legend: true };
+      let low = -1, lv = Infinity;
+      runners.forEach((r, i) => { if (r.mine || r.legend) return; const v = W.popEstimate(r.horse, race, wIdx); if (v < lv) { lv = v; low = i; } });
+      if (low < 0) runners.push(x); else runners[low] = x;
+    }
+  };
   // プレイヤーの騎乗を当てた出走表（人気つき）。騎乗が変わるまで使い回す
   W.cards = function () {
     const wk = W.prepareWeek();
@@ -560,6 +575,7 @@
     const y0 = G.year;
     W.nextWeek(report);
     if (HS.Jockey && G.year !== y0) HS.Jockey.yearEnd(y0);
+    if (HS.Trophy && G.year !== y0) HS.Trophy.yearEnd(y0); // 年末の表彰のトロフィー（ホールオブフェイム）
     if (HS.Jockey) HS.Jockey.weekStart();
     G.rngState = Math.floor(rng.next() * 4294967296);
     G.lastWeek = { date: report.date, races: report.races.map(r => W.slimResult(r)) };
@@ -684,6 +700,7 @@
         }
       }
     }
+    if (G.eraless && HS.Trophy) HS.Trophy.afterRace(race, sim); // 着差の合計・G1 の連勝のトロフィー（js/core/trophy.js）
     if (G.eraless && HS.Special) HS.Special.afterRace(race, sim);
     // 記録（G1 は全部、ほかの重賞は勝ち馬だけ）
     if (race.graded) {

@@ -343,14 +343,14 @@
     // ---------- 海外（米・加・豪・香港・UAE・サウジ・星） ----------
     'メイダン': {
       turf: [
-        { id: '周回', lap: 2400, straight: 450, use: [1800, 2410],
+        { id: '周回', lap: 2400, straight: 450, use: [1200, 1800, 2410, 3200],
           segs: [['S', 450], ['C', 162.3, 162.3, 180, 3], ['S', 690], ['C', 162.3, 162.3, 180, 1], ['S', 240]],
           elev: [[0, 0], [2400, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/uae/racecourse.html', 'https://www.jairs.jp/contents/courses/uae.html', 'https://en.wikipedia.org/wiki/Meydan_Racecourse'],
           note: '楕円の左回り。高低差はほとんど無い。2コーナー奥・4コーナー奥にシュート', approx: true },
       ],
       dirt: [
-        { id: '周回', lap: 1750, straight: 400, use: [1200, 2000],
+        { id: '周回', lap: 1750, straight: 400, use: [1200, 1900, 2000],
           segs: [['S', 400], ['C', 135.3, 135.3, 180, 3], ['S', 450], ['C', 135.3, 135.3, 180, 1], ['S', 50]],
           elev: [[0, 0], [1750, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/uae/racecourse.html', 'https://www.jairs.jp/contents/courses/uae.html', 'https://en.wikipedia.org/wiki/Meydan_Racecourse'],
@@ -415,7 +415,7 @@
           elev: [[0, 0], [1448.1, 0]],
           src: ['https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://en.wikipedia.org/wiki/Santa_Anita_Park', 'https://www.jra.go.jp/keiba/overseas/country/america/santaanitapark.html', 'https://www.jairs.jp/contents/courses/us.html'],
           note: 'ダートの内側の芝の楕円（9/10マイル）。コーナーにバンク。直線約300m', approx: true },
-        { id: 'ダウンヒル', lap: 2400, straight: 301.8, open: true, use: [2400],
+        { id: 'ダウンヒル', lap: 2400, straight: 301.8, open: true, use: [1300, 2400],
           segs: [['S', 301.8], ['C', 102.4, 102.4, 180, 3], ['S', 402.3], ['C', 102.4, 102.4, 180, 1], ['S', 402.3], ['C', 145, 145, 150, 2], ['C', 300, 300, -20, 2], ['S', 165.8]],
           elev: [[0, 0], [1749.9, 0], [2400, 7.9]],
           src: ['https://en.wikipedia.org/wiki/Santa_Anita_Park', 'https://www.jra.go.jp/keiba/overseas/country/america/santaanitapark.html', 'https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://www.americasbestracing.net/node/72405'],
@@ -431,7 +431,7 @@
     },
     'チャーチルダウンズ': {
       turf: [
-        { id: '周回', lap: 1407, straight: 372.5, use: [1600, 1900, 2200, 2400],
+        { id: '周回', lap: 1407, straight: 372.5, use: [1000, 1600, 1900, 2200, 2400],
           segs: [['S', 372.5], ['C', 91.6, 91.6, 180, 3], ['S', 415.6], ['C', 91.6, 91.6, 180, 1], ['S', 43.1]],
           elev: [[0, 0], [1407, 0]],
           src: ['https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://www.jairs.jp/contents/courses/us.html'],
@@ -459,7 +459,7 @@
           note: 'インナーターフ', approx: true },
       ],
       dirt: [
-        { id: '周回', lap: 2413.5, straight: 334.4, use: [1200, 1700, 1800, 2000, 2400, 3200],
+        { id: '周回', lap: 2413.5, straight: 334.4, use: [1200, 1600, 1700, 1800, 2000, 2400, 3200],
           segs: [['S', 334.4], ['C', 196, 196, 180, 3], ['S', 590.8], ['C', 196, 196, 180, 1], ['S', 256.9]],
           elev: [[0, 0], [2413.5, 0]],
           src: ['https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://en.wikipedia.org/wiki/Belmont_Park', 'https://www.jra.go.jp/keiba/overseas/country/america/belmontpark.html', 'https://www.jairs.jp/contents/courses/us.html'],
@@ -484,7 +484,7 @@
     },
     'サラトガ': {
       turf: [
-        { id: '外', lap: 1609, straight: 342.7, use: [],
+        { id: '外', lap: 1609, straight: 342.7, use: [2400],
           segs: [['S', 342.7], ['C', 115.8, 115.8, 180, 3], ['S', 440.6], ['C', 115.8, 115.8, 180, 1], ['S', 97.9]],
           elev: [[0, 0], [1609, 0]],
           src: ['https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://en.wikipedia.org/wiki/Saratoga_Race_Course', 'https://www.jairs.jp/contents/courses/us.html'],
@@ -496,7 +496,7 @@
           note: 'インナーターフ（障害も使う）', approx: true },
       ],
       dirt: [
-        { id: '周回', lap: 1810, straight: 348.7, use: [1800, 2000],
+        { id: '周回', lap: 1810, straight: 348.7, use: [1600, 1800, 2000],
           segs: [['S', 348.7], ['C', 144, 144, 180, 3], ['S', 452.6], ['C', 144, 144, 180, 1], ['S', 103.9]],
           elev: [[0, 0], [1810, 0]],
           src: ['https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://en.wikipedia.org/wiki/Saratoga_Race_Course', 'https://www.jairs.jp/contents/courses/us.html'],
@@ -542,7 +542,7 @@
     },
     'デルマー': {
       turf: [
-        { id: '周回', lap: 1407, straight: 280.1, use: [1600, 2200, 2400],
+        { id: '周回', lap: 1407, straight: 280.1, use: [1000, 1600, 2200, 2400],
           segs: [['S', 280.1], ['C', 95.9, 95.9, 180, 3], ['S', 402.3], ['C', 95.9, 95.9, 180, 1], ['S', 122.2]],
           elev: [[0, 0], [1407, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/america/delmar.html', 'https://en.wikipedia.org/wiki/Del_Mar_Fairgrounds'],
@@ -558,7 +558,7 @@
     },
     'キーンランド': {
       turf: [
-        { id: '周回', lap: 1507.5, straight: 362.7, use: [1600, 2200, 2400],
+        { id: '周回', lap: 1507.5, straight: 362.7, use: [1100, 1600, 2200, 2400],
           segs: [['S', 362.7], ['C', 95.9, 95.9, 180, 3], ['S', 452.6], ['C', 95.9, 95.9, 180, 1], ['S', 89.9]],
           elev: [[0, 0], [1507.5, 0]],
           src: ['https://en.wikipedia.org/wiki/Keeneland', 'https://en.wikipedia.org/wiki/2015_Breeders%27_Cup'],
@@ -723,7 +723,7 @@
     },
     'キングアブドゥルアジーズ': {
       turf: [
-        { id: '周回', lap: 1800, straight: 438, use: [2100],
+        { id: '周回', lap: 1800, straight: 438, use: [1351, 2100, 3000],
           segs: [['S', 438], ['C', 98.2, 98.2, 180, 3], ['S', 591.6], ['C', 98.2, 98.2, 180, 1], ['S', 153.6]],
           elev: [[0, 0], [1800, 0]],
           src: ['https://www.jairs.jp/contents/courses/saudi.html', 'https://en.wikipedia.org/wiki/King_Abdulaziz_Racetrack', 'https://ja.wikipedia.org/wiki/%E3%82%AD%E3%83%B3%E3%82%B0%E3%82%A2%E3%83%96%E3%83%89%E3%82%A5%E3%83%AB%E3%82%A2%E3%82%B8%E3%83%BC%E3%82%BA%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
@@ -748,12 +748,12 @@
     },
     'フレミントン': {
       turf: [
-        { id: '周回', lap: 2312, straight: 450, use: [3200],
+        { id: '周回', lap: 2312, straight: 450, use: [2000, 2500, 3200],
           segs: [['S', 450], ['C', 291.6, 225.3, 197.1, 3], ['S', 413.5], ['C', 192.5, 192.5, 162.9, 1], ['S', 12]],
           elev: [[0, 0], [2312, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/australia/flemington.html', 'https://www.jairs.jp/contents/courses/au.html', 'https://en.wikipedia.org/wiki/Flemington_Racecourse'],
           note: '洋梨型。3〜4コーナーのゆったりしたカーブ。ほぼ平坦。3200mはストレート6の上から発走し最初のコーナーまで約900m', approx: true },
-        { id: '直線', lap: 1200, straight: 1200, line: true, use: [],
+        { id: '直線', lap: 1200, straight: 1200, line: true, use: [1000, 1200],
           segs: [['S', 1200]],
           elev: [[0, 0], [1200, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/australia/flemington.html', 'https://en.wikipedia.org/wiki/Flemington_Racecourse'],
@@ -762,7 +762,7 @@
     },
     'ランドウィック': {
       turf: [
-        { id: '周回', lap: 2224, straight: 410, use: [1600],
+        { id: '周回', lap: 2224, straight: 410, use: [1200, 1400, 1600, 2000, 2400, 3200],
           segs: [['S', 410], ['C', 120, 120, 90, 3], ['S', 205], ['C', 120, 120, 90, 3], ['S', 530], ['C', 120, 120, 90, 1], ['S', 205], ['C', 120, 120, 90, 1], ['S', 120]],
           elev: [[0, 1], [400, 0], [1900, 0], [2224, 1]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/australia/randwick.html', 'https://www.jairs.jp/contents/courses/au.html', 'https://en.wikipedia.org/wiki/Randwick_Racecourse'],
@@ -771,7 +771,7 @@
     },
     'ローズヒル': {
       turf: [
-        { id: '周回', lap: 2048, straight: 408, use: [1200, 1400, 1450, 1500],
+        { id: '周回', lap: 2048, straight: 408, use: [1200, 1400, 1450, 1500, 2000],
           segs: [['S', 408], ['C', 110, 110, 90, 3], ['S', 170.4], ['C', 110, 110, 90, 3], ['S', 508], ['C', 110, 110, 90, 1], ['S', 170.4], ['C', 110, 110, 90, 1], ['S', 100]],
           elev: [[0, 0], [2048, 0]],
           src: ['https://www.jairs.jp/contents/courses/au.html', 'https://en.wikipedia.org/wiki/Rosehill_Gardens_Racecourse'],
@@ -780,7 +780,7 @@
     },
     'コーフィールド': {
       turf: [
-        { id: '周回', lap: 2080, straight: 367, use: [2400],
+        { id: '周回', lap: 2080, straight: 367, use: [1200, 1600, 2400],
           segs: [['S', 367], ['C', 153.4, 153.4, 120.9, 3], ['S', 418.2], ['C', 113.3, 113.3, 120, 2], ['S', 443.1], ['C', 135, 135, 119.1, 1], ['S', 10]],
           elev: [[0, 0], [367, 0], [1100, 1.5], [1300, 0], [2080, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/australia/caulfield.html', 'https://www.jairs.jp/contents/courses/au.html', 'https://en.wikipedia.org/wiki/Caulfield_Racecourse'],
@@ -804,7 +804,7 @@
     // ---------- 海外（欧州） ----------
     'ロンシャン': {
       turf: [
-        { id: '大回り', lap: 2750, straight: 533, use: [1600, 1850, 2000, 2100, 2400, 3000, 3100, 4000],
+        { id: '大回り', lap: 2750, straight: 533, use: [1600, 1850, 2000, 2100, 2400, 2800, 3000, 3100, 4000],
           segs: [['S', 533], ['C', 230, 230, 25, 3], ['S', 250], ['C', 133.9, 133.9, 165.3, 3], ['S', 993.9], ['C', 102.4, 102.4, 169.7, 1], ['S', 183.3]],
           elev: [[0, 0], [800, 0], [1400, 10], [2000, 0], [2750, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/france/longchamp.html', 'https://ja.wikipedia.org/wiki/%E3%83%91%E3%83%AA%E3%83%AD%E3%83%B3%E3%82%B7%E3%83%A3%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://fr.wikipedia.org/wiki/Hippodrome_de_Longchamp'],
@@ -852,12 +852,12 @@
     },
     'ドーヴィル': {
       turf: [
-        { id: '直線', lap: 1600, straight: 1600, line: true, use: [1300, 1400, 1600],
+        { id: '直線', lap: 1600, straight: 1600, line: true, use: [1200, 1300, 1400, 1600],
           segs: [['S', 1600]],
           elev: [[0, 0], [1600, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/france/deauville.html', 'https://fr.wikipedia.org/wiki/Hippodrome_de_Deauville-La_Touques', 'https://ja.wikipedia.org/wiki/%E3%83%89%E3%83%BC%E3%83%B4%E3%82%A3%E3%83%AB%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
           note: '直線1600m（ジャック・ル・マロワ賞・モーリス・ド・ゲスト賞）。平坦で起伏が無い' },
-        { id: '周回', lap: 2200, straight: 450, use: [],
+        { id: '周回', lap: 2200, straight: 450, use: [2000],
           segs: [['S', 450], ['C', 130, 130, 180, 3], ['S', 691.6], ['C', 130, 130, 180, 1], ['S', 241.6]],
           elev: [[0, 0], [2200, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/france/deauville.html', 'https://fr.wikipedia.org/wiki/Hippodrome_de_Deauville-La_Touques', 'https://ja.wikipedia.org/wiki/%E3%83%89%E3%83%BC%E3%83%B4%E3%82%A3%E3%83%AB%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
@@ -866,7 +866,7 @@
     },
     'サンクルー': {
       turf: [
-        { id: '周回', lap: 2300, straight: 500, use: [2100, 2400, 2500, 3100],
+        { id: '周回', lap: 2300, straight: 500, use: [1600, 2000, 2100, 2400, 2500, 3100],
           segs: [['S', 500], ['C', 140, 140, 180, 3], ['S', 710.2], ['C', 140, 140, 180, 1], ['S', 210.2]],
           elev: [[0, 1.5], [450, 0], [1200, 0], [2300, 1.5]],
           src: ['https://fr.wikipedia.org/wiki/Hippodrome_de_Saint-Cloud', 'https://ja.wikipedia.org/wiki/%E3%82%B5%E3%83%B3%E3%82%AF%E3%83%AB%E3%83%BC%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.turfoo.fr/hippodromes/saint-cloud/'],
@@ -875,12 +875,12 @@
     },
     'アスコット': {
       turf: [
-        { id: 'ラウンド', lap: 2816, straight: 503, use: [1600, 2000, 2400, 4000],
+        { id: 'ラウンド', lap: 2816, straight: 503, use: [1600, 2000, 2400, 3200, 4000],
           segs: [['S', 503], ['C', 88.4, 88.4, 123.2, 3], ['S', 827.5], ['C', 110, 110, 129, 2], ['S', 642], ['C', 146.9, 146.9, 107.8, 1], ['S', 129.3]],
           elev: [[0, 22.3], [200, 22.3], [503, 20.5], [693, 19], [1500, 1], [1620, 0], [1748, 1], [2390, 20], [2816, 22.3]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/racecourse.html', 'https://www.jra.go.jp/keiba/overseas/country/gbr/ascot.html', 'https://ja.wikipedia.org/wiki/%E3%82%A2%E3%82%B9%E3%82%B3%E3%83%83%E3%83%88%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://en.wikipedia.org/wiki/Ascot_Racecourse'],
           note: 'おむすび型。発走からスウィンリーボトムへ約20m下り、オールドマイルから直線へ上り続ける（スウィンリーボトム→ゴールで22.3m）', approx: true },
-        { id: '直線', lap: 1609, straight: 1609, line: true, use: [],
+        { id: '直線', lap: 1609, straight: 1609, line: true, use: [1000, 1200],
           segs: [['S', 1609]],
           elev: [[0, 3.3], [200, 3.3], [503, 1.5], [1609, 0]],
           src: ['https://ja.wikipedia.org/wiki/%E3%82%A2%E3%82%B9%E3%82%B3%E3%83%83%E3%83%88%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://en.wikipedia.org/wiki/Ascot_Racecourse'],
@@ -912,7 +912,7 @@
     },
     'ヨーク': {
       turf: [
-        { id: '周回', lap: 3200, straight: 900, use: [1600, 2000, 2050, 2400, 2800, 4000],
+        { id: '周回', lap: 3200, straight: 900, use: [1400, 1600, 2000, 2050, 2400, 2800, 4000],
           segs: [['S', 900], ['C', 144.1, 144.1, 150.9, 3], ['S', 634.7], ['C', 200, 200, 48, 2], ['S', 400], ['C', 238.4, 238.4, 161.1, 1], ['S', 47.8]],
           elev: [[0, 0], [3200, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/york.html', 'https://en.wikipedia.org/wiki/York_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%83%A8%E3%83%BC%E3%82%AF%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
@@ -936,6 +936,11 @@
           elev: [[0, 0], [820, 4], [1100, 8], [1450, 6], [2000, 2]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/goodwood.html', 'https://en.wikipedia.org/wiki/Goodwood_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%82%B0%E3%83%83%E3%83%89%E3%82%A6%E3%83%83%E3%83%89%E7%AB%B6%E9%A6%AC%E5%A0%B4'],
           note: 'ループを回って急なトップベンドから直線（800m強）へ。起伏が大きいが高さは出典に無い', approx: true },
+        { id: 'カップコース', lap: 3200, straight: 820, open: true, use: [3200],
+          segs: [['S', 820], ['C', 100, 100, 135, 3], ['S', 350], ['C', 110, 110, 135, 2], ['S', 335.2], ['C', 200, 200, 90, 1], ['S', 885.8]],
+          elev: [[0, 0], [820, 4], [1100, 8], [1450, 6], [2000, 2], [2600, 3], [3200, 1]],
+          src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/goodwood.html', 'https://en.wikipedia.org/wiki/Goodwood_Cup'],
+          note: 'グッドウッドカップ（約3219m）。ループを回ってからトップベンドの回りと同じ直線へ。ループの前の形と高さは出典に無い', approx: true },
       ],
     },
     'ニューベリー': {
@@ -954,7 +959,7 @@
     },
     'ドンカスター': {
       turf: [
-        { id: '周回', lap: 3118, straight: 905, use: [2900],
+        { id: '周回', lap: 3118, straight: 905, use: [1600, 2900],
           segs: [['S', 905], ['C', 154.7, 154.7, 181.3, 3], ['S', 1093], ['C', 141.9, 141.9, 178.7, 1], ['S', 188]],
           elev: [[0, 0], [1800, 0], [2000, 2], [2250, 1], [3118, 0]],
           src: ['https://en.wikipedia.org/wiki/Doncaster_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%83%89%E3%83%B3%E3%82%AB%E3%82%B9%E3%82%BF%E3%83%BC%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.attheraces.com/festivals/leger/course-guide'],
@@ -995,17 +1000,17 @@
     },
     'カラ': {
       turf: [
-        { id: 'ラウンド', lap: 3200, straight: 600, open: true, use: [2400, 2800],
+        { id: 'ラウンド', lap: 3200, straight: 600, open: true, use: [2000, 2100, 2400, 2800],
           segs: [['S', 600], ['C', 250, 250, 180, 3], ['S', 1814.6]],
           elev: [[0, 3], [400, 0], [3200, 0]],
           src: ['https://en.wikipedia.org/wiki/Curragh_Racecourse', 'https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%A9%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.attheraces.com/course-guides/Curragh', 'https://www.curragh.ie/track-talk/'],
           note: '馬蹄形の右回り（約2マイル。ダービーコースとプレートコース）。急なコーナーは無く、最後の直線は約3ハロンで、最後の2ハロンがゆるい上り（高さは出典に無い）', approx: true },
-        { id: 'マイル', lap: 1600, straight: 1300, open: true, use: [1600],
+        { id: 'マイル', lap: 1600, straight: 1300, open: true, use: [1400, 1600],
           segs: [['S', 1300], ['C', 400, 400, 15, 3], ['S', 195.3]],
           elev: [[0, 3], [400, 0], [1600, 0]],
           src: ['https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%A9%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.attheraces.com/course-guides/Curragh'],
           note: '直線コースの1300m付近から分かれる1マイル（ドッグレッグ）。最後の2ハロンがゆるい上り。折れの角度・向きは出典に無い', approx: true },
-        { id: '直線', lap: 1200, straight: 1200, line: true, use: [1200],
+        { id: '直線', lap: 1200, straight: 1200, line: true, use: [1000, 1200],
           segs: [['S', 1200]],
           elev: [[0, 3], [400, 0], [1200, 0]],
           src: ['https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%A9%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.attheraces.com/course-guides/Curragh'],
@@ -1023,7 +1028,7 @@
     },
     'レパーズタウン': {
       turf: [
-        { id: '周回', lap: 2800, straight: 400, use: [2000],
+        { id: '周回', lap: 2800, straight: 400, use: [1600, 1800, 2000],
           segs: [['S', 400], ['C', 214.5, 214.5, 175.3, 3], ['S', 839.5], ['C', 110, 110, 135, 2], ['S', 310.8], ['C', 223.5, 223.5, 49.7, 1], ['S', 140.5]],
           elev: [[0, 4], [400, 2.5], [1400, 0], [1856, 0.5], [2800, 4]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/ire/racecourse.html', 'https://www.jra.go.jp/keiba/overseas/country/ire/leopardstown.html', 'https://ja.wikipedia.org/wiki/%E3%83%AC%E3%83%91%E3%83%BC%E3%82%BA%E3%82%BF%E3%82%A6%E3%83%B3%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://en.wikipedia.org/wiki/Leopardstown_Racecourse'],
@@ -1059,11 +1064,35 @@
     },
     'デュッセルドルフ': {
       turf: [
-        { id: '周回', lap: 2000, straight: 500, use: [2400, 2600],
+        { id: '周回', lap: 2000, straight: 500, use: [2200, 2400, 2600],
           segs: [['S', 500], ['C', 90, 90, 128.4, 3], ['S', 442.3], ['C', 90, 90, 103.2, 2], ['S', 442.3], ['C', 90, 90, 128.4, 1], ['S', 50]],
           elev: [[0, 0], [2000, 0]],
           src: ['https://ja.wikipedia.org/wiki/%E3%83%87%E3%83%A5%E3%83%83%E3%82%BB%E3%83%AB%E3%83%89%E3%83%AB%E3%83%95%E7%AB%B6%E9%A6%AC%E5%A0%B4', 'https://www.visitduesseldorf.de/en/attractions/galopprennbahn-duesseldorf-racecourse-688c6f02fc'],
           note: 'グラーフェンベルク。右回り、1周2000mのおむすび型、直線約500mで比較的平坦。上り（Anberg）があると言われるが位置・高さは出典に無い', approx: true },
+      ],
+    },
+    // ---------- 世界の有名な重賞を足したときに増やした競馬場（data/races_more.js）。形はおおよそ（approx） ----------
+    'ヘイドック': {
+      turf: [
+        { id: '周回', lap: 2600, straight: 600, use: [],
+          segs: [['S', 600], ['C', 170, 170, 180, 3], ['S', 765.95], ['C', 170, 170, 180, 1], ['S', 165.95]],
+          elev: [[0, 0], [2600, 0]],
+          src: ['https://en.wikipedia.org/wiki/Haydock_Park_Racecourse'],
+          note: '左回りで平坦な周回コース。形の細かい数は出典に無く、1周と直線に合わせた楕円', approx: true },
+        { id: '直線', lap: 1200, straight: 1200, line: true, use: [1200],
+          segs: [['S', 1200]],
+          elev: [[0, 0], [1200, 0]],
+          src: ['https://en.wikipedia.org/wiki/Haydock_Park_Racecourse'],
+          note: '短距離は直線のコース（スプリントカップ）', approx: true },
+      ],
+    },
+    'オークローンパーク': {
+      dirt: [
+        { id: '周回', lap: 1609, straight: 350, use: [1800],
+          segs: [['S', 350], ['C', 110, 110, 180, 3], ['S', 458.9], ['C', 110, 110, 180, 1], ['S', 108.9]],
+          elev: [[0, 0], [1609, 0]],
+          src: ['https://en.wikipedia.org/wiki/Oaklawn_Park_Race_Track'],
+          note: '左回り1マイルのダートの楕円（アーカンソーダービー）。形の細かい数は出典に無い', approx: true },
       ],
     },
   };

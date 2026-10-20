@@ -15,7 +15,7 @@ static func trophies_of(h: Dictionary) -> Array:
 		else:
 			for m in HSU.or_(v.get("more"), []):   # GF のトロフィーは2頭目からの勝ち馬にも
 				if m.hid == h.id:
-					out.append({ id = id, label = label, y = m.y, bonus = 0.0 }); break
+					out.append({ id = id, label = label, y = m.y, bonus = float(HSU.or_(m.get("bonus"), 0.0)) }); break
 	return HSU.stable_sort(out, func(a, b): return a.y < b.y)
 static func eligible(h: Variant) -> bool: return h != null and h.get("owner") == "P" and trophies_of(h).size() >= NEED
 static func list() -> Array:
