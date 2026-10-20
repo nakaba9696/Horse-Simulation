@@ -9,7 +9,7 @@ const path = require('path');
 // 馬主 → 絵の id の候補（左から、基本の絵があるものを使う）。表情は、その絵の差分のうち上から順に有るものを使い、無ければ基本の絵
 // 2026-10-20：持ち主の決定「TRPGの画像使いまわしじゃなくて新規で生成してほしい」。新しい9人の絵（hs_*。設計は docs/OWNER_DESIGN.md、
 // 頼む行は docs/art/owner_portraits.json）を先に探し、まだ無ければ今の流用の絵（trpg-game の同じ名前の絵）のまま。
-// 候補が全部無い人（ユニ・米国の人・イロナの新しい絵が来る前）は書き出さず、data/owners.js の face の SVG（js/ui/ownerface.js。Godot は tools/owner_faces.js）
+// 候補が全部無い人（ユニ・米国の人・イロナの新しい絵が来る前）は書き出さない（絵の無い人は顔を出さない）
 // 新しい絵を入れた人は data/owners.js（イロナは data/gfhost.js）の portrait（顔の中心と札の幅）も書く
 const PICK = {
   makino: ['hs_hinata', 'tiria'],
@@ -34,7 +34,7 @@ function main() {
   for (const [oid, ids] of Object.entries(PICK)) {
     if (ONLY.length && !ONLY.includes(oid)) continue;
     const pid = ids.find(id => fs.existsSync(path.join(src, id + '.webp')));
-    if (!pid) { console.log(`${oid}：絵が無い（${ids.join('・')}）。書き出さない（今のファイルか SVG の顔のまま）`); continue; }
+    if (!pid) { console.log(`${oid}：絵が無い（${ids.join('・')}）。書き出さない（絵の無い人は顔を出さない）`); continue; }
     const parts = [], used = [];
     for (const [mood, sufs] of Object.entries(MOODS)) {
       let file = null;

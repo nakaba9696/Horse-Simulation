@@ -6,7 +6,7 @@
 "title": "グランドフェスティバルを開いている一族の人",
 "note": "栗色の長い髪に、白・桃・黄の花の花輪。黒い外套で、いつも少し遅れて汽車で来る。一族のことも自分のことも、ほとんど話さない。年に一度、GF の舞台にだけ現れ、勝った馬の首に自分で編んだ花輪をかける。足もとに黒い猫がいることが多い。",
 "silks": {"base":"#5a2a3a","sub":"#f6e0e8","pattern":"hoops"},
-"face": {"skin":"#f7e0d0","hair":"#9c3f1a","style":"wavy","eyes":"#3f6b4a","eye":"soft","brow":"thin","cloth":"#1e1a22","collar":"dress","accent":"#f3ead8","extras":["wreath","lashes","necklace"]},
+"face": {"skin":"#f7e0d0","hair":"#9a4e2a","style":"long","eyes":"#3f6b4a","eye":"soft","brow":"thin","cloth":"#1e1a22","collar":"dress","accent":"#f6e6c8","extras":["wreath","lashes","necklace"]},
 "look": {"hair":"赤みの強い栗色（栗毛の色）の長い髪を、ゆるく波打たせて腰まで下ろす","eyes":"深い緑のやわらかい目","clothes":"黒いフード付きの旅の外套（前を開けて肩から広がる）・生成りの立ち襟のブラウス","items":"頭に白・桃・黄の花の花輪・首に細い金の鎖・足もとの黒い猫・古い招待状","moods":{"base":"静かにほほえむ","smile":"目を細める","joy":"花輪を差し出して笑う","sad":"目を伏せる（それでもほほえんでいる）"}},
 "voice": {"me":"わたし","you":"{me}さん","end":"〜です・〜ます（静かでていねい。短く言い切る）","never":["自分の正体や年を話す","一族の名を明かす","負けた馬を悪く言う"]},
 "intro": "イロナと申します。グランドフェスティバルを開いている一族の者です。",

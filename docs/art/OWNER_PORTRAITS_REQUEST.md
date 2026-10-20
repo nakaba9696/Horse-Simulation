@@ -19,7 +19,7 @@
 - `docs/art/owner_portraits.json`：9人の行。trpg-game の `docs/art/portraits.json` の `portraits` に足せる形そのまま。
   - id：`hs_hinata`・`hs_sengoku`・`hs_yuni`・`hs_marie`・`hs_genzaburo`・`hs_violaine`・`hs_lucy`・`hs_farina`・`hs_ilona`
   - 男は `type`：千石が `classic`、竹之内が `elder`
-- `docs/OWNER_DESIGN.md`：9人の見た目の設計書。色見本・目印・表情、並べた一覧の絵 `docs/shots/owners/design_lineup.png` が載っている。絵を見て確かめるときの物差しにする。
+- `docs/OWNER_DESIGN.md`：9人の見た目の設計書。色見本・目印・表情・並べた一覧の表が載っている。絵を見て確かめるときの物差しにする。
 
 clone できなければ、GitHub の Raw で2つのファイルを開いて写す。
 
@@ -81,11 +81,9 @@ clone できなければ、GitHub の Raw で2つのファイルを開いて写�
    - 流用の行（tiria など）は外す。
 5. 書き出し直す：
    ```
-   node tools/owner_faces.js
    node tools/owners_draft.js
    node tools/export_godot.js
    ```
-   - `owner_faces.js`：絵ができた人の SVG の顔を消す。
 6. Godot を一度開くか、`godot --headless --path godot --import` で、新しい webp の `.import` を作る。
 7. 検証：`node tests/run.js`。
    - 持ち主の PC で全部を回すと重いので、回せなければ回さずに、その旨を書く（クラウドのセッションが回す）。

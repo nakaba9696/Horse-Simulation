@@ -27,13 +27,10 @@
     if (st === 'bob') p.push(`<path d="M25 42 C22 56 23 66 26 72 C34 76 66 76 74 72 C77 66 78 56 75 42 C72 18 28 18 25 42 Z" fill="${HAIR}"/>`);
     if (st === 'ponytail') p.push(`<path d="M68 26 C86 26 92 44 88 60 C86 70 80 76 76 82 C80 70 82 58 76 46 Z" fill="${HAIR}"/>`);
     if (st === 'bun') p.push(`<circle cx="50" cy="15" r="10" fill="${HAIR}"/><path d="M42 12 C46 9 54 9 58 12" stroke="${dark}" stroke-width="1.2" fill="none"/>`);
-    if (st === 'braids') p.push(`<path d="M25 42 C23 52 24 58 27 62 L73 62 C76 58 77 52 75 42 C72 18 28 18 25 42 Z" fill="${HAIR}"/>`);
     // 体と服
     p.push(`<path d="M12 100 C14 84 28 77 50 77 C72 77 86 84 88 100 Z" fill="${cl}"/>`);
     p.push(`<path d="M43 62 L57 62 L57 79 C53 82 47 82 43 79 Z" fill="${skD}"/>`);
     p.push(collar(f.collar, cl, clD, ac, sk));
-    // 二本のおさげ（耳の下から肩の前へ。結び目は accent の色）
-    if (st === 'braids') p.push([24.5, 75.5].map(x => [60, 67, 74, 81].map(y => `<ellipse cx="${x}" cy="${y}" rx="4.4" ry="4.2" fill="${HAIR}" stroke="${dark}" stroke-width=".6"/>`).join('') + `<circle cx="${x}" cy="86" r="2.4" fill="${ac}"/><path d="M${x - 3} 88 L${x} 95 L${x + 3} 88 Z" fill="${HAIR}"/>`).join(''));
     if (ex.has('necklace')) p.push(`<path d="M40 82 C45 89 55 89 60 82" stroke="${f.accent || '#e8d27a'}" stroke-width="1.4" fill="none"/><circle cx="50" cy="88.5" r="2.2" fill="${f.accent || '#e8d27a'}"/>`);
     // 耳と顔
     p.push(`<ellipse cx="28.5" cy="49" rx="3.6" ry="5" fill="${skD}"/><ellipse cx="71.5" cy="49" rx="3.6" ry="5" fill="${skD}"/>`);
@@ -112,7 +109,7 @@
   function front(st, HAIR, dark) {
     if (st === 'long') return `<path d="M27 46 C26 24 38 17 50 17 C63 17 75 24 73 46 L69 35 L63 39 L58 30 L50 37 L43 30 L37 38 L31 34 Z" fill="${HAIR}"/><path d="M27 42 C25 56 26 66 29 74 L32 52 Z M73 42 C75 56 74 66 71 74 L68 52 Z" fill="${HAIR}"/>`;
     if (st === 'wavy') return `<path d="M27 47 C24 24 40 16 52 17 C66 18 76 27 73 46 C70 38 66 33 60 31 C56 36 48 37 42 33 C38 38 32 41 27 47 Z" fill="${HAIR}"/><path d="M27 44 C22 54 27 60 24 68 L31 56 Z M73 44 C78 54 73 60 76 68 L69 56 Z" fill="${HAIR}"/>`;
-    if (st === 'bob' || st === 'braids') return `<path d="M26 50 C24 26 38 18 50 18 C64 18 76 26 74 50 L70 38 C64 34 58 30 54 26 C50 33 40 37 30 38 Z" fill="${HAIR}"/><path d="M26 46 C25 58 26 66 28 72 L31 50 Z M74 46 C75 58 74 66 72 72 L69 50 Z" fill="${HAIR}"/>`;
+    if (st === 'bob') return `<path d="M26 50 C24 26 38 18 50 18 C64 18 76 26 74 50 L70 38 C64 34 58 30 54 26 C50 33 40 37 30 38 Z" fill="${HAIR}"/><path d="M26 46 C25 58 26 66 28 72 L31 50 Z M74 46 C75 58 74 66 72 72 L69 50 Z" fill="${HAIR}"/>`;
     if (st === 'ponytail') return `<path d="M27 45 C26 24 38 18 50 18 C63 18 74 24 73 44 L68 34 L61 37 L56 29 L49 36 L44 28 L37 36 L31 33 Z" fill="${HAIR}"/><path d="M27 42 L27 54 L31 46 Z M73 42 L73 54 L69 46 Z" fill="${HAIR}"/>`;
     if (st === 'bun') return `<path d="M27 44 C26 26 38 20 50 20 C62 20 74 26 73 44 C70 34 64 28 52 28 C48 32 38 36 30 37 Z" fill="${HAIR}"/><path d="M28 40 C27 50 28 56 30 60 L31 44 Z" fill="${HAIR}"/>`;
     if (st === 'short') return `<path d="M27 44 C25 22 38 16 51 16 C64 16 76 22 73 44 L70 34 L66 37 L63 30 L57 34 L54 27 L48 33 L43 27 L39 34 L34 30 L31 37 Z" fill="${HAIR}"/><path d="M28 40 L28 50 L30.5 44 Z M72 40 L72 50 L69.5 44 Z" fill="${dark}"/>`;
