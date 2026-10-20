@@ -728,7 +728,7 @@ static func finish_week(played: Dictionary = {}) -> Dictionary:
 	var y0: float = G.year
 	next_week(report)
 	if G.year != y0: HSJockey.year_end(y0)
-	if G.year != y0: HSTrophy.year_end(y0)   # 年末の表彰のトロフィー（ホールオブフェイム）
+	if G.year != y0: HSTrophy.year_end(y0)   # 年末の表彰のトロフィー（いまは無し。ホールオブフェイムはレースに勝ったその場で）
 	HSJockey.week_start()
 	G.rngState = floorf(rng.next() * 4294967296.0)
 	G.lastWeek = { date = report.date, races = report.races.map(func(r): return slim_result(r)) }

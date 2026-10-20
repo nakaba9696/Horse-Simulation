@@ -598,7 +598,7 @@
     const y0 = G.year;
     W.nextWeek(report);
     if (HS.Jockey && G.year !== y0) HS.Jockey.yearEnd(y0);
-    if (HS.Trophy && G.year !== y0) HS.Trophy.yearEnd(y0); // 年末の表彰のトロフィー（ホールオブフェイム）
+    if (HS.Trophy && G.year !== y0) HS.Trophy.yearEnd(y0); // 年末の表彰のトロフィー（いまは無し。ホールオブフェイムはレースに勝ったその場で）
     if (HS.Jockey) HS.Jockey.weekStart();
     G.rngState = Math.floor(rng.next() * 4294967296);
     G.lastWeek = { date: report.date, races: report.races.map(r => W.slimResult(r)) };

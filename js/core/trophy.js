@@ -97,7 +97,7 @@
     for (const t of TR.LIST) if (TR.done(t, h, race) && TR.give(h, t, race.year)) got.push(t);
     return got;
   };
-  // レースのあと（world.js の finishWeek から）：着差の合計（ワンダーホース）と G1 の連勝（インモータルロード）。GF は数えない
+  // レースのあと（world.js の finishWeek から）：着差の合計（ワンダーホース）・G1 の連勝（インモータルロード）・無敗の年の G1 6勝（ホールオブフェイム）。GF は数えない
   TR.afterRace = function (race, sim) {
     const G = W.get();
     if (!G.eraless || race.grade === 'GF') return [];
@@ -114,21 +114,14 @@
       if (race.grade === 'G1') {
         h.g1Streak = res.pos === 1 ? (h.g1Streak || 0) + 1 : 0;
         if (h.g1Streak >= RULE.IMMORTAL_STREAK && TR.give(h, TR.BY.immortal, race.year)) got.push(TR.BY.immortal);
+        // ホールオブフェイム：その年を無敗のまま G1 を HOF_G1 勝目（レースに勝ったその場で。持ち主の決定 2026-10-20 で年末の表彰から変えた）
+        if (res.pos === 1) { const r = TR.yearRec(h, race.year); if (r.starts > 0 && r.wins === r.starts && r.g1 >= RULE.HOF_G1 && TR.give(h, TR.BY.hof, race.year)) got.push(TR.BY.hof); }
       }
     }
     return got;
   };
-  // 年末の表彰（world.js の finishWeek から、年が変わったとき）：その年を無敗で G1 を6勝した馬にホールオブフェイム
-  TR.yearEnd = function (y) {
-    const G = W.get();
-    if (!G.eraless) return [];
-    const got = [];
-    for (const h of W.mine()) {
-      const r = TR.yearRec(h, y);
-      if (r.starts > 0 && r.wins === r.starts && r.g1 >= RULE.HOF_G1 && TR.give(h, TR.BY.hof, y)) got.push(h);
-    }
-    return got;
-  };
+  // 年末の表彰：前はここでホールオブフェイムを付けた。いまはレースに勝ったその場（TR.afterRace）で付けるので、年末には何もしない
+  TR.yearEnd = function () { return []; };
 
   // ---------- 引退したときの能力の上がり（オリジナルホースの親） ----------
   // トロフィーごとに、focus の能力は TIER_PTS、ほかの能力はその半分。1つの能力の上がりは CAP まで
