@@ -4,7 +4,7 @@ class_name HSSpecial
 
 const MAX_IN_RACE := 4
 const UNBEATEN := { "マルゼンスキー": 8.0, "ラフィアン": 10.0 }
-const ALIAS := { "朝日杯3歳ステークス": "朝日杯フューチュリティステークス", "阪神3歳牝馬ステークス": "阪神ジュベナイルフィリーズ", "中山グランプリ": "有馬記念", "産経大阪杯": "大阪杯" }
+const ALIAS := { "朝日杯3歳ステークス": "朝日杯フューチュリティステークス", "朝日盃3歳ステークス": "朝日杯フューチュリティステークス", "阪神3歳牝馬ステークス": "阪神ジュベナイルフィリーズ", "中山グランプリ": "有馬記念", "産経大阪杯": "大阪杯" }
 static var _g1: Variant = null
 static func _g1_map() -> Dictionary:
 	if _g1 != null: return _g1
@@ -194,6 +194,8 @@ static func member(g: Dictionary, d: Dictionary) -> bool:
 		"g1five": return _g1_count(d) >= 5
 		"unbeaten": return unbeaten_of(d) >= STREAK
 	if g.get("race"):
+		# 手で入れた名馬（data/trophy_horses.js の specialRaceHand。js/core/special.js と同じ）
+		if HSData.d().get("specialRaceHand", {}).get(d.name) == g.short: return true
 		return HSU.or_(d.get("wins"), []).any(func(x):
 			var k = map_win(x)
 			return k != null and k.short == g.short)
