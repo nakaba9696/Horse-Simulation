@@ -830,6 +830,24 @@ check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデ�
   return `史実馬 ${hist.length}頭・店 ${shop.length}頭・2年目の2歳 ${crop}頭`;
 });
 
+// 持ち主の決定 2026-10-20「登場する馬」：デビューする馬（と馬の店の馬）は、重賞を勝っていないハルウララを除いて全員、重賞の勝ち鞍がある。
+// 勝ち鞍の無い馬を足すときは、出典で勝ち鞍を確かめて書くか、血統表の母などとしてだけ持つなら noDebut:true を付ける
+check('eraless: デビューする馬はハルウララを除いて全員、重賞の勝ち鞍がある（オリエンタルアートは母としてだけ持つ）', () => {
+  const E = HS.Eraless;
+  const KEEP = new Set(['ハルウララ']); // 重賞を勝っていないが残す（持ち主の決定 2026-10-20）
+  const pool = E.pool();
+  const bad = pool.filter(d => !KEEP.has(d.name) && !(d.wins || []).length).map(d => d.name);
+  assert(!bad.length, `重賞の勝ち鞍が無いのにデビューする馬（${bad.length}頭）: ${bad.slice(0, 10).join('・')}`);
+  for (const n of KEEP) assert(pool.some(d => d.name === n), `${n} がデビューする馬にいない`);
+  const oa = D.historic.find(d => d.name === 'オリエンタルアート');
+  assert(oa && oa.noDebut && !pool.includes(oa), 'オリエンタルアートがデビューする馬にいる（か、データから消えた）');
+  assert(D.historic.some(d => d.dam === 'オリエンタルアート') && (D.mares || []).some(m => m.name === 'オリエンタルアート'), 'オリエンタルアートが母・名牝のデータから消えた');
+  // noDebut は勝ち鞍の無い馬だけに付ける（勝ち鞍のある馬を黙って外さない）
+  const hidden = D.historic.filter(d => d.noDebut && (d.wins || []).length).map(d => d.name);
+  assert(!hidden.length, `勝ち鞍があるのに noDebut: ${hidden.join('・')}`);
+  return `${pool.length}頭（勝ち鞍の無い馬は ${[...KEEP].join('・')} だけ）`;
+});
+
 check('shop: 馬の店は少しずつ開く（はじめは G3 まで。G1・G2・地方・国のレースを勝つとその馬が並ぶ）', () => {
   const E = HS.Eraless;
   W.newGame({ seed: 22, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });

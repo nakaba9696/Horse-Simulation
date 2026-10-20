@@ -13,7 +13,8 @@
   E.AGES = [2, 3, 4, 5, 6]; // 始めたときにいる世代
 
   const lastYear = d => d.retire || d.born + 5;
-  E.isPool = d => lastYear(d) >= 1989 && d.born <= 2023;
+  // noDebut：血統表の母などとしてだけ持つ馬（重賞を勝っていない名牝の母。持ち主の決定 2026-10-20「オリエンタルアートは登場する馬から外す」）
+  E.isPool = d => lastYear(d) >= 1989 && d.born <= 2023 && !d.noDebut;
   E.isLegend = d => lastYear(d) < 1989;
   let poolCache = null;
   E.pool = () => poolCache || (poolCache = (HS.DATA.historic || []).filter(E.isPool));

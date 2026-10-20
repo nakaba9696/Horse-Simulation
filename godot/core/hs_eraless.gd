@@ -8,7 +8,8 @@ const CROP := 110
 const AGES := [2.0, 3.0, 4.0, 5.0, 6.0]
 
 static func _last_year(d: Dictionary) -> float: return float(HSU.or_(d.get("retire"), d.born + 5.0))
-static func is_pool(d: Dictionary) -> bool: return _last_year(d) >= 1989 and d.born <= 2023
+# noDebut：血統表の母などとしてだけ持つ馬（持ち主の決定 2026-10-20）
+static func is_pool(d: Dictionary) -> bool: return _last_year(d) >= 1989 and d.born <= 2023 and not d.get("noDebut", false)
 static func is_legend(d: Dictionary) -> bool: return _last_year(d) < 1989
 static var _pool: Variant = null
 static func pool() -> Array:
