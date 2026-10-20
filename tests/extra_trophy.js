@@ -217,7 +217,9 @@ module.exports = function (check, assert, HS) {
     assert(W.marketHistoric().some(x => sps.includes(x.horse.name) && x.legend), '店に並ばない');
     // 店に並んだあとも、別の馬がまた日本三冠をねらうと出てくる（again）。一度も達成していない条件のグループ（大レース）は、倒した馬は出てこない
     const h2 = Object.assign({}, h, { id: 'h2', gradedWins: [{ y: G.year + 1, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year + 1, race: '東京優駿', short: '日本ダービー', grade: 'G1' }] });
-    assert(SP.pending(h2, Object.assign({}, race, { year: G.year + 1 })).some(x => x.d.name === sps[0]), '再達成のときに出てこない');
+    // 出走表の並び（sps の順）は種で変わるので、倒した馬のうち日本三冠のグループの馬が出てくるかで見る
+    const again = SP.pending(h2, Object.assign({}, race, { year: G.year + 1 }));
+    assert(again.some(x => x.g.id === 't:triple' && sps.includes(x.d.name)), `再達成のときに出てこない（倒した馬 ${sps.join('・')}）`);
     return `菊花賞に ${sps.join('・')}（入れ替わり ${gone.map(x => x.horse.name).join('・')}）`;
   });
 };
