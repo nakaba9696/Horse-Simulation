@@ -24,6 +24,19 @@ for (const f of fs.readdirSync(path.join(ROOT, 'data/src')).filter(f => f.endsWi
   }
 }
 console.log('rows', rows.length);
+// 手で確かめた史実馬と英語の名前・生まれ年が同じ馬は、カナの書き方が違っても同じ馬（エラマナムー＝エラマナモウ、シュターアピール＝スターアピールなど）
+{
+  const enKey = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+  const byEn = new Map();
+  for (const h of D.historic) if (h.nameEn) { const k = enKey(h.nameEn); if (!byEn.has(k)) byEn.set(k, []); byEn.get(k).push(h); }
+  let n = 0;
+  for (const r of rows) {
+    if (!r.horseEn || !r.age) continue;
+    const h = (byEn.get(enKey(r.horseEn)) || []).find(x => Math.abs(x.born - (r.year - r.age)) <= 1);
+    if (h && h.name !== r.horse) { r.horse = h.name; n++; }
+  }
+  console.log('英語の名前で手のデータにそろえた記録', n);
+}
 
 // 暦から格付けを引く（記録に無いとき）
 const gradeOf = (race, year) => {

@@ -124,6 +124,27 @@ check('profiles: スペシャルホースは全頭に名鑑（年代・戦績・
   return `スペシャルホース ${SP.list().length}頭・解説 ${Math.min(...lens)}〜${Math.max(...lens)}字・名鑑 ${prof.size}頭`;
 });
 
+check('special: 名の知れた名馬（名鑑を書き足した馬）はスペシャルホース・ホーリックスは毎年デビューする側', () => {
+  HS.U.ERA = HS.Eraless.ERA;
+  const SP = HS.Special, E = HS.Eraless, bad = [];
+  // 持ち主の決定 2026-10-20「有名な馬はいれてほしい　ホーリックスとかトリプティクとかムトトとか」。入れる馬には名鑑を書く（名鑑の無い馬は入れない）
+  for (const n of ['トリプティク', 'ムトト', 'サドラーズウェルズ', 'ブラッシンググルーム', 'ペブルス', 'アルサイド', 'カブトシロー', 'タケシバオー', 'テンポイント', 'ハイセイコー']) {
+    const x = SP.byName(n);
+    if (!x) bad.push(n + ':入らない'); else if (!(x.d.text || '').length || !x.d.record) bad.push(n + ':名鑑なし');
+  }
+  // 名鑑の無い馬はスペシャルホースに入らない（香港の三冠の1989年からの隠し馬と data/legends.js を除く）
+  const prof = new Set((D.profiles || []).map(p => HS.normName(p.name)));
+  for (const { d } of SP.list()) if (d.born && !SP.isModern(d) && !prof.has(HS.normName(d.name))) bad.push(d.name + ':名鑑の無い馬が入った');
+  // ホーリックス（1989年のジャパンC）は1989年まで走ったので、スペシャルホースでなく毎年デビューする史実馬
+  const hor = (D.historic || []).find(d => d.name === 'ホーリックス');
+  if (!hor || E.isLegend(hor) || !E.pool().includes(hor) || SP.byName('ホーリックス')) bad.push('ホーリックス');
+  // 記録の英語の名前で手のデータにそろえる（同じ馬が2頭にならない。tools/build_auto.js）
+  const en = new Map();
+  for (const d of D.historic || []) if (d.nameEn) { const k = d.nameEn.toLowerCase().replace(/[^a-z]/g, '') + ':' + d.born; if (en.has(k)) bad.push('同じ馬が2頭:' + en.get(k) + '/' + d.name); else en.set(k, d.name); }
+  assert(!bad.length, bad.slice(0, 10).join(', '));
+  return `スペシャルホース ${SP.list().length}頭`;
+});
+
 check('assets: 素材はすべて出典の一覧にあり、大きさが目安以内', () => {
   const fs = require('fs'), path = require('path');
   const dir = path.join(__dirname, '..', 'assets');

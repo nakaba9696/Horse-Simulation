@@ -65,7 +65,7 @@
 {"race": "英2000ギニー", "year": 2024, "horse": "ノータブルスピーチ", "horseEn": "Notable Speech", "sex": "牡", "age": 3, "country": "英", "jockey": "W.ビュイック", "surface": "芝", "dist": 1600, "course": "ニューマーケット"}
 {"race": "英2000ギニー", "year": 2025, "horse": "ルーリングコート", "horseEn": "Ruling Court", "sex": "牡", "age": 3, "country": "英", "jockey": "W.ビュイック", "surface": "芝", "dist": 1600, "course": "ニューマーケット"}
 {"race": "英2000ギニー", "year": 2026, "horse": "ボウエコー", "horseEn": "Bow Echo", "sex": "牡", "age": 3, "country": "英", "jockey": "B.ラフナン", "surface": "芝", "dist": 1600, "course": "ニューマーケット"}
-{"race": "英1000ギニー", "year": 1960, "horse": "ネヴァーセイダイ", "horseEn": "Never Too Late", "sex": "牝", "age": 3, "country": "仏", "jockey": "R.ポワンスレ", "surface": "芝", "dist": 1600, "course": "ニューマーケット"}
+{"race": "英1000ギニー", "year": 1960, "horse": "ネヴァートゥーレイト", "horseEn": "Never Too Late", "sex": "牝", "age": 3, "country": "仏", "jockey": "R.ポワンスレ", "surface": "芝", "dist": 1600, "course": "ニューマーケット"}
 {"race": "英1000ギニー", "year": 1961, "horse": "スウィートソレラ", "horseEn": "Sweet Solera", "sex": "牝", "age": 3, "country": "英", "jockey": "B.リカビー", "surface": "芝", "dist": 1600, "course": "ニューマーケット"}
 {"race": "英1000ギニー", "year": 1962, "horse": "アバーメイド", "horseEn": "Abermaid", "sex": "牝", "age": 3, "country": "英", "jockey": "B.ウィリアムソン", "surface": "芝", "dist": 1600, "course": "ニューマーケット"}
 {"race": "英1000ギニー", "year": 1963, "horse": "フラダンサー", "horseEn": "Hula Dancer", "sex": "牝", "age": 3, "country": "仏", "jockey": "R.ポワンスレ", "surface": "芝", "dist": 1600, "course": "ニューマーケット"}
@@ -199,7 +199,7 @@
 {"race": "英ダービー", "year": 2024, "horse": "シティオブトロイ", "horseEn": "City Of Troy", "sex": "牡", "age": 3, "country": "愛", "jockey": "R.ムーア", "surface": "芝", "dist": 2400, "course": "エプソム"}
 {"race": "英ダービー", "year": 2025, "horse": "ランボーン", "horseEn": "Lambourn", "sex": "牡", "age": 3, "country": "愛", "jockey": "W.ローダン", "surface": "芝", "dist": 2400, "course": "エプソム"}
 {"race": "英ダービー", "year": 2026, "horse": "クリスマスデー", "horseEn": "Christmas Day", "sex": "牡", "age": 3, "country": "愛", "jockey": "R.ウィーラン", "surface": "芝", "dist": 2400, "course": "エプソム"}
-{"race": "英オークス", "year": 1960, "horse": "ネヴァーセイダイ", "horseEn": "Never Too Late", "sex": "牝", "age": 3, "country": "仏", "jockey": "R.ポワンスレ", "surface": "芝", "dist": 2400, "course": "エプソム"}
+{"race": "英オークス", "year": 1960, "horse": "ネヴァートゥーレイト", "horseEn": "Never Too Late", "sex": "牝", "age": 3, "country": "仏", "jockey": "R.ポワンスレ", "surface": "芝", "dist": 2400, "course": "エプソム"}
 {"race": "英オークス", "year": 1961, "horse": "スウィートソレラ", "horseEn": "Sweet Solera", "sex": "牝", "age": 3, "country": "英", "jockey": "B.リカビー", "surface": "芝", "dist": 2400, "course": "エプソム"}
 {"race": "英オークス", "year": 1962, "horse": "モネイド", "horseEn": "Monade", "sex": "牝", "age": 3, "country": "仏", "jockey": "Y.サンマルタン", "surface": "芝", "dist": 2400, "course": "エプソム"}
 {"race": "英オークス", "year": 1963, "horse": "ノブレス", "horseEn": "Noblesse", "sex": "牝", "age": 3, "country": "愛", "jockey": "G.ブゴール", "surface": "芝", "dist": 2400, "course": "エプソム"}
