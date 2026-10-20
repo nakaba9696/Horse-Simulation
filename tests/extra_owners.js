@@ -185,7 +185,7 @@ module.exports = function (check, assert, HS) {
   check('owners: 8つのジャンルの依頼がそのジャンルに寄る（7割以上。OP・G3 の段階）', () => {
     newGame(47);
     const t = {};
-    for (let i = 0; i < (QUICK ? 16 : 40); i++) {
+    for (let i = 0; i < (QUICK ? 16 : 52); i++) {
       const cards = W.cards();
       for (const stage of [0, 1]) for (const ofr of O.generate(cards, `s${i}`, { stage, all: true })) {
         const c = cards.find(c => c.race.key === ofr.raceKey), h = c.runners.find(x => x.horse.id === ofr.horseId).horse;
