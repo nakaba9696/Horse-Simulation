@@ -1,5 +1,5 @@
 # 週の流れ（godot/ui/flow.gd の UiFlow と画面）の確かめ：決まった種の新しいゲームから数週を進める。
-# 毎週：店で馬を買う・馬主の依頼を受ける・今週の騎乗を出走表の一式（desc_of）→ 模擬の入れ口（ViewLive）で決まった乗り方で走る（1鞍おきにおまかせ）
+# 毎週：店で馬を買う・オーナーの依頼の馬に乗る・今週の騎乗を出走表の一式（desc_of）→ 模擬の入れ口（ViewLive）で決まった乗り方で走る（1鞍おきにおまかせ）
 # → 週を締める（UiFlow.close_week）。週が1つ進むこと・乗ったレースが結果に入ること・セーブの往復で同じ状態に戻ること・画面を組めることを見る
 extends RefCounted
 
@@ -21,9 +21,15 @@ func run(t) -> void:
 		var G = HSWorld.G
 		var w0 := HSWorld.w_idx()
 		UiFlow.buy_cheapest(3)
-		var offers := HSOwners.offers()
-		if offers.size():
-			t.eq(HSOwners.accept(offers[0].raceKey, offers[0].horseId), null, "flow: 依頼を受ける（%d週目）" % wk)
+		# オーナーの依頼（ミッション）：レースの週は依頼の馬に自分が乗る
+		for o in HSOwners.offers():
+			if o.now:
+				var oc = HSWorld.card_of(o.raceKey)
+				var me = null
+				if oc:
+					for x in oc.runners:
+						if x.get("rider") == "P": me = x; break
+				t.eq(me.horse.id if me else null, o.horseId, "flow: 依頼の馬に乗る（%d週目）" % wk)
 		var want := HSJockey.my_rides().size()
 		var nxt := UiFlow.begin_week()
 		t.eq(UiFlow.rides.size(), want, "flow: 騎乗の列は今週の騎乗と同じ数（%d週目）" % wk)

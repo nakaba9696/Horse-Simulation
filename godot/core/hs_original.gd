@@ -6,6 +6,10 @@ const MAX_SKILLS := 4
 const BONUS_PER := 3.0   # 前の版：仔へのボーナス（前のセーブの引退馬だけ。potUp の無い馬）
 const BONUS_MAX := 12.0
 const POT_MAX := 118.0   # 能力の上限（仔を作るときと同じ）
+# 1頭の馬から作れる仔の数（作り終えた親は牧場を去る）。GF の一族の人（イロナ）の花輪を持っていれば＋1（original.js と同じ）
+const FOALS := 3
+static func foals_max() -> int: return FOALS + (1 if HSGFHost.has_item() else 0)
+static func foals_left(h: Variant) -> int: return maxi(0, foals_max() - int(HSU.or_(h.get("origN"), 0.0) if h else 0.0))
 # 仔の能力の元：両親の平均のうち SOFT を超えた分は HERIT の割合だけ受け継ぐ（original.js と同じ。持ち主の決定 2026-10-20）
 const SOFT := 94.0
 const HERIT := 0.5
@@ -70,6 +74,8 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	if not s or not m or s.get("loc") != "retired" or m.get("loc") != "retired" or s.get("owner") != "P" or m.get("owner") != "P": return { err = "引退馬を選んでください" }
 	if s.sex == "牝" or m.sex != "牝": return { err = "父は牡馬、母は牝馬" }
 	if m.get("foalY") == G.year: return { err = "%sは今年もう仔を産んだ（来年また作れる）" % m.name }
+	for p in [s, m]:
+		if not foals_left(p): return { err = "%sはもう仔を作れない（1頭から%d頭まで）" % [p.name, foals_max()] }
 	if not HSSeason.can_buy(): return { err = "お手馬は%s頭まで" % HSU.num(HSSeason.MAX_OWN) }
 	var rng := HSRng.new(float(HSU.hash32("orig:%s:%s:%s:%s" % [HSU.num(G.seed), HSU.num(G.year), s.id, m.id])))
 	var bonus := child_bonus(s, m)   # 前の版の引退馬だけ（いまは引退で親の能力が上がっている）
@@ -98,7 +104,7 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	var h := HSWorld.horse_from_foal(f, s.name, m.name, born, nm)
 	h.trigFixed = pick.filter(func(id): return not HSHorse.SKILLS.has(id))
 	h.owner = "P"; h.loc = "farm"; h.original = true; h.auto = true; h.bonusFromParents = bonus
-	HSOwners.apply_items(h)   # 馬主の依頼をやり終えてもらったアイテム（繁殖の永続のボーナス）
+	HSOwners.apply_items(h)   # オーナーの依頼をやり終えてもらったアイテム（繁殖の永続のボーナス）
 	HSHorse.sync_apt(h)
 	G.horses[h.id] = h
 	HSWorld.used_names()[nm] = true
@@ -106,4 +112,10 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	m.foalY = G.year
 	HSWorld.dirty()
 	HSWorld.news("オリジナルホース「%s」が生まれた！（父 %s・母 %s%s）" % [nm, s.name, m.name, ("・ボーナス +%s" % HSU.num(bonus)) if bonus else ""], "g1")
+	# 作った数を数え、決まった数の仔を残した親は牧場を去る
+	for p in [s, m]:
+		p.origN = float(HSU.or_(p.get("origN"), 0.0)) + 1.0
+		if not foals_left(p):
+			G.horses.erase(p.id)
+			HSWorld.news("%sは仔を%s頭残して、牧場を去った。" % [p.name, HSU.num(p.origN)], "info")
 	return { horse = h, bonus = bonus, skills = pick }

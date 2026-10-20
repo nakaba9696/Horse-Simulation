@@ -1,8 +1,10 @@
-# 馬主と騎乗依頼（js/core/owners.js の HS.Owners と同じ。仕様書 docs/SPEC.md「騎乗依頼」）：AI の馬の一部を架空の馬主が持ち、
-# 毎週「この馬でこのレースに」と依頼が来る。馬主は8つのジャンル（地方・短距離・クラシック・長距離・牝馬・米・欧州・豪州）に1人ずつ。
-# 好感度（0〜100）はその人のジャンルのレースで勝つと上がり、たまると出会い（海外の人は海外の印のあと）。
-# 段階 OP → G3 → G2 → G1 → お手馬。段階ごとの課題をやり終えるとお礼・好感度・場面・次の段階、最後はアイテム（繁殖の永続のボーナス）で依頼が止まる。
-# 乱数は週と馬の名前から決まるもの（U.hashRng）だけで、世界の乱数は使わない。セーブは G.owners
+# オーナー（馬主）と騎乗依頼（js/core/owners.js の HS.Owners と同じ。仕様書 docs/SPEC.md「騎乗依頼」「持ち主の決定（2026-10-20・オーナーの依頼）」）：
+# AI の馬の一部を架空のオーナーが持つ。オーナーは8つのジャンル（地方・短距離・クラシック・長距離・牝馬・米・欧州・豪州）に1人ずつ。画面の言葉は「オーナー」「友好度」。
+# 出会いの点：その人のジャンルのレースを自分が乗って勝つと OP 1点・G3 2点・G2 3点・G1 4点。合わせて4点で出会い（海外の人は海外の印のあと）。
+# 依頼はミッション形式：段階 OP → G3 → G2 → G1 → お手馬。OP〜G1 は依頼の馬とレースが決まっていて、レースの LEAD 週前に依頼が来る（依頼の馬をオーナーの馬として世界に出す）。
+# レースの週は依頼の馬に自分が乗る（依頼が先。自分の馬は出走を取り消す。見送れば戻す）。勝てばクリア、負け・見送りは次の年の同じレース。
+# まだやり終えていないミッションの依頼の馬は、デビューと馬の店に出さない（HSEraless.pool）。
+# 乱数は馬の名前などから決まるもの（U.hashRng）だけで、世界の乱数は使わない。セーブは G.owners
 class_name HSOwners
 
 static func ALL() -> Array: return HSData.d().get("owners", [])
@@ -21,31 +23,31 @@ static func by(id: String) -> Variant:
 	return null
 static func active(id: String) -> bool: return LIST().any(func(o): return o.id == id)
 
-# ---------- 段階と数（仮の値。js/core/owners.js と同じ） ----------
+# ---------- 段階と数（仮の値。js/core/owners.js と同じ。docs/BALANCE.md「9. オーナーの依頼」） ----------
 const STAGES := [
-	{ key = "op", label = "OP", maxClass = 0, maxFh = 60.0, maxStrength = 0.9, floor = 10.0, money = 300.0 },
-	{ key = "g3", label = "G3", maxClass = 1, maxFh = 66.0, maxStrength = 0.95, floor = 25.0, money = 600.0 },
-	{ key = "g2", label = "G2", maxClass = 2, maxFh = 72.0, maxStrength = 1.0, floor = 40.0, money = 1000.0 },
-	{ key = "g1", label = "G1", maxClass = 3, maxFh = 80.0, maxStrength = 1.0, floor = 55.0, money = 2000.0 },
-	{ key = "own", label = "お手馬", maxClass = 4, maxFh = 99.0, maxStrength = 1.0, floor = 70.0, money = 5000.0 },
+	{ key = "op", label = "OP", floor = 10.0, money = 300.0 },
+	{ key = "g3", label = "G3", floor = 25.0, money = 600.0 },
+	{ key = "g2", label = "G2", floor = 40.0, money = 1000.0 },
+	{ key = "g1", label = "G1", floor = 55.0, money = 2000.0 },
+	{ key = "own", label = "お手馬", floor = 70.0, money = 5000.0 },
 ]
 const DONE := 5
+const JOBS := 4
 const MAX := 100.0
-const MEET := 10.0
-const GAIN := [5.0, 7.0, 9.0, 12.0, 15.0]
-const PLACE := [0.0, 0.0, 3.0, 2.0]
+const MEET := 4.0
+const GAIN := [1.0, 2.0, 3.0, 4.0, 0.0]
+const LEAD := 4.0
 const OWNED := 0.5
 const OWNED_FILLER := 0.3
 const FEE := [10.0, 30.0, 50.0, 100.0, 200.0]
 const GIFT := 1000.0
 const AWARD := 500.0
-const AWARD_MIN := 3.0
-const SIGN_RATE := 0.95
-const OFF_SIGN := 0.15
+const AWARD_MIN := 2.0
 const ASK_STAGE := 1
 const ASK_N := 3
 const WEAR_STAGE := 3
 const GATE_LABEL := { "overseas": "海外のレースに1度出たあと" }
+const POINT_TEXT := "OP 1点・G3 2点・G2 3点・G1 4点。合わせて4点で出会い"
 # 依頼が始まる前に要る印（あとで本当の「海外の解放」に差し替える）
 static func gate_ok(o: Variant) -> bool:
 	if not o or not o.get("gate"): return true
@@ -54,12 +56,12 @@ static func gate_ok(o: Variant) -> bool:
 	return false
 
 static func on() -> bool: return HSJockey.is_mode()
-static func _blank() -> Dictionary: return { pts = 0.0, stage = 0.0, prog = 0.0, met = false, known = false, rides = 0.0, wins = 0.0, big = 0.0, dec = 0.0, streak = 0.0, fees = 0.0, got = {}, years = {}, cleared = [] }
+static func _blank() -> Dictionary: return { pts = 0.0, stage = 0.0, prog = 0.0, met = false, known = false, rides = 0.0, wins = 0.0, big = 0.0, dec = 0.0, streak = 0.0, fees = 0.0, got = {}, years = {}, cleared = [], job = null, fails = 0.0 }
 static func init() -> Dictionary:
 	var st := {}
 	for o in ALL(): st[o.id] = _blank()
-	return { v = 2.0, st = st, week = null, log = [], queue = [], react = [], awards = {}, wear = {}, flags = {}, ask = null }
-# 前の形（好感度 0〜800・段階 顔見知り／信頼／主戦／相棒）を、新しい段階に移す
+	return { v = 3.0, st = st, log = [], queue = [], react = [], awards = {}, wear = {}, flags = {}, ask = null }
+# 前の形（好感度 0〜800・段階 顔見知り／信頼／主戦／相棒）を、段階に移す
 static func migrate_st(st: Dictionary) -> Dictionary:
 	var t := int(HSU.or_(st.get("tier"), 0.0)); var p: float = float(HSU.or_(st.get("pts"), 0.0))
 	var lo: float = [0.0, 100.0, 260.0, 520.0][t] if t < 4 else 0.0
@@ -69,13 +71,14 @@ static func migrate_st(st: Dictionary) -> Dictionary:
 	st.pts = STAGES[stage].floor + HSU.clamp(floorf((p - lo) / (hi - lo) * 10.0), 0.0, 10.0) if HSU.truthy(st.get("known")) else 0.0
 	st.erase("tier")
 	return st
+# 古いセーブ・足りない項目を埋める（ミッションの予定は、読み込んだあと plan_missing で）
 static func fill(s: Variant, g: Variant = null) -> Dictionary:
 	if not s: s = init()
 	if not s.get("st"): s.st = {}
 	var old := not HSU.truthy(s.get("v"))
 	for o in ALL():
 		var st = s.st.get(o.id)
-		# 縁の項目が無い前のセーブ：依頼を受けた・断った・乗った・好感度がある馬主は、縁がある扱い
+		# 縁の項目が無い前のセーブ：依頼を受けた・断った・乗った・好感度がある人は、縁がある扱い
 		if st and not st.has("known"):
 			st.known = bool(HSU.truthy(st.get("met")) or HSU.truthy(st.get("rides")) or HSU.truthy(st.get("pts")) or HSU.truthy(st.get("tier")))
 		if st and not st.has("stage"): migrate_st(st)
@@ -84,15 +87,23 @@ static func fill(s: Variant, g: Variant = null) -> Dictionary:
 		if not s.get(k): s[k] = []
 	if old:
 		s.queue = []; s.react = []
+	# 前の版（v2 まで）の「毎週の依頼」：受けていた騎乗を外し、依頼の形を捨てる
+	if s.get("week"):
+		if g and g.get("rides") and s.week.get("acc"):
+			for rk in s.week.acc.keys():
+				if g.rides.get(rk) == s.week.acc[rk].horseId: g.rides.erase(rk)
+		s.erase("week")
+	elif s.has("week"): s.erase("week")
+	if float(HSU.or_(s.get("v"), 0.0)) < 3:
+		for o in ALL(): s.st[o.id].prog = 0.0
 	if not s.get("awards"): s.awards = {}
 	if not s.get("wear"): s.wear = {}
 	if not s.get("flags"): s.flags = {}
-	if not s.has("week"): s.week = null
 	if not s.has("ask"): s.ask = null
 	# 海外の印：前のセーブで、自分が海外の重賞を勝っていれば出たことにする
 	if not s.flags.get("overseas") and g and g.get("records") and g.records.get("player"):
 		if HSU.or_(g.records.player.get("g1"), []).any(func(x): return x.get("region") == "海外"): s.flags.overseas = { y = g.year }
-	s.v = 2.0
+	s.v = 3.0
 	return s
 static func state() -> Dictionary:
 	var g = HSWorld.G
@@ -110,6 +121,258 @@ static func mission_of(o: Variant, stage: int) -> Variant:
 	return o.missions[stage]
 static func mission(id: String) -> Variant: return mission_of(by(id), int(of(id).stage))
 static func yen(v: float) -> float: return HSMath.round_js(v * HSU.price_index(HSWorld.G.year) / 10.0) * 10.0
+
+# ---------- ミッションのレース ----------
+static var _ridx: Variant = null
+static func race_data(name: String) -> Variant:
+	var ey: float = float(HSU.ERA) if HSU.ERA else 2025.0
+	var races: Array = HSData.d().get("races", [])
+	if _ridx == null or _ridx.ey != ey or not is_same(_ridx.src, races):
+		var m := {}
+		for r in HSData.d().get("ownerRaces", []): m[r.name] = r
+		for r in races:
+			if r.from <= ey and ey <= float(HSU.or_(r.get("to"), 9999.0)):
+				if not m.has(r.name): m[r.name] = r
+				if r.get("short") and not m.has(r.short): m[r.short] = r
+		_ridx = { ey = ey, src = races, m = m }
+	return _ridx.m.get(name)
+static func race_label(name: String) -> String:
+	var d = race_data(name)
+	return HSRaces.label(d) if d else name
+# 名前のあるオープンを、年代なしのゲームの週に足す（HSRaces.of_week から。鍵は重賞と同じ 年-月-週-レース名）
+static func open_races(year: float, month: float, week: float) -> Array:
+	if not HSU.ERA: return []
+	var out: Array = []
+	for r in HSData.d().get("ownerRaces", []):
+		if r.month != month or r.week != week: continue
+		var x: Dictionary = r.duplicate()
+		x.key = "%s-%s-%s-%s" % [HSU.num(year), HSU.num(month), HSU.num(week), r.name]; x.short = null; x.grade = null; x.graded = false; x.year = year
+		x.prize = HSMath.round_js(HSRaces.CLS_PRIZE["L" if r.get("listed") else "OP"] * HSU.price_index(year) / 10.0) * 10.0
+		out.append(x)
+	return out
+# ミッションの馬の名前 → オーナー
+static var _mh: Variant = null
+static func mission_owner(name: String) -> Variant:
+	if _mh == null or not is_same(_mh.src, ALL()):
+		var m := {}
+		for o in LIST():
+			var ms: Array = HSU.or_(o.get("missions"), [])
+			for k in mini(JOBS, ms.size()):
+				if ms[k].get("horse"): m[ms[k].horse] = o.id
+		_mh = { src = ALL(), m = m }
+	return _mh.m.get(name)
+# まだやり終えていないミッションの依頼の馬（デビューと馬の店に出さない）
+static var _res: Variant = null
+static func reserved() -> Dictionary:
+	var g = HSWorld.G
+	var s = g.get("owners") if g else null
+	var parts := PackedStringArray()
+	for o in LIST(): parts.append(HSU.num(float(s.st[o.id].stage)) if s and s.st.has(o.id) else "0")
+	var sig := ",".join(parts)
+	if _res != null and _res.sig == sig and is_same(_res.src, ALL()): return _res.set
+	var set := {}
+	for o in LIST():
+		var k0: int = int(s.st[o.id].stage) if s and s.st.has(o.id) else 0
+		var ms: Array = HSU.or_(o.get("missions"), [])
+		for k in mini(JOBS, ms.size()):
+			if k >= k0 and ms[k].get("horse"): set[ms[k].horse] = true
+	_res = { sig = sig, src = ALL(), set = set }
+	return set
+static func job_key(j: Dictionary) -> String: return "%s-%s-%s-%s" % [HSU.num(j.y), HSU.num(j.m), HSU.num(j.w), j.race]
+static func job_idx(j: Dictionary) -> float: return HSHorse.week_index(j.y, j.m, j.w)
+static func job_date(j: Dictionary) -> String: return "%s%s月%s週" % [HSWorld.y_label(j.y), HSU.num(j.m), HSU.num(j.w)]
+# その馬が、そのミッションのレースに出られるか（年齢・性・引退の年）
+static func can_run(h: Variant, j: Dictionary) -> bool:
+	var d = race_data(String(j.race))
+	if not d or not h: return false
+	var age: float = j.y - float(h.born)
+	var ra := String(d.get("age"))
+	if ra == "2" and age != 2: return false
+	if ra == "3" and age != 3: return false
+	if ra == "3+" and age < 3: return false
+	if ra == "4+" and age < 4: return false
+	if age < 2 or age >= 9: return false
+	if d.get("sex") == "牝" and h.get("sex") != "牝": return false
+	if HSU.truthy(h.get("retireYear")) and h.retireYear < j.y: return false
+	return true
+# 次のミッションの予定を立てる。after（{y,m,w}）より後のいちばん近いレースの週（無ければいまの週より後）。依頼はその LEAD 週前に来る
+static func plan(oid: String, after: Variant = null) -> Variant:
+	var st := of(oid); var o = by(oid); var prev = st.get("job")
+	st.job = null
+	if not o or not active(oid) or not st.known or st.stage >= JOBS: return null
+	var m = o.missions[int(st.stage)]
+	var d = race_data(String(m.race)) if m else null
+	if not d: return null
+	var g = HSWorld.G
+	var by_: float = after.y if after else g.year
+	var bm: float = after.m if after else g.month
+	var bw: float = after.w if after else minf(g.week, 4.0)
+	var bi := HSHorse.week_index(by_, bm, bw)
+	var y: float = by_
+	if HSHorse.week_index(y, d.month, d.week) <= bi: y += 1.0
+	var tries := 0.0
+	if prev and prev.k == st.stage: tries = float(HSU.or_(prev.get("tries"), 0.0)) + 1.0
+	st.job = { k = st.stage, horse = m.horse, race = d.name, y = y, m = d.month, w = d.week, at = HSHorse.week_index(y, d.month, d.week) - LEAD, on = false, hid = null, tries = tries }
+	return st.job
+# 縁のある人で、予定の無い人に予定を立てる（読み込んだとき）
+static func plan_missing() -> void:
+	for o in LIST():
+		var st := of(o.id)
+		if st.known and st.stage < JOBS and (not st.get("job") or st.job.k != st.stage): plan(o.id)
+# 依頼の馬を世界に出す（その年齢で、オーナーの馬として）
+static func spawn(name: String, age: float, raceY: float) -> Variant:
+	var g = HSWorld.G
+	var d = HSWorld.histByName.get(name)
+	if not d: return null
+	var off: float = (raceY - age) - d.born
+	var h := HSHorse.from_historic(HSEraless.shift(d, off), HSWorld.new_id())
+	if HSWorld.foreignTrained.has(d.name) or HSData.is_foreign(d):
+		h.foreignTrained = true; h.country = d.country if d.get("country") else "外"
+	h.loc = "stable"
+	g.bornHist = HSU.or_(g.get("bornHist"), []).filter(func(n): return n != d.name) + [d.name]
+	g.lineup[d.name] = off
+	g.horses[h.id] = h
+	HSWorld.dirty()
+	return h
+# 依頼が来る：依頼の馬を用意して、場面を積む
+static func issue(oid: String) -> bool:
+	var g = HSWorld.G; var s := state(); var o = by(oid); var st := of(oid); var j = st.get("job")
+	if not o or not j or j.on: return false
+	var m: Dictionary = o.missions[int(j.k)]
+	var h = null
+	for x in HSWorld.all():
+		if x.name == j.horse and (x.get("loc") == "stable" or x.get("loc") == "farm"): h = x; break
+	if h and h.get("owner") != "P" and not can_run(h, j):   # 年齢などで出られない：いったん世界から外す
+		HSWorld.unenter(h.id); g.horses.erase(h.id); HSWorld.dirty(); h = null
+	if h and h.get("owner") == "P" and not can_run(h, j):   # 自分の馬（前のセーブ）が出られない年：次の年に
+		plan(oid, j); return false
+	if not h: h = spawn(String(j.horse), float(m.age), j.y)
+	if not h:
+		plan(oid, j); return false
+	if h.get("owner") != "P":
+		h.loc = "stable"; h.restUntil = 0.0
+	var rights: Dictionary = HSU.or_(h.get("rights"), {}).duplicate(); rights[j.race] = j.y; h.rights = rights
+	j.on = true; j.hid = h.id
+	var label := race_label(String(j.race))
+	HSWorld.news("%sさんから騎乗依頼：%sの%sに%sで。" % [o.name, job_date(j), label, h.name], "good")
+	s.queue.append({ oid = oid, kind = "job", k = j.k, horse = h.name, race = label, date = job_date(j), retry = j.tries > 0, y = g.year })
+	return true
+# 週の頭：予定の週になった依頼を出す。レースの週を過ぎた依頼は次の年へ
+static func tick() -> void:
+	var now := HSWorld.w_idx()
+	for o in LIST():
+		var st := of(o.id); var j = st.get("job")
+		if not j or not st.known or st.stage >= JOBS: continue
+		if job_idx(j) < now:
+			plan(o.id, j); continue
+		if not j.on and now >= j.at: issue(o.id)
+# いま来ている依頼（UI とテスト用）
+static func offers() -> Array:
+	if not on(): return []
+	var g = HSWorld.G; var now := HSWorld.w_idx()
+	var out: Array = []
+	for o in LIST():
+		var st := of(o.id); var j = st.get("job")
+		if not j or not j.on or st.stage >= JOBS: continue
+		var key := job_key(j)
+		out.append({ oid = o.id, k = j.k, raceKey = key, horseId = j.hid, horse = j.horse, race = j.race, y = j.y, m = j.m, w = j.w, inWeeks = job_idx(j) - now,
+			now = j.y == g.year and j.m == g.month and j.w == g.week, line = float(HSU.hash32("%s:%s" % [key, j.horse]) % 997), retry = j.tries > 0 })
+	return HSU.stable_sort(out, func(a, b): return a.inWeeks < b.inWeeks or (a.inWeeks == b.inWeeks and String(a.oid) < String(b.oid)))
+static func offer_of(raceKey: String) -> Variant:
+	for o in offers():
+		if o.raceKey == raceKey: return o
+	return null
+# 今週のレースの依頼（その人の）
+static func job_now(oid: String) -> Variant:
+	var g = HSWorld.G; var j = of(oid).get("job")
+	return j if (j and j.on and j.y == g.year and j.m == g.month and j.w == g.week) else null
+static func accepted(raceKey: String) -> bool:
+	var g = HSWorld.G
+	for o in LIST():
+		var j = job_now(o.id)
+		if j and job_key(j) == raceKey and HSU.or_(g.get("rides"), {}).get(raceKey) == j.hid: return true
+	return false
+static func job_of_race(raceKey: String) -> Variant:
+	for o in LIST():
+		var j = job_now(o.id)
+		if j and job_key(j) == raceKey: return { oid = o.id, j = j }
+	return null
+# 同じレースに出す予定だった自分の馬（依頼のために取り消した馬）
+static func clash(ofr: Dictionary) -> Variant:
+	var j = of(String(ofr.oid)).get("job")
+	if j and j.get("scr") and j.scr.size(): return HSWorld.horse(j.scr[0].id)
+	return null
+# 自分の馬の出走を取り消す（依頼が先）。取り消した馬は j.scr に覚えて、見送ったら戻す
+static func _scratch(j: Dictionary, h: Dictionary, key: String, label: String) -> void:
+	var g = HSWorld.G
+	var e = null
+	for x in g.entries.get(key, []):
+		if x.horseId == h.id: e = x; break
+	if e:
+		g.entries[key] = g.entries[key].filter(func(x): return x.horseId != h.id)
+		if not g.entries[key].size(): g.entries.erase(key)
+		if not j.get("scr"): j.scr = []
+		j.scr.append({ id = h.id, jockey = e.jockey })
+	elif h.get("auto"):
+		h.skipW = HSWorld.w_idx()
+		if not j.get("scr"): j.scr = []
+		j.scr.append({ id = h.id, auto = true })
+	else: return
+	HSWorld.news("%sは%sで依頼の馬と重なったので、今週の出走を取り消した。" % [h.name, label], "warn")
+# レースの週：依頼の馬に自分が乗る（HSWorld.cards・finish_week の頭から）
+static func apply_ride() -> void:
+	if not on(): return
+	var g = HSWorld.G
+	for o in LIST():
+		var j = job_now(o.id)
+		if not j: continue
+		var key := job_key(j)
+		var card = null
+		for c in HSWorld.prepare_week().cards:
+			if c.race.key == key: card = c; break
+		if not card or not card.runners.any(func(x): return x.horse.id == j.hid): continue
+		for x in card.runners:
+			if x.get("mine") and x.horse.id != j.hid: _scratch(j, x.horse, key, HSRaces.label(card.race))
+		if HSU.or_(g.get("rides"), {}).get(key) != j.hid:
+			var rides: Dictionary = HSU.or_(g.get("rides"), {}).duplicate(); rides[key] = j.hid; g.rides = rides
+# 依頼の馬は、ミッションのレースの週にそのレースへ出る（HSWorld.ai_choose の頭から）
+static func forced_race(h: Dictionary, races: Array) -> Variant:
+	for o in LIST():
+		var j = job_now(o.id)
+		if j and j.hid == h.id:
+			var key := job_key(j)
+			for r in races:
+				if r.key == key: return r
+	return null
+# 受ける（前の形の名残。依頼は来た時点で受けている）
+static func accept(raceKey: String, _horseId: Variant = null) -> Variant:
+	var x = job_of_race(raceKey)
+	if not x: return null if offer_of(raceKey) else "依頼が見つからない"
+	apply_ride(); HSWorld.dirty()
+	return null
+# 見送る（自分の馬に乗るときも）：次の年の同じレースでもう一度。取り消した自分の馬は戻す
+static func decline(oid: String) -> Variant:
+	if not by(oid):
+		var x = offer_of(oid)
+		if not x: return "依頼が見つからない"
+		oid = x.oid
+	var g = HSWorld.G; var s := state(); var st := of(oid); var j = st.get("job")
+	if not j or not j.on: return "依頼が見つからない"
+	var key := job_key(j)
+	for x in HSU.or_(j.get("scr"), []):
+		var h = HSWorld.horse(x.id)
+		if not h: continue
+		if x.get("auto"): h.erase("skipW")
+		else:
+			if not g.entries.has(key): g.entries[key] = []
+			if not g.entries[key].any(func(e): return e.horseId == x.id): g.entries[key].append({ horseId = x.id, jockey = x.jockey })
+	if HSU.or_(g.get("rides"), {}).get(key) == j.hid: HSJockey.cancel(key)
+	st.met = true; st.dec += 1.0
+	s.log.push_front({ y = g.year, m = g.month, w = g.week, oid = oid, race = race_label(String(j.race)), horse = j.horse, pos = 0.0, d = 0.0 })
+	if s.log.size() > 150: s.log.resize(150)
+	plan(oid, j)
+	HSWorld.dirty()
+	return null
 
 # ---------- 好み ----------
 const EU := ["英", "愛", "仏", "独", "伊"]
@@ -228,9 +491,11 @@ static func fit_data(o: Dictionary, d: Dictionary) -> bool:
 		"aus": return AUS.has(d.get("country")) or _sire_country(d) == "豪" or (d.get("surface") != "ダ" and float(HSU.or_(d.get("distMax"), 2000.0)) <= 1600 and _early(d))
 	return false
 
+
 # ---------- 縁（出会い） ----------
 static func known(id: String) -> bool: return bool(of(id).known)
 static func known_list() -> Array: return LIST().filter(func(o): return known(o.id))
+# 縁ができる：最初のミッションの予定を立てる。出会いの場面を積む
 static func meet(oid: String, ctx: Variant = null) -> bool:
 	var o = by(oid); var st := of(oid)
 	if not o or st.known: return false
@@ -238,6 +503,7 @@ static func meet(oid: String, ctx: Variant = null) -> bool:
 	var c: Dictionary = ctx if ctx else HSU.or_(st.get("lastWin"), {})
 	st.known = true; st.knownAt = { y = g.year, m = g.month, w = g.week }
 	st.pts = HSU.mx(st.pts, STAGES[0].floor)
+	plan(oid)
 	HSWorld.news("%sさん（%s）から声がかかった。これから騎乗依頼が来る。" % [o.name, sign_label(o)], "good")
 	s.queue.append({ oid = oid, kind = "meet", horse = String(c.get("horse", "")), race = String(c.get("race", "")), reward = "", y = g.year })
 	return true
@@ -249,7 +515,7 @@ static func hint(oid: String) -> String:
 	var o = by(oid)
 	return String(o.unlock.get("hint", "")) if o and o.get("unlock") else ""
 
-# ---------- 馬主の馬（馬の名前と種から決まる） ----------
+# ---------- オーナーの馬（依頼の馬はその人の馬。ほかは馬の名前と種から決まる） ----------
 static var _own: Variant = null
 static func _s(v: Variant) -> String:
 	return HSU.num(v) if (v is float or v is int) else str(v)
@@ -257,6 +523,8 @@ static func owner_of(h: Variant) -> Variant:
 	if not h or h.get("owner") == "P" or h.get("legend") or not LIST().size(): return null
 	var g = HSWorld.G
 	if not g: return null
+	var mo = mission_owner(String(h.name)) if h.get("name") else null
+	if mo: return mo
 	if _own == null or _own.seed != g.seed or _own.map.size() > 6000: _own = { seed = g.seed, map = {} }
 	var name: String = h.name if h.get("name") else _s(h.id)
 	var key := "%s|%s" % [name, _s(h.id)]
@@ -288,132 +556,8 @@ static func class_of(race: Dictionary) -> int:
 	if race.get("invite") or race.get("grade") == "GF": return 4
 	if not race.get("graded"): return 0
 	return { G1 = 3, G2 = 2, G3 = 1 }.get(race.get("grade"), 1)
-static func allowed(stage: int, race: Dictionary, h: Dictionary, strength: float) -> bool:
-	var t: Dictionary = STAGES[mini(stage, 4)]
-	var cls := class_of(race)
-	if cls > t.maxClass: return false
-	if race.get("region") == "海外" and stage < 3: return false
-	if strength > t.maxStrength + 1e-9: return false
-	if peak(h) > t.maxFh: return false
-	return true
 
-# ---------- 今週の依頼 ----------
-static func generate(cs: Array, key: String, opts: Dictionary = {}) -> Array:
-	var g = HSWorld.G
-	var wIdx := HSWorld.w_idx()
-	var r := HSU.hash_rng("%s:owners:%s" % [key, HSU.num(g.seed)])
-	var stageOf := func(oid): return int(opts.stage) if opts.get("stage") != null else int(of(oid).stage)
-	var per := {}
-	for c in cs:
-		var race: Dictionary = c.race
-		var ranked: Array = HSU.stable_sort(c.runners, func(a, b): return HSHorse.overall(HSHorse.cur(a.horse, wIdx)) > HSHorse.overall(HSHorse.cur(b.horse, wIdx)))
-		for k in ranked.size():
-			var x = ranked[k]
-			if x.get("mine") or x.horse.get("owner") == "P" or x.horse.get("legend"): continue
-			var oid = owner_of(x.horse)
-			if not oid: continue
-			if not opts.get("all") and not of(oid).known: continue
-			var stage: int = stageOf.call(oid)
-			if stage >= DONE: continue
-			var strength := 1.0 - k / HSU.mx(1.0, ranked.size() - 1.0)
-			if not allowed(stage, race, x.horse, strength): continue
-			if not per.has(oid): per[oid] = []
-			per[oid].append({ c = c, x = x, strength = strength })
-	var out: Array = []; var used := {}
-	var push := func(o, y, best: bool):
-		used[y.c.race.key] = true
-		out.append({ oid = o.id, raceKey = y.c.race.key, horseId = y.x.horse.id, horse = y.x.horse.name, best = best, line = float(r.int_(0, 999)) })
-	var owners: Array = r.shuffle(LIST().duplicate())
-	for o in owners:
-		var cand: Array = per.get(o.id, []).filter(func(y): return not used.has(y.c.race.key))
-		if not cand.size(): continue
-		var stage: int = stageOf.call(o.id)
-		var best = best_horse(o.id) if stage >= 3 else null
-		var bestPick = null
-		if best:
-			for y in cand:
-				if y.x.horse.id == best.id: bestPick = y; break
-		if bestPick:
-			push.call(o, bestPick, true); continue
-		if not r.chance(0.4 + 0.1 * stage): continue
-		var fit: Array = cand.filter(func(y): return sign_fits(o, y.c.race, y.x.horse))
-		var pool: Array = cand
-		if fit.size():
-			if r.chance(SIGN_RATE): pool = fit
-		elif not r.chance(OFF_SIGN): continue
-		var want := 0.5 + 0.12 * stage
-		var pick = r.weighted(pool, func(y): return (HSMath.exp_(-HSMath.pow_((y.strength - want) / 0.3, 2.0)) + 0.02) * (1.0 + class_of(y.c.race) * stage * 0.6) * (1.0 + fit_race(o, y.c.race) + fit_horse(o, y.x.horse)))
-		push.call(o, pick, false)
-	if not out.size():
-		var cands: Array = HSU.stable_sort(owners.filter(func(o): return per.get(o.id, []).size()), func(a, b): return per[a.id].size() > per[b.id].size())
-		if cands.size():
-			var o0: Dictionary = cands[0]
-			var fit0: Array = per[o0.id].filter(func(y): return sign_fits(o0, y.c.race, y.x.horse))
-			push.call(o0, r.pick(fit0 if fit0.size() else per[o0.id]), false)
-	return out
-static func _wk_key() -> String:
-	var g = HSWorld.G; return "%s-%s-%s" % [HSU.num(g.year), HSU.num(g.month), HSU.num(g.week)]
-static func _card_has(cs: Array, raceKey: String, horseId: String) -> bool:
-	for c in cs:
-		if c.race.key == raceKey: return c.runners.any(func(x): return x.horse.id == horseId)
-	return false
-static func offers() -> Array:
-	if not on(): return []
-	var s := state(); var g = HSWorld.G
-	var key := _wk_key()
-	var cs := HSWorld.cards()
-	if not s.get("week") or s.week.key != key: s.week = { key = key, list = generate(cs, key), acc = {}, dec = [] }
-	for rk in s.week.acc.keys():
-		var a = s.week.acc[rk]
-		if _card_has(cs, rk, a.horseId): continue
-		s.week.acc.erase(rk)
-		if g.get("rides") and g.rides.get(rk) == a.horseId: HSJockey.cancel(rk)
-	var fresh := HSWorld.cards()
-	return s.week.list.filter(func(o): return _card_has(fresh, o.raceKey, o.horseId) and not s.week.dec.has(o.raceKey))
-static func offer_of(raceKey: String) -> Variant:
-	for o in offers():
-		if o.raceKey == raceKey: return o
-	return null
-static func accepted(raceKey: String) -> bool:
-	var s := state(); return s.get("week") != null and s.week.key == _wk_key() and s.week.acc.has(raceKey)
-static func clash(o: Dictionary) -> Variant:
-	var c = HSWorld.card_of(o.raceKey)
-	if not c: return null
-	for x in c.runners:
-		if x.get("mine") and x.horse.id != o.horseId: return x.horse
-	return null
-static func accept(raceKey: String, horseId: String) -> Variant:
-	var g = HSWorld.G; var s := state()
-	var o = null
-	for x in offers():
-		if x.raceKey == raceKey and x.horseId == horseId: o = x; break
-	if not o: return "依頼が見つからない"
-	var rides: Dictionary = g.rides.duplicate(); rides[raceKey] = horseId; g.rides = rides
-	s.week.acc[raceKey] = { oid = o.oid, horseId = horseId }
-	of(o.oid).met = true
-	HSWorld.dirty()
-	return null
-static func unaccept(raceKey: String) -> void:
-	var s := state()
-	if s.get("week") and s.week.acc.has(raceKey):
-		s.week.acc.erase(raceKey); HSJockey.cancel(raceKey)
-static func decline(raceKey: String) -> Variant:
-	var s := state(); var g = HSWorld.G
-	var o = null
-	for x in offers():
-		if x.raceKey == raceKey: o = x; break
-	if not o: return "依頼が見つからない"
-	if s.week.acc.has(raceKey): unaccept(raceKey)
-	s.week.dec.append(raceKey)
-	var st := of(o.oid); st.met = true; st.dec += 1.0
-	var d := -2.0
-	add_pts(o.oid, d)
-	var race = HSWorld.race_by_key(raceKey)
-	s.log.push_front({ y = g.year, m = g.month, w = g.week, oid = o.oid, race = HSRaces.label(race) if race else "", horse = o.horse, pos = 0.0, d = d })
-	if s.log.size() > 150: s.log.resize(150)
-	return null
-
-# ---------- 好感度 ----------
+# ---------- 友好度 ----------
 static func cap(st: Dictionary) -> float:
 	if not st.known: return STAGES[1].floor - 1.0
 	if st.stage >= DONE: return MAX
@@ -430,20 +574,18 @@ static func add_pts(oid: String, d: float) -> float:
 	v = HSU.mx(v, floor_(st))
 	st.pts = HSMath.round_js(v * 10.0) / 10.0
 	return st.pts
+# 依頼の馬に乗った結果（騎乗料・成績・ひと言。友好度も少し上がる。負けても下がらない）
 static func on_ride(oid: String, race: Dictionary, me: Dictionary, pop: Variant) -> void:
 	var g = HSWorld.G; var s := state(); var o = by(oid); var st := of(oid)
 	if not o: return
 	var cls := class_of(race); var pos: float = me.pos
 	st.streak = 0.0 if pos <= 3 else st.streak + 1.0
 	var d := 0.0
-	if pos == 1: d = 3.0 + cls
+	if pos == 1: d = 0.0
 	elif pos == 2: d = 1.5
 	elif pos == 3: d = 1.0
 	elif pos <= 5: d = 0.5
-	elif st.streak >= 4: d = -1.0
 	if pop and pop - pos >= 3: d += 0.5
-	var bigLoss: bool = cls >= 3 and pos >= 10 and pop and pop <= 3
-	if bigLoss: d = -2.0
 	var fee := yen(FEE[cls])
 	g.player.money += fee; st.fees += fee
 	st.rides += 1.0
@@ -456,7 +598,7 @@ static func on_ride(oid: String, race: Dictionary, me: Dictionary, pop: Variant)
 	yr.rides += 1.0
 	if pos == 1: yr.wins += 1.0
 	st.met = true
-	add_pts(oid, d)
+	if d: add_pts(oid, d)
 	var kind: String = ("bigwin" if cls >= 3 else "win") if pos == 1 else ("good" if (pos <= 3 or (pop and pop - pos >= 3)) else "lose")
 	var label := HSRaces.label(race)
 	s.react.append({ oid = oid, kind = kind, race = label, horse = me.horse.name, pos = pos, d = d, fee = fee, line = float(HSU.hash32("%s:%s:%s" % [label, me.horse.name, HSU.num(g.year)]) % 997), tags = tags_of(race, me.horse) })
@@ -464,7 +606,13 @@ static func on_ride(oid: String, race: Dictionary, me: Dictionary, pop: Variant)
 	if s.log.size() > 150: s.log.resize(150)
 	if pos == 1 and cls >= 3: HSWorld.news("%sさんの%sで%sを勝った。" % [o.name, me.horse.name, label], "g1")
 
-# ---------- 課題 ----------
+# ---------- ミッション ----------
+# OP〜G1 の段階：依頼の馬とレースが決まっている。文は馬とレースから作る
+static func mission_text(o: Variant, k: int) -> String:
+	var m = mission_of(o, k)
+	if not m: return ""
+	if k >= JOBS or not m.get("horse"): return String(HSU.or_(m.get("text"), ""))
+	return "依頼の馬%sで、%sを勝つ" % [m.horse, race_label(String(m.race))]
 static func _name_in(names: Array, race: Dictionary) -> bool:
 	return names.has(race.get("name")) or (race.get("short") != null and names.has(race.short))
 static func _won(h: Dictionary, name: String, y: Variant) -> bool:
@@ -477,10 +625,10 @@ static func streak_of(h: Dictionary) -> int:
 	while i >= 0 and rs[i].pos == 1:
 		n += 1; i -= 1
 	return n
-static func need_ok(n: Dictionary, race: Dictionary, me: Dictionary, isOffer: bool) -> bool:
+# お手馬の段階のミッションの判定
+static func need_ok(n: Dictionary, race: Dictionary, me: Dictionary, _unused: Variant = null) -> bool:
 	var h: Dictionary = me.horse
-	var by_: String = String(HSU.or_(n.get("by"), "offer"))
-	if by_ == "offer" and not isOffer: return false
+	var by_: String = String(HSU.or_(n.get("by"), "own"))
 	if by_ == "own" and h.get("owner") != "P": return false
 	if by_ == "orig" and not (h.get("owner") == "P" and HSU.truthy(h.get("original"))): return false
 	if me.pos > float(HSU.or_(n.get("pos"), 1.0)): return false
@@ -505,13 +653,14 @@ static func need_ok(n: Dictionary, race: Dictionary, me: Dictionary, isOffer: bo
 	if n.get("twice") and not HSU.or_(n.get("names"), []).any(func(x): return _won(h, x, _year_of(race) - 1.0)): return false
 	if n.get("wonRegion") and not HSU.or_(h.get("gradedWins"), []).any(func(w): return w.get("region") == n.wonRegion): return false
 	return true
+# ミッションをやり終えた：お礼・友好度・場面・次の段階（次のミッションの予定。最後ならアイテム）
 static func advance(oid: String, ctx: Dictionary = {}) -> bool:
 	var g = HSWorld.G; var s := state(); var o = by(oid); var st := of(oid)
 	if not o or st.stage >= DONE: return false
 	var k := int(st.stage)
 	var m := yen(STAGES[k].money)
 	g.player.money += m
-	st.stage = float(k + 1); st.prog = 0.0
+	st.stage = float(k + 1); st.prog = 0.0; st.job = null
 	st.pts = HSU.mx(st.pts, MAX if st.stage >= DONE else STAGES[int(st.stage)].floor)
 	st.cleared = HSU.or_(st.get("cleared"), []) + [{ y = g.year, m = g.month, w = g.week, horse = String(ctx.get("horse", "")), race = String(ctx.get("race", "")) }]
 	var reward := "お礼 %s" % HSU.money(m)
@@ -522,29 +671,43 @@ static func advance(oid: String, ctx: Dictionary = {}) -> bool:
 	if st.stage >= DONE: HSWorld.news("%sさんの依頼をすべてやり終えた。%sを受け取った（%s）。" % [o.name, o.item.name, o.item.text], "g1")
 	else: HSWorld.news("%sさんの「%s」の依頼をやり終えた。次は「%s」の依頼。%s。" % [o.name, STAGES[k].label, STAGES[int(st.stage)].label, reward], "g1")
 	s.queue.append({ oid = oid, kind = "m" + HSU.num(st.stage), horse = String(ctx.get("horse", "")), race = String(ctx.get("race", "")), reward = reward, y = g.year })
+	if st.stage < JOBS: plan(oid)
 	return true
-# 自分が乗ったレースの結果（週の終わりに、レースのあとの馬で見る）
+# 自分が乗ったレースの結果：ジャンルの勝ちで出会いの点（会ったあとは友好度）、お手馬の段階のミッション、海外の印
 static func on_result(race: Dictionary, me: Dictionary) -> void:
 	var s := state()
 	var h: Dictionary = me.horse; var label := HSRaces.label(race)
 	if race.get("region") == "海外" and not s.flags.get("overseas"): s.flags.overseas = { y = _year_of(race), race = label }
-	var a = s.week.acc.get(race.key) if s.get("week") else null
-	var offerOid = a.oid if (a and a.horseId == h.id) else null
 	var cls := class_of(race)
 	for o in LIST():
 		var st := of(o.id)
 		if st.stage >= DONE: continue
-		var gain := 0.0
-		if me.pos == 1: gain = GAIN[cls]
-		elif not st.known and int(me.pos) < PLACE.size(): gain = PLACE[int(me.pos)]
+		var gain: float = GAIN[cls] if me.pos == 1 else 0.0
 		if gain and sign_fits(o, race, h):
 			add_pts(o.id, gain)
 			if not st.known: st.lastWin = { horse = h.name, race = label }
-		if not st.known: continue
+		if not st.known or st.stage < JOBS: continue
 		var m = mission_of(o, int(st.stage))
-		if not m or not need_ok(HSU.or_(m.get("need"), {}), race, me, offerOid == o.id): continue
-		st.prog += 1.0
-		if st.prog >= float(HSU.or_(m.need.get("count"), 1.0)): advance(o.id, { horse = h.name, race = label })
+		if m and m.get("need") and need_ok(m.need, race, me): advance(o.id, { horse = h.name, race = label })
+# ミッションのレースの結果：依頼の馬で勝てばクリア。負け・見送り・走れなかったときは次の年の同じレースでもう一度
+static func job_result(rep: Dictionary) -> void:
+	for o in LIST():
+		var st := of(o.id); var j = st.get("job")
+		if not j or not j.on or st.stage >= JOBS or j.y != rep.y or j.m != rep.m or j.w != rep.w: continue
+		var key := job_key(j)
+		var r = null
+		for x in rep.get("races", []):
+			if x.race.key == key: r = x; break
+		var me = null
+		if r and r.get("sim"):
+			for x in r.sim.results:
+				if x.get("rider") == "P": me = x; break
+		if me and me.get("horse") and me.horse.id == j.hid and me.pos == 1:
+			advance(o.id, { horse = me.horse.name, race = HSRaces.label(r.race) })
+			continue
+		st.fails = float(HSU.or_(st.get("fails"), 0.0)) + 1.0
+		HSWorld.news("%sさんの依頼（%s）は、次の年の同じレースでもう一度。" % [o.name, race_label(String(j.race))], "info")
+		plan(o.id, j)
 static func after_week(rep: Dictionary) -> void:
 	for r in rep.get("races", []):
 		if r.race.get("grade") == "GF" or not r.get("sim"): continue
@@ -552,7 +715,11 @@ static func after_week(rep: Dictionary) -> void:
 		for x in r.sim.results:
 			if x.get("rider") == "P": me = x; break
 		if me and me.get("horse"): on_result(r.race, me)
+	job_result(rep)
+	HSGFHost.after_week(rep)   # GF の一族の人（GF を全制覇したときの花輪）
 	meet_check()
+	tick()
+
 
 # ---------- 最後のアイテム ----------
 static func items() -> Array:
@@ -618,7 +785,7 @@ static func gift_legend(oid: String) -> String:
 		var m := yen(GIFT * 3.0); g.player.money += m; got.money = m; got.erase("pending"); return "お祝い %s" % HSU.money(m)
 	if not d: return money.call()
 	if not HSSeason.can_buy():
-		got.pending = true; return "思い出の名馬%s（お手馬に空きができたら、馬主の画面で受け取れる）" % o.memory
+		got.pending = true; return "思い出の名馬%s（お手馬に空きができたら、オーナーの画面で受け取れる）" % o.memory
 	if not g.get("unlocked"): g.unlocked = []
 	if not g.unlocked.has(d.name): g.unlocked.append(d.name)
 	var it = null
@@ -642,7 +809,7 @@ static func claim(oid: String) -> Variant:
 	if st.got.bond.get("pending"): return "お手馬がいっぱい"
 	HSWorld.news("%sさんから受け取った：%s" % [by(oid).name, r], "good")
 	return null
-# 前の版で「引退した馬を譲ってもらう」約束をした馬主の馬を1頭、年明けに牧場へ（W.newYear の前に）
+# 前の版で「引退した馬を譲ってもらう」約束をした人の馬を1頭、年明けに牧場へ（W.newYear の前に）
 static func retire_gifts() -> void:
 	var g = HSWorld.G
 	for o in ALL():
@@ -671,7 +838,7 @@ static func retire_gifts() -> void:
 			st.got.t3 = { y = g.year, horse = h.name, money = m }
 			HSWorld.news("%sさんの%sが引退した。お礼に %s が届いた。" % [o.name, h.name, HSU.money(m)], "g1")
 		HSWorld.dirty()
-# 年末：その年にいちばん勝った馬主と「名コンビ賞」
+# 年末：その年にいちばん勝ったオーナーと「名コンビ賞」
 static func year_award(year: float) -> Variant:
 	var s := state(); var g = HSWorld.G
 	var yk := HSU.num(year)
@@ -745,3 +912,13 @@ static func fill_(text: String, vars: Dictionary) -> String:
 static func scene_lines(oid: String, kind: String, vars: Dictionary = {}) -> Array:
 	var o = by(oid)
 	return HSU.or_(o.get("scenes"), {}).get(kind, []).map(func(t): return fill_(t, vars)) if o else []
+# 依頼が来たときのひと言：はじめはミッションの say、やり直しは offer の台詞（js/core/owners.js の O.jobLine）
+static func job_line(oid: String, q: Dictionary) -> String:
+	var o = by(oid)
+	if not o: return ""
+	var m = mission_of(o, int(q.get("k", 0)))
+	var vars := { horse = String(q.get("horse", "")), race = String(q.get("race", "")) }
+	if not q.get("retry") and m and m.get("say"): return fill_(String(m.say), vars)
+	var d = race_data(String(m.race)) if m else null
+	var seed := float(HSU.hash32("%s:%s:%s" % [String(q.get("race", "")), String(q.get("horse", "")), HSU.num(float(q.get("y", 0.0)))]) % 997)
+	return line(oid, "offer", seed, vars, { race = d, horse = HSWorld.histByName.get(String(q.get("horse", ""))) })

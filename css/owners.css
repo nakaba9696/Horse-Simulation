@@ -31,6 +31,7 @@ button.own-face:hover .oface { transform: translateY(-2px); transition: transfor
 .own-gauge { position: relative; height: 8px; margin-top: 6px; border-radius: var(--r-pill); background: var(--sunk); overflow: hidden; box-shadow: 0 0 0 1px var(--line) inset; }
 .own-gauge i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: inherit; background: linear-gradient(90deg, #ff9fb8, #ffd34d); box-shadow: 0 0 10px rgba(255, 180, 120, .6); }
 .own-next { margin-top: 2px; }
+.own-pips { margin-left: 4px; color: var(--accent); letter-spacing: 2px; }
 .own-up { color: var(--accent-hi); font-weight: 700; font-size: var(--fs-sm); }
 
 /* 一覧 */

@@ -62,13 +62,13 @@
     const sires = O.retired('牡'), dams = O.retired('牝');
     const ps = sires.find(h => h.id === st.osire), pd = dams.find(h => h.id === st.odam);
     const card = (h, role, on) => `<div class="card ${on ? 'sel' : ''}" data-act="orig-pick" data-role="${role}" data-id="${h.id}">${UI.thumb(h)}<div class="grow">
-        <div class="row"><span class="nm">${e(h.name)}</span>${h.hist ? UI.histMark(h) : ''}${h.parentBonus ? `<span class="chip crown">${h.potUp ? `引退で能力 最大+${h.parentBonus}` : `ボーナス +${h.parentBonus}`}</span>` : ''}${role === 'dam' && h.foalY === G.year ? '<span class="chip">今年は産んだ</span>' : ''}<button class="btn sm right" data-act="orig-release" data-id="${h.id}">放す</button></div>
+        <div class="row"><span class="nm">${e(h.name)}</span>${h.hist ? UI.histMark(h) : ''}${h.parentBonus ? `<span class="chip crown">${h.potUp ? `引退で能力 最大+${h.parentBonus}` : `ボーナス +${h.parentBonus}`}</span>` : ''}${role === 'dam' && h.foalY === G.year ? '<span class="chip">今年は産んだ</span>' : ''}<span class="chip">仔はあと${O.foalsLeft(h)}頭</span><button class="btn sm right" data-act="orig-release" data-id="${h.id}">放す</button></div>
         <div class="sub">${h.starts || 0}戦${h.wins || 0}勝・${e(H.styleText(h))}・${H.distLabel(h.distMin, h.distMax)}</div>${potStats(h)}
         <div class="skills">${O.skillsOf(h).map(skillChip).join('')}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}</div></div>`;
     const cand = ps && pd ? O.candidates(ps, pd) : [];
     const bonus = ps && pd ? O.childBonus(ps, pd) : 0;
     return `<h2 class="sec">オリジナルホース<span class="r">お手馬 ${T.ownCount()}/${T.MAX_OWN}</span></h2>
-      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬は、引退したときにトロフィーの数と種類で能力が上がるので、良い仔ができやすい。牝馬は1年に1頭。</div>
+      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬は、引退したときにトロフィーの数と種類で能力が上がるので、良い仔ができやすい。牝馬は1年に1頭。1頭の馬から作れる仔は${O.foalsMax()}頭までで、作り終えた親は牧場を去る。</div>
       ${ps && pd ? `<div class="panel gold mt"><b>${e(ps.name)} × ${e(pd.name)}</b>${bonus ? `<span class="chip crown" style="margin-left:6px">ボーナス +${bonus}</span>` : ''}
         <div class="small mt">受け継ぐ特殊能力の候補（${cand.length}つ${cand.length > O.MAX_SKILLS ? '。この中から4つ' : ''}）</div><div class="skills">${cand.map(skillChip).join('') || '<span class="small muted">なし</span>'}</div>
         <div class="row mt"><input id="orig-name" maxlength="12" placeholder="名前（空ならおまかせ）" class="grow"><button class="btn gold" data-act="orig-make">オリジナルホースを作る</button></div></div>`
@@ -417,7 +417,7 @@
     App.modal(`<h3>${e(name)}騎手、デビュー</h3>
       <p>${W.get().year}年1月。${e(W.get().jockey.region)}所属の新人騎手として、最初の依頼を待つ。</p>
       <ul class="small"><li><b>馬の店</b>：デビュー前の史実馬を買う。2歳の4月から入厩し、厩舎の「番組表」で出るレースを選ぶ。</li>
-        <li><b>騎乗依頼</b>：毎週、馬主から依頼が来る。受けたレースに乗る。仲良くなるほど大きなレースの依頼が来る。</li>
+        <li><b>騎乗依頼</b>：オーナーのジャンルのレースで勝つと出会いがあり、決まった馬とレースの依頼（ミッション）が来る。クリアするたびに大きなレースの依頼になる。</li>
         <li><b>騎乗</b>：↓で引いて脚をため、↑の連打でしごいて速さを上げる。ゴール前はムチ。前が壁なら進路を変える。</li>
         <li>操作したくないレースは「おまかせ」で乗れる。</li><li>勝って評判を上げれば、強い馬と大きいレースの依頼が来る。</li></ul>
       <div class="btns"><button class="btn gold" data-act="close">はじめる</button></div>`);

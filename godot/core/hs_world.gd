@@ -434,6 +434,9 @@ static func hist_targets(h: Dictionary, year: float) -> Array:
 		if s.begins_with(pre): out.append(s.substr(4))
 	return out
 static func ai_choose(h: Dictionary, races: Array, wIdx: float, r: HSRng) -> Variant:
+	if h.get("owner") != "P" and h.get("loc") == "stable" and HSOwners.on():   # owners.js の包み（依頼の馬は、ミッションのレースの週にそのレースへ）
+		var fr = HSOwners.forced_race(h, races)
+		if fr: return fr
 	if h.get("loc") != "stable": return null
 	var year: float = G.year
 	var targets: Array = hist_targets(h, year) if h.get("hist") else []
@@ -625,6 +628,7 @@ static func build_field(race: Dictionary, entr0: Array, wIdx: float, r: HSRng) -
 
 # プレイヤーの騎乗を当てた出走表（人気つき）。騎乗が変わるまで使い回す
 static func cards() -> Array:
+	if HSOwners.on(): HSOwners.apply_ride()   # owners.js の包み（レースの週は依頼の馬に乗る。依頼が先）
 	var wk := prepare_week()
 	var rides: Dictionary = HSU.or_(G.get("rides"), {})
 	var rk := JSON.stringify(rides)
@@ -664,7 +668,8 @@ static func start_sim(card: Dictionary, opts: Dictionary = {}):
 
 # played：{ raceKey: HSSim.finish の結果 }（プレイヤーが乗ったレース）
 static func finish_week(played: Dictionary = {}) -> Dictionary:
-	if HSOwners.on(): HSOwners.state().react = []   # owners.js の包み
+	if HSOwners.on():   # owners.js の包み
+		HSOwners.state().react = []; HSOwners.apply_ride()
 	var wk := prepare_week()
 	var cs := cards()
 	var wIdx: float = wk.wIdx
@@ -703,7 +708,7 @@ static func finish_week(played: Dictionary = {}) -> Dictionary:
 	G.rngState = floorf(rng.next() * 4294967296.0)
 	G.lastWeek = { date = report.date, races = report.races.map(func(r): return slim_result(r)) }
 	_week = null
-	if HSOwners.on(): HSOwners.after_week(report)   # owners.js の包み（自分が乗ったレースの結果：ジャンルの勝ち・課題・出会い）
+	if HSOwners.on(): HSOwners.after_week(report)   # owners.js の包み（自分が乗ったレースの結果：ジャンルの勝ち・ミッション・出会い・次の依頼）
 	return report
 
 # コースレコード
@@ -1157,6 +1162,7 @@ static func load_save(json: Variant) -> Dictionary:
 	HSPed.build(HSU.or_(G.get("pedExtra"), {}))
 	rng = HSRng.new(G.rngState)
 	_reset_caches()
+	if HSOwners.on(): HSOwners.plan_missing()   # owners.js の包み（前のセーブ：縁のある人のミッションの予定）
 	return G
 # 古いセーブを今の形にそろえる
 static func migrate(g: Dictionary) -> void:

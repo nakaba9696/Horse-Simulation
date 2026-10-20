@@ -65,11 +65,11 @@ func build() -> void:
 	var bh := HBoxContainer.new()
 	bh.add_child(b_next)
 	main.add_child(bh)
-	# 右：馬主のひと言・ご褒美・今週の G1・ニュース
+	# 右：オーナーのひと言・場面・今週の G1・ニュース
 	if HSOwners.on():
 		var st := HSOwners.state()
 		if st.react.size():
-			side.add_child(UiScreen.section("馬主のひと言"))
+			side.add_child(UiScreen.section("オーナーのひと言"))
 			for x in st.react.slice(0, 3):
 				side.add_child(_react_card(x))
 		for q in st.queue.slice(0, 2):
@@ -93,10 +93,10 @@ func build() -> void:
 	side.add_child(nb[0])
 
 const MOOD := {"win": "joy", "bigwin": "joy", "good": "smile", "lose": "sad", "decline": "sad"}
-const KICK := {"meet": "新しい馬主から声がかかった", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞"}
+const KICK := {"meet": "新しいオーナーから声がかかった", "job": "騎乗依頼が届いた", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞", "wreath": "GF 全制覇の花輪"}
 
 static func _face(oid: String, mood: String, w: float, h: float) -> Control:
-	var o = HSOwners.by(oid)
+	var o = HSGFHost.data() if oid == "gfhost" else HSOwners.by(oid)
 	var fr := PanelContainer.new()
 	fr.add_theme_stylebox_override("panel", UiTheme.box(Color(o.silks.base), Color(o.silks.sub), 2, 10, Vector4(0, 0, 0, 0)))
 	fr.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
@@ -111,7 +111,7 @@ static func _face(oid: String, mood: String, w: float, h: float) -> Control:
 		fr.add_child(tr)
 	return fr
 
-# 依頼で乗った馬の馬主のひと言（着順でうれしい・くやしい）
+# 依頼で乗った馬のオーナーのひと言（着順でうれしい・くやしい）
 func _react_card(x: Dictionary) -> PanelContainer:
 	var o = HSOwners.by(x.oid)
 	var st := HSOwners.of(x.oid)
@@ -143,9 +143,10 @@ func _react_card(x: Dictionary) -> PanelContainer:
 	v.add_child(UiTheme.label(foot, 12, UiTheme.GOOD if x.get("up") else UiTheme.FAINT))
 	return p
 
-# ご褒美の場面（間柄が深まった・名コンビ賞など）
+# 場面（出会い・依頼が届いた・ミッションをやり終えた・名コンビ賞・GF 全制覇の花輪）
 func _gift_card(q: Dictionary) -> PanelContainer:
-	var o = HSOwners.by(q.oid)
+	var host: bool = q.get("kind") == "wreath"
+	var o = HSGFHost.data() if host else HSOwners.by(q.oid)
 	var pb := UiScreen.panel_box(true, 4)
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 12)
@@ -159,11 +160,12 @@ func _gift_card(q: Dictionary) -> PanelContainer:
 	var nh := HBoxContainer.new()
 	nh.add_theme_constant_override("separation", 8)
 	nh.add_child(UiTheme.title(String(o.name), 20))
-	nh.add_child(UiScreen.owner_sign_chip(o, 11))
+	if not host: nh.add_child(UiScreen.owner_sign_chip(o, 11))
 	v.add_child(nh)
-	if meet:
-		v.add_child(UiTheme.label("次の週から騎乗依頼が来る", 14, UiTheme.GOLD_BRIGHT))
-	var lines := HSOwners.scene_lines(q.oid, q.kind, {"horse": q.get("horse", ""), "race": q.get("race", "")})
+	var vars := {"horse": q.get("horse", ""), "race": q.get("race", "")}
+	if q.get("kind") == "job":
+		v.add_child(UiTheme.label("%sで%s（%s）" % [q.horse, q.race, q.get("date", "")], 14, UiTheme.GOLD_BRIGHT))
+	var lines: Array = HSGFHost.scene_lines(vars) if host else ([HSOwners.job_line(String(q.oid), q)] if q.get("kind") == "job" else HSOwners.scene_lines(q.oid, q.kind, vars))
 	if lines.size():
 		var l := UiTheme.label("「%s」" % lines[0], 14)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -306,7 +308,7 @@ func focus_first() -> void:
 		b_next.grab_focus()
 	_show_moments.call_deferred()
 
-# 週の見せ場：G1 を自分で勝った・トロフィー・スペシャルホースを破った → 馬主のご褒美の場面（js/ui/jockeyui.js の週の流れと同じ順）
+# 週の見せ場：G1 を自分で勝った・トロフィー・スペシャルホースを破った → オーナーの場面（js/ui/jockeyui.js の週の流れと同じ順）
 var _moments_done := false
 func _show_moments() -> void:
 	if _moments_done or shots.size() > 0:

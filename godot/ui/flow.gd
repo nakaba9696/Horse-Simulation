@@ -92,20 +92,23 @@ static func _reset_week() -> void:
 	report = null
 
 # 撮影とテストの見本：決まった種の新しいゲームで、店のいちばん安い馬を買えるだけ（3頭まで）買い、
-# weeks 週をおまかせで進める（毎週、馬主の最初の依頼を受ける）。セーブは書かない
+# weeks 週をおまかせで進める（オーナーの依頼の馬には自分が乗る）。セーブは書かない
 static func demo(weeks := 0, seed := 7.0) -> void:
 	no_save = true
 	replay_dir = "user://demo_replays"   # 見本のリプレイは遊ぶときのものと混ぜない
 	HSWorld.new_game({"mode": "jockey", "seed": seed, "jockeyName": "新人騎手", "region": "美浦"})
 	_reset_week()
-	# 見本は、はじめから全員と縁がある形にする（依頼の札・出走表・騎乗の場面を撮れるように。ふだんの遊びでは条件を満たすと縁ができる）
+	# 見本は、はじめから全員と縁がある形にする（依頼の札・出走表・騎乗の場面を撮れるように。ふだんの遊びでは出会いの点がたまると縁ができる）。
+	# 最初の依頼は今週に届いたことにする（ふだんはミッションのレースの4週前に届く）
+	HSOwners.state().flags.overseas = { y = HSWorld.G.year }
 	for o in HSOwners.LIST():
-		HSOwners.of(String(o.id)).known = true
+		HSOwners.meet(String(o.id), { horse = "", race = "" })
+		var j = HSOwners.of(String(o.id)).get("job")
+		if j: j.at = minf(j.at, HSWorld.w_idx())
+	HSOwners.tick()
+	HSOwners.state().queue = []
 	buy_cheapest(3)
 	for i in weeks + 1:
-		var offers := HSOwners.offers()
-		if offers.size():
-			HSOwners.accept(offers[0].raceKey, offers[0].horseId)
 		if i < weeks:
 			HSWorld.finish_week({})
 			buy_cheapest(3)
@@ -284,7 +287,7 @@ static func week_news() -> Array:
 		out.append(nw)
 	return out
 
-# 週の結果を見終えた：馬主のひと言とご褒美の場面を見たことにする（JS の ownersAfterWeek と同じく空にする）
+# 週の結果を見終えた：オーナーのひと言と場面を見たことにする（JS の ownersAfterWeek と同じく空にする）
 static func after_result() -> void:
 	if HSOwners.on():
 		var s := HSOwners.state()

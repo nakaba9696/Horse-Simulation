@@ -1,0 +1,10 @@
+[
+{"name":"カトレアステークス","cls":"OP","listed":false,"region":"JRA","course":"東京","surface":"ダ","dist":1600,"month":11,"week":4,"age":"2","weight":"馬齢"},
+{"name":"すずらん賞","cls":"OP","listed":false,"region":"JRA","course":"札幌","surface":"芝","dist":1200,"month":7,"week":4,"age":"2","weight":"馬齢"},
+{"name":"芙蓉ステークス","cls":"OP","listed":false,"region":"JRA","course":"中山","surface":"芝","dist":2000,"month":9,"week":4,"age":"2","weight":"馬齢"},
+{"name":"万葉ステークス","cls":"OP","listed":false,"region":"JRA","course":"京都","surface":"芝","dist":3000,"month":1,"week":1,"age":"4+","weight":"ハンデ"},
+{"name":"エルフィンステークス","cls":"OP","listed":true,"region":"JRA","course":"京都","surface":"芝","dist":1600,"month":2,"week":2,"age":"3","sex":"牝","weight":"馬齢"},
+{"name":"ブラジルカップ","cls":"OP","listed":true,"region":"JRA","course":"東京","surface":"ダ","dist":2100,"month":10,"week":4,"age":"3+","weight":"ハンデ"},
+{"name":"メトロポリタンステークス","cls":"OP","listed":true,"region":"JRA","course":"東京","surface":"芝","dist":2400,"month":5,"week":1,"age":"4+","weight":"別定"},
+{"name":"カンナステークス","cls":"OP","listed":false,"region":"JRA","course":"中山","surface":"芝","dist":1200,"month":9,"week":2,"age":"2","weight":"馬齢"}
+]

@@ -12,9 +12,16 @@ static func _last_year(d: Dictionary) -> float: return float(HSU.or_(d.get("reti
 static func is_pool(d: Dictionary) -> bool: return _last_year(d) >= 1989 and d.born <= 2023 and not d.get("noDebut", false)
 static func is_legend(d: Dictionary) -> bool: return _last_year(d) < 1989
 static var _pool: Variant = null
+static var _pc: Variant = null
 static func pool() -> Array:
 	if _pool == null: _pool = HSData.d().get("historic", []).filter(func(d): return is_pool(d))
-	return _pool
+	# owners.js の包み：まだやり終えていないミッションの依頼の馬は、デビューと馬の店に出さない（騎手のゲーム）
+	var g = HSWorld.G
+	if not g or g.get("mode") != "jockey" or not g.get("eraless"): return _pool
+	var res := HSOwners.reserved()
+	if _pc != null and is_same(_pc.p, _pool) and is_same(_pc.res, res): return _pc.list
+	_pc = { p = _pool, res = res, list = _pool.filter(func(d): return not res.has(d.name)) }
+	return _pc.list
 
 # いま世界で走っている（入厩・牧場の）馬の名前
 static func active_names() -> Dictionary:
