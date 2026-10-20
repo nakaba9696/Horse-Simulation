@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "unit": "px",
+  "textures": {
+    "btn_main_normal.png": {
+      "width": 360,
+      "height": 72,
+      "corner_px": 24,
+      "nine_patch": true
+    },
+    "btn_main_focus.png": {
+      "width": 360,
+      "height": 72,
+      "corner_px": 24,
+      "nine_patch": true
+    },
+    "btn_main_pressed.png": {
+      "width": 360,
+      "height": 72,
+      "corner_px": 24,
+      "nine_patch": true
+    },
+    "btn_main_disabled.png": {
+      "width": 360,
+      "height": 72,
+      "corner_px": 24,
+      "nine_patch": true
+    },
+    "btn_sub_normal.png": {
+      "width": 360,
+      "height": 72,
+      "corner_px": 24,
+      "nine_patch": true
+    },
+    "btn_sub_focus.png": {
+      "width": 360,
+      "height": 72,
+      "corner_px": 24,
+      "nine_patch": true
+    },
+    "btn_sub_pressed.png": {
+      "width": 360,
+      "height": 72,
+      "corner_px": 24,
+      "nine_patch": true
+    },
+    "btn_sub_disabled.png": {
+      "width": 360,
+      "height": 72,
+      "corner_px": 24,
+      "nine_patch": true
+    },
+    "btn_round_normal.png": {
+      "width": 96,
+      "height": 96,
+      "corner_px": 48,
+      "nine_patch": false
+    },
+    "btn_round_focus.png": {
+      "width": 96,
+      "height": 96,
+      "corner_px": 48,
+      "nine_patch": false
+    }
+  }
+}
