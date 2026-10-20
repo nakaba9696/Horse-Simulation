@@ -4,13 +4,13 @@
  "summary": {
   "horses": 322,
   "special": 322,
-  "trophyHorses": 79,
-  "withIssues": 90,
+  "trophyHorses": 78,
+  "withIssues": 88,
   "issues": {
    "乱れ": 21,
    "能力": 49,
    "同格": 26,
-   "帯": 20,
+   "帯": 17,
    "馬場": 3,
    "脚質": 5
   },
@@ -1210,11 +1210,9 @@
    "legend": false,
    "local": "",
    "groups": [
-    "t:gs_us"
+    "r:ホイットニーS"
    ],
-   "trophies": [
-    "アメリカン GS"
-   ],
+   "trophies": [],
    "data": {
     "rating": 86,
     "surface": "ダ",
@@ -1254,12 +1252,7 @@
    "unique": "",
    "bigWins": 1,
    "unbeaten": 0,
-   "issues": [
-    {
-     "kind": "帯",
-     "text": "トロフィーの隠し馬なのに 61（G1 を何度も勝った名馬は 66〜80）"
-    }
-   ],
+   "issues": [],
    "fixed": null,
    "proposal": {
     "set": {
@@ -1302,11 +1295,9 @@
    "legend": false,
    "local": "",
    "groups": [
-    "t:gs_us"
+    "r:ホイットニーS"
    ],
-   "trophies": [
-    "アメリカン GS"
-   ],
+   "trophies": [],
    "data": {
     "rating": 86,
     "surface": "ダ",
@@ -1351,12 +1342,7 @@
    "unique": "",
    "bigWins": 1,
    "unbeaten": 0,
-   "issues": [
-    {
-     "kind": "帯",
-     "text": "トロフィーの隠し馬なのに 60（G1 を何度も勝った名馬は 66〜80）"
-    }
-   ],
+   "issues": [],
    "fixed": null,
    "proposal": {
     "set": {
@@ -6694,11 +6680,9 @@
    "legend": false,
    "local": "",
    "groups": [
-    "t:gs_au"
+    "r:メルボルンカップ"
    ],
-   "trophies": [
-    "オーストラリアン GS"
-   ],
+   "trophies": [],
    "data": {
     "rating": 88,
     "surface": "芝",
@@ -6743,10 +6727,6 @@
     {
      "kind": "同格",
      "text": "大レース 3勝の馬のまん中（70）より 6 低い"
-    },
-    {
-     "kind": "帯",
-     "text": "トロフィーの隠し馬なのに 64（G1 を何度も勝った名馬は 66〜80）"
     },
     {
      "kind": "能力",
@@ -8363,9 +8343,11 @@
    "legend": false,
    "local": "",
    "groups": [
-    "r:ケンタッキーダービー"
+    "t:immortal"
    ],
-   "trophies": [],
+   "trophies": [
+    "インモータルロード"
+   ],
    "data": {
     "rating": 98,
     "surface": "ダ",
@@ -8438,9 +8420,11 @@
    "legend": false,
    "local": "",
    "groups": [
-    "us2"
+    "t:us3"
    ],
-   "trophies": [],
+   "trophies": [
+    "米国三冠"
+   ],
    "data": {
     "rating": 97,
     "surface": "ダ",
@@ -9347,10 +9331,10 @@
    "legend": false,
    "local": "",
    "groups": [
-    "t:legend"
+    "t:bc2"
    ],
    "trophies": [
-    "ホールオブフェイム"
+    "クラウンオブブリーダーズ"
    ],
    "data": {
     "rating": 95,
@@ -10090,6 +10074,81 @@
    "adopt": null
   },
   {
+   "name": "テンポイント",
+   "nameEn": "",
+   "country": "日",
+   "region": "日本",
+   "born": 1973,
+   "years": "1975〜1978年",
+   "record": "18戦11勝",
+   "mainWins": [
+    "1975 阪神3歳ステークス",
+    "1976 スプリングステークス",
+    "1977 天皇賞（春）",
+    "1977 京都大賞典",
+    "1977 有馬記念"
+   ],
+   "file": "data/historic_old.js",
+   "auto": false,
+   "legend": false,
+   "local": "",
+   "groups": [
+    "t:gs_jp"
+   ],
+   "trophies": [
+    "ジャパン GS"
+   ],
+   "data": {
+    "rating": 95,
+    "surface": "芝",
+    "turf": null,
+    "dirt": null,
+    "distMin": 1600,
+    "distMax": 3200,
+    "style": "先行",
+    "growth": "普通",
+    "kire": 5,
+    "pot": null
+   },
+   "fh": {
+    "turf": 72,
+    "dirt": 57
+   },
+   "fhNominal": 73,
+   "noise": -1,
+   "pot": {
+    "spd": 94,
+    "sta": 98,
+    "dspd": 80,
+    "dsta": 80,
+    "guts": 97,
+    "mind": 78,
+    "slope": 93
+   },
+   "skills": {
+    "from": "手で決めた表",
+    "list": [
+     "大舞台"
+    ],
+    "ids": [
+     "big"
+    ]
+   },
+   "triggers": [
+    "二の脚",
+    "出ムチ○",
+    "ど根性",
+    "叩き合い"
+   ],
+   "unique": "",
+   "bigWins": 2,
+   "unbeaten": 0,
+   "issues": [],
+   "fixed": null,
+   "proposal": null,
+   "adopt": null
+  },
+  {
    "name": "アカテナンゴ",
    "nameEn": "Acatenango",
    "country": "独",
@@ -10167,79 +10226,6 @@
      "text": "記録から自動で作った馬で、脚質は名前の運で決まっている（出典で確かめていない）"
     }
    ],
-   "fixed": null,
-   "proposal": null,
-   "adopt": null
-  },
-  {
-   "name": "テンポイント",
-   "nameEn": "",
-   "country": "日",
-   "region": "日本",
-   "born": 1973,
-   "years": "1975〜1978年",
-   "record": "18戦11勝",
-   "mainWins": [
-    "1975 阪神3歳ステークス",
-    "1976 スプリングステークス",
-    "1977 天皇賞（春）",
-    "1977 京都大賞典",
-    "1977 有馬記念"
-   ],
-   "file": "data/historic_old.js",
-   "auto": false,
-   "legend": false,
-   "local": "",
-   "groups": [
-    "r:天皇賞・春"
-   ],
-   "trophies": [],
-   "data": {
-    "rating": 95,
-    "surface": "芝",
-    "turf": null,
-    "dirt": null,
-    "distMin": 1600,
-    "distMax": 3200,
-    "style": "先行",
-    "growth": "普通",
-    "kire": 5,
-    "pot": null
-   },
-   "fh": {
-    "turf": 72,
-    "dirt": 57
-   },
-   "fhNominal": 73,
-   "noise": -1,
-   "pot": {
-    "spd": 94,
-    "sta": 98,
-    "dspd": 80,
-    "dsta": 80,
-    "guts": 97,
-    "mind": 78,
-    "slope": 93
-   },
-   "skills": {
-    "from": "手で決めた表",
-    "list": [
-     "大舞台"
-    ],
-    "ids": [
-     "big"
-    ]
-   },
-   "triggers": [
-    "二の脚",
-    "出ムチ○",
-    "ど根性",
-    "叩き合い"
-   ],
-   "unique": "",
-   "bigWins": 2,
-   "unbeaten": 0,
-   "issues": [],
    "fixed": null,
    "proposal": null,
    "adopt": null
@@ -10931,103 +10917,29 @@
    "adopt": null
   },
   {
-   "name": "ロイヤルパレス",
-   "nameEn": "Royal Palace",
-   "country": "英",
+   "name": "オールアロング",
+   "nameEn": "All Along",
+   "country": "仏",
    "region": "欧州",
-   "born": 1964,
-   "years": "1966〜1968年",
-   "record": "11戦9勝",
+   "born": 1979,
+   "years": "1981〜1984年",
+   "record": "21戦9勝",
    "mainWins": [
-    "1967 英2000ギニー",
-    "1967 英ダービー",
-    "1968 コロネーションカップ",
-    "1968 エクリプスステークス",
-    "1968 キングジョージ6世＆クイーンエリザベスステークス"
+    "1982 ヴェルメイユ賞",
+    "1983 凱旋門賞",
+    "1983 ロスマンズインターナショナル",
+    "1983 ターフクラシック",
+    "1983 ワシントンDCインターナショナル"
    ],
    "file": "data/historic_world.js",
    "auto": false,
    "legend": false,
    "local": "",
    "groups": [
-    "t:gs_turf"
+    "t:legend"
    ],
    "trophies": [
-    "ワールドターフ GS"
-   ],
-   "data": {
-    "rating": 93,
-    "surface": "芝",
-    "turf": null,
-    "dirt": null,
-    "distMin": 1600,
-    "distMax": 2400,
-    "style": "先行",
-    "growth": "普通",
-    "kire": 5,
-    "pot": null
-   },
-   "fh": {
-    "turf": 71,
-    "dirt": 57
-   },
-   "fhNominal": 70,
-   "noise": 1,
-   "pot": {
-    "spd": 94,
-    "sta": 96,
-    "dspd": 80,
-    "dsta": 80,
-    "guts": 94,
-    "mind": 83,
-    "slope": 91
-   },
-   "skills": {
-    "from": "手で決めた表",
-    "list": [
-     "大舞台"
-    ],
-    "ids": [
-     "big"
-    ]
-   },
-   "triggers": [
-    "ロケットスタート",
-    "出ムチ○",
-    "二の脚",
-    "ど根性"
-   ],
-   "unique": "",
-   "bigWins": 6,
-   "unbeaten": 0,
-   "issues": [],
-   "fixed": null,
-   "proposal": null,
-   "adopt": null
-  },
-  {
-   "name": "ロベルト",
-   "nameEn": "Roberto",
-   "country": "愛",
-   "region": "欧州",
-   "born": 1969,
-   "years": "1971〜1973年",
-   "record": "14戦7勝",
-   "mainWins": [
-    "1971 ナショナルステークス",
-    "1972 英ダービー",
-    "1972 ベンソン&ヘッジズゴールドカップ",
-    "1973 コロネーションカップ"
-   ],
-   "file": "data/historic_world.js",
-   "auto": false,
-   "legend": false,
-   "local": "",
-   "groups": [
-    "t:gs_eu"
-   ],
-   "trophies": [
-    "ヨーロピアン GS"
+    "ホールオブフェイム"
    ],
    "data": {
     "rating": 93,
@@ -11036,39 +10948,45 @@
     "dirt": null,
     "distMin": 2000,
     "distMax": 2400,
-    "style": "逃げ",
-    "growth": "普通",
-    "kire": 2,
+    "style": "差し",
+    "growth": "遅め",
+    "kire": 7,
     "pot": null
    },
    "fh": {
     "turf": 71,
-    "dirt": 55
+    "dirt": 54
    },
-   "fhNominal": 71,
-   "noise": 0,
+   "fhNominal": 70,
+   "noise": 1,
    "pot": {
-    "spd": 96,
-    "sta": 93,
-    "dspd": 78,
-    "dsta": 78,
-    "guts": 96,
-    "mind": 93,
-    "slope": 84
+    "spd": 94,
+    "sta": 97,
+    "dspd": 77,
+    "dsta": 79,
+    "guts": 98,
+    "mind": 81,
+    "slope": 90
    },
    "skills": {
     "from": "手で決めた表",
-    "list": [],
-    "ids": []
+    "list": [
+     "大舞台",
+     "海外○"
+    ],
+    "ids": [
+     "big",
+     "travel"
+    ]
    },
    "triggers": [
-    "ロケットスタート",
-    "幻惑逃げ",
-    "差し返し",
-    "二の脚"
+    "直線一気",
+    "切れ味",
+    "ど根性",
+    "大外一気"
    ],
    "unique": "",
-   "bigWins": 3,
+   "bigWins": 2,
    "unbeaten": 0,
    "issues": [],
    "fixed": null,
@@ -11152,26 +11070,26 @@
    "adopt": null
   },
   {
-   "name": "オールアロング",
-   "nameEn": "All Along",
-   "country": "仏",
+   "name": "ロイヤルパレス",
+   "nameEn": "Royal Palace",
+   "country": "英",
    "region": "欧州",
-   "born": 1979,
-   "years": "1981〜1984年",
-   "record": "21戦9勝",
+   "born": 1964,
+   "years": "1966〜1968年",
+   "record": "11戦9勝",
    "mainWins": [
-    "1982 ヴェルメイユ賞",
-    "1983 凱旋門賞",
-    "1983 ロスマンズインターナショナル",
-    "1983 ターフクラシック",
-    "1983 ワシントンDCインターナショナル"
+    "1967 英2000ギニー",
+    "1967 英ダービー",
+    "1968 コロネーションカップ",
+    "1968 エクリプスステークス",
+    "1968 キングジョージ6世＆クイーンエリザベスステークス"
    ],
    "file": "data/historic_world.js",
    "auto": false,
    "legend": false,
    "local": "",
    "groups": [
-    "r:凱旋門賞"
+    "g1five"
    ],
    "trophies": [],
    "data": {
@@ -11179,47 +11097,45 @@
     "surface": "芝",
     "turf": null,
     "dirt": null,
-    "distMin": 2000,
+    "distMin": 1600,
     "distMax": 2400,
-    "style": "差し",
-    "growth": "遅め",
-    "kire": 7,
+    "style": "先行",
+    "growth": "普通",
+    "kire": 5,
     "pot": null
    },
    "fh": {
     "turf": 71,
-    "dirt": 54
+    "dirt": 57
    },
    "fhNominal": 70,
    "noise": 1,
    "pot": {
     "spd": 94,
-    "sta": 97,
-    "dspd": 77,
-    "dsta": 79,
-    "guts": 98,
-    "mind": 81,
-    "slope": 90
+    "sta": 96,
+    "dspd": 80,
+    "dsta": 80,
+    "guts": 94,
+    "mind": 83,
+    "slope": 91
    },
    "skills": {
     "from": "手で決めた表",
     "list": [
-     "大舞台",
-     "海外○"
+     "大舞台"
     ],
     "ids": [
-     "big",
-     "travel"
+     "big"
     ]
    },
    "triggers": [
-    "直線一気",
-    "切れ味",
-    "ど根性",
-    "大外一気"
+    "ロケットスタート",
+    "出ムチ○",
+    "二の脚",
+    "ど根性"
    ],
    "unique": "",
-   "bigWins": 2,
+   "bigWins": 6,
    "unbeaten": 0,
    "issues": [],
    "fixed": null,
@@ -11293,6 +11209,74 @@
    ],
    "unique": "",
    "bigWins": 1,
+   "unbeaten": 0,
+   "issues": [],
+   "fixed": null,
+   "proposal": null,
+   "adopt": null
+  },
+  {
+   "name": "ロベルト",
+   "nameEn": "Roberto",
+   "country": "愛",
+   "region": "欧州",
+   "born": 1969,
+   "years": "1971〜1973年",
+   "record": "14戦7勝",
+   "mainWins": [
+    "1971 ナショナルステークス",
+    "1972 英ダービー",
+    "1972 ベンソン&ヘッジズゴールドカップ",
+    "1973 コロネーションカップ"
+   ],
+   "file": "data/historic_world.js",
+   "auto": false,
+   "legend": false,
+   "local": "",
+   "groups": [
+    "r:英ダービー"
+   ],
+   "trophies": [],
+   "data": {
+    "rating": 93,
+    "surface": "芝",
+    "turf": null,
+    "dirt": null,
+    "distMin": 2000,
+    "distMax": 2400,
+    "style": "逃げ",
+    "growth": "普通",
+    "kire": 2,
+    "pot": null
+   },
+   "fh": {
+    "turf": 71,
+    "dirt": 55
+   },
+   "fhNominal": 71,
+   "noise": 0,
+   "pot": {
+    "spd": 96,
+    "sta": 93,
+    "dspd": 78,
+    "dsta": 78,
+    "guts": 96,
+    "mind": 93,
+    "slope": 84
+   },
+   "skills": {
+    "from": "手で決めた表",
+    "list": [],
+    "ids": []
+   },
+   "triggers": [
+    "ロケットスタート",
+    "幻惑逃げ",
+    "差し返し",
+    "二の脚"
+   ],
+   "unique": "",
+   "bigWins": 3,
    "unbeaten": 0,
    "issues": [],
    "fixed": null,
