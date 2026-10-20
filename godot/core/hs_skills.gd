@@ -185,6 +185,8 @@ static func of(h: Variant, w_idx: Variant) -> Array:
 				if out.size() < c: out.append(g[round_].id)
 		if not any: break
 		round_ += 1
+	# 史実馬は、損な技（ささり癖・馬込み× など）を能力の数から自動で付けない。逸話のある馬だけ trig に手で書く（外部レビューの指摘・持ち主の決定 2026-10-20）
+	if HSU.truthy(h.get("hist")): out = out.filter(func(id): return not HSU.truthy(BY[id].get("bad")))
 	return [u] + out if u else out
 static func label(id: String) -> String:
 	_uniques()
@@ -280,7 +282,11 @@ const IKKI := { a = 0.4, b = 2.0, lo = 0.6, hi = 1.6 }
 static func apply(sim, s, k: Dictionary) -> void:
 	var f: Dictionary = k.fx
 	var amp := HSU.clamp(IKKI.a + IKKI.b * s.E, IKKI.lo, IKKI.hi) if k.get("ikki") else 1.0
-	if f.get("spd"): s.boost = { mul = 1.0 + f.spd * amp, until = sim.t + float(HSU.or_(f.get("sec"), 1.5)), id = k.id, free = HSU.truthy(f.get("free")) }
+	# 速さの効き目が重なったら強いほう（倍率が高いほう。同じなら長く残るほう）を残す（外部レビューの指摘 2026-10-20）
+	if f.get("spd"):
+		var b := { mul = 1.0 + f.spd * amp, until = sim.t + float(HSU.or_(f.get("sec"), 1.5)), id = k.id, free = HSU.truthy(f.get("free")) }
+		var o = s.boost
+		if not (o and sim.t < o.until and (o.mul > b.mul or (o.mul == b.mul and o.until >= b.until))): s.boost = b
 	if f.get("free") and k.at == "start": s.easyStart = true
 	if f.get("top"): s.topAdd = s.topAdd + f.top
 	if f.get("E"): s.E = HSU.clamp(s.E + f.E, -0.2, 1.0)

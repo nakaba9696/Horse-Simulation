@@ -127,8 +127,8 @@ module.exports = function (check, assert, HS) {
     const cnt = {}, nSt = {};
     D.historic.forEach((d, i) => { const h = H.fromHistoric(d, 'c' + i); nSt[h.style] = (nSt[h.style] || 0) + 1; for (const id of K.of(h)) { const k = h.style + id; cnt[k] = (cnt[k] || 0) + 1; } });
     for (const [st, ids] of [['逃げ', ['ikiire', 'nidan', 'genwaku']], ['追込', ['kouhou', 'tsuiso', 'sotomawashi', 'sabaki']]]) for (const id of ids) { const r = (cnt[st + id] || 0) / nSt[st]; assert(r >= 0.05 && r <= 0.6, `${K.label(id)} ${st}の ${Math.round(r * 100)}%`); }
-    const rb = (cnt['逃げbante'] || 0) / nSt['逃げ'];
-    assert(rb > 0.02 && rb < 0.2, `番手× 逃げの ${Math.round(rb * 100)}%`);
+    // 番手× は損な技なので、史実馬には能力の数から付かない（外部レビューの指摘・持ち主の決定 2026-10-20。前は逃げの 2〜20％）
+    assert(!cnt['逃げbante'], `番手× が史実馬の逃げ ${cnt['逃げbante']}頭に付く`);
     return H.STYLES.map(st => `${st} 強み${g(st).toFixed(2)}・弱み${bd(st).toFixed(2)}`).join('／');
   });
 

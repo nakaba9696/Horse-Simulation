@@ -485,8 +485,10 @@ module.exports = function (check, assert, HS) {
       const none = [], many = [];
       for (const seed of [71, 72, 73]) { none.push(lines(0, 8, 3, seed)); many.push(lines(8, 8, 3, seed)); }
       const flat = xs => [].concat(...xs);
-      assert(flat(none).every(x => x < 90), `トロフィー無しで90台（${none.map(r => r.join('→')).join('／')}）`);
       const avg = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
+      // トロフィー無しは、2世代目まではどれも90に届かず、3世代目も平均で90に届かない（いちばん良い仔の運の上振れで1本だけ90を少し越えることはある。
+      // 史実馬に損な技を自動で付けなくなって受け継ぐ技の数が変わり、乱数の並びがずれて 78→83→92 が出た。種71〜80の10本では3世代目は 77〜92・平均82。2026-10-20）
+      assert(none.every(r => r[0] < 90 && r[1] < 90) && avg(none.map(r => r[2])) < 90 && flat(none).every(x => x < 95), `トロフィー無しで90台（${none.map(r => r.join('→')).join('／')}）`);
       assert(avg(many.map(r => r[0])) < 90, `1世代目で90台（${many.map(r => r.join('→')).join('／')}）`);
       assert(flat(many).every(x => x < 99), `3世代で99（${many.map(r => r.join('→')).join('／')}）`);
       assert(avg(many.map(r => r[2])) > avg(none.map(r => r[2])) + 5, 'トロフィーを集めても仔が良くならない');
