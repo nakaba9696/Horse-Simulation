@@ -11,7 +11,7 @@
   SP.UNBEATEN = { 'マルゼンスキー': 8, 'ラフィアン': 10 };
 
   // データの勝ち鞍の名前 → いまの番組の G1（短い名）。名前が変わったレースは読み替える
-  const ALIAS = { '朝日杯3歳ステークス': '朝日杯フューチュリティステークス', '阪神3歳牝馬ステークス': '阪神ジュベナイルフィリーズ', '中山グランプリ': '有馬記念', '産経大阪杯': '大阪杯' };
+  const ALIAS = { '朝日杯3歳ステークス': '朝日杯フューチュリティステークス', '朝日盃3歳ステークス': '朝日杯フューチュリティステークス', '阪神3歳牝馬ステークス': '阪神ジュベナイルフィリーズ', '中山グランプリ': '有馬記念', '産経大阪杯': '大阪杯' };
   let g1 = null;
   const g1Map = () => {
     if (g1) return g1;
@@ -118,7 +118,7 @@
     const two = m.age === '2';
     SP.GROUPS.push({ id: 'r:' + m.short, label: `歴代の${m.short}馬`, note: two ? `重賞を勝って${m.short}へ` : `G1を勝った馬で${m.short}へ`, finals: [m.short], race: true, at: m.at, prize: m.prize,
       legs: (h, race) => !won(h, race.short) && (two ? (h.gradedWins || []).length > 0 : (h.gradedWins || []).some(g => g.grade === 'G1')),
-      member: d => (d.wins || []).some(x => { const k = SP.mapWin(x); return k && k.short === m.short; }) });
+      member: d => (HS.DATA.specialRaceHand || {})[d.name] === m.short || (d.wins || []).some(x => { const k = SP.mapWin(x); return k && k.short === m.short; }) });
   }
   SP.BY = {}; SP.GROUPS.forEach(g => { SP.BY[g.id] = g; });
 

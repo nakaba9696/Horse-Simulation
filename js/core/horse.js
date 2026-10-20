@@ -319,9 +319,8 @@
       const left = cnt(r => (C[r.course] || {}).dir === '左'), right = cnt(r => (C[r.course] || {}).dir === '右');
       if (left >= 3 && right === 0) sk.push('left');
       else if (right >= 3 && left === 0) sk.push('right');
-      // 片方の回りでばかり勝った馬（4勝以上）は、反対の回りが苦手
-      if (left >= 4 && right === 0) sk.push('rightB');
-      else if (right >= 4 && left === 0) sk.push('leftB');
+      // 反対の回りの苦手（左回り×・右回り×）は勝ち鞍から自動で付けない。勝っていないだけでは苦手の裏付けにならない
+      // （持ち主の決定 2026-10-20）。逸話のある馬だけ、名馬の表か data/horse_fix.js に手で書く
       // 短い距離と長い距離（800m 以上の開き）の両方で勝った馬は、流れに合わせて位置を変えられる
       const ds = ws.map(r => r.dist);
       if (Math.max(...ds) - Math.min(...ds) >= 800) sk.push('jiyu');

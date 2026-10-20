@@ -347,8 +347,7 @@ static func hist_skills(d: Dictionary) -> Array:
 		var right: int = cnt.call(func(r): return dir_of.call(r) == "右")
 		if left >= 3 and right == 0: sk.append("left")
 		elif right >= 3 and left == 0: sk.append("right")
-		if left >= 4 and right == 0: sk.append("rightB")
-		elif right >= 4 and left == 0: sk.append("leftB")
+		# 反対の回りの苦手（leftB・rightB）は勝ち鞍から自動で付けない（持ち主の決定 2026-10-20。js/core/horse.js と同じ）
 		var mx := -HSMath.INF; var mn := HSMath.INF
 		for r in ws:
 			mx = HSU.mx(mx, r.dist); mn = HSU.mn(mn, r.dist)

@@ -146,6 +146,44 @@ check('special: 名の知れた名馬（名鑑を書き足した馬）はスペ�
   return `スペシャルホース ${SP.list().length}頭`;
 });
 
+check('special: 暦に無い勝ち鞍の名馬（フォルリなど）もどこかのグループに入る・香港の隠し馬は三冠の勝ち鞍を持つ', () => {
+  HS.U.ERA = HS.Eraless.ERA;
+  const SP = HS.Special, bad = [];
+  // 持ち主の決定 2026-10-20：フォルリは芝の名馬としてどこかのグループへ（手で）
+  for (const n of ['フォルリ', 'テディ', 'ウメノチカラ']) if (!SP.byName(n)) bad.push(n + ':グループに入らない');
+  // パーソナルエンスンは芝のワールドティアラ GS から外し、ダートの側へ
+  const tiara = SP.members(SP.BY['t:gs_tiara']).map(d => d.name);
+  if (tiara.includes('パーソナルエンスン')) bad.push('パーソナルエンスンが芝のティアラに残る');
+  for (const d of SP.members(SP.BY['t:gs_tiara'])) if (d.surface === 'ダ') bad.push(d.name + ':ダートの馬が芝のティアラに');
+  // 香港の三冠の隠し馬は、トロフィーのレースを同じ年に勝っている（data/src の記録）。スプリントのサイレントウィットネスは2つ（センテナリー・チェアマンズ）を2年続けて
+  const T = HS.Trophy.BY;
+  for (const id of ['hk3', 'hksp']) for (const d of SP.members(SP.BY['t:' + id])) {
+    if (d.name === 'サイレントウィットネス') continue;
+    const shortOf = w => { const y = +w.slice(0, 4), r = D.races.find(x => x.name === w.slice(4) && x.from <= y && y <= (x.to || 9999)); return r ? (r.short || r.name) : null; };
+    const years = new Set((d.wins || []).map(w => +w.slice(0, 4)));
+    const ok = [...years].some(y => T[id].races.every(s => (d.wins || []).some(w => +w.slice(0, 4) === y && shortOf(w) === s)));
+    if (!ok) bad.push(d.name + ':' + T[id].label + 'の勝ち鞍が無い');
+  }
+  assert(!bad.length, bad.join(', '));
+  return `フォルリ ${SP.byName('フォルリ').groups.join('・')}・ティアラ ${tiara.join('・')}`;
+});
+
+check('data: 史実馬の距離の幅に、勝った G1（2歳を除く）の距離が入る', () => {
+  // 持ち主の決定 2026-10-20：決まりで広げる（js/core/datafix.js）
+  const rb = new Map(); for (const r of D.races) { if (!rb.has(r.name)) rb.set(r.name, []); rb.get(r.name).push(r); }
+  const bad = [];
+  for (const d of D.historic) for (const w of d.wins || []) {
+    const y = +w.slice(0, 4), r = (rb.get(w.slice(4)) || []).find(x => x.from <= y && y <= (x.to || 9999));
+    if (!r || r.grade !== 'G1' || r.age === '2') continue;
+    const dist = Math.round(r.dist / 100) * 100;
+    if (dist < (d.distMin || 1600) || dist > (d.distMax || 2400)) bad.push(`${d.name}:${w}`);
+  }
+  const want = { 'エピファネイア': [2000, 3000], 'コントレイル': [1800, 3000], 'レモンポップ': [1400, 1800], 'フリオーソ': [1600, 2100], 'ヒシミラクル': [2200, 3200] };
+  for (const [n, [a, b]] of Object.entries(want)) { const d = D.historic.find(x => x.name === n); if (!d || d.distMin !== a || d.distMax !== b) bad.push(`${n}:${d && d.distMin}-${d && d.distMax}`); }
+  assert(!bad.length, bad.slice(0, 10).join(', '));
+  return 'G1 の距離はすべて幅の中';
+});
+
 check('assets: 素材はすべて出典の一覧にあり、大きさが目安以内', () => {
   const fs = require('fs'), path = require('path');
   const dir = path.join(__dirname, '..', 'assets');
@@ -571,8 +609,18 @@ check('skills: 系統を1つずつ回して選ぶ・一気系は1レースに1�
   assert(suna > none, `砂かぶり×が損になっていない（${suna.toFixed(2)}・なし ${none.toFixed(2)}）`);
   // 史実馬にも付く
   const hs = D.historic.slice(0, 3000).map((d, i) => H.fromHistoric(d, 't' + i));
-  // 砂かぶり×は運で付けていたが、運はやめた（持ち主の決定 2026-10-20）。勝ち鞍から決まる自在・左回り×は史実馬にいる
-  for (const id of ['jiyu', 'leftB']) assert(hs.some(x => x.skills.includes(id)), `${H.SKILLS[id].label}を持つ史実馬がいない`);
+  // 砂かぶり×は運で付けていたが、運はやめた（持ち主の決定 2026-10-20）。勝ち鞍から決まる自在は史実馬にいる
+  for (const id of ['jiyu']) assert(hs.some(x => x.skills.includes(id)), `${H.SKILLS[id].label}を持つ史実馬がいない`);
+  // 反対の回りの苦手は勝ち鞍から自動で付けない（持ち主の決定 2026-10-20）。得意な回りの○は残る
+  {
+    const all = D.historic.map((d, i) => ({ d, h: H.fromHistoric(d, 'u' + i) }));
+    const bad = all.filter(({ d, h }) => !Array.isArray(d.skills) && h.skills.some(x => x === 'leftB' || x === 'rightB'));
+    assert(!bad.length, `左回り×・右回り×が自動で付いた：${bad.slice(0, 5).map(x => x.d.name).join('・')}`);
+    assert(all.some(({ h }) => h.skills.includes('left')) && all.some(({ h }) => h.skills.includes('right')), '得意な回りの○が付かなくなった');
+    const fake = { name: 'テスト', rating: 80, wins: ['2010中山記念', '2010皐月賞', '2011有馬記念', '2011宝塚記念', '2012大阪杯'] };
+    const sk = H.histSkills(fake);
+    assert(!sk.includes('leftB') && !sk.includes('rightB'), `右回りばかり勝った馬に反対の回りの×が付く：${sk.join(',')}`);
+  }
   return `一気系 ${ikki}/40 で1つずつ・砂かぶり× 平均着順 ${none.toFixed(2)}→${suna.toFixed(2)}`;
 });
 check('sim: ペース：スローは前・ハイは後ろが有利、平均ペースは脚質がおおむね釣り合う', () => {

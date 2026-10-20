@@ -66,6 +66,26 @@
       for (const k of HS.FIX_KEYS) if (f[k] != null) h[k] = Array.isArray(f[k]) ? f[k].slice() : k === 'pot' ? Object.assign({}, h.pot || {}, f.pot) : f[k];
     }
   }
+  // 距離の幅に、勝った G1 の距離を必ず入れる（持ち主の決定 2026-10-20）。勝ち鞍のうち、その年の暦で G1 のレースの距離（100m に丸める）が
+  // distMin〜distMax の外なら、幅をその距離まで広げる。2歳の G1 は数えない（若いときだけの距離で幅を広げない）。
+  // データの値は書き換えず、読み込んだあとの遊びの値だけ。Godot へはこのあとの HS.DATA（tools/export_godot.js）で届く
+  {
+    const raceAt = (w) => { const y = +w.slice(0, 4); return (raceByName.get(w.slice(4)) || []).find(r => active(r, y)); };
+    const widen = h => {
+      let lo = h.distMin || 1600, hi = h.distMax || 2400;
+      for (const w of h.wins || []) {
+        const r = raceAt(w);
+        if (!r || r.grade !== 'G1' || r.age === '2' || !r.dist) continue;
+        const d = Math.round(r.dist / 100) * 100;
+        if (d < lo) lo = d;
+        if (d > hi) hi = d;
+      }
+      if (lo !== (h.distMin || 1600)) h.distMin = lo;
+      if (hi !== (h.distMax || 2400)) h.distMax = hi;
+    };
+    for (const h of out) widen(h);
+    for (const h of D.legendsExtra || []) widen(h);
+  }
   // 名馬の解説・脚の切れ・特殊能力（data/famous_*.js）。種牡馬になった馬は、仔に切れと能力を伝える
   for (const f of D.famous || []) {
     const h = byName.get(f.name) || byNorm.get(HS.normName(f.name)); if (!h) continue;

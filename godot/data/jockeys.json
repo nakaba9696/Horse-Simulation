@@ -1391,7 +1391,7 @@
 {"name":"R.クレマン","region":"栗東","from":2005,"to":2029,"skill":{"2005":82},"uncertain":true},
 {"name":"T.ヴェルヌ","region":"栗東","from":2010,"to":2029,"skill":{"2010":82},"uncertain":true},
 {"name":"笹川翔吾","region":"栗東","from":2007,"to":2025,"skill":{"2007":82},"uncertain":true},
-{"name":"K.マクレー","region":"栗東","from":2007,"to":2028,"skill":{"2007":82},"uncertain":true},
+{"name":"K.マクレー","region":"栗東","from":2007,"to":2029,"skill":{"2007":82},"uncertain":true},
 {"name":"寺岡雅人","region":"美浦","from":2006,"to":2024,"skill":{"2006":82},"uncertain":true},
 {"name":"仲間朔","region":"栗東","from":2007,"to":2029,"skill":{"2007":82},"uncertain":true},
 {"name":"R.タリス","region":"栗東","from":2009,"to":2022,"skill":{"2009":82},"uncertain":true},
@@ -1972,7 +1972,7 @@
 {"name":"L.ダルトン","region":"外国","from":1981,"to":1992,"skill":{"1981":76},"uncertain":true},
 {"name":"K.ペルティエ","region":"外国","from":1985,"to":1993,"skill":{"1985":74},"uncertain":true},
 {"name":"R.カヴァナー","region":"外国","from":1987,"to":2008,"skill":{"1987":82},"uncertain":true},
-{"name":"N.ベルトラン","region":"外国","from":1988,"to":2002,"skill":{"1988":78},"uncertain":true},
+{"name":"N.ベルトラン","region":"外国","from":1988,"to":2002,"skill":{"1988":80},"uncertain":true},
 {"name":"L.ウォルシュ","region":"外国","from":1987,"to":2016,"skill":{"1987":82},"uncertain":true},
 {"name":"L.アイヴス","region":"外国","from":2006,"to":2015,"skill":{"2006":78},"uncertain":true},
 {"name":"R.アルノー","region":"外国","from":1989,"to":1998,"skill":{"1989":76},"uncertain":true},
@@ -1983,10 +1983,10 @@
 {"name":"E.クインラン","region":"外国","from":1986,"to":2006,"skill":{"1986":80},"uncertain":true},
 {"name":"D.レイノルズ","region":"外国","from":1999,"to":2014,"skill":{"1999":78},"uncertain":true},
 {"name":"M.ベルトラン","region":"外国","from":2005,"to":2013,"skill":{"2005":74},"uncertain":true},
-{"name":"G.ヴァレンティ","region":"外国","from":2013,"to":2025,"skill":{"2013":78},"uncertain":true},
+{"name":"G.ヴァレンティ","region":"外国","from":2013,"to":2028,"skill":{"2013":80},"uncertain":true},
 {"name":"M.ストラウド","region":"外国","from":2003,"to":2025,"skill":{"2003":78},"uncertain":true},
 {"name":"L.ジャレット","region":"外国","from":2008,"to":2019,"skill":{"2008":82},"uncertain":true},
-{"name":"F.ヴァレンティ","region":"外国","from":1988,"to":2001,"skill":{"1988":78},"uncertain":true},
+{"name":"F.ヴァレンティ","region":"外国","from":1987,"to":2001,"skill":{"1987":82},"uncertain":true},
 {"name":"T.アルノー","region":"外国","from":1984,"to":2009,"skill":{"1984":78},"uncertain":true},
 {"name":"H.ノースロップ","region":"外国","from":1955,"to":1963,"skill":{"1955":74},"uncertain":true},
 {"name":"N.レイノルズ","region":"外国","from":1956,"to":1965,"skill":{"1956":76},"uncertain":true},
@@ -2063,5 +2063,6 @@
 {"name":"G.タリス","region":"外国","from":2017,"to":2025,"skill":{"2017":74},"uncertain":true},
 {"name":"J.ヴァレンティ","region":"外国","from":2019,"to":2027,"skill":{"2019":74},"uncertain":true},
 {"name":"F.ペルティエ","region":"外国","from":2017,"to":2025,"skill":{"2017":74},"uncertain":true},
-{"name":"H.ノーラン","region":"外国","from":1995,"to":2003,"skill":{"1995":74},"uncertain":true}
+{"name":"H.ノーラン","region":"外国","from":1995,"to":2003,"skill":{"1995":74},"uncertain":true},
+{"name":"G.ブレナン","region":"外国","from":1986,"to":1994,"skill":{"1986":74},"uncertain":true}
 ]

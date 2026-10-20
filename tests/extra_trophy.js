@@ -238,7 +238,7 @@ module.exports = function (check, assert, HS) {
     assert(gfs.length === 6 && gfs.every(t => t.tier === 4), `GF の難しさ ${gfs.map(t => t.tier)}`);
     // 無敗のときだけの馬・いつでもの馬
     const UNB = { triple: ['シンボリルドルフ', 'シンザン'], uk3: ['バーラム'], us3: ['ウォーアドミラル', 'シアトルスルー'], eu3: ['シーバード'], ftriple: ['テスコガビー'],
-      ukf3: ['プリティーポリー'], gs_tiara: ['パーソナルエンスン'], arc2: ['リボー'], immortal: ['オーモンド'] };
+      ukf3: ['プリティーポリー'], arc2: ['リボー'], immortal: ['オーモンド', 'パーソナルエンスン'] }; // パーソナルエンスンは芝のティアラからダートの側へ（持ち主の決定 2026-10-20）
     const whenOf = {}; for (const [id, xs] of Object.entries(D.trophyHorses)) for (const x of xs) whenOf[x.name] = x.when || 'any';
     for (const [id, ns] of Object.entries(UNB)) for (const n of ns) assert((D.trophyHorses[id] || []).some(x => x.name === n && x.when === 'unbeaten'), `${n}（${id}）が無敗のときの馬でない`);
     const unbN = Object.values(UNB).reduce((a, b) => a.concat(b), []);
@@ -464,7 +464,7 @@ module.exports = function (check, assert, HS) {
             if (!G.horses[h.id]) h.id = W.newId();
             h.owner = 'P'; h.loc = 'stable'; G.horses[h.id] = h; W.dirty();
             for (const t of turfT.slice(0, nt)) TR.give(h, t, G.year);
-            assert(O.retire(h.id).to === 'retired', '引退できない');
+            const rr = O.retire(h.id); assert(rr.to === 'retired', `引退できない ${h.name} ${rr.err || ''}`);
             assert(H.STATS.every(k => (h.potUp[k] || 0) <= RULE.CAP), `上がりが CAP を超える ${JSON.stringify(h.potUp)}`);
           }
           const ks = [];
