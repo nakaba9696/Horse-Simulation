@@ -3,21 +3,21 @@
 持ち主の言葉「キャラデザは任せます　trpgゲームで作ったノウハウが使えるはずです」（2026-10-20）を受けて作った。オーナー8人と、GF を開いている一族の人（イロナ）の見た目を1人ずつ決め、9人を並べて、シルエットと色がかぶらないことを確かめた。
 
 - 決めたのは**見た目だけ**。名前・年・人柄・台詞・ミッションは `data/owners.js`・`data/gfhost.js` と、持ち主が外で作り直す文が正。年はいまのデータに合わせた。
-- 持ち主の絵がある6人（`assets/owners_*.js`。trpg-game の絵を流用している）は**今の絵に合わせて書いた**。絵は変えない。
-- このリポジトリでは画像を生成しない（CLAUDE.md「画像生成は持ち主が決めるまで使わない」）。下の「絵を頼む文」は、持ち主が trpg-game の道具（Stable Diffusion WebUI と `tools/gen_portraits.mjs`）で使う。
+- **9人とも新しく描く**（持ち主の決定 2026-10-20「TRPGの画像使いまわしじゃなくて新規で生成してほしい」）。いま6人（ひなた・千石・マリエ・竹之内・ヴィオレーヌ・ファリナ）は trpg-game の絵を流用しているが、見た目の設計はその絵の色と形を下敷きにして、このゲームの人として決め直した（元のゲームの持ち物は外した）。新しい絵が来るまでは今の絵のまま出る。
+- 絵の生成は、持ち主のパソコンにいる trpg-game のセッションが trpg-game の道具で行う（このリポジトリのクラウドのセッションからは生成しない）。頼む行と依頼文は下の「絵を頼む文」。
 - `data/owners.js`・`data/gfhost.js` の `look`（絵を描く手がかり）と `face`（絵が無いときの SVG の顔の色）を、この設計書に合わせて直した。台詞は直していない。
 
 ![9人の並べた一覧](shots/owners/design_lineup.png)
 
-（左から 牧園 ひなた・千石 悠斗・ユニ・宝田 マリエ・竹之内 源三郎・ヴィオレーヌ・米国の少女・ファリナ・イロナ。上が今の顔、下の小さい3つが表情（ほほえみ・喜び・残念）、その下が色見本4色と勝負服の色・柄。）
+（左から 牧園 ひなた・千石 悠斗・ユニ・宝田 マリエ・竹之内 源三郎・ヴィオレーヌ・米国の少女・ファリナ・イロナ。上が今の顔（6人は流用中の絵、3人は SVG の顔。どれも新しい絵に替わる）、下の小さい3つが表情（ほほえみ・喜び・残念）、その下が色見本4色と勝負服の色・柄。）
 
 ## 決めてほしいこと（番号で答えられる形。推しは ◎）
 
 1. **米国の少女の名前**：① ◎ルーシー・ホイットフィールド（呼び名ルーシー）② メイジー・カーター ③ アニー・ブルックス。
 2. **米国の少女の勝負服**：① ◎赤と白の縦縞・青い帽子（柄 `stripes`。9人で柄が一つもかぶらなくなる）② 今のまま（赤に白の星。ひなたと柄が同じ星になる）。今の台詞（G2 の場面）が「赤に白の星」なので、①なら台詞を書き直すときに一緒に直す。
-3. **ユニの髪と目**：別のセッションのメイドの絵が来たら、その絵に合わせる。それまでの仮は ◎ミルクティー色のボブ・緑の目（ほかの8人とかぶらない色）。
-4. **年の食い違い**：データは 千石 26歳・マリエ 38歳、持ち主のメモは 30歳・33歳。絵（流用中）はどちらでも合う。◎メモの年（30・33）に合わせる（台詞を書き直すときに一緒に）。
-5. **流用中の絵の小物**：千石の絵は本、竹之内の絵は札、ヴィオレーヌの絵は細い剣を持っている（どれも元のゲームの持ち物）。◎今のまま使う（札は顔の窓ではほぼ見えない）。描き直すなら下の「描き直すときの頼み方」に小物を替えた文がある。
+3. **ユニの髪と目**：◎ミルクティー色のボブ・緑の目（ほかの8人とかぶらない色）。別のセッションのメイドの絵は待たずに、この見た目で新しく描く。
+4. **年の食い違い**：データは 千石 26歳・マリエ 38歳、持ち主のメモは 30歳・33歳。◎メモの年に寄せる。頼む行はこの推しで書いた（千石は 28〜30歳に見える・マリエは 35歳）。
+5. **ヴィオレーヌの剣**：「決闘」と言う人だが、◎剣は持たせない（両手を前でそろえて立つ）。持たせるなら、頼む行の tags に `holding a sheathed rapier upright` を足す。
 
 ## trpg-game から使ったやり方
 
@@ -45,9 +45,9 @@ trpg-game の `docs/art/README.md`・`portraits.json`・`moods.json`・`style.js
 | 人 | 年（見た目） | 背丈・雰囲気 | 髪 | 目 | 服の主の色 | 目印 | 勝負服 |
 |---|---|---|---|---|---|---|---|
 | 牧園 ひなた | 26 | 中くらい・やわらかい | くすんだ栗色・長い・一本の三つ編みを肩から前へ | はしばみ色・笑うと閉じる | 青緑の前掛け＋白い襟 | 麦の穂の髪飾り・かご | 緑に黄色の星 |
-| 千石 悠斗 | 26（男） | 中背・やせ型・日焼け | 黒・短い・はね毛 | 琥珀色・鋭い | 白いシャツ＋茶色のベスト | ポケットに片手・スマートフォン | 水色に白のダイヤ |
-| ユニ | 21 | 小柄寄り・きちんと | （仮）ミルクティー色・あごまでの内巻きのボブ | （仮）緑・丸い | 濃い紺のメイド服＋白いエプロン | 白いフリルの頭飾り・紺の手帳 | 紺と白の半分ずつ |
-| 宝田 マリエ | 38 | 背が高い・華やか | 黒・結い上げ | 紫・切れ長 | えんじの高い襟のドレス | 羽根の帽子・扇子・金の耳飾り・赤い口紅 | 金に紫のたすき |
+| 千石 悠斗 | 28〜30（男。推し） | 中背・やせ型・日焼け | 黒・短い・はね毛 | 琥珀色・鋭い | 白いシャツ＋茶色のベスト | ポケットに片手・スマートフォン | 水色に白のダイヤ |
+| ユニ | 21 | 小柄寄り・きちんと | ミルクティー色・あごまでの内巻きのボブ | 緑・丸い | 濃い紺のメイド服＋白いエプロン | 白いフリルの頭飾り・紺の手帳 | 紺と白の半分ずつ |
+| 宝田 マリエ | 35前後（推し） | 背が高い・華やか | 黒・結い上げ | 紫・切れ長 | えんじの高い襟のドレス | 羽根の帽子・扇子・金の耳飾り・赤い口紅 | 金に紫のたすき |
 | 竹之内 源三郎 | 68（男） | 背が高い・やせ型 | 灰色・後ろで小さな髷・無精ひげ | 糸目 | 墨色に近い紺の着物＋白い紋の羽織 | 扇子・懐中時計 | 深い緑に白の十字 |
 | ヴィオレーヌ | 22 | 背が高い・細身・まっすぐ立つ | 淡い水色・肩まで・低い一つ結び | 紫・鋭い・長いまつげ | 黒い長い外套（体に沿う形・白い縁） | 家紋の銀のブローチ・黒い手袋 | 紫に銀の肩 |
 | 米国の少女 | 12 | 9人でいちばん小さい・元気 | はちみつ色の金髪・二本のおさげ | 青・丸い | さくらんぼ色のベスト＋デニム | 大きすぎるつば広の帽子・そばかす | （推し）赤と白の縦縞・青い帽子 |
@@ -60,14 +60,14 @@ trpg-game の `docs/art/README.md`・`portraits.json`・`moods.json`・`style.js
 - **髪の双子になりかけた組**：ひなたとイロナ（同じ女・栗色・長い）。イロナの髪を赤く濃くし、三つ編み↔下ろした波、青緑の前掛け↔黒い外套、はしばみ色↔深い緑、かご↔花輪で分けた。ヴィオレーヌとファリナ（どちらも低い一つ結び）は、淡い水色↔青みの黒、眼鏡の有無で分かれる。
 - **服の主の色**：紺が3人（ユニ・竹之内・ファリナ）。白いエプロンと頭飾り／男の着物の V の襟と白い紋／眼鏡と高い襟、で分かれる。黒が2人（ヴィオレーヌ・イロナ）。ヴィオレーヌは体に沿う外套に白い縁と淡い髪、イロナは肩から広がるフードの外套に赤い髪と花輪で、シルエットが別（細い柱と、裾の広い三角）。
 - **シルエット**：頭の形が9人とも違う（三つ編み・はね毛・頭飾り・羽根の帽子・髷・低い一つ結び・つば広の帽子・眼鏡とぱっつん・花輪）。
-- **年と体格**：12・21・22・26・26・28・38・68・年の分からない人。背丈は小さい（米国の少女）から高い（マリエ・竹之内・ヴィオレーヌ）まで散らした。お姉さん系が多いので、少女・メイド・老人・若い男を混ぜてある。
+- **年と体格**：12・21・22・26・28・28〜30・35・68・年の分からない人。背丈は小さい（米国の少女）から高い（マリエ・竹之内・ヴィオレーヌ）まで散らした。お姉さん系が多いので、少女・メイド・老人・若い男を混ぜてある。
 - **勝負服**：柄は9人で、米国の少女を縦縞にすれば全部ちがう（星・ダイヤ・半分ずつ・たすき・十字・肩・縦縞・無地・輪）。色が近いのはひなた（明るい緑に黄）と竹之内（深い緑に白）だけで、柄と差し色で分かれる。
 
 ## 1人ずつの設計書
 
 色見本は「服の主の色・髪・差し色・もう一つ」の4色。SVG の顔（絵が無いとき）もこの色で描く。
 
-### 1. 牧園 ひなた（地方・ダート）— 絵あり（trpg-game `tiria`）
+### 1. 牧園 ひなた（地方・ダート）— 新しく描く（`hs_hinata`）
 
 - 髪：くすんだ栗色の長い髪を、一本の三つ編みにして右の肩から前へ。やわらかい前髪。
 - 目：はしばみ色のやさしい目。ふだんは笑って目を閉じている。
@@ -80,23 +80,23 @@ trpg-game の `docs/art/README.md`・`portraits.json`・`moods.json`・`style.js
 - 表情：ふだん＝目を閉じたやさしい笑顔／ほほえみ＝口を開けて笑う／喜び＝目を閉じて大笑い／残念＝涙ぐむ。
 - 立ち姿の一言：かごを抱えて、だれにでも先に「食べた？」と聞く人。
 
-### 2. 千石 悠斗（短距離）— 絵あり（trpg-game `dil`）
+### 2. 千石 悠斗（短距離）— 新しく描く（`hs_sengoku`）
 
 - 髪：黒の短い髪、あちこちはねる。前髪は横へ流す。
 - 目：鋭い琥珀色の目。細い眉。
 - 顔立ち：二十代後半の若い男。細い顔・とがったあご・日焼けした肌。
 - 体格：中背・やせ型。片手をポケットに入れて、少し斜めに立つ。
 - 服：白いシャツの袖をまくり、えりを開ける。茶色のベスト。ネクタイは締めない（会社の社長だが、競馬場では身軽）。
-- 小物：スマートフォン・金のストップウォッチ（今の絵は本を持っている）。
+- 小物：スマートフォン・スマートウォッチ・金のストップウォッチ（鎖でベストに留める）。
 - 色見本：`#f4f4f0` 白・`#16161c` 黒・`#8a4a1e` 茶・`#00a3e0` 水色（勝負服とスマートフォンの縁）。
 - 勝負服：水色に白のダイヤ（デザイナーの三十案から選んだ）。
 - 表情：ふだん＝口の端で笑う／ほほえみ＝口を閉じて満足げ／喜び＝歯を見せてにやっと笑う／残念＝目を伏せて口を曲げる。
 - 立ち姿の一言：スマートフォンから目を上げずに、結論だけ言う。
 
-### 3. ユニ（クラシック・ナビゲーター）— 絵は別のセッションで作っている途中（来たら合わせる）
+### 3. ユニ（クラシック・ナビゲーター）— 新しく描く（`hs_yuni`）
 
-- 髪：（仮）ミルクティー色のあごまでのボブ、毛先を内に巻く。白いフリルの頭飾り。
-- 目：（仮）緑の丸い目。
+- 髪：ミルクティー色のあごまでのボブ、毛先を内に巻く。まっすぐな前髪。白いフリルの頭飾り。
+- 目：緑の丸い目。
 - 顔立ち：二十歳を少し過ぎたくらい。ととのった、まじめな顔。
 - 体格：小柄寄り。背すじを伸ばし、手帳を胸に抱える。
 - 服：濃い紺のメイドのワンピース（丈はひざ下・長袖）・白いエプロン・白い襟。
@@ -105,9 +105,8 @@ trpg-game の `docs/art/README.md`・`portraits.json`・`moods.json`・`style.js
 - 勝負服：紺と白の半分ずつ（メイド服の紺とエプロンの白）。
 - 表情：ふだん＝にこやかに手帳を抱える／ほほえみ＝ほほえむ／喜び＝目を輝かせる／残念＝手帳で口元を隠してしょんぼり。
 - 立ち姿の一言：ご主人様の一週間を、手帳一冊で先回りしている人。
-- 絵が来たら：髪・目の行と色見本の2色、`data/owners.js` の `look`・`face` をその絵に合わせて直す。
 
-### 4. 宝田 マリエ（牝馬）— 絵あり（trpg-game `dorothea`。表情の差分が無い）
+### 4. 宝田 マリエ（牝馬）— 新しく描く（`hs_marie`）
 
 - 髪：黒髪をきっちり結い上げる。小さな羽根の帽子を斜めにのせる。
 - 目：紫の切れ長の目、自信のある目つき。赤い口紅。
@@ -119,35 +118,35 @@ trpg-game の `docs/art/README.md`・`portraits.json`・`moods.json`・`style.js
 - 勝負服：金に紫のたすき（お店の包装紙と同じ色）。
 - 表情：ふだん＝自信のある笑み／ほほえみ＝ほほえむ／喜び＝扇子で口元を隠して笑う／残念＝目を伏せる。
 - 立ち姿の一言：扇子を一振りして、お嬢さんたちを送り出す人。
-- 足りない物：今の絵には表情の差分が無く、4つとも同じ絵が出る。下の「絵を頼む文」に差分だけの頼み方がある。
+- 今の流用の絵には表情の差分が無く、4つとも同じ絵が出ている。新しい絵では4つ作る。
 
-### 5. 竹之内 源三郎（長距離）— 絵あり（trpg-game `gensai`）
+### 5. 竹之内 源三郎（長距離）— 新しく描く（`hs_genzaburo`。男の型は老人 `elder`）
 
 - 髪：灰色の髪を後ろで小さな髷に結う。無精ひげ。
 - 目：糸のように細い目。ほとんど開けない（開けるのは本気のときだけ）。
 - 顔立ち：六十代の後半。ほうれい線としわ。穏やかだが、腹の内を見せない顔。
 - 体格：背が高い・やせ型。片手を胸の前に上げて話す。
 - 服：墨色に近い紺の着物に、白い紋の羽織。五十年、この格好で競馬場へ来る。
-- 小物：扇子・古い懐中時計（今の絵は札を持っている）。
+- 小物：閉じた扇子・古い懐中時計（胸元に鎖）。
 - 色見本：`#2e3242` 墨紺・`#b4aca4` 灰色の髪・`#f0f0f0` 紋の白・`#1f5f3a` 深い緑（勝負服）。
 - 勝負服：深い緑に白の十字（亡くなった家内が選んだ色）。
 - 表情：ふだん＝目を閉じて穏やかにほほえむ／ほほえみ＝口を閉じてかすかに笑う／喜び＝目を閉じて声を上げて笑う／残念＝目を閉じて黙る。大口・涙は作らない。
 - 立ち姿の一言：笑ったまま、こちらの腕をはかっている人。
 
-### 6. ヴィオレーヌ・ド・サン＝クレール（欧州）— 絵あり（trpg-game `violaine`）
+### 6. ヴィオレーヌ・ド・サン＝クレール（欧州）— 新しく描く（`hs_violaine`）
 
 - 髪：淡い水色の髪、肩までの長さを低い一つ結びに。
 - 目：紫の鋭い目、長いまつげ。
 - 顔立ち：二十代の前半。白い肌、硬いまじめな顔。
 - 体格：背が高い・細身。まっすぐ立ち、礼をするように手を体の前でそろえる。
 - 服：黒い長い外套（体に沿う形・高い襟・白い縁）・白いリボンタイ。
-- 小物：家紋の銀のブローチ・黒い手袋。今の絵は細い剣を体の前に立てている（家に伝わる飾りの剣、と見てよい）。
+- 小物：家紋の銀のブローチ・黒い手袋。剣は持たない（決めてほしいこと5）。
 - 色見本：`#1e1e2a` 黒・`#bcdcee` 淡い水色・`#7a4aa8` 紫・`#d8d8e0` 銀。
 - 勝負服：紫に銀の肩（サン＝クレールの色）。
 - 表情：ふだん＝まじめで硬い顔／ほほえみ＝ほっとした小さな笑み／喜び＝やわらかくほほえむ／残念＝唇をかんでうつむく。
 - 立ち姿の一言：決闘の前のように、まっすぐこちらを見る人。
 
-### 7. 米国の少女（米国）— 絵は無い（新しく頼む）
+### 7. 米国の少女（米国。仮の名はルーシー・ホイットフィールド）— 新しく描く（`hs_lucy`）
 
 - 名前：未定（決めてほしいこと1）。ケンタッキーの古い牧場の、祖父の跡を継ぐ孫娘。データはまだ前の人（ダコタ・ベル）のままで、`look` と `face` だけ先にこの設計に合わせた。
 - 髪：はちみつ色の金髪を、耳の下で二本のおさげ（三つ編み）に。短い前髪。
@@ -161,20 +160,20 @@ trpg-game の `docs/art/README.md`・`portraits.json`・`moods.json`・`style.js
 - 表情：ふだん＝口を閉じて、にっと得意げに笑う／ほほえみ＝帽子のつばを上げてほほえむ／喜び＝歯を見せて大きく笑う／残念＝口をとがらせる（すぐ立ち直る顔）。
 - 立ち姿の一言：大人の馬主たちの間を、帽子を押さえて走り抜けていく子。
 
-### 8. ファリナ（豪州）— 絵あり（trpg-game `farina`）
+### 8. ファリナ（豪州）— 新しく描く（`hs_farina`）
 
 - 髪：青みのある黒の長い髪を低く束ねる。まっすぐな前髪。
 - 目：灰色の細い目、銀縁の眼鏡。
 - 顔立ち：二十代の後半。表情の少ない、冷たく見える顔。
 - 体格：中くらいの背・細身。両手で眼鏡を直す。
 - 服：紺の高い襟のドレス。
-- 小物：銀の鎖の首飾り・赤い表紙の帳面（今の絵は書類の束）。
+- 小物：銀の鎖の首飾り・赤い表紙の帳面。
 - 色見本：`#1f2a4a` 紺・`#1c1a26` 青みの黒・`#c9a227` 金・`#b8323c` 帳面の赤。
 - 勝負服：紺に金（無地）。
 - 表情：ふだん＝眼鏡を直す無表情／ほほえみ＝ほんの少し笑う／喜び＝目を閉じてほほえむ／残念＝慌てて汗をかく。
 - 立ち姿の一言：数字が「無理」と言うほど、眼鏡の奥が光る人。
 
-### 9. イロナ（GF を開いている一族の人）— 絵は無い（新しく頼む）
+### 9. イロナ（GF を開いている一族の人）— 新しく描く（`hs_ilona`）
 
 キンチェムを思わせる人物（本人や化身とは書かない）。花輪・赤みの栗色の髪（栗毛の色）・黒い旅の外套・黒い猫・ハンガリーの刺しゅうで「もしかして」と思わせる。
 
@@ -189,91 +188,13 @@ trpg-game の `docs/art/README.md`・`portraits.json`・`moods.json`・`style.js
 - 表情：ふだん＝静かにほほえむ／ほほえみ＝目を細める／喜び＝花輪を差し出して笑う（大口にしない）／残念＝目を伏せる（それでもほほえんでいる）。泣き・慌ては作らない。
 - 立ち姿の一言：汽車で少し遅れて着き、黙って花輪を編んでいる人。
 
-## 絵を頼む文（持ち主の環境で使う）
+## 絵を頼む文
 
-trpg-game の道具に、そのまま入る形にした。前置き（画風・品質）・後置き（solo・胸から上・白い背景・fully clothed）・ネガティブ（露出・複数人など）・モデル・大きさは trpg-game の `docs/art/style.json` をそのまま使う。下のタグは**特徴だけ**。
+持ち主の決定（2026-10-20）「オーナー9人のデザイン　TRPGの画像使いまわしじゃなくて新規で生成してほしい　生成の仕方はTRPGセッションがしってる」「表情差分も作り方知ってるはず」。9人とも、この設計書の見た目で新しく描く。生成は持ち主のパソコンにいる trpg-game のセッションが、trpg-game の道具（Stable Diffusion WebUI と `tools/gen_portraits.mjs`）と絵柄（`docs/art/style.json`。男は `style_male.json` の型）で行う。9人を同じ絵柄・同じ設定で描くので、画風がそろう。
 
-### 使い方
-
-1. trpg-game のフォルダで、`docs/art/portraits.json` の `portraits` の終わりに、下の JSON の行を足す（手元だけ。trpg-game には commit しない）。
-2. WebUI を `--api` で起動し、`node tools/gen_portraits.mjs --only hs_lucy,hs_ilona --dry` でプロンプトを確かめる。よければ `--dry` を外して作る。
-3. 1枚ずつ見て（2人写っていない・字が無い・服が子どもらしい）、気に入ったら `--keep hs_lucy` で seed を残す。気に入らなければ `--force --new-seed`。
-4. 表情の差分：`node tools/gen_portraits.mjs --variants --only hs_lucy,hs_ilona`（基本の絵から img2img。表情のタグだけ差し替わる）。
-5. 透過は trpg-game と同じ（`python3 tools/a20/a20_gaps.py`）。
-6. このリポジトリへ：`tools/pack_owners.cjs` の `PICK` に `dakota: 'hs_lucy'`（名前が決まったらその id）・`gfhost: 'hs_ilona'` を足し、`node tools/pack_owners.cjs <trpg-game/assets/portraits>` で `assets/owners_*.js` を作る。`data/owners.js` にその人の `portrait`（顔の中心と札の幅）を書き、`assets/CREDITS.md` に出典を足し、`node tools/owner_faces.js` で Godot の SVG を片づける。GF の人は `portrait` を読む所がまだ無いので、入れるときに画面の係と相談する。
-
-ユニの行は、別のセッションのメイドの絵の参考（その絵が来たら要らない）。マリエの行は、今の絵（`dorothea`）に表情の差分を足すだけの頼み方（`--variants --only dorothea`）。
-
-### 足す行（portraits.json の形）
-
-```json
-[
- {
-  "id": "hs_lucy",
-  "group": "hs_owner",
-  "name": "米国の少女（ターフの系譜）",
-  "file": "assets/portraits/hs_lucy.webp",
-  "identity": "1girl, child, 12 years old, petite, small body, round face, fair skin, freckles across nose, blonde hair, honey blonde hair, long hair, twin braids, low twin braids over shoulders, short bangs, blue eyes, round eyes, thin eyebrows, oversized tan felt cowboy hat, cream shirt, cherry red quilted vest, denim skirt, horseshoe badge on vest",
-  "tags": "lifting the brim of her hat with one hand, energetic",
-  "face": "confident smile, closed mouth",
-  "variants": {
-   "joy": "smile, bright eyes, closed mouth",
-   "fun": "big grin, open mouth, teeth, happy",
-   "sorrow": "pout, puffed cheeks, looking down"
-  },
-  "memo": "ターフの系譜のオーナー（米国）。ケンタッキーの牧場の孫娘。子どもらしく、元気に。性的な描き方はしない"
- },
- {
-  "id": "hs_ilona",
-  "group": "hs_owner",
-  "name": "イロナ（ターフの系譜）",
-  "file": "assets/portraits/hs_ilona.webp",
-  "identity": "1girl, adult, young woman, 25 years old, slender, pale skin, auburn hair, reddish chestnut hair, very long hair, wavy hair, hair down, green eyes, deep green eyes, soft eyes, long eyelashes, thin eyebrows, flower wreath on head, white pink and yellow flowers, black hooded travel cloak, open cloak, cream high-collar blouse, small red and green folk embroidery on collar, thin gold chain necklace",
-  "tags": "holding a black cat in her arms",
-  "face": "gentle smile, closed mouth, calm",
-  "variants": {
-   "faint_smile": "slight smile, half-closed eyes, soft eyes",
-   "fun": "gentle smile, closed eyes, happy",
-   "sorrow": "downcast eyes, faint sad smile"
-  },
-  "memo": "ターフの系譜の GF を開いている一族の人。静かで年の分からない人。大口・涙・慌ては作らない"
- },
- {
-  "id": "hs_yuni",
-  "group": "hs_owner",
-  "name": "ユニ（ターフの系譜・参考）",
-  "file": "assets/portraits/hs_yuni.webp",
-  "identity": "1girl, adult, young woman, 21 years old, petite, fair skin, light brown hair, milk tea hair, short hair, bob cut, inward curled hair, green eyes, round eyes, thin eyebrows, white frilled maid headdress, dark navy maid dress, long sleeves, knee-length skirt, white apron, white collar",
-  "tags": "holding a navy notebook against chest, holding a pen",
-  "face": "smile, closed mouth",
-  "variants": {
-   "joy": "gentle smile, soft eyes",
-   "fun": "excited, sparkling eyes, smile, open mouth",
-   "sorrow": "sad, notebook covering mouth, worried eyebrows"
-  },
-  "memo": "ターフの系譜のナビゲーター（メイド）。丁寧でよく気がつく。別のセッションの絵が正（これは参考）"
- }
-]
-```
-
-マリエ（今の絵 `dorothea`）に差分を足すときは、trpg-game の `dorothea` の行の `"variants": {}` を次にして `node tools/gen_portraits.mjs --variants --only dorothea`（trpg-game にもそのまま使える差分なので、残してよいかは持ち主が決める）。
-
-```json
-"variants": {
- "joy": "gentle smile, closed mouth",
- "fun": "laughing, folding fan covering mouth, closed eyes",
- "sorrow": "sad, downcast eyes, closed mouth"
-}
-```
-
-### 描き直すときの頼み方（流用中の絵を、このゲーム用に描き直したくなったら）
-
-今の絵の `identity` を土台に、元のゲームの持ち物だけ替える。髪・目・服の色は替えない（今の絵と同じ人に見えるように）。
-
-| 人 | 元の絵 | 外す語 | 足す語 |
-|---|---|---|---|
-| 牧園 ひなた | `tiria` | `princess, 23 years old` | `young woman, 26 years old, ranch girl` |
-| 千石 悠斗 | `dil` | `daggers on belt, pencil behind ear`・tags の `holding an old book with a torn cover` | `smartwatch, holding a smartphone`・`gold stopwatch on chain` |
-| 竹之内 源三郎 | `gensai` | `hair ornament in sleeve`・tags の `twirling a playing card between fingers, standing on a pier` | `holding a closed folding fan`・`white family crest on haori` |
-| ヴィオレーヌ | `violaine` | `rapier`・tags の `holding a rapier upright before her face, saluting` | `hands clasped in front, white ribbon tie` |
-| ファリナ | `farina` | `princess`・tags の `holding documents` | `adult, woman`・`holding a red notebook` |
+- 頼む行：[`docs/art/owner_portraits.json`](art/owner_portraits.json)（9人。trpg-game の `docs/art/portraits.json` の `portraits` にそのまま足せる形。id は `hs_hinata`・`hs_sengoku`・`hs_yuni`・`hs_marie`・`hs_genzaburo`・`hs_violaine`・`hs_lucy`・`hs_farina`・`hs_ilona`）。
+- trpg-game のセッションに貼る依頼文：[`docs/art/OWNER_PORTRAITS_REQUEST.md`](art/OWNER_PORTRAITS_REQUEST.md)。
+- 特徴のタグだけを書いた。画風・品質・構図・ネガティブ（露出・複数人）は trpg-game の設定が足す。作品名・作家名は書いていない。
+- 表情は、基本の絵（ふだん）と3つの差分（ほほえみ＝`joy` か `faint_smile`・喜び＝`fun`・残念＝`sorrow`）。`tools/pack_owners.cjs` がこの順で拾う。竹之内・ヴィオレーヌ・ファリナ・イロナは崩した顔を作らない（大口・涙・汗なし）。基本が笑顔の人（ひなた・マリエ・ユニ・ルーシー・イロナ）は、喜びを基本と違う笑い方にした。
+- 米国の少女の id と名前（`hs_lucy`・ルーシー・ホイットフィールド）は仮。持ち主の返事で名前が変わっても、絵の id はこのままでよい。
+- 新しい絵が来るまでは、ゲームは今の流用の絵（ユニ・米国の人・イロナは SVG の顔）のまま。`tools/pack_owners.cjs` は新しい id の絵があればそちらを使う。
