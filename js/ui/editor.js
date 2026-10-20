@@ -41,15 +41,15 @@
     if (!v) { const h = H.fromHistoric(d, 'x'); v = { pot: h.pot, kire: h.kire, health: h.health, turf: h.apt.turf, dirt: h.apt.dirt, heavy: h.apt.heavy, skills: h.skills }; infoCache.set(d.name, v); }
     return v;
   }
-  // 伸びきったときの総合力（芝とダートの高いほう）
-  const fhOf = d => { const p = info(d).pot, t = HS.Season.fhOf(p, '芝'), x = HS.Season.fhOf(p, 'ダ'); return t >= x ? { v: t, s: '芝' } : { v: x, s: 'ダ' }; };
+  // 伸びきったときの芝・ダートの総合力（強さの数はこの2つだけ。持ち主の決定 2026-10-20「評価＝芝やダートの総合力」）
+  const fhOf = d => E.fhOfPot(info(d).pot);
   const order = arr => v => { const i = arr.indexOf(v); return i < 0 ? 99 : i; };
   // 一覧の列。dir：最初に押したときの向き（1＝小さい順、-1＝大きい順）
   const COLS = [
     { k: 'name', label: '馬名', val: d => d.name, str: true, dir: 1 },
     { k: 'born', label: '生年', val: d => d.born, dir: 1 },
-    { k: 'rating', label: '評価', val: d => d.rating, dir: -1, heat: true },
-    { k: 'fh', label: HS.Season.FH_NAME, val: d => fhOf(d).v, dir: -1, title: '伸びきったときの総合力（芝とダートの高いほう）', show: d => `${fhOf(d).v} ${fhOf(d).s}` },
+    { k: 'fhT', label: '芝' + HS.Season.FH_NAME, val: d => fhOf(d).turf, dir: -1, fh: true, title: '伸びきったときの芝の総合力' },
+    { k: 'fhD', label: 'ダ' + HS.Season.FH_NAME, val: d => fhOf(d).dirt, dir: -1, fh: true, title: '伸びきったときのダートの総合力' },
     ...H.STATS.map(k => ({ k, label: H.STAT_SHORT[k], val: d => Math.round(info(d).pot[k]), dir: -1, tier: 'stat', title: H.STAT_LABEL[k] })),
     { k: 'heavy', label: '道悪', val: d => Math.round(info(d).heavy), dir: -1, heat: true, title: '大きいほど重い馬場が得意' },
     { k: 'health', label: '健康', val: d => Math.round(info(d).health), dir: -1, heat: true, title: '大きいほど疲れが早く取れる' },
@@ -103,6 +103,7 @@
       if (c.k === 'name') return `<td class="nm"><b>${e(d.name)}</b>${ed[d.name] ? ' <span class="chip mine">編集</span>' : ''}<div class="small muted">${d.sex}・${e(d.coat || '')}・父 ${e(d.sire || '?')}</div></td>`;
       const v = c.val(d);
       if (c.tier && UI.kit) return `<td class="num">${UI.kit.num(v, c.title, false, c.tier)}</td>`;
+      if (c.fh) return `<td class="num" style="${heat(v + 15)}"><b>${v}</b></td>`;
       if (c.heat) return `<td class="num" style="${heat(v)}">${v}</td>`;
       if (c.k === 'skills') return `<td class="small sk">${info(d).skills.map(x => `<span class="${H.SKILLS[x].bad ? 'bad' : ''}">${e(H.SKILLS[x].label)}</span>`).join('・')}</td>`;
       return `<td class="small ${c.str ? '' : 'num'}">${e(c.show ? c.show(d) : v)}</td>`;
@@ -145,37 +146,27 @@
   App.act['ed-more'] = () => { App.st.ed.limit = (App.st.ed.limit || PAGE) + PAGE; refreshList(); };
 
   // ---------- 1頭の編集 ----------
-  // 評価・馬場・距離・脚質から自動で決まる値（元のデータの切れ・特殊能力・健康などはそのまま）
-  function defaultsFor(d, rating, over) {
-    const o = E.original(d.name) || d;
-    const tmp = Object.assign({}, o, { rating, surface: d.surface, distMin: d.distMin, distMax: d.distMax, style: d.style }, over || {}, { pot: null, temper: null });
-    return H.fromHistoric(tmp, 'x');
-  }
   App.act['ed-open'] = ds => {
     const d = list().find(x => x.name === ds.name);
     if (!d) return;
-    const o = E.original(d.name);
     const ed = edits()[d.name] || {};
-    const base = defaultsFor(d, d.rating);
-    const now = H.fromHistoric(d, 'x');
-    const custom = !!d.pot;
+    // 能力の値を持たない馬は、今の自動の作り方で作った値を初めの値として出す（持ち主の決定 2026-10-20）
+    const now = E.horseOf(d);
     const pot = now.pot;
+    const fh0 = E.fhOfPot(pot);
     const kire = now.kire, health = now.health, skills = now.skills;
     const span = [d.born + 2, d.retire];
     const riders = (HS.DATA.jockeys || []).filter(j => j.from <= span[1] && (j.to || 9999) >= span[0]).map(j => j.name);
     const curJ = jockeyOf(d);
     const jOpts = [...new Set([curJ, ...riders].filter(Boolean))];
     const sel = (id, opts, cur) => `<select id="${id}">${opts.map(v => `<option ${String(v) === String(cur) ? 'selected' : ''} value="${e(v)}">${e(v)}</option>`).join('')}</select>`;
-    const statRow = k => `<div class="stat"><span class="lb">${H.STAT_LABEL[k]}</span><input type="range" id="ed-p-${k}" min="20" max="120" value="${Math.round(pot[k])}" ${custom ? '' : 'disabled'}><span class="gr" id="ed-pv-${k}">${Math.round(pot[k])}</span></div>`;
+    const statRow = k => `<div class="stat"><span class="lb">${H.STAT_LABEL[k]}</span><input type="range" id="ed-p-${k}" min="20" max="120" value="${Math.round(pot[k])}"><span class="gr" id="ed-pv-${k}">${Math.round(pot[k])}</span></div>`;
     const bg = App.modal(`<h3>${e(d.name)}${Object.keys(ed).length ? ' <span class="chip mine">編集済み</span>' : ''}</h3>
       <div class="hero"><canvas width="960" height="480" id="ed-cv"></canvas>
         <div class="plate"><div class="nm">${e(d.name)}</div><div class="pd">${d.born}年生 ${d.sex}　父 ${e(d.sire || '?')}　母 ${e(d.dam || '?')}${d.damsire ? '（母父 ' + e(d.damsire) + '）' : ''}</div></div></div>
       ${d.text ? `<div class="panel mt horse-text"><div class="small muted">解説</div>${e(d.text)}</div>` : ''}
       <div class="panel small mt">${d.note ? e(d.note) + '<br>' : ''}${(d.wins || []).length ? '史実の勝ち鞍：' + d.wins.map(e).join('、') : '史実ではG1未勝利'}</div>
       <div class="panel mt">
-        <div class="field"><label for="ed-rating">評価（能力の総合。100で歴代の名馬級）</label>
-          <div class="row"><input type="range" id="ed-rating" class="grow" min="20" max="110" value="${d.rating}"><b id="ed-rv" class="serif" style="min-width:64px;text-align:right;color:var(--gold2)">${U.grade(d.rating)} ${d.rating}</b></div>
-          <div class="small muted">元の値：${U.grade(o.rating)} ${o.rating}</div></div>
         <div class="row wrap">
           <div class="field grow"><label for="ed-surface">馬場</label>${sel('ed-surface', ['芝', 'ダ', '芝ダ'], d.surface)}</div>
           <div class="field grow"><label for="ed-dmin">距離（短）</label>${sel('ed-dmin', DISTS, d.distMin)}</div>
@@ -195,49 +186,36 @@
           <div class="field grow"><label for="ed-health">健康（疲れの取れ方）<b id="ed-hv">${Math.round(health)}</b></label><input type="range" id="ed-health" min="10" max="100" value="${Math.round(health)}"></div>
         </div>
         <div class="row wrap">
-          ${['turf', 'dirt', 'heavy'].map(k => `<div class="field grow"><label for="ed-a-${k}">${{ turf: '芝の向き', dirt: 'ダートの向き', heavy: '道悪' }[k]}<b id="ed-av-${k}">${Math.round(now.apt[k])}</b></label><input type="range" id="ed-a-${k}" min="10" max="100" value="${Math.round(now.apt[k])}"></div>`).join('')}
+          <div class="field grow"><label for="ed-a-heavy">道悪<b id="ed-av-heavy">${Math.round(now.apt.heavy)}</b></label><input type="range" id="ed-a-heavy" min="10" max="100" value="${Math.round(now.apt.heavy)}"></div>
         </div>
-        <div class="small muted">芝・ダートの向きは、能力を自動で決めるときに、苦手な側のスピード・スタミナをどれだけ下げるかに使います。</div>
-        <label class="small"><input type="checkbox" id="ed-custom" ${custom ? 'checked' : ''}> 能力を個別に決める（決めないときは評価と向きから自動で決まる）</label>
-        <div class="stats mt">${H.STATS.map(statRow).join('')}</div>
+        <div class="row wrap mt ed-fh">
+          <div class="field grow"><label>芝の${HS.Season.FH_NAME}</label><b id="ed-fh-t" class="serif" style="font-size:30px;color:var(--gold2)">${fh0.turf}</b></div>
+          <div class="field grow"><label>ダートの${HS.Season.FH_NAME}</label><b id="ed-fh-d" class="serif" style="font-size:30px;color:var(--gold2)">${fh0.dirt}</b></div>
+        </div>
+        <div class="small muted">${HS.Season.FH_NAME}は下の能力から決まります（伸びきったとき）。能力を動かすと変わります。</div>
+        <div class="stats">${H.STATS.map(statRow).join('')}</div>
         <div class="field mt"><label>特殊能力</label>
           <div class="skillpick">${H.SKILL_IDS.map(id => `<label class="small ${H.SKILLS[id].bad ? 'bad' : ''}" title="${e(H.SKILLS[id].note)}"><input type="checkbox" data-skill="${id}" ${skills.includes(id) ? 'checked' : ''}> ${e(H.SKILLS[id].label)}</label>`).join('')}</div></div>
       </div>
       <div class="btns mt"><button class="btn gold" data-x="save">保存</button><button class="btn" data-x="reset">初期値に戻す</button><button class="btn" data-act="close">やめる</button></div>`);
     HS.Art.portrait(bg.querySelector('#ed-cv'), { coat: d.coat, name: d.name });
     const $ = s => bg.querySelector(s);
-    const syncStats = () => {
-      const custom = $('#ed-custom').checked;
-      const r = +$('#ed-rating').value;
-      const auto = defaultsFor(Object.assign({}, d, { surface: $('#ed-surface').value, distMax: +$('#ed-dmax').value, style: $('#ed-style').value }), r, { turf: +$('#ed-a-turf').value, dirt: +$('#ed-a-dirt').value }).pot;
-      for (const k of H.STATS) {
-        const inp = $('#ed-p-' + k);
-        inp.disabled = !custom;
-        if (!custom) inp.value = Math.round(auto[k]);
-        $('#ed-pv-' + k).textContent = inp.value;
-      }
-    };
-    $('#ed-rating').oninput = () => { const r = +$('#ed-rating').value; $('#ed-rv').textContent = `${U.grade(r)} ${r}`; syncStats(); };
-    for (const k of ['turf', 'dirt', 'heavy']) $('#ed-a-' + k).oninput = () => { $('#ed-av-' + k).textContent = $('#ed-a-' + k).value; if (k !== 'heavy') syncStats(); };
+    const formPot = () => { const p = {}; for (const k of H.STATS) p[k] = +$('#ed-p-' + k).value; return p; };
+    // 能力を動かすたびに、芝・ダートの総合力を出し直す
+    const syncFh = () => { const f = E.fhOfPot(formPot()); $('#ed-fh-t').textContent = f.turf; $('#ed-fh-d').textContent = f.dirt; };
+    $('#ed-a-heavy').oninput = () => { $('#ed-av-heavy').textContent = $('#ed-a-heavy').value; };
     $('#ed-health').oninput = () => { $('#ed-hv').textContent = $('#ed-health').value; };
-    $('#ed-custom').onchange = syncStats;
-    for (const id of ['#ed-surface', '#ed-dmax', '#ed-style']) $(id).onchange = syncStats;
-    for (const k of H.STATS) $('#ed-p-' + k).oninput = () => { $('#ed-pv-' + k).textContent = $('#ed-p-' + k).value; };
+    for (const k of H.STATS) $('#ed-p-' + k).oninput = () => { $('#ed-pv-' + k).textContent = $('#ed-p-' + k).value; syncFh(); };
     $('#ed-coat').onchange = () => HS.Art.portrait($('#ed-cv'), { coat: $('#ed-coat').value, name: d.name });
     $('[data-x=save]').onclick = () => {
-      const next = {
-        rating: +$('#ed-rating').value, surface: $('#ed-surface').value, distMin: +$('#ed-dmin').value, distMax: +$('#ed-dmax').value,
+      const next = E.build(d, {
+        surface: $('#ed-surface').value, distMin: +$('#ed-dmin').value, distMax: +$('#ed-dmax').value,
         style: $('#ed-style').value, growth: $('#ed-growth').value, coat: $('#ed-coat').value, retire: +$('#ed-retire').value,
         jockey: $('#ed-jockey').value || null,
-      };
-      // 切れ・健康・芝・ダート・道悪・特殊能力は、動かしたときだけ残す
-      const kv = +$('#ed-kire').value;
-      if (kv !== base.kire || ed.kire != null) next.kire = kv;
-      if (+$('#ed-health').value !== Math.round(base.health) || ed.health != null) next.health = +$('#ed-health').value;
-      for (const k of ['turf', 'dirt', 'heavy']) { const v = +$('#ed-a-' + k).value; if (v !== Math.round(base.apt[k]) || ed[k] != null) next[k] = v; }
-      const sk = [...bg.querySelectorAll('[data-skill]')].filter(x => x.checked).map(x => x.dataset.skill);
-      if (sk.join() !== base.skills.join() || ed.skills != null) next.skills = sk;
-      if ($('#ed-custom').checked) { next.pot = {}; for (const k of H.STATS) next.pot[k] = +$('#ed-p-' + k).value; }
+        kire: +$('#ed-kire').value, health: +$('#ed-health').value, heavy: +$('#ed-a-heavy').value,
+        skills: [...bg.querySelectorAll('[data-skill]')].filter(x => x.checked).map(x => x.dataset.skill),
+        pot: formPot(),
+      });
       const err = E.validate(next);
       if (err) return App.toast(err);
       if (!(next.retire >= d.born + 2)) return App.toast(`引退する年は${d.born + 2}年以降`);
@@ -270,12 +248,9 @@
   App.act['ed-import'] = () => {
     const bg = App.modal(`<h3>編集を読み込む</h3><textarea id="ed-in" style="width:100%;height:160px" placeholder="書き出した文字を貼り付け"></textarea><div class="small muted">今の編集は置き換わります。</div><div class="btns mt"><button class="btn gold" data-x="ok">読み込む</button><button class="btn" data-act="close">やめる</button></div>`);
     bg.querySelector('[data-x=ok]').onclick = () => {
-      let obj;
-      try { obj = JSON.parse(bg.querySelector('#ed-in').value.trim()); } catch (err) { return App.toast('読み込めませんでした（形が違います）'); }
-      if (!obj || typeof obj !== 'object') return App.toast('読み込めませんでした');
-      const names = new Set(list().map(d => d.name));
-      const clean = {};
-      for (const [n, ed] of Object.entries(obj)) { if (!names.has(n) || !ed || E.validate(ed)) continue; const c = E.clean(n, ed); if (c) clean[n] = c; }
+      const r = E.parseImport(bg.querySelector('#ed-in').value, new Set(list().map(d => d.name)));
+      if (r.err) return App.toast(r.err);
+      const clean = r.edits;
       E.saveLocal(clean); E.apply(clean); W.index();
       App.closeModal(); App.toast(`${Object.keys(clean).length}頭の編集を読み込んだ`); App.render();
     };

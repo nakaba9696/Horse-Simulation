@@ -1330,6 +1330,7 @@ require('./extra_beat.js')(check, assert, HS); // 拍子（しごく手が馬の
 require('./extra_ui.js')(check, assert, HS); // 画面の仕組み：並べ替え・絞り込み・番組表と予約
 require('./extra_feel.js')(check, assert, HS); // 騎乗の手ざわり（パッドの向き・状態の文字を出さない）
 require('./extra_fatigue.js')(check, assert, HS); // 疲労（格・激戦・回復・移動・連闘で別の国へ行けない）と、故障が無いこと
+require('./extra_edits.js')(check, assert, HS); // 競走馬エディット（能力を書き換える・総合力はその結果・前の版の書き出しを読む）
 require('./extra_gate.js')(check, assert, HS); // スタートの目押し（数えを出さない・待つ秒は種から・GOOD の幅）と、騎手のゲームに放牧が無い
 require('./extra_records.js')(check, assert, HS); // お手馬のレースの記録（出走馬・ラップ）と殿堂入りの案内
 require('./extra_skills2.js')(check, assert, HS); // 逃げ・追込の能力・道悪○・外枠○・伝説級の固有の能力
