@@ -1,5 +1,5 @@
 # 番組表（次走を選ぶ。docs/UI.md「番組表」・GAM-76）：お手馬をタブ（Q/E・LB/RB）で替え、今週から1年先までの週ごとのレースを並べる
-# 1. 馬の要点（距離・芝ダの向き・脚質・調子・総合力）と「次走」の札（右端・金の縁）
+# 1. 馬の要点（距離・芝ダの向き・脚質・疲労・総合力）と「次走」の札（右端・金の縁）
 # 2. 絞り込み：表示（出られるレース／出られない重賞も）・種類（すべて／重賞）・馬場（すべて／芝／ダ）
 # 3. 表：月の区切り → 週ごとの行（週・格と名前と条件・コース・距離の向き・馬場の向き・1着賞金・操作）
 # 4. 操作：行を押すと、今週は「出走する」（金）、先の週は「予約する」、登録・予約済みは「取消」。出られないときは理由
@@ -96,8 +96,9 @@ func _fill(refocus: bool) -> void:
 	l1.add_child(UiTheme.mark(HSProgram.fit_surf(h, "芝")))
 	l1.add_child(UiTheme.label("ダ", 14, UiTheme.MUTED))
 	l1.add_child(UiTheme.mark(HSProgram.fit_surf(h, "ダ")))
-	var cond: Dictionary = HSSeason.cond(h, wi)
-	l1.add_child(UiTheme.label("入厩前" if h.loc == "farm" else String(cond.label), 15, Color(String(cond.color)) if h.loc == "stable" else UiTheme.FAINT))
+	# 馬の状態は疲労の段階（調子は無い：持ち主の決定 2026-10-20）
+	var fv := HSFatigue.view(h)
+	l1.add_child(UiTheme.label("入厩前" if h.loc == "farm" else "疲労 %s" % String(fv.label), 15, Color(String(fv.color)) if h.loc == "stable" else UiTheme.FAINT))
 	l1.add_child(UiScreen.spacer())
 	var fh := HSSeason.fh_both(h, wi)
 	l1.add_child(UiTheme.label("総合力", 12, UiTheme.MUTED))

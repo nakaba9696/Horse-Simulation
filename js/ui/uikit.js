@@ -68,7 +68,7 @@
   document.addEventListener('focusin', ev => help(ev.target));
   document.addEventListener('mouseover', ev => help(ev.target));
   // 下の並びの札のひと言
-  K.NAV_HELP = { home: '今週の騎乗・依頼・お手馬', stable: 'お手馬の調子と次走。番組表で出るレースを選ぶ', market: 'デビュー前の史実馬を買う', breed: '引退させた馬からオリジナルホースを作る', races: '先週の結果と今年の重賞', jrecord: '成績・スペシャルホース・トロフィー・リーディング', menu: 'セーブ・音・画面の設定・フリーレース' };
+  K.NAV_HELP = { home: '今週の騎乗・依頼・お手馬', stable: 'お手馬の疲労と次走。番組表で出るレースを選ぶ', market: 'デビュー前の史実馬を買う', breed: '引退させた馬からオリジナルホースを作る', races: '先週の結果と今年の重賞', jrecord: '成績・スペシャルホース・トロフィー・リーディング', menu: 'セーブ・音・画面の設定・フリーレース' };
 
   // ---------- 騎手のゲームの画面の頭の帯（App.render が中身の前に置く）。中身の最初の同じ名前の見出しは外す ----------
   const BANDS = {

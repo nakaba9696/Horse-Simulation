@@ -10,7 +10,7 @@ module.exports = function (check, assert, HS) {
   // 着順の並び（lengths＝前の馬との差・endE＝残りのスタミナ）
   const duel = [{ lengths: 0, endE: 0 }, { lengths: 0.05, endE: -0.02 }, { lengths: 2, endE: -0.1 }];
   const easy = [{ lengths: 0, endE: 0.25 }, { lengths: 6, endE: 0.02 }, { lengths: 1, endE: -0.05 }];
-  const field = (rng, lvMe, lvOpp, n) => { const me = H.makeFiller(rng, { level: lvMe, surface: '芝', dist: 2400, born: 2021 }); me.name = 'me'; me.health = 75; me.cond = 0; me.distMin = 2000; me.distMax = 2800; me.fatigue = 0; const opp = []; for (let i = 0; i < n; i++) { const h = H.makeFiller(rng, { level: lvOpp, surface: '芝', dist: 2400, born: 2021 }); h.name = 'o' + i; h.cond = 0; opp.push(h); } return { me, opp }; };
+  const field = (rng, lvMe, lvOpp, n) => { const me = H.makeFiller(rng, { level: lvMe, surface: '芝', dist: 2400, born: 2021 }); me.name = 'me'; me.health = 75; me.distMin = 2000; me.distMax = 2800; me.fatigue = 0; const opp = []; for (let i = 0; i < n; i++) { const h = H.makeFiller(rng, { level: lvOpp, surface: '芝', dist: 2400, born: 2021 }); h.name = 'o' + i; opp.push(h); } return { me, opp }; };
   const runners = (me, opp) => [me, ...opp].map((h, i) => ({ horse: h, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 }));
 
   check('fatigue: 故障が起きない（調教・レース・牧場のどこでも）。故障の仕組みが無い', () => {
@@ -40,9 +40,12 @@ module.exports = function (check, assert, HS) {
     assert(!rc || R.ineligible(h2, rc, W.get().year) !== '故障中', '故障中のまま');
   });
 
-  check('fatigue: G1（すごい G1）の激戦ほど多くたまり、脚を余らせた余裕勝ちは少ない', () => {
+  check('fatigue: 格の重いレースの激戦ほど多くたまり、脚を余らせた余裕勝ちは少ない。すごい G1 だけ重くする決まりは無い', () => {
     const gJ = F.gain(JC, duel, 0), gJe = F.gain(JC, easy, 0), g3 = F.gain(G3, duel, 0), gc = F.gain(COND, duel, 0);
-    assert(F.isTop(JC) && !F.isTop(G3), 'すごい G1 の見分け');
+    // 持ち主の決定 2026-10-20「すごいG1だと相手が強いので結果的に激戦になって勝手に疲労が溜まる」：レースの名前では変わらない
+    assert(F.TOP_G1 === undefined && F.isTop === undefined && F.GRADE.top === undefined, 'すごい G1 の表が残っている');
+    const otherG1 = Object.assign({}, JC, { name: 'エリザベス女王杯' });
+    assert(F.gain(otherG1, duel, 0) === gJ && F.gain(otherG1, easy, 1) === F.gain(JC, easy, 1), 'G1 の名前でたまる量が変わる');
     assert(gJ > g3 && g3 > gc, `格の順にならない（JC ${gJ.toFixed(1)}・G3 ${g3.toFixed(1)}・条件戦 ${gc.toFixed(1)}）`);
     assert(gJe < gJ * 0.65, `余裕勝ちが少なくない（${gJe.toFixed(1)} / 激戦 ${gJ.toFixed(1)}）`);
     // 着順の2着でも、ハナ差の激戦は大差負けより多い
@@ -51,9 +54,53 @@ module.exports = function (check, assert, HS) {
     assert(F.gain(Object.assign({}, COND, { dist: 3200 }), duel, 0) > F.gain(Object.assign({}, COND, { dist: 1200 }), duel, 0), '距離で増えない');
     // 激戦の度合いの幅
     for (const r of [duel, easy]) for (let k = 0; k < r.length; k++) { const v = F.severity(r, k); assert(v >= F.SEV.lo - 1e-9 && v <= F.SEV.lo + F.SEV.close + F.SEV.spent + 1e-9, '度合いの幅'); }
-    // 名前の表がデータの暦にある
-    for (const n of F.TOP_G1) assert(HS.DATA.races.some(r => r.name === n && r.grade === 'G1'), `すごい G1 の名前が暦に無い：${n}`);
     return `JC の激戦 ${gJ.toFixed(1)}・JC の余裕勝ち ${gJe.toFixed(1)}・G3 の激戦 ${g3.toFixed(1)}・条件戦の激戦 ${gc.toFixed(1)}`;
+  });
+
+  check('fatigue: 強い相手と競り合うと、同じレースでも疲労が多くたまる（すごい G1 の重さは相手の強さから来る）', () => {
+    // 同じ強い馬・同じレース（ジャパンカップ）で、少し下の相手13頭（競り合う）と、ずっと弱い相手13頭（楽に勝つ）。たまる量の平均を比べる
+    const N = QUICK ? 16 : 40;
+    let tight = 0, soft = 0;
+    for (let t = 0; t < N; t++) for (const lvOpp of [90, 76]) {
+      const { me, opp } = field(new U.RNG(1300 + t), 96, lvOpp, 13);
+      const res = S.run(JC, runners(me, opp), wIdx, new U.RNG(1700 + t), {});
+      const k = res.results.findIndex(x => x.horse === me);
+      const g = F.gain(JC, res.results, k);
+      if (lvOpp === 90) tight += g; else soft += g;
+    }
+    tight /= N; soft /= N;
+    assert(tight > soft * 1.06, `強い相手でたまる量が増えない（強い相手 ${tight.toFixed(1)}・弱い相手 ${soft.toFixed(1)}）`);
+    return `ジャパンカップでたまる量：強い相手 ${tight.toFixed(1)}・弱い相手 ${soft.toFixed(1)}`;
+  });
+
+  check('fatigue: 調子は無い（強さ・新しい馬・調教・前のセーブ）。馬の状態は疲労だけ', () => {
+    // 強さ：前のセーブに残った調子の値は効かない
+    const rng = new U.RNG(8);
+    const { me } = field(rng, 88, 86, 1);
+    assert(!('cond' in me), '新しい馬に調子の項目がある');
+    const p0 = S.power(me, JC, wIdx, {}).total;
+    me.cond = 100; const p1 = S.power(me, JC, wIdx, {}).total;
+    me.cond = -100; const p2 = S.power(me, JC, wIdx, {}).total;
+    assert(p0 === p1 && p0 === p2, '調子の値で強さが変わる');
+    delete me.cond;
+    // 調教では調子が動かない（疲労だけ。休ませるメニューは疲労が抜ける）
+    for (const m of Object.values(H.MENUS)) assert(m.cond == null, '調教のメニューに調子の効きが残っている');
+    me.fatigue = 40; H.train(me, '休養', new U.RNG(2), wIdx);
+    assert(!('cond' in me) && me.fatigue < 40, '休養で疲労が抜けない・調子ができた');
+    // 調教師のひと言は疲労の段階から
+    me.fatigue = 0; const c0 = H.comment(me); me.fatigue = 80; const c4 = H.comment(me);
+    assert(c0 !== c4 && /休ませ/.test(c4), `調教師のひと言（${c0}／${c4}）`);
+    // 前のセーブ：調子の項目は読み捨てる。読み直しても強さは同じ
+    W.newGame({ mode: 'jockey', seed: 43, jockeyName: 'テスト', region: '美浦' });
+    const s = JSON.parse(W.serialize());
+    const ids = Object.keys(s.horses).slice(0, 20);
+    for (const id of ids) s.horses[id].cond = 55;
+    W.load(JSON.stringify(s));
+    assert(ids.every(id => !W.horse(id) || !('cond' in W.horse(id))), '前のセーブの調子の項目が残った');
+    // 1週進めても誰にも調子の項目ができない
+    W.finishWeek({});
+    assert(!W.all().some(h => 'cond' in h), '週を進めると調子の項目ができる');
+    return `調子の値（±100）で強さが変わらない・前のセーブの調子を読み捨てる`;
   });
 
   check('fatigue: 健康が高いほど早く抜ける（毎週）。牧場ではもっと早い', () => {
@@ -69,8 +116,9 @@ module.exports = function (check, assert, HS) {
     assert(F.STAGES.length === S.FATIGUE.at.length + 1 && S.FATIGUE.pen.length === F.STAGES.length, '段階の数');
     assert(F.stageOf(0) === 0 && F.stageOf(14.9) === 0 && F.stageOf(15) === 1 && F.stageOf(54.9) === 2 && F.stageOf(75) === 4 && F.stageOf(100) === 4, '段階の境目');
     for (let i = 1; i < S.FATIGUE.pen.length; i++) assert(S.FATIGUE.pen[i] > S.FATIGUE.pen[i - 1], '段階が上がるほど下げが大きい');
-    // 調子の8段階の「疲れ」「疲れが濃い」「使いすぎ」と同じ名前
-    for (let s = 2; s <= 4; s++) assert(T.COND[s + 3].label === F.STAGES[s].label, '調子の段階の名前');
+    // 段階の名前（万全・軽い疲れ・疲れ・疲れが濃い・使いすぎ）。調子の段階は無い（持ち主の決定 2026-10-20「調子のパラメータは無し。疲労だけにする」）
+    assert(F.STAGES.map(x => x.label).join() === '万全,軽い疲れ,疲れ,疲れが濃い,使いすぎ', '段階の名前');
+    assert(!T.COND && !T.condLevel && !T.cond && !H.condLabel, '調子の段階が残っている');
     const rng = new U.RNG(3);
     const { me, opp } = field(rng, 88, 86, 13);
     const p0 = S.power(me, JC, wIdx, {}).total;
@@ -109,7 +157,8 @@ module.exports = function (check, assert, HS) {
     };
     const sR = run(104, false), sF = run(104, true), mR = run(88, false), mF = run(88, true);
     assert(sR.fh >= 80, `強い馬の総合力 ${sR.fh}`);
-    assert(sR.fat > 55, `強い馬にも疲労はたまる（${sR.fat.toFixed(0)}）`);
+    // 5週続けてジャパンカップ（すごい G1 の重さは無くした。持ち主の決定 2026-10-20）でも「疲れ」（35）より上にたまる
+    assert(sR.fat > 45, `強い馬にも疲労はたまる（${sR.fat.toFixed(0)}）`);
     assert(sR.win >= sF.win - 0.15 && sR.win >= 0.5, `強い馬が連闘で勝てない（連闘 ${(sR.win * 100).toFixed(0)}％・休み明け ${(sF.win * 100).toFixed(0)}％）`);
     assert(mR.pos - mF.pos >= 0.8, `ふつうの G1 馬が連闘で落ちない（${mF.pos.toFixed(1)} → ${mR.pos.toFixed(1)}着）`);
     return `4・5戦目：総合力${sR.fh}は勝率 ${(sF.win * 100).toFixed(0)}％→${(sR.win * 100).toFixed(0)}％（疲労 ${sR.fat.toFixed(0)}）／総合力${mR.fh}は平均 ${mF.pos.toFixed(1)}→${mR.pos.toFixed(1)}着（疲労 ${mR.fat.toFixed(0)}）`;
