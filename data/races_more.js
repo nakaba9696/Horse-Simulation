@@ -7,6 +7,7 @@
  *  - 年代なしのゲームは2025年の番組で走るので、いまの形（競馬場・距離・格）を出典で確かめて書いた。
  *    それより前の年の形（距離・競馬場の移り変わり）は確かめきれていない所があり、uncertain:true を付けた
  *  - 出典：en.wikipedia の各レースの記事（2026-10-19 に確認。施行日は記事の結果の表・参照の Racing Post の結果）
+ *  - ドイツのディアナ賞（独オークス）は外した（持ち主の決定 2026-10-20「格が高くないならディアナ賞をなくして欧州オークス三冠もなくしましょう」）
  *  - ブリーダーズカップターフスプリントは、ブリーダーズカップの開催地（暦の BC マイルの競馬場）に合わせて年ごとに作る
  */
 (function () {
@@ -77,7 +78,6 @@
     { name: 'ロワイヤリュー賞', short: 'ロワイヤリュー賞', grade: 'G1', region: '海外', country: '仏', course: 'ロンシャン', surface: '芝', dist: 2800, month: 10, week: 1, age: '3+', sex: '牝', weight: '定量', prize: 2500, from: FAMOUS_FROM, to: 9999, uncertain: true },
     { name: 'クリテリウムドサンクルー', short: 'クリテリウムドサンクルー', grade: 'G1', region: '海外', country: '仏', course: 'サンクルー', surface: '芝', dist: 2000, month: 10, week: 4, age: '2', weight: '定量', prize: 2500, from: FAMOUS_FROM, to: 9999, uncertain: true },
     { name: 'クリテリウムアンテルナシオナル', short: 'クリテリウムアンテルナシオナル', grade: 'G1', region: '海外', country: '仏', course: 'サンクルー', surface: '芝', dist: 1600, month: 10, week: 4, age: '2', weight: '定量', prize: 2500, from: FAMOUS_FROM, to: 9999, uncertain: true },
-    { name: 'ディアナ賞', short: 'ディアナ賞', grade: 'G1', region: '海外', country: '独', course: 'デュッセルドルフ', surface: '芝', dist: 2200, month: 8, week: 1, age: '3', sex: '牝', weight: '定量', prize: 2500, from: FAMOUS_FROM, to: 9999, uncertain: true, note: 'ドイツオークス' },
     // ---- 米国・カナダ ----
     { name: 'フロリダダービー', short: 'フロリダダービー', grade: 'G1', region: '海外', country: '米', course: 'ガルフストリームパーク', surface: 'ダ', dist: 1800, month: 3, week: 4, age: '3', weight: '定量', prize: 6000, from: FAMOUS_FROM, to: 9999, uncertain: true },
     { name: 'アーカンソーダービー', short: 'アーカンソーダービー', grade: 'G1', region: '海外', country: '米', course: 'オークローンパーク', surface: 'ダ', dist: 1800, month: 3, week: 4, age: '3', weight: '定量', prize: 6000, from: FAMOUS_FROM, to: 9999, uncertain: true },

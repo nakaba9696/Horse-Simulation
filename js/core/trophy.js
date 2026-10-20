@@ -11,17 +11,16 @@
 
   TR.CATS = [
     { id: 'classic', label: 'クラシック／三冠' }, { id: 'filly', label: '牝馬三冠' }, { id: 'gs', label: 'グランドスラム' },
-    { id: 'title', label: '称号・連覇・単発偉業' }, { id: 'gf', label: 'GF' }, { id: 'extra', label: '仕様書に無い（前からのもの）' },
+    { id: 'title', label: '称号・連覇・単発偉業' }, { id: 'gf', label: 'GF' },
   ];
   TR.LIST = (HS.DATA.trophies || []).map(t => Object.assign({}, t, { races: t.races.slice(), focus: t.focus.slice() }));
   // GF（data/gf.js）ごとのトロフィー（持ち主の仕様書「レースごとにもらえるトロフィーは違うものにする」）。勝ったお手馬それぞれに付く
   const GFT = HS.DATA.trophyGF || { tier: 3, focus: {} };
-  const gfAt = TR.LIST.findIndex(t => t.cat === 'extra');
   const gfList = (HS.DATA.gf || []).map(c => {
     const name = `${HS.Season.DC_NAME}（${c.label}）`;
     return { cat: 'gf', id: 'gf:' + c.id, label: c.trophy, kind: 'gf', races: [name], same: false, tier: GFT.tier, focus: (GFT.focus[c.id] || ['spd', 'sta']).slice(), note: `${name}を勝つ`, gf: c.id };
   });
-  TR.LIST.splice(gfAt < 0 ? TR.LIST.length : gfAt, 0, ...gfList);
+  TR.LIST.push(...gfList);
   TR.BY = {}; TR.LIST.forEach(t => { TR.BY[t.id] = t; });
 
   // お金（いまの物価に直す）
@@ -147,6 +146,13 @@
     return { n: ids.length, by, top };
   };
 
+  // 前のセーブ：外したトロフィー（RULE.REMOVED。仕様書に無い5つと豪州2歳三冠・持ち主の決定 2026-10-20）の記録を消す。
+  // 殿堂の写し（G.hallOwn）からも外す。もらったお金はそのまま。殿堂入りの数（HS.Hall.trophiesOf）にも数えない
+  TR.migrateRemoved = function (g) {
+    const gone = RULE.REMOVED || [];
+    for (const id of gone) if (g.trophies && id in g.trophies) delete g.trophies[id];
+    for (const e of g.hallOwn || []) if (Array.isArray(e.trophies)) e.trophies = e.trophies.filter(t => !gone.includes(t.id));
+  };
   // GF のトロフィーを、2頭目からの勝ち馬にも付ける（前の版の形。TR.give と同じ記録）
   TR.addHolder = function (rec, h, y) {
     if (rec.hid === h.id || (rec.more || []).some(m => m.hid === h.id)) return;

@@ -1,9 +1,10 @@
 {
 "TIER_MONEY": [0,10000,20000,30000,50000,80000,120000],
-"TIER_PTS": [0,2,3,4,6,8,10],
-"CAP": 20,
+"TIER_PTS": [0,1,1.5,2,2.5,3,4],
+"CAP": 8,
 "WONDER_LEN": 100,
 "WONDER_PER_RACE": 10,
 "IMMORTAL_STREAK": 10,
-"HOF_G1": 6
+"HOF_G1": 6,
+"REMOVED": ["autumn","spring","grandprix","tenno","arima2","au2"]
 }

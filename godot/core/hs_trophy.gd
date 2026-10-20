@@ -5,26 +5,22 @@ class_name HSTrophy
 
 const CATS := [
 	{ id = "classic", label = "クラシック／三冠" }, { id = "filly", label = "牝馬三冠" }, { id = "gs", label = "グランドスラム" },
-	{ id = "title", label = "称号・連覇・単発偉業" }, { id = "gf", label = "GF" }, { id = "extra", label = "仕様書に無い（前からのもの）" },
+	{ id = "title", label = "称号・連覇・単発偉業" }, { id = "gf", label = "GF" },
 ]
 static func rule() -> Dictionary: return HSData.d().get("trophyRule", {})
 
-# 一覧（data/trophies.js と、GF ごとのもの。GF は「仕様書に無い」の前に入れる）。初めて使うときに作る
+# 一覧（data/trophies.js と、GF ごとのもの。GF は最後に入れる）。初めて使うときに作る
 static var _list: Variant = null
 static func list() -> Array:
 	if _list == null:
 		_list = []
 		for t in HSData.d().get("trophies", []): _list.append(t.duplicate(true))
 		var gft: Dictionary = HSData.d().get("trophyGF", { tier = 3.0, focus = {} })
-		var at: int = -1
-		for i in _list.size():
-			if _list[i].cat == "extra": at = i; break
-		if at < 0: at = _list.size()
 		var gfl: Array = []
 		for c in HSData.d().get("gf", []):
 			var name := "%s（%s）" % [HSSeason.DC_NAME, c.label]
 			gfl.append({ cat = "gf", id = "gf:" + c.id, label = c.trophy, kind = "gf", races = [name], same = false, tier = gft.tier, focus = HSU.or_(gft.focus.get(c.id), ["spd", "sta"]).duplicate(), note = "%sを勝つ" % name, gf = c.id })
-		for i in gfl.size(): _list.insert(at + i, gfl[i])
+		_list.append_array(gfl)
 	return _list
 static var _by_v: Variant = null
 static func by() -> Dictionary:
@@ -161,6 +157,14 @@ static func points(h: Dictionary) -> Dictionary:
 		bym[k] = HSU.mn(R.CAP, bym[k]); top = HSU.mx(top, bym[k])
 	return { n = float(ids.size()), by = bym, top = top }
 
+# 前のセーブ：外したトロフィー（REMOVED。仕様書に無い5つと豪州2歳三冠・持ち主の決定 2026-10-20）の記録を消す。殿堂の写しからも外す。お金はそのまま
+static func migrate_removed(g: Dictionary) -> void:
+	var gone: Array = HSU.or_(rule().get("REMOVED"), [])
+	var tr = g.get("trophies")
+	if tr is Dictionary:
+		for id in gone: tr.erase(id)
+	for e in HSU.or_(g.get("hallOwn"), []):
+		if e.get("trophies") is Array: e.trophies = e.trophies.filter(func(t): return not gone.has(t.get("id")))
 # GF のトロフィーを、2頭目からの勝ち馬にも付ける（前の版の形）
 static func add_holder(rec: Dictionary, h: Dictionary, y: float) -> void:
 	if rec.get("hid") == h.id: return
