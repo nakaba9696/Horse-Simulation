@@ -5,6 +5,5 @@
 "WONDER_LEN": 100,
 "WONDER_PER_RACE": 10,
 "IMMORTAL_STREAK": 10,
-"HOF_G1": 6,
-"REMOVED": ["autumn","spring","grandprix","tenno","arima2","au2"]
+"REMOVED": ["autumn","spring","grandprix","tenno","arima2","au2","hof"]
 }

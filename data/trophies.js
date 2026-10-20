@@ -1,10 +1,10 @@
 // トロフィーの表（持ち主の仕様書 docs/SPEC.md の「トロフィー」・2026-10-19）。js/core/trophy.js と Godot の hs_trophy.gd がこれを読む。
 //   cat：区分（classic＝クラシック／三冠・filly＝牝馬三冠・gs＝グランドスラム・title＝称号・連覇・単発偉業・gf＝GF（data/gf.js から作る））
-//   kind：set（races を全部勝つ。same が true なら同じ年に）・repeat（races のどれかを2年続けて勝つ）・hof（年末の表彰）・wonder（生涯の着差）・immortal（G1 の連勝）
+//   kind：set（races を全部勝つ。same が true なら同じ年に）・repeat（races のどれかを2年続けて勝つ）・wonder（生涯の着差）・immortal（G1 の連勝）
 //   races：レースの短い名（暦の short）。tier：難しさ（1〜6）。お金（TIER_MONEY）と、引退したときの能力の上がり（TIER_PTS）を決める
 //   focus：引退したときに大きく上がる能力（ほかの能力は半分だけ上がる）
 // id は前のセーブと同じもの（triple・ftriple・us3・uk3・arc2）をそのまま使う。
-// 外したトロフィー（REMOVED）：仕様書に無い5つ（秋の古馬三冠・春の古馬三冠・グランプリ制覇・天皇賞の春秋制覇・有馬記念連覇）と豪州2歳三冠
+// 外したトロフィー（REMOVED）：仕様書に無い5つ（秋の古馬三冠・春の古馬三冠・グランプリ制覇・天皇賞の春秋制覇・有馬記念連覇）と豪州2歳三冠。前のホールオブフェイム（無敗の年に G1 6勝。id hof）も外し、その名前を凱旋門賞とドバイWC を同じ年に勝つトロフィー（id legend。前の名はレジェンドホース）に付けた（持ち主の決定 2026-10-20。40個）
 // （持ち主の決定 2026-10-20）。前のセーブに残っていれば World.migrate が消す（js/core/trophy.js の TR.migrateRemoved）
 (function () {
   const HS = globalThis.HS = globalThis.HS || {}; HS.DATA = HS.DATA || {};
@@ -21,8 +21,7 @@
     WONDER_LEN: 100,      // ワンダーホース：勝ったレースで2着につけた着差（馬身）の合計
     WONDER_PER_RACE: 10,  // 1レースで数える着差の上限（10馬身より大きい差＝大差は10馬身と数える）
     IMMORTAL_STREAK: 10,  // インモータルロード：G1 の連勝（持ち主の決定 2026-10-19「単に G1 を10連勝」。格の区別なし）
-    HOF_G1: 6,            // ホールオブフェイム：その年を無敗で、G1 をこの数だけ勝つ
-    REMOVED: ['autumn', 'spring', 'grandprix', 'tenno', 'arima2', 'au2'], // 外したトロフィーの id（前のセーブから消す）
+    REMOVED: ['autumn', 'spring', 'grandprix', 'tenno', 'arima2', 'au2', 'hof'], // 外したトロフィーの id（前のセーブから消す）
   };
   HS.DATA.trophies = [
     // ---- クラシック／三冠（同じ年に） ----
@@ -62,8 +61,7 @@
     T('title', 'dwc2', 'メイダンルーラー', 'repeat', ['ドバイワールドカップ'], 4, ['dspd', 'dsta'], '同じ馬でドバイワールドカップを2連覇'),
     T('title', 'ev2', 'キングオブエベレスト', 'repeat', ['ジ・エベレスト'], 4, ['spd', 'guts'], '同じ馬でジ・エベレストを2連覇'),
     T('title', 'bc2', 'クラウンオブブリーダーズ', 'repeat', ['BCクラシック', 'BCターフ'], 4, ['guts', 'mind'], '同じ馬でBCクラシックかBCターフのどちらかを2連覇'),
-    T('title', 'legend', 'レジェンドホース', 'set', ['凱旋門賞', 'ドバイワールドカップ'], 5, ['spd', 'dspd'], '凱旋門賞とドバイワールドカップを同じ年に'),
-    T('title', 'hof', 'ホールオブフェイム', 'hof', [], 6, ['guts', 'mind'], '同じ年に無敗のまま G1 を6勝（6勝目のレースに勝ったとき）'),
+    T('title', 'legend', 'ホールオブフェイム', 'set', ['凱旋門賞', 'ドバイワールドカップ'], 5, ['spd', 'dspd'], '凱旋門賞とドバイワールドカップを同じ年に'),
     T('title', 'wonder', 'ワンダーホース', 'wonder', [], 5, ['spd', 'guts'], '勝ったレースで2着につけた着差の合計が100馬身（1レースは10馬身まで数える・GF は数えない）'),
     T('title', 'immortal', 'インモータルロード', 'immortal', [], 6, ['guts', 'mind'], 'G1 を10連勝（G1 に出たときだけ数える。G1 で負けると0から。GF は数えない）'),
   ];

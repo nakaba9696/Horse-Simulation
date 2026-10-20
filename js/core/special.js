@@ -55,7 +55,7 @@
   const trophyGroups = TR.LIST.filter(t => ((HS.DATA.trophyHorses || {})[t.id] || []).length).map(t => {
     const names = HS.DATA.trophyHorses[t.id].map(x => x.name);
     return { id: 't:' + t.id, trophy: t.id, label: `トロフィー「${t.label}」`, note: `${t.note}（あと1勝のとき）`, finals: (t.kind === 'set' || t.kind === 'repeat') ? t.races.slice() : null,
-      again: true, needG1: t.kind === 'hof' || t.kind === 'immortal', legs: (h, race) => TR.reach(h, t, race), member: d => names.includes(d.name) };
+      again: true, needG1: t.kind === 'immortal', legs: (h, race) => TR.reach(h, t, race), member: d => names.includes(d.name) };
   });
   SP.GROUPS = trophyGroups.concat([
     { id: 'nikan', label: 'クラシック二冠馬', note: '皐月賞・日本ダービー・菊花賞のどれかを勝って、ほかのクラシックへ', finals: CLASSIC, legs: (h, race) => CLASSIC.filter(n => won(h, n, y => y === race.year)).length === 1 && !won(h, race.short, y => y === race.year), member: d => (dn(d, '皐月賞') ? 1 : 0) + (dn(d, '東京優駿') ? 1 : 0) + (dn(d, '菊花賞') ? 1 : 0) === 2 },

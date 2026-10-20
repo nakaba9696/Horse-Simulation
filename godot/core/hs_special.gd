@@ -71,7 +71,7 @@ static func _trophy_groups() -> Array:
 		var xs: Array = th.get(t.id, [])
 		if not xs.size(): continue
 		out.append({ id = "t:" + t.id, trophy = t.id, label = "トロフィー「%s」" % t.label, note = "%s（あと1勝のとき）" % t.note,
-			finals = t.races.duplicate() if (t.kind == "set" or t.kind == "repeat") else null, again = true, needG1 = t.kind == "hof" or t.kind == "immortal",
+			finals = t.races.duplicate() if (t.kind == "set" or t.kind == "repeat") else null, again = true, needG1 = t.kind == "immortal",
 			names = xs.map(func(x): return x.name) })
 	return out
 static func _groups() -> Array:

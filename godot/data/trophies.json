@@ -30,8 +30,7 @@
 {"cat":"title","id":"dwc2","label":"メイダンルーラー","kind":"repeat","races":["ドバイワールドカップ"],"same":true,"tier":4,"focus":["dspd","dsta"],"note":"同じ馬でドバイワールドカップを2連覇"},
 {"cat":"title","id":"ev2","label":"キングオブエベレスト","kind":"repeat","races":["ジ・エベレスト"],"same":true,"tier":4,"focus":["spd","guts"],"note":"同じ馬でジ・エベレストを2連覇"},
 {"cat":"title","id":"bc2","label":"クラウンオブブリーダーズ","kind":"repeat","races":["BCクラシック","BCターフ"],"same":true,"tier":4,"focus":["guts","mind"],"note":"同じ馬でBCクラシックかBCターフのどちらかを2連覇"},
-{"cat":"title","id":"legend","label":"レジェンドホース","kind":"set","races":["凱旋門賞","ドバイワールドカップ"],"same":true,"tier":5,"focus":["spd","dspd"],"note":"凱旋門賞とドバイワールドカップを同じ年に"},
-{"cat":"title","id":"hof","label":"ホールオブフェイム","kind":"hof","races":[],"same":true,"tier":6,"focus":["guts","mind"],"note":"同じ年に無敗のまま G1 を6勝（6勝目のレースに勝ったとき）"},
+{"cat":"title","id":"legend","label":"ホールオブフェイム","kind":"set","races":["凱旋門賞","ドバイワールドカップ"],"same":true,"tier":5,"focus":["spd","dspd"],"note":"凱旋門賞とドバイワールドカップを同じ年に"},
 {"cat":"title","id":"wonder","label":"ワンダーホース","kind":"wonder","races":[],"same":true,"tier":5,"focus":["spd","guts"],"note":"勝ったレースで2着につけた着差の合計が100馬身（1レースは10馬身まで数える・GF は数えない）"},
 {"cat":"title","id":"immortal","label":"インモータルロード","kind":"immortal","races":[],"same":true,"tier":6,"focus":["guts","mind"],"note":"G1 を10連勝（G1 に出たときだけ数える。G1 で負けると0から。GF は数えない）"}
 ]

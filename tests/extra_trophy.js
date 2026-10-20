@@ -18,7 +18,7 @@ module.exports = function (check, assert, HS) {
     'ジャパン GS': ['天皇賞・春', '宝塚記念', '天皇賞・秋', 'ジャパンC', '有馬記念'], 'ジャパンダート GS': ['フェブラリーステークス', '帝王賞', '南部杯', 'JBCクラシック', '東京大賞典'],
     'オーストラリアン GS': ['メルボルンカップ', 'コックスプレート', 'ジ・エベレスト'],
     'アークエンペラー': ['凱旋門賞'], 'メイダンルーラー': ['ドバイワールドカップ'], 'キングオブエベレスト': ['ジ・エベレスト'], 'クラウンオブブリーダーズ': ['BCクラシック', 'BCターフ'],
-    'レジェンドホース': ['凱旋門賞', 'ドバイワールドカップ'], 'ホールオブフェイム': [], 'ワンダーホース': [], 'インモータルロード': [],
+    'ホールオブフェイム': ['凱旋門賞', 'ドバイワールドカップ'], 'ワンダーホース': [], 'インモータルロード': [],
     'GF クラシック覇者': null, 'GF ディスタンス覇者': null, 'GF マイル覇者': null, 'GF スプリント覇者': null, 'GF ステイヤー覇者': null, 'GF ダート覇者': null,
   };
   const ADDED = ['ランドウィックギニー', 'ローズヒルギニー', '豪ダービー', 'サイアーズプロデュースS', 'シャンペンS', 'スチュワーズC', 'チャンピオンズ＆チャターC', 'センテナリースプリントC',
@@ -102,13 +102,6 @@ module.exports = function (check, assert, HS) {
       } else if (t.kind === 'gf') {
         const r = HS.Season.dcRace(y, t.gf);
         assert(winIt(h, r, y).includes(t), `${t.label}：GF を勝っても手に入らない`);
-      } else if (t.kind === 'hof') {
-        for (let i = 0; i < 5; i++) { h.results.push({ y, pos: 1, grade: 'G1' }); h.gradedWins.push({ y, race: 'G1' + i, short: 'G1' + i, grade: 'G1' }); }
-        assert(TR.reach(h, t, { short: '何か', grade: 'G1', year: y }) && !TR.reach(h, t, { short: '何か', grade: 'G2', year: y }), 'ホールオブフェイム：無敗で G1 5勝でリーチにならない');
-        // 6勝目：レースの記録が付いたあとの TR.afterRace（world.js と同じ順）で、その場で手に入る。年末を待たない
-        h.results.push({ y, pos: 1, grade: 'G1' }); h.gradedWins.push({ y, race: 'G15', short: 'G15', grade: 'G1' });
-        const got6 = TR.afterRace({ grade: 'G1', year: y }, { results: [{ pos: 1, horse: h }, { pos: 2, lengths: 1, horse: {} }] });
-        assert(got6.includes(t) && TR.yearEnd(y).length === 0, 'ホールオブフェイム：無敗で G1 6勝目に勝っても、その場で手に入らない');
       } else if (t.kind === 'wonder') {
         h.winLen = 95;
         assert(TR.reach(h, t, { short: '何か', grade: 'G3' }), 'ワンダーホース：95馬身でリーチにならない');
@@ -139,12 +132,6 @@ module.exports = function (check, assert, HS) {
     TR.afterRace({ grade: 'G1', year: G.year }, { results: [{ pos: 1, horse: {} }, { pos: 2, lengths: 1, horse: h2 }] });
     TR.afterRace({ grade: 'GF', year: G.year }, { results: [{ pos: 1, horse: h2 }, { pos: 2, lengths: 9, horse: {} }] });
     assert(h2.g1Streak === 0 && h2.winLen === 10, `連勝 ${h2.g1Streak}・着差 ${h2.winLen}`);
-    // 負けた年はホールオブフェイムにならない
-    const h3 = myHorse(G, '牡'); const y = G.year;
-    for (let i = 0; i < 6; i++) { h3.results.push({ y, pos: 1, grade: 'G1' }); h3.gradedWins.push({ y, race: 'x' + i, short: 'x' + i, grade: 'G1' }); }
-    h3.results.push({ y, pos: 2, grade: 'G2' });
-    TR.afterRace({ grade: 'G1', year: y }, { results: [{ pos: 1, horse: h3 }, { pos: 2, lengths: 1, horse: {} }] });
-    assert(!TR.has(h3, 'hof'), '負けた年にホールオブフェイム');
     const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で変わる');
     return `${got.length}個を取れた`;
   });

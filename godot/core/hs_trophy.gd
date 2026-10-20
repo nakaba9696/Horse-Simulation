@@ -79,10 +79,6 @@ static func reach(h: Dictionary, t: Dictionary, race: Dictionary) -> bool:
 			var pred = (func(y): return y == race.year) if t.same else null
 			return not _won(h, race.short, pred) and t.races.all(func(n): return n == race.short or _won(h, n, pred))
 		"repeat": return t.races.has(race.get("short")) and _won(h, race.short, func(y): return y == race.year - 1) and not _won(h, race.short, func(y): return y == race.year)
-		"hof":
-			if race.get("grade") != "G1": return false
-			var r := year_rec(h, race.year)
-			return r.starts > 0 and r.wins == r.starts and r.g1 == int(R.HOF_G1) - 1
 		"wonder":
 			var w := float(HSU.or_(h.get("winLen"), 0.0))
 			return race.get("grade") != "GF" and w >= R.WONDER_LEN - R.WONDER_PER_RACE and w < R.WONDER_LEN
@@ -113,7 +109,7 @@ static func on_win(h: Dictionary, race: Dictionary) -> Array:
 	for t in list():
 		if done(t, h, race) and give(h, t, race.year): got.append(t)
 	return got
-# レースのあと（finish_week から）：着差の合計（ワンダーホース）・G1 の連勝（インモータルロード）・無敗の年の G1 6勝（ホールオブフェイム）。GF は数えない
+# レースのあと（finish_week から）：着差の合計（ワンダーホース）・G1 の連勝（インモータルロード）。GF は数えない
 static func after_race(race: Dictionary, sim: Variant) -> Array:
 	var G = HSWorld.G
 	if not G.get("eraless") or race.get("grade") == "GF": return []
@@ -130,12 +126,8 @@ static func after_race(race: Dictionary, sim: Variant) -> Array:
 		if race.get("grade") == "G1":
 			h.g1Streak = float(HSU.or_(h.get("g1Streak"), 0.0)) + 1.0 if x.pos == 1 else 0.0
 			if h.g1Streak >= R.IMMORTAL_STREAK and give(h, by().immortal, race.year): got.append(by().immortal)
-			# ホールオブフェイム：その年を無敗のまま G1 を HOF_G1 勝目（レースに勝ったその場で。trophy.js と同じ）
-			if x.pos == 1:
-				var yr := year_rec(h, race.year)
-				if yr.starts > 0 and yr.wins == yr.starts and yr.g1 >= int(R.HOF_G1) and give(h, by().hof, race.year): got.append(by().hof)
 	return got
-# 年末の表彰：前はここでホールオブフェイムを付けた。いまはレースに勝ったその場（after_race）で付けるので、年末には何もしない
+# 年末の表彰：前はここでホールオブフェイム（無敗の年に G1 6勝）を付けた。そのトロフィーは外した（trophy.js と同じ）ので、年末には何もしない
 static func year_end(_y: float) -> Array:
 	return []
 
