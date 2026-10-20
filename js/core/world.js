@@ -370,10 +370,12 @@
       .filter(rc => (rc.surface === 'ダ' ? h.apt.dirt : h.apt.turf) >= 70)
       .filter(rc => !rc.graded || c >= (GRADE_NEED[rc.grade] || 72) - (year - h.born <= 3 ? 6 : 0));
     if (!cand.length) return null;
-    return r.weighted(cand, rc => rc.graded ? (R.GRADE_RANK[rc.grade] * 3) : rc.cls === H.classOf(h) ? 4 : 1);
+    // レースは OP 以上だけ。重賞に出られる強さの馬は、オープンを軽く見る（オープンは週に多いので、重さ1）
+    const opW = c >= GRADE_NEED.G3 - (year - h.born <= 3 ? 6 : 0) ? 1 : 4;
+    return r.weighted(cand, rc => rc.graded ? (R.GRADE_RANK[rc.grade] * 3) : opW);
   };
 
-  // その場限りの馬の強さ（クラス・格・年齢から）
+  // その場限りの馬の強さ（格・年齢・月から）
   W.fillerLevel = function (race, year) {
     const m = race.month;
     if (race.region === '海外') return 86;
@@ -384,10 +386,11 @@
       if (race.age === '3' && m <= 6) return { G1: 77, G2: 74, G3: 71 }[gr] || 71;
       return { G1: 81, G2: 78, G3: 76 }[gr] || 76;
     }
-    const base = { newcomer: 52, maiden: 54, C1: 62, C2: 67, C3: 72, OP: 75 }[race.cls] || 60;
-    if (race.age === '2') return base - 6 + (m >= 10 ? 2 : 0);
-    if (race.age === '3' && m <= 4) return base - 3;
-    return base;
+    // オープン（レースは OP 以上だけ）：2歳は6月 58 から月に1ずつ上がり、3歳は春は低め、古馬は G3 の少し下。リステッドは1上
+    const L = race.listed ? 1 : 0;
+    if (race.age === '2') return 52 + Math.min(12, Math.max(6, m)) + L;
+    if (race.age === '3') return (m <= 4 ? 68 : m <= 6 ? 70 : 72) + L;
+    return 73 + L;
   };
 
   // ---------- 週を進める ----------
@@ -1157,6 +1160,13 @@
       if (g.mode === 'jockey' && h.parked) delete h.parked;
       // 故障は無くなった（持ち主の仕様書「故障はなしにする」）：前のセーブで故障していた馬は治った扱い
       if ('injury' in h) delete h.injury;
+    }
+    // レースが OP 以上だけになる前のセーブ（持ち主の決定 2026-10-20）：条件戦（鍵が -c…）の予約・出走登録・騎乗を外す。デビュー戦の予約は、その週の2歳オープンに出る
+    if (HS.Races && HS.Races.isOldKey) {
+      g.reserve = g.reserve.filter(x => !HS.Races.isOldKey(x.key));
+      for (const x of g.reserve) if (x.debut && x.label === '新馬戦') x.label = 'デビュー戦';
+      for (const k of Object.keys(g.entries || {})) if (HS.Races.isOldKey(k)) delete g.entries[k];
+      for (const k of Object.keys(g.rides)) if (HS.Races.isOldKey(k)) delete g.rides[k];
     }
     // コースレコードの「自分で乗って作ったか」（前の版のセーブには無い。騎手のゲームでは自分の馬＝自分が乗った馬）
     for (const rc of Object.values(g.records.course || {})) if (rc.rode == null) rc.rode = !!rc.mine && g.mode === 'jockey';

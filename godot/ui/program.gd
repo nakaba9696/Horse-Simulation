@@ -133,7 +133,7 @@ func _fill(refocus: bool) -> void:
 	fl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row0.add_child(fl)
 	fl.add_child(_seg("表示", "show", [["ok", "出られるレース"], ["all", "出られない重賞も"]]))
-	fl.add_child(_seg("種類", "kind", [["all", "重賞と条件戦"], ["graded", "重賞だけ"]]))
+	fl.add_child(_seg("種類", "kind", [["all", "オープンと重賞"], ["graded", "重賞だけ"]]))
 	fl.add_child(_seg("馬場", "surf", [["", "すべて"], ["芝", "芝"], ["ダ", "ダート"]]))
 	# 見出しの行
 	var head := HBoxContainer.new()
