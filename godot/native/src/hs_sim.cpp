@@ -68,7 +68,7 @@ static double base_speed(double dist, const Variant &surface, const Variant &gro
 	v *= 1.0 + mx(0.0, 1600.0 - dist) / 1600.0 * 0.04;
 	if (is_str(surface, "ダ")) v *= 0.955;
 	int g = is_str(ground, "稍重") ? 1 : is_str(ground, "重") ? 2 : is_str(ground, "不良") ? 3 : 0;
-	static const double TURF[4] = { 0.0, 0.006, 0.015, 0.03 }, DIRT[4] = { 0.0, 0.004, 0.007, 0.009 };
+	static const double TURF[4] = { 0.0, 0.004, 0.0075, 0.011 }, DIRT[4] = { 0.0, 0.004, 0.007, 0.009 };
 	if (is_str(surface, "芝")) v *= 1.0 - TURF[g];
 	else v *= 1.0 + DIRT[g];
 	v *= 1.0 + num_or(course_adj, 0.0);
@@ -142,7 +142,7 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 		double vc = v0 * (1.0 + 0.0012 * (A - 85.0));
 		Dictionary cur = pw["cur"];
 		double sta = cur["sta"], guts = cur["guts"], mind = cur["mind"], slopeP = cur["slope"];
-		// 馬場の状態：道悪ほどスタミナの減りが速く（Ds を割る）、終いの伸びが鈍る。道悪の苦手な馬ほど大きく
+		// 馬場の状態：道悪ほどスタミナの減りが速く（Ds を割る）、終いの伸びが鈍る（全馬共通）
 		GroundFx gx = ground_fx(h, race);
 		double Ds = mx(800.0, ((double)h["distMax"] + 300.0 + (sta - 75.0) * 12.0) * DS) / gx.e;
 		double kire = clamp(num_or(h.get("kire", Variant()), 4.0), 1.0, 8.0);

@@ -1,4 +1,6 @@
-// 検証：馬場の状態（良・稍重・重・不良）がスタミナの減りと脚の切れに効き、道悪の苦手な馬が大きく損をする（持ち主の決定 2026-10-20。docs/BALANCE.md「14. 馬場の状態」）
+// 検証：馬場の状態（良・稍重・重・不良）。docs/BALANCE.md「14. 馬場の状態」
+// 持ち主の決定 2026-10-20「道悪のパラメータ　高いほど重馬場でスピードが減りにくいにする…基本的に重馬場は全員スピードステータスにデバフがかかりますが
+// 道悪のパラメータが高いほど効きにくいです　スタミナの減り、切れは道悪関係なく全馬共通で」
 module.exports = function (check, assert, HS) {
   const S = HS.Sim, U = HS.U, H = HS.Horse;
   const B = require('../tools/ground_bench.js');
@@ -6,34 +8,61 @@ module.exports = function (check, assert, HS) {
   const race = (ground, o) => Object.assign({ dist: 2000, surface: '芝', course: '東京', ground, year: 2004, month: 5 }, o || {});
   const horse = (heavy, kire) => ({ apt: { heavy }, kire: kire || 4 });
 
-  check('ground: 道悪ほどスタミナの減りが速く、切れが鈍る。苦手な馬ほど大きく、得意な馬はほとんど変わらない', () => {
-    // 良では何も変わらない（前の結果のまま）
-    const g0 = S.groundFx(horse(20), race('良'));
-    assert(g0.e === 1 && g0.k === 1, '良で効いた');
+  check('ground: スタミナの減りと切れの効きは全馬共通（道悪の適性で変わらない）。道悪の段・距離・切れで決まる', () => {
+    // 良では何も変わらない
+    for (const a of [20, 66, 95]) {
+      const g0 = S.groundFx(horse(a), race('良'));
+      assert(g0.e === 1 && g0.k === 1 && S.groundDrop(horse(a), race('良')) === 0, `良で効いた（道悪 ${a}）`);
+    }
+    // 道悪の適性で e・k が変わらない（芝・ダート、どの段でも）
+    for (const sf of ['芝', 'ダ']) for (const g of ['稍重', '重', '不良']) for (const kire of [2, 4, 7]) {
+      const f = [25, 35, 66, 90, 100].map(a => S.groundFx(horse(a, kire), race(g, { surface: sf })));
+      assert(f.every(x => x.e === f[0].e && x.k === f[0].k), `${sf}・${g}・切れ${kire}：道悪の適性でスタミナ・切れの効きが変わった`);
+    }
     // 道悪の段が上がるほど大きく
     let pe = 1, pk = 1;
     for (const g of ['稍重', '重', '不良']) {
-      const f = S.groundFx(horse(40), race(g));
+      const f = S.groundFx(horse(66), race(g));
       assert(f.e > pe && f.k < pk, `${g}：スタミナ ${f.e.toFixed(3)}・切れ ${f.k.toFixed(3)} が前の段より効いていない`);
       pe = f.e; pk = f.k;
     }
-    // 苦手な馬（道悪 25）は大きく、ふつう（66）は小さく、得意（90）は逆に少し得
-    const bad = S.groundFx(horse(25), race('不良')), mid = S.groundFx(horse(66), race('不良')), good = S.groundFx(horse(90), race('不良'));
-    assert(bad.e >= 1.35 && bad.k <= 0.6, `苦手な馬の損が小さい（スタミナ ×${bad.e.toFixed(2)}・切れ ×${bad.k.toFixed(2)}）`);
-    assert(mid.e < 1.1 && mid.k > 0.9, `ふつうの馬の損が大きい（×${mid.e.toFixed(2)}・×${mid.k.toFixed(2)}）`);
-    assert(good.e <= 1 && good.e > 0.95 && good.k >= 1 && good.k < 1.1, `得意な馬が損をした・得をしすぎ（×${good.e.toFixed(3)}・×${good.k.toFixed(3)}）`);
-    // 長い距離ほどスタミナの減りの効きが大きい
+    // 大きさは前の「ふつう（66）の馬」と同じくらい（不良・芝2000・切れ4 で スタミナ ×1.031・切れ ×0.957）
+    const mid = S.groundFx(horse(66), race('不良'));
+    assert(mid.e > 1.02 && mid.e < 1.045 && mid.k > 0.94 && mid.k < 0.97, `不良・芝2000 の効き（×${mid.e.toFixed(3)}・×${mid.k.toFixed(3)}）`);
+    // 長い距離ほどスタミナの減りの効きが大きく、切れる馬ほど切れの損が大きい
     const short = S.groundFx(horse(40), race('重', { dist: 1200 })), long = S.groundFx(horse(40), race('重', { dist: 3200 }));
     assert(long.e > short.e, `長い距離 ×${long.e.toFixed(3)}・短い距離 ×${short.e.toFixed(3)}`);
-    // 切れる馬ほど切れの損が大きい
     const k7 = S.groundFx(horse(40, 7), race('不良')), k2 = S.groundFx(horse(40, 2), race('不良'));
     assert(k7.k < k2.k, `切れ7 ×${k7.k.toFixed(3)}・切れ2 ×${k2.k.toFixed(3)}`);
     // 出走表・パドックの印は馬の詳しい画面と同じ境目（45 未満が苦手・75 以上が得意）
     assert(S.mudLabel(44) === '苦手' && S.mudLabel(45) === 'ふつう' && S.mudLabel(74) === 'ふつう' && S.mudLabel(75) === '得意' && S.mudLabel(undefined) === 'ふつう', '道悪の印の境目');
-    return `不良・芝2000：苦手(25) スタミナ×${bad.e.toFixed(2)}・切れ×${bad.k.toFixed(2)}／ふつう(66) ×${mid.e.toFixed(2)}・×${mid.k.toFixed(2)}／得意(90) ×${good.e.toFixed(2)}・×${good.k.toFixed(2)}`;
+    return `不良・芝2000・切れ4：全馬 スタミナ×${mid.e.toFixed(3)}・切れ×${mid.k.toFixed(3)}（切れ2 ×${k2.k.toFixed(3)}・切れ7 ×${k7.k.toFixed(3)}）`;
   });
 
-  check('ground: 模擬の中でも道悪でスタミナの減りが速い（同じ馬・同じ種で、道中のスタミナの残り）', () => {
+  check('ground: 道悪ではスピード（強さの点）が全馬下がり、道悪の適性が高いほど下がりにくい', () => {
+    const out = [];
+    for (const sf of ['芝', 'ダ']) {
+      let prev = null;
+      for (const g of ['稍重', '重', '不良']) {
+        const d = a => S.groundDrop(horse(a), race(g, { surface: sf }));
+        assert(d(35) > d(66) && d(66) > d(90) && d(90) >= 0, `${sf}・${g}：下がりの順（35 ${d(35).toFixed(2)}・66 ${d(66).toFixed(2)}・90 ${d(90).toFixed(2)}）`);
+        assert(d(90) < d(66) * 0.2, `${sf}・${g}：得意（90）がほとんど下がらない、にならない（${d(90).toFixed(2)}）`);
+        assert(d(35) > d(66) * 2, `${sf}・${g}：苦手（35）が大きく下がらない（${d(35).toFixed(2)}）`);
+        // 連続の値（段の境目で跳ばない）・適性が上がるほど下がりは小さい（0 は「無い」と同じ 50 に読む）
+        for (let a = 1; a < 100; a++) assert(d(a + 1) <= d(a) && d(a) - d(a + 1) < d(66) * 0.06, `${sf}・${g}：適性 ${a}→${a + 1} で跳んだ`);
+        if (prev) assert(d(66) > prev, `${sf}・${g}：段が上がっても下がりが大きくならない`);
+        prev = d(66);
+        if (g === '不良') out.push(`${sf}不良 35 −${d(35).toFixed(1)}・66 −${d(66).toFixed(1)}・90 −${d(90).toFixed(1)}点`);
+      }
+    }
+    // 強さの点（S.power）に入り、良では道悪の適性で何も変わらない
+    const pw = (a, g) => S.power(Object.assign(H.makeFiller(new U.RNG(3), { level: 80, surface: '芝', dist: 2000, born: 2000 }), { apt: { turf: 100, dirt: 50, heavy: a } }), race(g), null, {}).total;
+    assert(pw(35, '良') === pw(90, '良'), '良で道悪の適性が強さに効いた');
+    assert(pw(35, '不良') < pw(66, '不良') && pw(66, '不良') < pw(90, '不良') && pw(90, '不良') < pw(90, '良'), '不良の強さの順');
+    return out.join('／');
+  });
+
+  check('ground: 模擬の中のスタミナの減りは道悪の適性で変わらない（同じ種で、1000m 通過のスタミナの残り）', () => {
     const run = (ground, heavy) => {
       const rng = new U.RNG(7), field = [];
       for (let i = 0; i < 10; i++) { const h = H.makeFiller(rng, { level: 80, surface: '芝', dist: 2000, born: 2000 }); h.apt.heavy = heavy; h.style = '先行'; field.push({ horse: h, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 }); }
@@ -41,38 +70,41 @@ module.exports = function (check, assert, HS) {
       while (sim.st[0].x < 1000) S.step(sim);
       return sim.st[0].E;
     };
-    const good = run('良', 40), heavyBad = run('不良', 40), heavyGood = run('不良', 90);
-    assert(heavyBad < good - 0.04, `1000m で不良の苦手な馬の残り ${heavyBad.toFixed(3)}・良 ${good.toFixed(3)}`);
-    assert(Math.abs(heavyGood - good) < 0.03, `得意な馬は良と同じくらい（${heavyGood.toFixed(3)}・良 ${good.toFixed(3)}）`);
-    return `1000m 通過のスタミナ：良 ${good.toFixed(2)}・不良で苦手 ${heavyBad.toFixed(2)}・不良で得意 ${heavyGood.toFixed(2)}`;
+    const g35 = run('良', 35), g90 = run('良', 90), b35 = run('不良', 35), b66 = run('不良', 66), b90 = run('不良', 90);
+    assert(g35 === g90, `良で道悪の適性がスタミナに効いた（${g35}・${g90}）`);
+    assert(Math.abs(b35 - b90) < 0.03 && Math.abs(b66 - b90) < 0.03, `不良のスタミナの残りが道悪の適性で大きく違う（35 ${b35.toFixed(3)}・66 ${b66.toFixed(3)}・90 ${b90.toFixed(3)}）`);
+    return `1000m 通過のスタミナ：良 ${g35.toFixed(2)}・不良 35 ${b35.toFixed(2)}・66 ${b66.toFixed(2)}・90 ${b90.toFixed(2)}`;
   });
 
-  check('ground: 不良で道悪の苦手な馬ははっきり負け、得意な馬は負けない。走破タイムは芝の道悪ほど遅い', () => {
+  check('ground: 走破タイムの目安（全馬の道悪の適性をそろえたレース。不良・芝2000 で ふつうは良より 2〜3 秒・苦手は 1 秒前後遅く・得意は 0.5〜1 秒速い）', () => {
+    const t = {};
+    for (const all of [35, 66, 90]) for (const g of B.GROUNDS) t[all + g] = B.bench({ surface: '芝', dist: 2000, ground: g, all, N }).time;
+    assert(t['35良'] === t['66良'] && t['66良'] === t['90良'], '良で道悪の適性が走破タイムに効いた');
+    assert(t['66良'] > 115 && t['66良'] < 122, `良の芝2000 ${U.time(t['66良'])}`);
+    for (const g of ['稍重', '重', '不良']) assert(t['35' + g] > t['66' + g] && t['66' + g] > t['90' + g], `${g}：35・66・90 の順に遅くない（${[35, 66, 90].map(a => U.time(t[a + g])).join('・')}）`);
+    assert(t['66良'] < t['66稍重'] && t['66稍重'] < t['66重'] && t['66重'] < t['66不良'], '芝の道悪ほど遅い');
+    const slow = t['66不良'] - t['66良'], bad = t['35不良'] - t['66不良'], good = t['66不良'] - t['90不良'];
+    assert(slow >= 2 && slow <= 3, `ふつうの馬の不良と良の差 ${slow.toFixed(2)}秒`);
+    assert(bad >= 0.7 && bad <= 1.5, `苦手な馬の遅れ ${bad.toFixed(2)}秒`);
+    assert(good >= 0.5 && good <= 1, `得意な馬の得 ${good.toFixed(2)}秒`);
+    // ダート：ふつうの馬は道悪でも良とほぼ同じか少し速い（前からの決まり）。35・66・90 の順に遅い
+    const td = {};
+    for (const all of [35, 66, 90]) for (const g of ['良', '不良']) td[all + g] = B.bench({ surface: 'ダ', dist: 1600, ground: g, all, N }).time;
+    assert(Math.abs(td['66不良'] - td['66良']) < 0.6, `ダ1600 ふつう 良 ${U.time(td['66良'])}・不良 ${U.time(td['66不良'])}`);
+    assert(td['35不良'] > td['66不良'] && td['66不良'] > td['90不良'], `ダ1600 不良の順 ${[35, 66, 90].map(a => U.time(td[a + '不良'])).join('・')}`);
+    return `芝2000 不良−良：ふつう +${slow.toFixed(2)}・苦手は +${bad.toFixed(2)} 遅く・得意は ${good.toFixed(2)} 速い／ダ1600 不良 ${[35, 66, 90].map(a => `${a} ${(td[a + '不良'] - td[a + '良']).toFixed(2)}`).join('・')}`;
+  });
+
+  check('ground: 不良で道悪の苦手な馬は着順を大きく落とし、得意な馬は上げる（ほかは史実馬の散らばり）', () => {
     const o = { surface: '芝', dist: 2000, field: 'hist', N };
     const r = {};
-    for (const heavy of [25, 66, 90]) for (const g of ['良', '不良']) r[heavy + g] = B.bench(Object.assign({ heavy, ground: g }, o));
-    assert(r['25不良'].pos > r['25良'].pos + 3 && r['25不良'].win < 0.02, `苦手な馬：良 ${r['25良'].pos.toFixed(2)}着・不良 ${r['25不良'].pos.toFixed(2)}着・勝率 ${r['25不良'].win}`);
-    assert(r['90不良'].pos <= r['90良'].pos, `得意な馬が不良で負けた（良 ${r['90良'].pos.toFixed(2)}・不良 ${r['90不良'].pos.toFixed(2)}）`);
-    assert(Math.abs(r['66不良'].pos - r['66良'].pos) < 1.5, `ふつうの馬が大きく動いた（良 ${r['66良'].pos.toFixed(2)}・不良 ${r['66不良'].pos.toFixed(2)}）`);
-    // 走破タイム：芝は良 < 稍重 < 重 < 不良（不良は良より 2〜7 秒遅い）。ダートは道悪でやや速い（前からの決まり）
-    const t = {};
-    for (const g of B.GROUNDS) t[g] = B.bench({ surface: '芝', dist: 2000, ground: g, N: Math.round(N / 2) }).time;
-    assert(t['良'] < t['稍重'] && t['稍重'] < t['重'] && t['重'] < t['不良'], `芝の走破タイムの並び ${B.GROUNDS.map(g => U.time(t[g])).join('・')}`);
-    assert(t['不良'] - t['良'] > 2 && t['不良'] - t['良'] < 7, `芝2000の不良と良の差 ${(t['不良'] - t['良']).toFixed(1)}秒`);
-    assert(t['良'] > 115 && t['良'] < 122, `良の芝2000 ${U.time(t['良'])}`);
-    const td = { '良': B.bench({ surface: 'ダ', dist: 1600, ground: '良', N: Math.round(N / 2) }).time, '不良': B.bench({ surface: 'ダ', dist: 1600, ground: '不良', N: Math.round(N / 2) }).time };
-    assert(td['不良'] <= td['良'] + 0.3 && td['不良'] > td['良'] - 2, `ダ1600 良 ${U.time(td['良'])}・不良 ${U.time(td['不良'])}`);
-    return `芝2000 平均着順 苦手(25) ${r['25良'].pos.toFixed(1)}→${r['25不良'].pos.toFixed(1)}・ふつう(66) ${r['66良'].pos.toFixed(1)}→${r['66不良'].pos.toFixed(1)}・得意(90) ${r['90良'].pos.toFixed(1)}→${r['90不良'].pos.toFixed(1)}　勝ち時計 ${B.GROUNDS.map(g => `${g}${U.time(t[g])}`).join('・')}`;
+    for (const heavy of [35, 66, 90]) for (const g of ['良', '不良']) r[heavy + g] = B.bench(Object.assign({ heavy, ground: g }, o));
+    assert(r['35不良'].pos > r['35良'].pos + 1.2 && r['35不良'].win < r['35良'].win, `苦手な馬：良 ${r['35良'].pos.toFixed(2)}着・不良 ${r['35不良'].pos.toFixed(2)}着`);
+    assert(r['90不良'].pos < r['90良'].pos - 0.5, `得意な馬が不良で上がらない（良 ${r['90良'].pos.toFixed(2)}・不良 ${r['90不良'].pos.toFixed(2)}）`);
+    assert(Math.abs(r['66不良'].pos - r['66良'].pos) < 0.8, `ふつうの馬が大きく動いた（良 ${r['66良'].pos.toFixed(2)}・不良 ${r['66不良'].pos.toFixed(2)}）`);
+    return `芝2000 平均着順 苦手(35) ${r['35良'].pos.toFixed(1)}→${r['35不良'].pos.toFixed(1)}・ふつう(66) ${r['66良'].pos.toFixed(1)}→${r['66不良'].pos.toFixed(1)}・得意(90) ${r['90良'].pos.toFixed(1)}→${r['90不良'].pos.toFixed(1)}`;
   });
 
-  check('ground: 不良で道悪の苦手な馬は、切れる馬ほど損が大きい', () => {
-    const o = { surface: '芝', dist: 2000, field: 'hist', heavy: 45, style: '差し', N };
-    const k2 = { g: B.bench(Object.assign({ kire: 2, ground: '良' }, o)), b: B.bench(Object.assign({ kire: 2, ground: '不良' }, o)) };
-    const k7 = { g: B.bench(Object.assign({ kire: 7, ground: '良' }, o)), b: B.bench(Object.assign({ kire: 7, ground: '不良' }, o)) };
-    const l2 = k2.b.pos - k2.g.pos, l7 = k7.b.pos - k7.g.pos;
-    assert(l7 > l2 + 1, `切れ7 の損 ${l7.toFixed(2)}・切れ2 の損 ${l2.toFixed(2)}`);
-    return `道悪45・差し：切れ2 ${k2.g.pos.toFixed(1)}→${k2.b.pos.toFixed(1)}・切れ7 ${k7.g.pos.toFixed(1)}→${k7.b.pos.toFixed(1)}`;
-  });
   // 史実馬の道悪の適性（data/mud.js。docs/BALANCE.md「14-6」）：史実で得手不得手がはっきりした馬だけ。ほかは 66
   check('ground: 史実馬の道悪の適性（得意 90・苦手 35・ほかは 66）', () => {
     const D = HS.DATA, SP = HS.Special;
@@ -83,7 +115,7 @@ module.exports = function (check, assert, HS) {
     const orf = of('オルフェーヴル');
     assert(orf.apt.heavy === 90 && orf.skills.includes('mud') && orf.skills.includes('big'), `オルフェーヴル ${orf.apt.heavy} ${orf.skills}`);
     assert(bad.apt.heavy === 35 && S.mudLabel(bad.apt.heavy) === '苦手' && !bad.skills.includes('mud'), `モンテプリンスが苦手でない ${bad.apt.heavy}`);
-    assert(S.groundFx(bad, race('不良')).e > 1.3, '苦手の馬が不良で大きく損をしない');
+    assert(S.groundDrop(bad, race('不良')) > S.groundDrop(plain, race('不良')) * 2, '苦手の馬が不良で大きく損をしない');
     assert(plain.apt.heavy === 66 && S.mudLabel(66) === 'ふつう', `書いていない馬が 66 でない ${plain.apt.heavy}`);
     // 表の馬は全部データにいて、表に無い史実馬は全員 66
     const fix = D.mudFix || {};

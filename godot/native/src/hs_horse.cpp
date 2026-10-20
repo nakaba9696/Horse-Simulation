@@ -61,35 +61,42 @@ static int ground_lv(const Variant &g) {
 	return 0;
 }
 
-// 馬場の状態（js/core/racesim.js の S.GROUND・S.mudM・S.groundFx、hs_sim.gd の GROUND・mud_m・ground_fx と同じ）。数は docs/BALANCE.md「14. 馬場の状態」
-static const double GR_MID = 75.0, GR_SPAN = 30.0, GR_Q = 0.25, GR_MMAX = 2.2, GR_GOOD = 25.0, GR_GAIN = 0.15, GR_PW = 0.4;
-static const double GR_E_TURF[4] = { 0.0, 0.06, 0.13, 0.22 }, GR_E_DIRT[4] = { 0.0, 0.05, 0.1, 0.17 };
-static const double GR_K_TURF[4] = { 0.0, 0.1, 0.2, 0.32 }, GR_K_DIRT[4] = { 0.0, 0.07, 0.14, 0.24 };
+// 馬場の状態（js/core/racesim.js の S.GROUND・S.mudS・S.groundDrop・S.groundFx、hs_sim.gd の GROUND・mud_s・ground_drop・ground_fx と同じ）。数は docs/BALANCE.md「14. 馬場の状態」
+// スピード：全馬の強さ（点）が sp[芝ダ][段]×s 下がる（s は道悪の適性から）。スタミナの減り（e）と終いの伸び（k）は全馬共通
+static const double GR_REF = 66.0, GR_UP = 27.0, GR_DN = 22.0, GR_SMAX = 3.0;
+static const double GR_SP_TURF[4] = { 0.0, 2.0, 4.0, 6.0 }, GR_SP_DIRT[4] = { 0.0, 1.5, 3.0, 4.5 };
+static const double GR_E_TURF[4] = { 0.0, 0.009, 0.019, 0.031 }, GR_E_DIRT[4] = { 0.0, 0.007, 0.014, 0.024 };
+static const double GR_K_TURF[4] = { 0.0, 0.014, 0.028, 0.046 }, GR_K_DIRT[4] = { 0.0, 0.01, 0.02, 0.034 };
 static const double GR_DLO = 0.6, GR_DHI = 1.6, GR_KW0 = 0.5, GR_KW1 = 0.15, GR_KMIN = 0.35;
 
-// 道悪の苦手さ（正＝苦手・負＝得意）
-double mud_m(double heavy) {
+// 道悪でのスピードの下がりやすさ（1＝ふつう。大きいほど下がる）
+double mud_s(double heavy) {
 	double a = num_or(heavy, 50.0);
-	if (a >= GR_MID) return -mn(GR_GAIN, (a - GR_MID) / GR_GOOD * GR_GAIN);
-	double x = (GR_MID - a) / GR_SPAN;
-	return mn(GR_MMAX, x * (GR_Q + (1.0 - GR_Q) * x));
+	if (a >= GR_REF) return mx(0.0, 1.0 - (a - GR_REF) / GR_UP);
+	return mn(GR_SMAX, 1.0 + (GR_REF - a) / GR_DN);
 }
 static double heavy_of(const Dictionary &horse) {
 	Variant apt = horse.get("apt", Variant());
 	if (apt.get_type() != Variant::DICTIONARY) return 0.0;
 	return num_or(((Dictionary)apt).get("heavy", Variant()), 0.0);
 }
-// この馬のこの馬場での効き：e＝スタミナの減りの倍率・k＝終いの伸びの倍率
+// 道悪で下がる強さ（点。0 以上）
+double ground_drop(const Dictionary &horse, const Dictionary &race) {
+	int gl = ground_lv(race.get("ground", Variant()));
+	if (gl == 0) return 0.0;
+	bool dirt = is_str(race.get("surface", Variant()), "ダ");
+	return (dirt ? GR_SP_DIRT : GR_SP_TURF)[gl] * mud_s(heavy_of(horse));
+}
+// この馬場での効き：e＝スタミナの減りの倍率・k＝終いの伸びの倍率（全馬共通。切れと距離だけで変わる）・s＝スピードの下がりやすさ
 GroundFx ground_fx(const Dictionary &horse, const Dictionary &race) {
 	int gl = ground_lv(race.get("ground", Variant()));
 	if (gl == 0) return { 1.0, 1.0, 0.0 };
 	bool dirt = is_str(race.get("surface", Variant()), "ダ");
-	double m = mud_m(heavy_of(horse));
 	double kire = clamp(num_or(horse.get("kire", Variant()), 4.0), 1.0, 8.0);
 	double dF = clamp((double)race["dist"] / 2000.0, GR_DLO, GR_DHI);
-	double e = 1.0 + (dirt ? GR_E_DIRT : GR_E_TURF)[gl] * m * dF;
-	double k = mx(GR_KMIN, 1.0 - (dirt ? GR_K_DIRT : GR_K_TURF)[gl] * m * (GR_KW0 + GR_KW1 * (kire - 1.0)));
-	return { e, k, m };
+	double e = 1.0 + (dirt ? GR_E_DIRT : GR_E_TURF)[gl] * dF;
+	double k = mx(GR_KMIN, 1.0 - (dirt ? GR_K_DIRT : GR_K_TURF)[gl] * (GR_KW0 + GR_KW1 * (kire - 1.0)));
+	return { e, k, mud_s(heavy_of(horse)) };
 }
 
 static const double PACE_HI = 1.006, PACE_LO = 0.994;
@@ -167,9 +174,8 @@ Dictionary power(const Dictionary &horse, const Dictionary &race, const Variant 
 	if (D < dmin) distPen = (dmin - D) / 100.0 * 1.4;
 	if (D > dmax) distPen = (D - dmax) / 100.0 * 1.2;
 	double surfPen = 0.0;
-	int gl = ground_lv(race.get("ground", Variant()));
-	// 馬場の状態：強さの上下は小さく（道悪の効きはスタミナの減りと脚の切れで。ground_fx）
-	double groundAdj = gl ? -gl * mud_m(heavy_of(horse)) * GR_PW : 0.0;
+	// 馬場の状態：稍重・重・不良では全馬のスピード（強さの点）が下がり、道悪の適性が高いほど下がりにくい（ground_drop）
+	double groundAdj = -ground_drop(horse, race);
 	Variant lrw = horse.get("lastRaceW", Variant());
 	double layoff = (lrw.get_type() != Variant::NIL && w_idx.get_type() != Variant::NIL && (double)w_idx - (double)lrw >= 12) ? 1.2 : 0.0;
 	bool ctxOk = !ctx.is_empty();

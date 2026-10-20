@@ -212,17 +212,25 @@ static var TSUISO := 0.95
 static var SOTO := 0.96
 static var SABAKI := { v = 1.6, gap = 0.55, dx = 1.4, block = 0.4 }
 static var KIRE := { s0 = 0.03, s1 = 0.0035, r = 60.0, a0 = 0.85, a1 = 0.05, c0 = 0.95, c1 = 0.0, cS = 0.035, z = 0.0015, top = 2.2 }
-# 馬場の状態（js/core/racesim.js の S.GROUND・S.mudM・S.mudLabel・S.groundFx と同じ。C++ は hs_horse.cpp の mud_m・ground_fx）。数は docs/BALANCE.md「14. 馬場の状態」
-static var GROUND := { mid = 75.0, bad = 45.0, span = 30.0, q = 0.25, mMax = 2.2, good = 25.0, gain = 0.15, pw = 0.4,
-	e = { "芝": [0.0, 0.06, 0.13, 0.22], "ダ": [0.0, 0.05, 0.1, 0.17] }, k = { "芝": [0.0, 0.1, 0.2, 0.32], "ダ": [0.0, 0.07, 0.14, 0.24] },
+# 馬場の状態（js/core/racesim.js の S.GROUND・S.mudS・S.groundDrop・S.mudLabel・S.groundFx と同じ。C++ は hs_horse.cpp の mud_s・ground_drop・ground_fx）。数は docs/BALANCE.md「14. 馬場の状態」
+# スピード：稍重・重・不良では全馬の強さ（点）が sp[芝ダ][段]×s 下がる。s は道悪の適性で決まる（ref より上は 1−(適性−ref)/up、下は 1＋(ref−適性)/dn。0〜sMax）
+# スタミナの減り（e）と終いの伸び（k）は全馬共通（道悪の適性は掛けない）。mid・bad は印（mud_label）の境目
+static var GROUND := { mid = 75.0, bad = 45.0, ref = 66.0, up = 27.0, dn = 22.0, sMax = 3.0,
+	sp = { "芝": [0.0, 2.0, 4.0, 6.0], "ダ": [0.0, 1.5, 3.0, 4.5] },
+	e = { "芝": [0.0, 0.009, 0.019, 0.031], "ダ": [0.0, 0.007, 0.014, 0.024] }, k = { "芝": [0.0, 0.014, 0.028, 0.046], "ダ": [0.0, 0.01, 0.02, 0.034] },
 	dLo = 0.6, dHi = 1.6, kw0 = 0.5, kw1 = 0.15, kMin = 0.35 }
-# 道悪の苦手さ（正＝苦手・負＝得意）
-static func mud_m(heavy: Variant) -> float:
+# 道悪でのスピードの下がりやすさ（1＝ふつう。大きいほど下がる）
+static func mud_s(heavy: Variant) -> float:
 	var G := GROUND
 	var a: float = float(HSU.or_(heavy, 50.0))
-	if a >= G.mid: return -HSU.mn(G.gain, (a - G.mid) / G.good * G.gain)
-	var x: float = (G.mid - a) / G.span
-	return HSU.mn(G.mMax, x * (G.q + (1.0 - G.q) * x))
+	if a >= G.ref: return HSU.mx(0.0, 1.0 - (a - G.ref) / G.up)
+	return HSU.mn(G.sMax, 1.0 + (G.ref - a) / G.dn)
+# 道悪で下がる強さ（点。0 以上）
+static func ground_drop(horse: Dictionary, race: Dictionary) -> float:
+	var gl: int = _GROUND.get(race.get("ground"), 0)
+	if gl == 0: return 0.0
+	var sf := "ダ" if race.get("surface") == "ダ" else "芝"
+	return GROUND.sp[sf][gl] * mud_s(_heavy_of(horse))
 # 道悪の得手不得手の印（苦手・ふつう・得意）
 static func mud_label(heavy: Variant) -> String:
 	var a: float = float(HSU.or_(heavy, 50.0))
@@ -230,18 +238,17 @@ static func mud_label(heavy: Variant) -> String:
 static func _heavy_of(horse: Dictionary) -> Variant:
 	var apt: Variant = horse.get("apt")
 	return apt.get("heavy") if apt is Dictionary else null
-# この馬のこの馬場での効き：e＝スタミナの減りの倍率・k＝終いの伸びの倍率
+# この馬場での効き：e＝スタミナの減りの倍率・k＝終いの伸びの倍率（全馬共通。切れと距離だけで変わる）・s＝スピードの下がりやすさ
 static func ground_fx(horse: Dictionary, race: Dictionary) -> Dictionary:
 	var G := GROUND
 	var gl: int = _GROUND.get(race.get("ground"), 0)
-	if gl == 0: return { e = 1.0, k = 1.0, m = 0.0 }
+	if gl == 0: return { e = 1.0, k = 1.0, s = 0.0 }
 	var sf := "ダ" if race.get("surface") == "ダ" else "芝"
-	var m := mud_m(_heavy_of(horse))
 	var kire := HSU.clamp(float(HSU.or_(horse.get("kire"), 4.0)), 1.0, 8.0)
 	var dF := HSU.clamp(float(race.dist) / 2000.0, G.dLo, G.dHi)
-	var e: float = 1.0 + G.e[sf][gl] * m * dF
-	var k: float = HSU.mx(G.kMin, 1.0 - G.k[sf][gl] * m * (G.kw0 + G.kw1 * (kire - 1.0)))
-	return { e = e, k = k, m = m }
+	var e: float = 1.0 + G.e[sf][gl] * dF
+	var k: float = HSU.mx(G.kMin, 1.0 - G.k[sf][gl] * (G.kw0 + G.kw1 * (kire - 1.0)))
+	return { e = e, k = k, s = mud_s(_heavy_of(horse)) }
 static var ORIAI := { ramp = 2.5, calmK = 5.0, over = 0.55, overHot = 0.25, fightAfter = 1.2, fightK = 14.0, surgeT = 6.0, match = 0.35, matchLo = 0.12,
 	keen = 40.0, passed = 9.0, wall = 4.0, sand = 3.0, cover = 4.0, shrinkT = 4.0, shrinkSpd = 0.012, pushSurge = 10.0, surgeMax = 45.0 }
 static var FIGHT := { from = 300.0, dx = 2.4, l0 = 0.45, l1 = 1.8, dv = 0.6, g0 = 72.0, up = 10.0, low = -40.0, decay = 0.05, spd = 0.012, cost = 0.12 }
@@ -272,7 +279,7 @@ static func base_speed(dist: float, surface: Variant, ground: Variant, course_ad
 	v *= 1.0 + HSU.mx(0.0, 1600.0 - dist) / 1600.0 * 0.04
 	if surface == "ダ": v *= 0.955
 	var g: int = _GROUND.get(ground, 0)
-	if surface == "芝": v *= 1.0 - [0.0, 0.006, 0.015, 0.03][g]
+	if surface == "芝": v *= 1.0 - [0.0, 0.004, 0.0075, 0.011][g]   # 芝の道悪は馬場そのものも少し遅い（全馬のスピードの下がりは ground_drop）
 	else: v *= 1.0 + [0.0, 0.004, 0.007, 0.009][g]
 	v *= 1.0 + float(HSU.or_(course_adj, 0.0))
 	return dist / (dist / v + 2.4)
@@ -305,9 +312,8 @@ static func _power_gd(horse: Dictionary, race: Dictionary, w_idx: Variant, ctx: 
 	if D < horse.distMin: distPen = (horse.distMin - D) / 100.0 * 1.4
 	if D > horse.distMax: distPen = (D - horse.distMax) / 100.0 * 1.2
 	var surfPen := 0.0
-	var gl: int = _GROUND.get(race.get("ground"), 0)
-	# 馬場の状態：強さの上下は小さく（道悪の効きはスタミナの減りと脚の切れで。ground_fx）
-	var groundAdj: float = -gl * mud_m(_heavy_of(horse)) * GROUND.pw if gl != 0 else 0.0
+	# 馬場の状態：稍重・重・不良では全馬のスピード（強さの点）が下がり、道悪の適性が高いほど下がりにくい（ground_drop）
+	var groundAdj: float = -ground_drop(horse, race)
 	var layoff := 1.2 if (horse.get("lastRaceW") != null and w_idx != null and w_idx - horse.lastRaceW >= 12) else 0.0
 	var trav: float = float(HSU.or_(ctx.get("travel"), 0.0)) if ctx else 0.0   # このレースへの移動の疲れ（HSFatigue.travel）
 	# 調子は無い（持ち主の決定 2026-10-20）。調子の揺れの分はその日の出来（FORM_SD）に入れた
@@ -491,7 +497,7 @@ static func _create_gd(race: Dictionary, runners: Array, w_idx: Variant, rng: HS
 		var A: float = pw.total + form
 		var vc := v0 * (1.0 + 0.0012 * (A - 85.0))
 		var sta: float = pw.cur.sta; var guts: float = pw.cur.guts; var mind: float = pw.cur.mind; var slopeP: float = pw.cur.slope
-		# 馬場の状態：道悪ほどスタミナの減りが速く（Ds を割る）、終いの伸びが鈍る。道悪の苦手な馬ほど大きく
+		# 馬場の状態：道悪ほどスタミナの減りが速く（Ds を割る）、終いの伸びが鈍る（全馬共通）
 		var gx := ground_fx(h, race)
 		var Ds: float = HSU.mx(800.0, (h.distMax + 300.0 + (sta - 75.0) * 12.0) * DS) / gx.e
 		var kire := HSU.clamp(HSU.or_(h.get("kire"), 4.0), 1.0, 8.0)

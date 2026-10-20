@@ -1,6 +1,7 @@
 // 馬場の状態（良・稍重・重・不良）の効き目を測る（docs/BALANCE.md「14. 馬場の状態」の表の数）。
 // 14頭（頭数合わせの馬・level 82。道悪の適性は 30〜89 のくじ）のうち1頭目（h0）だけ、道悪の適性・脚の切れを決めて、おまかせで N 回走らせる。
-// 使い方：node tools/ground_bench.js [time|apt|kire|all] [N]
+// 使い方：node tools/ground_bench.js [time|field|apt|kire|all] [N]
+//   field … 全馬の道悪の適性を 35・66・90 にそろえたときの、馬場ごとの勝ち時計の平均（東京芝2000・東京ダ1600）
 //   time … 馬場ごとの勝ち時計の平均（東京芝2000・東京芝3400・東京ダ1600）
 //   apt  … 道悪の適性（25・45・66・90）ごとの、馬場ごとの勝率・平均着順（東京芝2000・東京ダ1600）
 //   apthist … apt と同じ。ほかの馬の道悪の適性を史実馬の散らばりにする
@@ -24,6 +25,8 @@ function bench(o) {
       const h = H.makeFiller(rng, { level: 82, surface, dist, born: 2000 }); h.name = 'h' + i;
       // field＝'hist' のとき、ほかの馬の道悪の適性を史実馬の散らばり（中央 66・おおよそ 46〜85）に寄せる
       if (i > 0 && o.field === 'hist') h.apt.heavy = Math.round(U.clamp(66 + rng.normal(0, 12), 20, 100));
+      // all＝全馬の道悪の適性をそろえる（走破タイムの目安を測る。同じ力の馬だけのレース）
+      if (o.all != null) h.apt.heavy = o.all;
       if (i === 0) { if (o.heavy != null) h.apt.heavy = o.heavy; if (o.kire != null) h.kire = o.kire; if (o.style) h.style = o.style; }
       field.push({ horse: h, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 });
     }
@@ -74,10 +77,25 @@ function kireTable() {
   return rows;
 }
 
+// 全馬の道悪の適性をそろえたレース（35・66・90）の勝ち時計の平均。良は道悪の適性で変わらない
+function fieldTable() {
+  const rows = [];
+  console.log('全馬の道悪の適性をそろえたときの勝ち時計の平均（14頭・level 82・おまかせ。かっこは良との差）');
+  for (const [surface, dist] of [['芝', 2000], ['ダ', 1600]]) {
+    for (const all of [35, 66, 90]) {
+      const r = {}; for (const g of GROUNDS) r[g] = bench({ surface, dist, ground: g, all });
+      rows.push({ surface, dist, all, r });
+      console.log(`東京${surface}${dist}・道悪${all}　` + GROUNDS.map(g => `${g} ${U.time(r[g].time)}（${g === '良' ? '－' : (r[g].time - r['良'].time >= 0 ? '+' : '') + (r[g].time - r['良'].time).toFixed(2)}）`).join('　'));
+    }
+  }
+  return rows;
+}
+
 if (require.main === module) {
+  if (what === 'field' || what === 'all') fieldTable();
   if (what === 'time' || what === 'all') timeTable();
   if (what === 'apt' || what === 'all') aptTable();
   if (what === 'apthist' || what === 'all') aptTable('hist');
   if (what === 'kire' || what === 'all') kireTable();
 }
-module.exports = { bench, timeTable, aptTable, kireTable, GROUNDS };
+module.exports = { bench, fieldTable, timeTable, aptTable, kireTable, GROUNDS };
