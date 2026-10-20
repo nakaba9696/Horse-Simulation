@@ -185,10 +185,11 @@ module.exports = function (check, assert, HS) {
   check('owners: 8つのジャンルの依頼がそのジャンルに寄る（7割以上。OP・G3 の段階）', () => {
     // 1つの種だけだと、海外（欧州・豪州）のレースの少ない人は件数が10ほどで揺れが大きい（世界の乱数の並びが変わるだけで7割を割る）。
     // 全部を回すときは2つの種の世界を合わせて数える（2026-10-20：調子を無くして乱数の並びが変わり、種47だけでは欧州好きが 5/10 になった。種48は 23/27）
+    // QUICK は種47の30週（16週だと欧州の大レースが少ない1〜4月が大半で、レースを OP 以上だけにしたら欧州好きの依頼が 3件・ジャンルに合うのが 3/8 になった）
     const t = {};
     for (const seed of QUICK ? [47] : [47, 48]) {
       newGame(seed);
-      for (let i = 0; i < (QUICK ? 16 : 52); i++) {
+      for (let i = 0; i < (QUICK ? 30 : 52); i++) {
         const cards = W.cards();
         for (const stage of [0, 1]) for (const ofr of O.generate(cards, `s${seed}-${i}`, { stage, all: true })) {
           const c = cards.find(c => c.race.key === ofr.raceKey), h = c.runners.find(x => x.horse.id === ofr.horseId).horse;
