@@ -15,7 +15,7 @@ static func list() -> Array:
 	if _list == null:
 		_list = []
 		for t in HSData.d().get("trophies", []): _list.append(t.duplicate(true))
-		var gft: Dictionary = HSData.d().get("trophyGF", { tier = 3.0, focus = {} })
+		var gft: Dictionary = HSData.d().get("trophyGF", { tier = 4.0, focus = {} })
 		var gfl: Array = []
 		for c in HSData.d().get("gf", []):
 			var name := "%s（%s）" % [HSSeason.DC_NAME, c.label]
@@ -29,7 +29,8 @@ static func by() -> Dictionary:
 		for t in list(): _by_v[t.id] = t
 	return _by_v
 
-static func money_of(t: Dictionary) -> float: return HSMath.round_js(float(rule().TIER_MONEY[int(t.tier)]) * HSU.price_index() / 10.0) * 10.0
+# お金（rule().MONEY_YEAR の物価で持つ額を、いまの物価に直す。ゲームの中は2025年で固定なので、表の額がそのまま出る）
+static func money_of(t: Dictionary) -> float: return HSMath.round_js(float(rule().TIER_MONEY[int(t.tier)]) * HSU.price_index() / HSU.price_index(float(rule().get("MONEY_YEAR", 1995.0))) / 10.0) * 10.0
 static func bonus_of(t: Dictionary) -> float: return money_of(t)   # 前の名前
 static func note_of(t: Dictionary) -> String: return "%s（ボーナス賞金 %s）" % [t.note, HSU.money(money_of(t))]
 

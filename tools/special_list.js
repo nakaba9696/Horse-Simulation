@@ -14,14 +14,16 @@ const TR = HS.Trophy, RULE = TR.RULE;
 const th = HS.DATA.trophyHorses || {};
 lines.push('## トロフィーと隠し馬', '');
 lines.push('トロフィー（`data/trophies.js`）にリーチをかけて最後のレースに出ると、紐づけた隠し馬（`data/trophy_horses.js`）が出てくる。隠し馬は手持ちでない最低人気の馬と入れ替わる。勝つと店に並び、そのあとも、またそのトロフィーにリーチをかけたときだけ出てくる（自分のお手馬になっている間は出ない）。隠し馬は1989年より前に走り終えた馬だけ（持ち主の決定 2026-10-19）。ただし香港の三冠2つは1989年からの有名な馬もあてる（持ち主の決定 2026-10-20）。その馬がその年に世界で走っているときは出てこず、倒すと店にいつも並び、それからは毎年のデビューに選ばれない。直すときは `data/trophy_horses.js` の名前と理由を書き換える。', '');
-lines.push(`お金は難しさ（1〜6）で決まる（${RULE.TIER_MONEY.slice(1).map((m, i) => `${i + 1}：${HS.U.money(Math.round(m * HS.U.priceIndex() / 10) * 10)}`).join('・')}）。引退したときの能力の上がりは、トロフィーごとに「上がる能力」に ${RULE.TIER_PTS.slice(1).join('・')}（難しさ1〜6）、ほかの能力にその半分（1つの能力は ${RULE.CAP} まで）。`, '');
+lines.push('★の馬は「無敗のとき」だけ出てくる：自分の馬がそのリーチの時点でデビューから一度も負けていない（出走数と勝ち数が同じ。GF は数えない）とき。★の無い馬はいつでも出てくる（持ち主の決定 2026-10-20）。', '');
+lines.push(`隠し馬の強さ：出てくるときの総合力（そのレースの馬場で）の下限は難しさ1〜6で ${RULE.HIDDEN_FH.slice(1).join('・')}。下回る馬は、そのレースだけその馬場のスピードとスタミナを上げて下限にそろえる（データは変えない）。最後のレースが芝にもダートにもなるトロフィー（${TR.LIST.filter(t => SP.mixedTrophy(t)).map(t => t.label).join('・')}）の隠し馬は［芝］［ダート］に分け、そのレースの馬場の馬だけが出てくる（持ち主の決定 2026-10-20）。`, '');
+lines.push(`お金は難しさ（1〜6）で決まる（${RULE.TIER_MONEY.slice(1).map((m, i) => `${i + 1}：${HS.U.money(TR.money({ tier: i + 1 }))}`).join('・')}）。引退したときの能力の上がりは、トロフィーごとに「上がる能力」に ${RULE.TIER_PTS.slice(1).join('・')}（難しさ1〜6）、ほかの能力にその半分（1つの能力は ${RULE.CAP} まで）。`, '');
 lines.push(`ワンダーホースの着差：勝ったレースで2着につけた着差（馬身）を足す。1レースは ${RULE.WONDER_PER_RACE} 馬身まで（大差は ${RULE.WONDER_PER_RACE} 馬身）。GF は数えない。インモータルロード：G1 に出たときだけ数え、${RULE.IMMORTAL_STREAK} 回続けて勝つ（G1 で負けると0から。GF は数えない）。`, '');
 for (const c of TR.CATS) {
   const ts = TR.LIST.filter(t => t.cat === c.id);
   if (!ts.length) continue;
   lines.push(`### ${c.label}`, '', '| トロフィー | 条件 | 難しさ | お金 | 引退で大きく上がる能力 | 出てくる隠し馬（理由） |', '|---|---|---|---|---|---|');
   for (const t of ts) {
-    const hs = c.id === 'gf' ? `GF の担当の伝説級（${HS.Season.gfLegends(t.gf).map(d => d.name).join('・') || 'なし'}）` : (th[t.id] || []).map(x => `${x.name}（${x.why}）`).join('、') || '（いない）';
+    const hs = c.id === 'gf' ? `GF の担当の伝説級（${HS.Season.gfLegends(t.gf).map(d => d.name).join('・') || 'なし'}）` : (th[t.id] || []).map(x => `${x.when === 'unbeaten' ? '★' : ''}${x.surf ? `［${x.surf === 'ダ' ? 'ダート' : '芝'}］` : ''}${x.name}（${x.why}）`).join('、') || '（いない）';
     lines.push(`| ${t.label} | ${t.note} | ${t.tier} | ${HS.U.money(TR.money(t))} | ${t.focus.map(k => HS.Horse.STAT_LABEL[k]).join('・')} | ${hs} |`);
   }
   lines.push('');

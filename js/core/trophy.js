@@ -15,7 +15,7 @@
   ];
   TR.LIST = (HS.DATA.trophies || []).map(t => Object.assign({}, t, { races: t.races.slice(), focus: t.focus.slice() }));
   // GF（data/gf.js）ごとのトロフィー（持ち主の仕様書「レースごとにもらえるトロフィーは違うものにする」）。勝ったお手馬それぞれに付く
-  const GFT = HS.DATA.trophyGF || { tier: 3, focus: {} };
+  const GFT = HS.DATA.trophyGF || { tier: 4, focus: {} };
   const gfList = (HS.DATA.gf || []).map(c => {
     const name = `${HS.Season.DC_NAME}（${c.label}）`;
     return { cat: 'gf', id: 'gf:' + c.id, label: c.trophy, kind: 'gf', races: [name], same: false, tier: GFT.tier, focus: (GFT.focus[c.id] || ['spd', 'sta']).slice(), note: `${name}を勝つ`, gf: c.id };
@@ -23,8 +23,8 @@
   TR.LIST.push(...gfList);
   TR.BY = {}; TR.LIST.forEach(t => { TR.BY[t.id] = t; });
 
-  // お金（いまの物価に直す）
-  TR.money = t => Math.round((RULE.TIER_MONEY[t.tier] || 0) * HS.U.priceIndex() / 10) * 10;
+  // お金（RULE.MONEY_YEAR の物価で持つ額を、いまの物価に直す。ゲームの中は2025年で固定なので、表の額がそのまま出る）
+  TR.money = t => Math.round((RULE.TIER_MONEY[t.tier] || 0) * HS.U.priceIndex() / HS.U.priceIndex(RULE.MONEY_YEAR || 1995) / 10) * 10;
   TR.bonusOf = TR.money; // 前の名前
   TR.noteOf = t => `${t.note}（ボーナス賞金 ${HS.U.money(TR.money(t))}）`;
 
