@@ -11,8 +11,8 @@ const FOALS := 2
 static func foals_max() -> int: return FOALS + (1 if HSGFHost.has_item() else 0)
 static func foals_left(h: Variant) -> int: return maxi(0, foals_max() - int(HSU.or_(h.get("origN"), 0.0) if h else 0.0))
 # 仔の能力の元：両親の平均のうち SOFT を超えた分は HERIT の割合だけ受け継ぐ（original.js と同じ。持ち主の決定 2026-10-20）
-const SOFT := 94.0
-const HERIT := 0.5
+const SOFT := 92.0   # 総合力の式に合わせて 94・0.5 から締めた（original.js と同じ）
+const HERIT := 0.4
 static func inherit(avg: float) -> float: return SOFT + (avg - SOFT) * HERIT if avg > SOFT else avg
 
 static func on() -> bool:

@@ -16,11 +16,11 @@
   O.FOALS = 2;
   O.foalsMax = () => O.FOALS + (HS.GFHost && HS.GFHost.hasItem && HS.GFHost.hasItem() ? 1 : 0);
   O.foalsLeft = h => Math.max(0, O.foalsMax() - ((h && h.origN) || 0));
-  // 仔の能力の元：両親の平均のうち SOFT を超えた分は HERIT の割合だけ受け継ぐ（強い両親の仔ほど親に届きにくい）。
+  // 仔の能力の元：両親の平均のうち SOFT（92）を超えた分は HERIT（0.4）の割合だけ受け継ぐ（強い両親の仔ほど親に届きにくい）。
   // 選んで重ねるだけでは史実の名馬の上（総合力80前後）で止まり、そこから上はトロフィーを集めた親から（持ち主の決定 2026-10-20
   // 「上げすぎなくていいよ すぐ総合力99ができてもつまらないし」。総合力90台は何世代も重ねて、99はやりこみの果てに）
-  O.SOFT = 94;
-  O.HERIT = 0.5;
+  O.SOFT = 92;   // 総合力をスピードとスタミナから出す式（2026-10-20）に合わせて 94・0.5 から締めた（docs/BALANCE.md「12-4」）
+  O.HERIT = 0.4;
   O.inherit = avg => avg > O.SOFT ? O.SOFT + (avg - O.SOFT) * O.HERIT : avg;
 
   O.on = () => { const G = W.get(); return !!(G && G.eraless); };
