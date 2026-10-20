@@ -163,7 +163,7 @@ func _preview(i: int) -> void:
 	note.custom_minimum_size.x = 100
 	tv.add_child(note)
 	var m = HSOwners.mission(oid)
-	var say := UiTheme.label("「%s」" % HSOwners.fill_(String(m.say if m else o.get("intro", "")), {}), 15)
+	var say := UiTheme.label("「%s」" % HSOwners.fill_(String(m.say if m else o.get("intro", "")), {"horse": String(m.get("horse", "")) if m else "", "race": HSOwners.race_label(String(m.race)) if m and m.get("race") else ""}), 15)
 	say.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	say.custom_minimum_size.x = 100
 	tv.add_child(say)

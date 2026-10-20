@@ -52,6 +52,7 @@ func _ready() -> void:
 				for o in HSOwners.LIST():
 					var st := HSOwners.of(String(o.id))
 					st.known = plan.has(o.id)
+					if not st.known: st.pts = 2.0   # 出会いの点（2点たまっている見本）
 					if plan.has(o.id):
 						st.known = true; st.stage = float(plan[o.id][0]); st.pts = plan[o.id][1]; st.rides = 12.0; st.wins = 3.0
 						if st.stage >= HSOwners.WEAR_STAGE: st.got.t2 = { y = HSWorld.G.year }
@@ -88,6 +89,12 @@ func _ready() -> void:
 	elif args.has("--setup=meet"):
 		# 縁ができたときの場面（初めて声をかけてくる）
 		owner_scene({"oid": "sengoku", "kind": "meet", "horse": "サンプルホース", "race": "2歳オープン", "reward": ""})
+	elif args.has("--setup=job"):
+		# ミッションの依頼が届いた場面（G1 の段階の依頼の馬とレース）
+		owner_scene({"oid": "makino", "kind": "job", "k": 3.0, "horse": "フリオーソ", "race": "帝王賞", "date": "2年目7月1週", "retry": false, "y": 2026.0})
+	elif args.has("--setup=wreath"):
+		# GF を全制覇したときのイロナの花輪（アイテム）
+		owner_scene({"oid": "gfhost", "kind": "wreath", "horse": "", "race": "", "reward": "一族の花輪（1頭の馬からオリジナルホースを作れる数＋1）"})
 	elif args.has("--setup=meet_yuni"):
 		# 絵の無い人（コードで描いた顔）の出会い
 		owner_scene({"oid": "yuni", "kind": "meet", "horse": "サンプルホース", "race": "2歳オープン", "reward": ""})
