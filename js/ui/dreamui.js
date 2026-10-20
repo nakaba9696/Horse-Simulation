@@ -99,7 +99,7 @@
           <div class="grow">
             <div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${!cur && h === best ? '<span class="chip mine">おすすめ</span>' : ''}<span class="small muted">${UI.age(h)}・${e(h.style)}・${h.distMin || '?'}〜${h.distMax || '?'}m</span></div>
             <div class="small">招待の理由：<b>${e(why)}</b></div>
-            <div class="row dc-fh"><span class="small muted">${T.FH_NAME}</span><span class="fhv turf ${sf === '芝' ? '' : 'dim'}"><small>芝</small>${fh.turf}</span><span class="fhv dirt ${sf === 'ダ' ? '' : 'dim'}"><small>ダ</small>${fh.dirt}</span>${UI.condMark(h, wIdx)}</div>
+            <div class="row dc-fh"><span class="small muted">${T.FH_NAME}</span><span class="fhv turf ${sf === '芝' ? '' : 'dim'}"><small>芝</small>${fh.turf}</span><span class="fhv dirt ${sf === 'ダ' ? '' : 'dim'}"><small>ダ</small>${fh.dirt}</span>${UI.fatigueMark(h)}</div>
             ${UI.numStats(h, wIdx, { surface: sf })}
             ${UI.hasSkills(h) ? `<div class="skills">${UI.skillChips(h)}</div>` : '<div class="small muted">特殊能力なし</div>'}
             <div class="small muted">近走：${e(UI.recentRuns(h))}</div>

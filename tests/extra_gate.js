@@ -79,7 +79,7 @@ module.exports = function (check, assert, HS) {
     globalThis.HS = HS;
     const UI = HS.UI = HS.UI || {};
     vm.runInThisContext(read('js/ui/screens.js'), { filename: 'js/ui/screens.js' });
-    const stub = ['thumb', 'histMark', 'condTag', 'fatigue', 'gradeTag', 'age', 'condMark', 'surf', 'programTab'];
+    const stub = ['thumb', 'histMark', 'fatigue', 'gradeTag', 'age', 'fatigueMark', 'surf', 'programTab'];
     for (const k of stub) if (!UI[k]) UI[k] = () => '';
     W.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
     const g = W.get(); g.player.money = 60000;
