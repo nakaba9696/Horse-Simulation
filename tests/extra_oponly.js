@@ -157,11 +157,12 @@ module.exports = function (check, assert, HS) {
     return `豪州の2歳 G1 ${au.length}（出られない）・2歳 ${two.name}・古馬 ${old.name}（${U.money(R.g1Need(old, G.year))}）・${g2.grade} ${g2.name}`;
   });
 
-  check('oponly: 4歳限定（香港ダービー）は4歳の馬だけが出られる', () => {
-    const R = HS.Races, d = (HS.DATA.races || []).find(r => r.name === '香港ダービー' && r.from <= 2025 && 2025 <= (r.to || 9999));
-    assert(d && d.age === '4', '2025年の香港ダービーが4歳限定でない');
+  check('oponly: 4歳限定（2024年までの香港ダービー）は4歳の馬だけが出られる。2025年の番組には香港ダービーが無い（外から出られないため）', () => {
+    const R = HS.Races, d = (HS.DATA.races || []).find(r => r.name === '香港ダービー' && r.from <= 2024 && 2024 <= (r.to || 9999));
+    assert(d && d.age === '4', '2024年の香港ダービーが4歳限定でない');
+    assert(!(HS.DATA.races || []).some(r => r.name === '香港ダービー' && r.from <= 2025 && 2025 <= (r.to || 9999)), '2025年の番組に香港ダービーがある');
     for (const [age, ok] of [[3, false], [4, true], [5, false]]) {
-      const why = R.ineligibleBase({ born: 2025 - age, sex: '牡' }, d, 2025);
+      const why = R.ineligibleBase({ born: 2024 - age, sex: '牡' }, d, 2024);
       assert((why !== '年齢') === ok, `${age}歳: ${why}`);
     }
   });
