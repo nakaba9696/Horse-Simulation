@@ -1,11 +1,12 @@
 # 出走表（docs/UI.md「出走表（レースの前・パドック）」）：18頭が 1600×1000 の 1画面に収まる（持ち主「レース時の馬一覧もスクロールなしで全頭見れるようにしてね」）
 # 上の帯（1行）：レース番号・格・レース名（明朝）・競馬場・芝ダと距離・回り・天気・馬場・頭数
 # 表（1行 36px）：馬番（枠の色）・馬名・性齢・斤量・脚質の矢印（右ほど前。その馬の脚質が赤く光る）・騎手・印の4列（スピード・スタミナ・サブパラ・実績の1〜4位に ◎○▲△。UiMarks）・人気（単勝）。自分の馬の行は左に金の線
-# 疲労の列は出さない（持ち主の指摘 2026-10-20「疲労の列は要らない」）。表の下に印の凡例
+# 疲労の列は出さない（持ち主の指摘 2026-10-20「疲労の列は要らない」）。印の凡例は出さない（持ち主「印の意味書かないでいい　競馬新聞風にしたいだけだから」）
 # 馬場が良でないときは、印の前に道悪の得手不得手（得意・ふつう・苦手。HSSim.mud_label。持ち主の決定 2026-10-20「馬場の状態」）の列を足す（馬名の列が縮む）
 # 右：コース図（UiCourseMap：回り・走る道・スタートとゴール・距離の目盛り・最後の直線の長さ・坂。展開予想は出さない。持ち主の指摘 2026-10-17「プレイヤーに判断させたい」）・
 #   選んだ馬の詳しい札（どの馬も：総合力・能力・道悪・距離・脚質・特殊能力。持ち主の指摘 2026-10-20）・「パドック」「ゲートイン」（金）・操作の案内。後ろはパドックを歩く馬（3D。選んだ馬をカメラが追う）
-# 操作：十字キー・矢印で選ぶ、A・Enter で決める、B・Esc で戻る（docs/UI.md 4）。パドックでは十字キーの上下で馬を替える
+# 操作：十字キー・矢印で選ぶ、A・Enter で決める、B・Esc で戻る（docs/UI.md 4）。LB・RB（Q・E）で前後の馬、パドックでは十字キーの上下でも替える。
+# Start（G）でゲートイン・Y（P）でパドック。ボタンと札の端に押すボタンの印（UiGlyph）
 extends Node
 
 const RACE_SCENE := "res://scenes/race.tscn"
@@ -359,22 +360,6 @@ func _build_table() -> void:
 		b.pressed.connect(func(): _open_paddock())
 		v.add_child(b)
 		rows.append(b)
-	# 印の凡例（docs/UI.md「出走表の印」）
-	var sf := "ダ" if String(race.race.surface) == "ダ" else "芝"
-	var lg := HBoxContainer.new()
-	lg.add_theme_constant_override("separation", 16)
-	lg.add_child(UiTheme.label("印：各列の1〜4位に ◎○▲△", 12, UiTheme.MUTED))
-	for x in [["SP", "スピード（%s）" % sf], ["ST", "スタミナ（%s）" % sf], ["サブ", "根性・気性・坂・切れ"], ["実績", "レーティング（無ければ獲得賞金）"]]:
-		var g := HBoxContainer.new()
-		g.add_theme_constant_override("separation", 5)
-		g.add_child(UiTheme.chip(String(x[0]), UiTheme.SURFACE_3, UiTheme.IVORY, 11))
-		g.add_child(UiTheme.label(String(x[1]), 12, UiTheme.MUTED))
-		lg.add_child(g)
-	var lm := MarginContainer.new()
-	lm.add_theme_constant_override("margin_left", 10)
-	lm.add_theme_constant_override("margin_top", 4)
-	lm.add_child(lg)
-	v.add_child(lm)
 
 # 右：コース図・選んだ馬の詳しい札・ボタン・操作の案内
 func _build_right() -> void:
@@ -404,6 +389,8 @@ func _build_right() -> void:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 12)
 	v.add_child(top)
+	# 札の端に、前後の馬へ替える印（LB・RB／Q・E。持ち主「L1R1で次の馬に切り替わることも示して」）
+	top.add_child(UiGlyph.make("Q", "LB", 11))
 	card_name = UiTheme.title("", 24, UiTheme.IVORY)
 	card_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	card_name.clip_text = true
@@ -412,6 +399,7 @@ func _build_right() -> void:
 	card_arrows.custom_minimum_size = Vector2(118, 26)
 	card_arrows.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(card_arrows)
+	top.add_child(UiGlyph.make("E", "RB", 11))
 	card_sub = UiTheme.label("", 14, UiTheme.MUTED)
 	v.add_child(card_sub)
 	card_marks = HBoxContainer.new()
@@ -437,6 +425,9 @@ func _build_right() -> void:
 	bh.add_child(btn_gate)
 	btn_paddock.pressed.connect(_open_paddock)
 	btn_gate.pressed.connect(_gate_in)
+	# 押すボタンの印（持ち主「ゲートインの横にスタートボタンのマークとか」）
+	UiGlyph.attach(btn_gate, "G", "Start", 13)
+	UiGlyph.attach(btn_paddock, "P", "Y", 13)
 	btn_paddock.mouse_entered.connect(func(): btn_paddock.grab_focus())
 	btn_gate.mouse_entered.connect(func(): btn_gate.grab_focus())
 	# 「おまかせで乗る」は無い（自分の騎乗は必ず自分で乗る。持ち主の決定 2026-10-20「おまかせ騎乗　なしにして」）
@@ -468,8 +459,8 @@ func _link_focus() -> void:
 
 func _keys() -> Array:
 	if mode == "paddock":
-		return [["↑↓", "十字↑↓", "馬を替える"], ["Enter", "A", "決定"], ["Esc", "B", "出走表へ"]]
-	return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "決定"], ["Esc", "B", "もどる"]]
+		return [["↑↓", "十字↑↓", "馬を替える"], ["Q/E", "LB/RB", "前後の馬"], ["G", "Start", "ゲートイン"], ["Esc", "B", "出走表へ"]]
+	return [["↑↓", "十字", "選ぶ"], ["Q/E", "LB/RB", "前後の馬"], ["Enter", "A", "決定"], ["Esc", "B", "もどる"]]
 
 func _refresh_keybar() -> void:
 	var par := keybar.get_parent()
@@ -546,48 +537,62 @@ func _fill_stats(i: int) -> void:
 	card_stats.add_child(fr)
 	# 能力（今日の馬場）
 	var grid := GridContainer.new()
-	grid.columns = 6
+	grid.columns = 8
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 4)
 	var ks := ["dspd", "dsta"] if sf == "ダ" else ["spd", "sta"]
 	for k in ks + ["guts", "mind", "slope"]:
 		_cell(grid, String(HSHorse.STAT_SHORT[k]), UiTheme.stat_chip(float(c[k]), "stat"))
 	_cell(grid, "切れ", UiTheme.stat_chip(float(HSU.or_(hh.get("kire"), 4.0)), "kire"))
-	card_stats.add_child(grid)
-	# 道悪・距離・脚質
+	# 道悪もほかの能力と同じ並び・同じ札（持ち主「道悪だけ下にあるの気持ち悪い」）。得手不得手の一言を隣に
 	var heavy := float(HSU.or_(hh.apt.get("heavy") if hh.get("apt") is Dictionary else null, 50.0))
 	var ml := HSSim.mud_label(heavy)
+	_cell(grid, "道悪", UiTheme.stat_chip(heavy, "stat"))
+	var mlab := UiTheme.label(ml, 12, UiTheme.GOOD if ml == "得意" else (UiTheme.BAD if ml == "苦手" else UiTheme.MUTED))
+	grid.add_child(Control.new())
+	grid.add_child(mlab)
+	card_stats.add_child(grid)
+	# 距離・脚質
 	var dmin := float(HSU.or_(hh.get("distMin"), 1600.0))
 	var dmax := float(HSU.or_(hh.get("distMax"), 2400.0))
 	var dist := float(race.race.dist)
 	var fit := dist >= dmin and dist <= dmax
 	var kv := HBoxContainer.new()
 	kv.add_theme_constant_override("separation", 6)
-	kv.add_child(UiTheme.label("道悪", 13, UiTheme.MUTED))
-	kv.add_child(UiTheme.stat_chip(heavy, "stat"))
-	kv.add_child(UiTheme.label(ml, 13, UiTheme.GOOD if ml == "得意" else (UiTheme.BAD if ml == "苦手" else UiTheme.MUTED)))
-	kv.add_child(UiTheme.label("　距離", 13, UiTheme.MUTED))
+	kv.add_child(UiTheme.label("距離", 13, UiTheme.MUTED))
 	kv.add_child(UiTheme.label("%s〜%sm" % [HSU.num(dmin), HSU.num(dmax)], 14, UiTheme.GOOD if fit else UiTheme.WARN))
 	kv.add_child(UiTheme.label("　脚質", 13, UiTheme.MUTED))
 	kv.add_child(UiTheme.label(HSHorse.style_text(hh), 14, UiTheme.IVORY))
 	card_stats.add_child(kv)
-	# 特殊能力：性質（パッシブ。弱みは赤）・発動（レース中の場面で効く）
+	# 特殊能力（持ち主「性質　発動ってなに　スキルのことなら意味不明なので改善して」）：
+	# パッシブ＝いつも効く馬の性質（弱みは赤）／スキル＝レース中の場面で発動する。名前の札の横に効き目を1行（小さい字）
 	var pas: Array = HSHorse.shown_skills(hh)
 	var act: Array = HSSkills.of(hh, wi)
-	for row in [["性質", pas, true], ["発動", act, false]]:
-		var fl := HFlowContainer.new()
-		fl.add_theme_constant_override("h_separation", 5)
-		fl.add_theme_constant_override("v_separation", 4)
-		var hl := UiTheme.label(String(row[0]), 13, UiTheme.MUTED)
-		hl.custom_minimum_size.x = 36
-		fl.add_child(hl)
-		if (row[1] as Array).is_empty():
-			fl.add_child(UiTheme.label("なし", 13, UiTheme.FAINT))
-		for id in row[1]:
+	for row in [["パッシブ", "いつも効く", pas], ["スキル", "レース中の場面で発動", act]]:
+		var hd2 := HBoxContainer.new()
+		hd2.add_theme_constant_override("separation", 8)
+		hd2.add_child(UiTheme.label(String(row[0]), 13, UiTheme.GOLD_BRIGHT))
+		hd2.add_child(UiTheme.label(String(row[1]), 11, UiTheme.FAINT))
+		if (row[2] as Array).is_empty():
+			hd2.add_child(UiTheme.label("なし", 12, UiTheme.FAINT))
+		card_stats.add_child(hd2)
+		var list: Array = row[2]
+		for id in list.slice(0, 4):
+			var ln := HBoxContainer.new()
+			ln.add_theme_constant_override("separation", 8)
 			var bad := HSSkills.is_bad(String(id))
 			var fg := UiTheme.BAD if bad else (UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY)
-			fl.add_child(UiTheme.chip(HSSkills.label(String(id)), UiTheme.SURFACE_3, fg, 12))
-		card_stats.add_child(fl)
+			var ch := UiTheme.chip(HSSkills.label(String(id)), UiTheme.SURFACE_3, fg, 12)
+			ch.custom_minimum_size.x = 112
+			ln.add_child(ch)
+			var nt := UiTheme.label(HSSkills.note(String(id)), 11, UiTheme.MUTED)
+			nt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			nt.clip_text = true
+			nt.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			ln.add_child(nt)
+			card_stats.add_child(ln)
+		if list.size() > 4:
+			card_stats.add_child(UiTheme.label("ほか%d" % (list.size() - 4), 11, UiTheme.FAINT))
 
 func _cell(grid: GridContainer, name: String, chip: Control) -> void:
 	var l := UiTheme.label(name, 12, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_RIGHT)
@@ -620,20 +625,45 @@ func _close_paddock() -> void:
 	_refresh_keybar()
 	rows[sel].grab_focus()
 
+var _going := false
 func _gate_in() -> void:
+	if _going: return   # 連打で二度入らない
+	_going = true
 	var tw := create_tween()
 	tw.tween_property(fade, "color:a", 1.0, 0.3)
 	tw.tween_callback(func(): get_tree().change_scene_to_file(RACE_SCENE))
 
-# パドックの間は表が隠れているので、十字キーの上下（左スティック）で馬を替える
+# 前後の馬へ（端から反対の端へ回る）。表を出しているとき、カーソルが表の行にあれば行も動かす
+func _step(d: int) -> void:
+	var i := posmod(sel + d, rows.size())
+	var on_row := mode == "card" and get_viewport().gui_get_focus_owner() in rows
+	_select(i, true)
+	if on_row: rows[i].grab_focus()
+
+static func _pressed(ev: InputEvent, keys: Array, btns: Array) -> bool:
+	if ev is InputEventKey and ev.pressed and not ev.echo: return ev.keycode in keys
+	if ev is InputEventJoypadButton and ev.pressed: return ev.button_index in btns
+	return false
+
+# LB・RB（Q・E）で前後の馬、パドックの間は十字キーの上下（左スティック）でも。Start（G）でゲートイン、Y（P）でパドックを開く・閉じる
 func _input(ev: InputEvent) -> void:
-	if mode != "paddock" or shots.size() > 0:
+	if shots.size() > 0:
 		return
 	var d := 0
-	if ev.is_action_pressed("ui_up", true): d = -1
-	elif ev.is_action_pressed("ui_down", true): d = 1
+	if _pressed(ev, [KEY_Q, KEY_PAGEUP], [JOY_BUTTON_LEFT_SHOULDER]): d = -1
+	elif _pressed(ev, [KEY_E, KEY_PAGEDOWN], [JOY_BUTTON_RIGHT_SHOULDER]): d = 1
+	elif mode == "paddock" and ev.is_action_pressed("ui_up", true): d = -1
+	elif mode == "paddock" and ev.is_action_pressed("ui_down", true): d = 1
 	if d != 0:
-		_select(posmod(sel + d, rows.size()), true)
+		_step(d)
+		get_viewport().set_input_as_handled()
+		return
+	if _pressed(ev, [KEY_G], [JOY_BUTTON_START]):
+		_gate_in()
+		get_viewport().set_input_as_handled()
+	elif _pressed(ev, [KEY_P], [JOY_BUTTON_Y]):
+		if mode == "paddock": _close_paddock()
+		else: _open_paddock()
 		get_viewport().set_input_as_handled()
 
 func _unhandled_input(ev: InputEvent) -> void:

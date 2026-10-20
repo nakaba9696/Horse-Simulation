@@ -70,6 +70,24 @@ func _screen(t, n: String) -> void:
 			_check(t, sc, n, "確かめ", sc._modal)
 		sc.close_modal()
 	if n == "race_card":
+		# 印の凡例は出さない（持ち主「印の意味書かないでいい」）・特殊能力の見出しはパッシブとスキル・道悪はほかの能力と同じ並び
+		var texts: Array = sc.find_children("*", "Label", true, false).map(func(l): return String(l.text))
+		t.ok(not texts.any(func(x): return x.begins_with("印：")), "focus: 出走表に印の凡例が無い")
+		t.ok(texts.has("パッシブ") and texts.has("スキル") and not texts.has("性質") and not texts.has("発動"), "focus: 特殊能力の見出しはパッシブ・スキル")
+		var mud_in_grid := false
+		for l in sc.card_stats.find_children("*", "Label", true, false):
+			if String(l.text) == "道悪" and l.get_parent() is GridContainer: mud_in_grid = true
+		t.ok(mud_in_grid, "focus: 道悪はほかの能力と同じ並び（能力の格子の中）")
+		t.ok(sc.btn_gate.has_meta("glyph") and sc.btn_paddock.has_meta("glyph"), "focus: ゲートイン・パドックのボタンに押すボタンの印")
+		var s1: int = sc.sel
+		var rb := InputEventJoypadButton.new()
+		rb.button_index = JOY_BUTTON_RIGHT_SHOULDER; rb.pressed = true
+		sc._input(rb)
+		t.eq(sc.sel, posmod(s1 + 1, sc.rows.size()), "focus: RB で次の馬")
+		var lb := InputEventJoypadButton.new()
+		lb.button_index = JOY_BUTTON_LEFT_SHOULDER; lb.pressed = true
+		sc._input(lb)
+		t.eq(sc.sel, s1, "focus: LB で前の馬")
 		sc._open_paddock()
 		await _frames(t, 2)
 		var s0: int = sc.sel
@@ -120,6 +138,12 @@ func _check(t, sc: Node, n: String, where: String, modal: Node = null) -> void:
 	var lost: Array = []
 	for b in all:
 		if not seen.has(b): lost.append(_name(b))
+	# 押すボタンの印：右下の操作の案内は印（UiGlyph）で出し、字のあるボタンを選んでいるときはその横に決定の印
+	var glyphs := sc.find_children("*", "Control", true, false).filter(func(x): return x is UiGlyph and x.is_visible_in_tree())
+	t.ok(glyphs.size() > 0, "focus: %s に押すボタンの印がある" % tag)
+	if cur is Button and String(cur.text) != "" and not cur.has_meta("glyph"):
+		var pads: Array = sc.get_children().filter(func(x): return x is UiPad)
+		t.ok(pads.size() > 0 and pads[0].cursor_glyph.visible, "focus: %s の選んでいるボタンの横に決定の印（%s）" % [tag, cur.text])
 	t.ok(lost.is_empty(), "focus: %s の札は十字キーでたどり着ける（届かない：%s）" % [tag, ", ".join(lost.slice(0, 8))])
 	t.ok(escaped.is_empty(), "focus: %s のカーソルは画面（小窓）の外へ抜けない（%s）" % [tag, ", ".join(escaped.slice(0, 6))])
 

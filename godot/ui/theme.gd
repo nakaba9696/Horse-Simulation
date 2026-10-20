@@ -303,7 +303,8 @@ static func band(h := 76.0) -> UiBand:
 	return b
 
 # 操作の案内（右下の丸い帯）。pad＝ゲームパッドで遊んでいるか
-static func keybar(items: Array, pad := false) -> PanelContainer:
+# glyphs＝押すボタンの印（UiGlyph。いま使っている入力で字が替わる）で出す。騎乗の計器の案内は前の札のまま（false）
+static func keybar(items: Array, pad := false, glyphs := true) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", box(Color(SUNK.r, SUNK.g, SUNK.b, 0.86), LINE_STRONG, 1, 999, Vector4(16, 5, 16, 6)))
 	var h := HBoxContainer.new()
@@ -312,8 +313,10 @@ static func keybar(items: Array, pad := false) -> PanelContainer:
 	for it in items:
 		var g := HBoxContainer.new()
 		g.add_theme_constant_override("separation", 5)
-		var k := chip(String(it[1] if pad else it[0]), SURFACE_3, IVORY, 11)
-		g.add_child(k)
+		if glyphs:
+			g.add_child(UiGlyph.make(String(it[0]), String(it[1]), 11))
+		else:
+			g.add_child(chip(String(it[1] if pad else it[0]), SURFACE_3, IVORY, 11))
 		g.add_child(label(String(it[2]), 12, MUTED))
 		h.add_child(g)
 	return p
@@ -325,7 +328,7 @@ static func tabs(items: Array, cur: int, pad := false, on_pick = null) -> PanelC
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 4)
 	p.add_child(h)
-	h.add_child(chip("LB" if pad else "Q", SURFACE_3, MUTED, 11))
+	h.add_child(UiGlyph.make("Q", "LB", 11))
 	for i in items.size():
 		var b := Button.new()
 		b.text = String(items[i])
@@ -343,7 +346,7 @@ static func tabs(items: Array, cur: int, pad := false, on_pick = null) -> PanelC
 			var k: int = i
 			b.pressed.connect(func(): on_pick.call(k))
 		h.add_child(b)
-	h.add_child(chip("RB" if pad else "E", SURFACE_3, MUTED, 11))
+	h.add_child(UiGlyph.make("E", "RB", 11))
 	return p
 
 # 適性の印（◎ 良い・○ 字・△ 注意・× 悪い）
