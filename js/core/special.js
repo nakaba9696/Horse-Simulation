@@ -54,9 +54,42 @@
   const TR = HS.Trophy;
   const trophyGroups = TR.LIST.filter(t => ((HS.DATA.trophyHorses || {})[t.id] || []).length).map(t => {
     const names = HS.DATA.trophyHorses[t.id].map(x => x.name);
+    const when = {}, surf = {};
+    for (const x of HS.DATA.trophyHorses[t.id]) { if (x.when) when[x.name] = x.when; if (x.surf) surf[x.name] = x.surf; }
     return { id: 't:' + t.id, trophy: t.id, label: `トロフィー「${t.label}」`, note: `${t.note}（あと1勝のとき）`, finals: (t.kind === 'set' || t.kind === 'repeat') ? t.races.slice() : null,
-      again: true, needG1: t.kind === 'immortal', legs: (h, race) => TR.reach(h, t, race), member: d => names.includes(d.name) };
+      again: true, needG1: t.kind === 'immortal', legs: (h, race) => TR.reach(h, t, race), member: d => names.includes(d.name), when, surf };
   });
+  // 隠し馬の出てくるとき（data/trophy_horses.js の when。持ち主の決定 2026-10-20）：書いていなければいつでも。
+  // 'unbeaten'＝自分の馬がデビューから一度も負けていない（出走数と勝ち数が同じ。GF はどちらにも数えない＝world.js の applyResults）ときだけ
+  SP.unbeatenNow = h => (h.starts || 0) === (h.wins || 0);
+  // 芝でもダートでも最後のレースになりうるトロフィー（SP.MIXED）の隠し馬は、芝の馬（surf '芝'）とダートの馬（surf 'ダ'）に分けて持ち、
+  // そのレースの馬場に合うほうだけが出てくる（持ち主の決定 2026-10-20「芝で強い馬、ダートで強い馬をそれぞれ出して欲しい」）。race が無ければ馬場は見ない
+  SP.whenOk = (g, d, h, race) => {
+    const s = g.surf && g.surf[d.name];
+    if (s && race && race.surface && s !== race.surface) return false;
+    const w = g.when && g.when[d.name]; return !w || (w === 'unbeaten' && SP.unbeatenNow(h));
+  };
+  // 最後のレースの馬場が芝にもダートにもなるトロフィー（条件のレースに芝とダートが混ざる・どのレースでもよいワンダーホースとインモータルロード）
+  SP.mixedTrophy = t => {
+    if (t.kind === 'wonder' || t.kind === 'immortal') return true;
+    if (t.kind !== 'set' && t.kind !== 'repeat') return false;
+    const ss = new Set();
+    for (const n of t.races) { const r = (HS.DATA.races || []).find(x => (x.short || x.name) === n && x.from <= (HS.Eraless ? HS.Eraless.ERA : 2025) && (HS.Eraless ? HS.Eraless.ERA : 2025) <= (x.to || 9999)); if (r) ss.add(r.surface); }
+    return ss.size > 1;
+  };
+  // 隠し馬の強さ：トロフィーの難しさごとの総合力の下限（data/trophies.js の HIDDEN_FH。そのレースの馬場で）
+  SP.floorOf = g => (g && g.trophy && TR.BY[g.trophy] && (TR.RULE.HIDDEN_FH || [])[TR.BY[g.trophy].tier]) || 0;
+  // 下限に届かない馬は、そのレースの馬場のスピードとスタミナを同じだけ（0.5ずつ）上げて下限にそろえる（その場限りの馬だけ。データは変えない）
+  SP.lift = function (h, surface, floor) {
+    if (!floor || !surface) return h;
+    const S = HS.Season, keys = surface === 'ダ' ? ['dspd', 'dsta'] : ['spd', 'sta'];
+    if (keys.some(k => h.pot[k] == null)) return h;
+    const base = keys.map(k => h.pot[k]);
+    let x = 0;
+    while (S.fhOf(H.cur(h, 0), surface, h) < floor && x < 60) { x += 0.5; keys.forEach((k, i) => { h.pot[k] = base[i] + x; }); }
+    if (x > 0) H.syncApt(h);
+    return h;
+  };
   SP.GROUPS = trophyGroups.concat([
     { id: 'nikan', label: 'クラシック二冠馬', note: '皐月賞・日本ダービー・菊花賞のどれかを勝って、ほかのクラシックへ', finals: CLASSIC, legs: (h, race) => CLASSIC.filter(n => won(h, n, y => y === race.year)).length === 1 && !won(h, race.short, y => y === race.year), member: d => (dn(d, '皐月賞') ? 1 : 0) + (dn(d, '東京優駿') ? 1 : 0) + (dn(d, '菊花賞') ? 1 : 0) === 2 },
     { id: 'filly', label: '牡馬を破った名牝', note: '牝馬で G1 を勝って、天皇賞・宝塚記念・ジャパンC・有馬記念へ', finals: BEAT_MALES,
@@ -161,7 +194,7 @@
     const G = W.get(), un = G.unlocked || [];
     const out = [];
     // 条件の組み合わせのグループを先に（強い順）、大レースのグループはそのあと（強い順）
-    for (const g of SP.GROUPS) if (SP.reach(h, g, race)) for (const d of SP.members(g)) if (SP.canAppear(g, d, un) && !out.some(x => x.d === d) && (!g.fit || g.fit(d, race))) out.push({ d, g });
+    for (const g of SP.GROUPS) if (SP.reach(h, g, race)) for (const d of SP.members(g)) if (SP.canAppear(g, d, un) && SP.whenOk(g, d, h, race) && !out.some(x => x.d === d) && (!g.fit || g.fit(d, race))) out.push({ d, g });
     const key = x => (x.g.race ? 1000 : 0) - (x.d.rating || 0);
     return out.sort((a, b) => key(a) - key(b));
   };
@@ -172,18 +205,20 @@
     const out = [];
     const nextRaces = W.upcomingGraded(52).filter(r => r.inWeeks > 0 && !HS.Season.staticIneligible(h, r, r.year));
     for (const g of SP.GROUPS) {
-      if (!SP.members(g).some(d => SP.canAppear(g, d, un))) continue;
-      const r = nextRaces.find(rc => SP.reach(h, g, rc));
+      const ms = SP.members(g).filter(d => SP.canAppear(g, d, un));
+      if (!ms.length) continue;
+      const r = nextRaces.find(rc => SP.reach(h, g, rc) && ms.some(d => SP.whenOk(g, d, h, rc)));
       if (r) out.push({ group: g, need: g.finals ? r.short : (g.needG1 || ['g1five', 'allround', 'local'].includes(g.id) ? '次のG1' : '次のレース') });
     }
     return out;
   };
-  // その場限りの馬にする（いちばん良いときの力で）
-  SP.horse = function (d, race) {
+  // その場限りの馬にする（いちばん良いときの力で）。g がトロフィーのグループなら、難しさの下限（SP.floorOf）までそのレースの馬場で力を上げる
+  SP.horse = function (d, race, g) {
     const age = race.age === '2' ? 2 : race.age === '3' ? 3 : 4;
     const h = H.fromHistoric(HS.Eraless.shift(d, (race.year - age) - d.born), `special:${d.name}`);
     h.legend = true; h.owner = 'AI'; h.loc = 'legend'; h.starts = 8; h.wins = 8; h.earn = 50000;
     if (HS.DATA.isForeign(d)) { h.foreignTrained = true; h.country = d.country || '外'; }
+    SP.lift(h, race.surface, SP.floorOf(g));
     return h;
   };
   // prepareWeek から：自分の馬がリーチをかけて出るレースに、スペシャルホースを足す
@@ -197,7 +232,7 @@
         if (sp.g.race && fromRace >= SP.RACE_IN_RACE) continue;
         if (sp.g.race) fromRace++;
         if (race.sex === '牝' && sp.d.sex !== '牝') continue; // 牝馬限定のレースには牝馬だけ
-        names.add(sp.d.name); out.push({ horse: SP.horse(sp.d, race), legend: true });
+        names.add(sp.d.name); out.push({ horse: SP.horse(sp.d, race, sp.g), legend: true });
       }
     }
     return out;

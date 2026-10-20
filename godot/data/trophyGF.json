@@ -1,4 +1,4 @@
 {
-"tier": 3,
+"tier": 4,
 "focus": {"sprint":["spd","guts"],"mile":["spd","mind"],"distance":["spd","sta"],"classic":["sta","spd"],"long":["sta","guts"],"dirt":["dspd","dsta"]}
 }

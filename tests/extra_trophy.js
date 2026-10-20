@@ -145,8 +145,8 @@ module.exports = function (check, assert, HS) {
     assert(TR.has(s, 'triple') && TR.has(s, 'ev2'), 'トロフィーが付かない');
     const p = TR.points(s);
     // 日本三冠（芝のスピード・スタミナ）とキングオブエベレスト（芝のスピード・根性）：focus は大きく、ほかは半分
-    const P4 = D.trophyRule.TIER_PTS[4];
-    assert(p.n === 2 && p.by.spd === Math.min(D.trophyRule.CAP, P4 * 2) && p.by.sta === P4 + P4 / 2 && p.by.dspd === P4, `上がり ${JSON.stringify(p.by)}`);
+    const PA = D.trophyRule.TIER_PTS[TR.BY.triple.tier], PB = D.trophyRule.TIER_PTS[TR.BY.ev2.tier];
+    assert(p.n === 2 && p.by.spd === Math.min(D.trophyRule.CAP, PA + PB) && p.by.sta === PA + PB / 2 && p.by.dspd === (PA + PB) / 2, `上がり ${JSON.stringify(p.by)}`);
     const pot0 = Object.assign({}, s.pot), plain0 = Object.assign({}, plain.pot);
     for (const h of [s, d, plain]) assert(HS.Jockey.retire(h.id).to === 'retired', '引退できない');
     for (const k of H.STATS) {
@@ -181,7 +181,8 @@ module.exports = function (check, assert, HS) {
     G.player.money = 1e9;
     const kk = R.gradedYear(G.year).find(r => r.short === '菊花賞');
     const h = W.all().find(x => x.hist && x.sex !== '牝' && !x.gelding && G.year - x.born === 3 && x.loc === 'stable' && !x.injury);
-    h.owner = 'P'; h.auto = false; h.fatigue = 0; h.injury = null; h.earn = 30000; h.wins = 4; h.starts = 5;
+    // 無敗（5戦5勝）にしておく：シンザン・シンボリルドルフは無敗のときだけ出てくる（持ち主の決定 2026-10-20）
+    h.owner = 'P'; h.auto = false; h.fatigue = 0; h.injury = null; h.earn = 30000; h.wins = 5; h.starts = 5;
     h.gradedWins.push({ y: G.year, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year, race: '東京優駿', short: '日本ダービー', grade: 'G1' });
     assert(SP.reachInfo(h).some(r => r.group.id === 't:triple' && r.need === '菊花賞'), '日本三冠のリーチが出ない');
     for (const k of H.STATS) h.pot[k] = 150;
@@ -222,6 +223,153 @@ module.exports = function (check, assert, HS) {
     const kikka = sps.find(n => SP.byName(n).groups.includes('r:菊花賞'));
     if (kikka) assert(!SP.pending(h2, Object.assign({}, race, { year: G.year + 1 })).some(x => x.d.name === kikka), `倒した大レースの名馬がまた出てくる（${kikka}）`);
     return `菊花賞に ${sps.join('・')}（入れ替わり ${gone.map(x => x.horse.name).join('・')}）`;
+  });
+
+  check('trophy: 棚卸し（持ち主の決定 2026-10-20）：お金は難しさ1〜6で5,000万〜5億円・決めた難しさ・無敗のときの隠し馬・外した馬・ジョンヘンリーとテンポイント', () => {
+    newGame(68);
+    // お金（ゲームの中の額。2025年の物価）
+    const MONEY = [0, 5000, 10000, 15000, 20000, 30000, 50000];
+    for (let k = 1; k <= 6; k++) assert(TR.money({ tier: k }) === MONEY[k], `難しさ${k}のお金 ${TR.money({ tier: k })}`);
+    const s1 = U.money(TR.money({ tier: 1 })), s6 = U.money(TR.money({ tier: 6 }));
+    // 難しさ（ここに書いたもの。GF は6つとも4）
+    const TIER = { arc2: 5, au3: 2, dwc2: 5, eu3: 5, eumile: 4, ev2: 4, fr3: 2, frf3: 2, ftriple: 2, gs_jd: 3, jd3: 1, triple: 3, uk3: 4, us3: 4, usf3: 2, gs_tiara: 4 };
+    for (const [id, k] of Object.entries(TIER)) assert(TR.BY[id].tier === k, `${TR.BY[id].label}の難しさ ${TR.BY[id].tier}`);
+    const gfs = TR.LIST.filter(t => t.kind === 'gf');
+    assert(gfs.length === 6 && gfs.every(t => t.tier === 4), `GF の難しさ ${gfs.map(t => t.tier)}`);
+    // 無敗のときだけの馬・いつでもの馬
+    const UNB = { triple: ['シンボリルドルフ', 'シンザン'], uk3: ['バーラム'], us3: ['ウォーアドミラル', 'シアトルスルー'], eu3: ['シーバード'], ftriple: ['テスコガビー'],
+      ukf3: ['プリティーポリー'], gs_tiara: ['パーソナルエンスン'], arc2: ['リボー'], immortal: ['オーモンド'] };
+    const whenOf = {}; for (const [id, xs] of Object.entries(D.trophyHorses)) for (const x of xs) whenOf[x.name] = x.when || 'any';
+    for (const [id, ns] of Object.entries(UNB)) for (const n of ns) assert((D.trophyHorses[id] || []).some(x => x.name === n && x.when === 'unbeaten'), `${n}（${id}）が無敗のときの馬でない`);
+    const unbN = Object.values(UNB).reduce((a, b) => a.concat(b), []);
+    assert(Object.entries(whenOf).every(([n, w]) => (w === 'unbeaten') === unbN.includes(n)), '無敗のときの馬が多い');
+    assert(whenOf['ファリス'] === 'any' && whenOf['サンオーイ'] === 'any', 'ファリス・サンオーイはいつでも');
+    // 外した馬・動かした馬
+    const all = n => Object.keys(D.trophyHorses).filter(id => D.trophyHorses[id].some(x => x.name === n));
+    for (const [n, id] of [['カーバイン', 'gs_au'], ['ロベルト', 'gs_eu'], ['ロイヤルパレス', 'gs_turf'], ['ギャロレット', 'gs_us'], ['トムフール', 'gs_us']]) {
+      assert(!all(n).length, `${n}が隠し馬に残る`);
+      assert(!SP.members(SP.BY['t:' + id] || { id: 'x' }).some(d => d.name === n), `${n}がトロフィーのグループにいる`);
+    }
+    assert(!SP.BY['t:gs_us'], 'アメリカン GS の隠し馬が残る');
+    assert(all('ジョンヘンリー').join() === 'bc2' && SP.byName('ジョンヘンリー').groups.join() === 't:bc2', 'ジョンヘンリーがクラウンオブブリーダーズにいない');
+    assert(all('テンポイント').join() === 'gs_jp' && SP.byName('テンポイント').groups.join() === 't:gs_jp', 'テンポイントがジャパン GS にいない');
+    assert(all('シアトルスルー').join() === 'us3' && SP.byName('シアトルスルー').groups.join() === 't:us3', 'シアトルスルーが米国三冠にいない');
+    // リーチのレースで実際に出てくるか：無敗の馬では無敗のときの馬もいつでもの馬も、負けたことのある馬ではいつでもの馬だけ
+    const G = W.get(), m = cal();
+    const reachRace = (h, t) => {
+      if (t.kind === 'set') {
+        const rs = t.races.map(n => m.get(n)).sort((a, b) => a.month * 10 + a.week - (b.month * 10 + b.week));
+        for (const r of rs.slice(0, -1)) h.gradedWins.push({ y: G.year, race: r.name, short: r.short, grade: r.grade, region: r.region });
+        return Object.assign({}, rs[rs.length - 1], { year: G.year });
+      }
+      if (t.kind === 'repeat') { const r = m.get(t.races[t.races.length - 1]); h.gradedWins.push({ y: G.year - 1, race: r.name, short: r.short, grade: r.grade, region: r.region }); return Object.assign({}, r, { year: G.year }); }
+      if (t.kind === 'immortal') { h.g1Streak = RULE_IMM - 1; return Object.assign({}, m.get('有馬記念'), { year: G.year }); }
+      if (t.kind === 'wonder') { h.winLen = D.trophyRule.WONDER_LEN - 1; return Object.assign({}, m.get('有馬記念'), { year: G.year }); }
+      return null;
+    };
+    const RULE_IMM = D.trophyRule.IMMORTAL_STREAK;
+    let nUnb = 0, nAny = 0;
+    for (const [id, xs] of Object.entries(D.trophyHorses)) {
+      if (!xs.length) continue;
+      const t = TR.BY[id];
+      const h = myHorse(G, t.cat === 'filly' || id === 'gs_tiara' ? '牝' : '牡');
+      const race = reachRace(h, t);
+      assert(TR.reach(h, t, race), `${t.label}：リーチにならない`);
+      const names = () => SP.pending(h, race).filter(x => x.g.id === 't:' + id).map(x => x.d.name);
+      const live = HS.Eraless.activeNames();
+      const check1 = (unbeaten) => {
+        const ns = names();
+        for (const x of xs) {
+          if (x.modern && live.has(x.name)) continue; // 1989年からの馬で、その年に世界で走っている
+          const want = (!x.when || unbeaten) && (!x.surf || x.surf === race.surface);
+          assert(ns.includes(x.name) === want, `${t.label}：${x.name}が${unbeaten ? '無敗' : '負けたことのある馬'}で${want ? '出てこない' : '出てくる'}（${ns}）`);
+        }
+      };
+      h.starts = 4; h.wins = 4; check1(true);
+      h.starts = 5; h.wins = 4; check1(false);
+      // ホームのリーチの案内も、出てくる馬がいないグループは出さない
+      const onlyUnb = xs.every(x => x.when === 'unbeaten');
+      if (onlyUnb) assert(!SP.whenOk(SP.BY['t:' + id], SP.data(xs[0].name), h), `${t.label}：負けた馬で無敗のときの馬が通る`);
+      nUnb += xs.filter(x => x.when).length; nAny += xs.filter(x => !x.when).length;
+      h.owner = 'AI';
+    }
+    // ジョンヘンリーはクラウンオブブリーダーズ（BC ターフの2連覇のリーチ）で、テンポイントはジャパン GS の有馬記念で出てくる
+    const hj = myHorse(G, '牡'), bt = m.get('BCターフ');
+    hj.gradedWins.push({ y: G.year - 1, race: bt.name, short: bt.short, grade: bt.grade, region: bt.region }); hj.starts = 3; hj.wins = 1;
+    assert(SP.pending(hj, Object.assign({}, bt, { year: G.year })).some(x => x.d.name === 'ジョンヘンリー' && x.g.id === 't:bc2'), 'ジョンヘンリーが出てこない');
+    const ht = myHorse(G, '牡'), tp = reachRace(ht, TR.BY.gs_jp); ht.starts = 9; ht.wins = 4;
+    assert(SP.pending(ht, tp).some(x => x.d.name === 'テンポイント' && x.g.id === 't:gs_jp'), 'テンポイントが出てこない');
+    // ホールオブフェイムのリーチにはジョンヘンリーが出てこない
+    const hl = myHorse(G, '牡'), lr = reachRace(hl, TR.BY.legend);
+    assert(!SP.pending(hl, lr).some(x => x.d.name === 'ジョンヘンリー'), 'ホールオブフェイムでジョンヘンリーが出てくる');
+    return `お金 ${s1}〜${s6}・無敗のときの馬 ${nUnb}頭・いつでもの馬 ${nAny}頭`;
+  });
+
+  check('trophy: 隠し馬の強さはトロフィーの難しさの下限まで（そのレースの馬場で）。芝にもダートにもなるトロフィーは芝の馬・ダートの馬を分けて出す（持ち主の決定 2026-10-20）', () => {
+    const G = newGame(69), m = cal(), S = HS.Season;
+    const FL = D.trophyRule.HIDDEN_FH;
+    assert(FL.length === 7 && FL.slice(1).every((v, i) => !i || v > FL[i]) && FL[1] >= 60 && FL[6] <= 90, `下限 ${FL}`);
+    // 芝にもダートにもなるトロフィー（全部洗い出す）：隠し馬は全部 surf を持ち、芝・ダートの両方がいる。ほかのトロフィーの馬は surf を持たない
+    const mixed = TR.LIST.filter(t => SP.mixedTrophy(t)).map(t => t.id).sort();
+    assert(mixed.join() === ['bc2', 'immortal', 'legend', 'wonder'].sort().join(), `芝にもダートにもなるトロフィー ${mixed}`);
+    for (const [id, xs] of Object.entries(D.trophyHorses)) {
+      if (mixed.includes(id)) assert(xs.every(x => x.surf === '芝' || x.surf === 'ダ') && xs.some(x => x.surf === '芝') && xs.some(x => x.surf === 'ダ' && !x.when), `${id} の芝・ダートの分け ${xs.map(x => x.name + (x.surf || '?'))}`);
+      else assert(xs.every(x => !x.surf), `${id} に馬場の分けがある`);
+    }
+    for (const [n, id] of [['オールアロング', 'legend'], ['スペクタキュラービッド', 'immortal']]) assert(SP.byName(n).groups.join() === 't:' + id, `${n}のグループ ${SP.byName(n).groups}`);
+    // 下限：トロフィーの隠し馬は、出るレースの馬場で下限以上。データ（史実馬の値）は変えない。もとから強い馬はそのまま
+    const out = [];
+    let lifted = 0;
+    for (const t of TR.LIST) {
+      const g = SP.BY['t:' + t.id]; if (!g) continue;
+      const fl = SP.floorOf(g);
+      assert(fl === FL[t.tier], `${t.label}の下限 ${fl}`);
+      const surfs = SP.mixedTrophy(t) ? ['芝', 'ダ'] : [...new Set(t.races.map(n => m.get(n).surface))];
+      for (const sf of surfs) {
+        const race = { age: '3+', year: G.year, surface: sf };
+        for (const d of SP.members(g)) {
+          const x = HS.DATA.trophyHorses[t.id].find(y => y.name === d.name);
+          if (x.surf && x.surf !== sf) continue;
+          const r0 = JSON.stringify(d);
+          const raw = SP.horse(d, race), h = SP.horse(d, race, g);
+          const v0 = S.fhOf(H.cur(raw, 0), sf, raw), v = S.fhOf(H.cur(h, 0), sf, h);
+          assert(JSON.stringify(d) === r0, `${d.name}のデータが変わる`);
+          assert(v >= fl && (v0 >= fl ? v === v0 && JSON.stringify(h.pot) === JSON.stringify(raw.pot) : v <= fl + 1), `${t.label}：${d.name}（${sf}）${v0} → ${v}（下限 ${fl}）`);
+          const other = sf === 'ダ' ? ['spd', 'sta'] : ['dspd', 'dsta'];
+          assert(other.every(k => h.pot[k] === raw.pot[k]) && ['guts', 'mind', 'slope'].every(k => h.pot[k] === raw.pot[k]), `${d.name}：ほかの能力が変わる`);
+          if (v0 < fl) { lifted++; out.push(`${d.name}${sf}${v0}→${v}`); }
+        }
+      }
+    }
+    // 出走表に入る馬にも効く（forRace）：英国三冠（難しさ4）のリーチの英セントレジャー
+    const h = myHorse(G, '牡'); h.starts = 2; h.wins = 2;
+    for (const n of ['英2000ギニー', '英ダービー']) { const r = m.get(n); h.gradedWins.push({ y: G.year, race: r.name, short: r.short, grade: r.grade, region: r.region }); }
+    const sl = Object.assign({}, m.get('英セントレジャー'), { year: G.year });
+    const lg = SP.forRace(sl, [{ horse: h, mine: true }]).filter(x => SP.byName(x.horse.name).groups.includes('t:uk3'));
+    assert(lg.length && lg.every(x => S.fhOf(H.cur(x.horse, 0), '芝', x.horse) >= FL[TR.BY.uk3.tier]), `英国三冠の隠し馬 ${lg.map(x => x.horse.name)}`);
+    // 芝・ダートの分け：そのレースの馬場の馬だけ出てくる
+    const reachOn = (id, finalShort, prev) => {
+      const hh = myHorse(G, '牡'); hh.starts = 3; hh.wins = 1;
+      const t = TR.BY[id];
+      if (t.kind === 'repeat') { const r = m.get(finalShort); hh.gradedWins.push({ y: G.year - 1, race: r.name, short: r.short, grade: r.grade, region: r.region }); }
+      for (const n of prev || []) { const r = m.get(n); hh.gradedWins.push({ y: G.year, race: r.name, short: r.short, grade: r.grade, region: r.region }); }
+      if (t.kind === 'immortal') hh.g1Streak = D.trophyRule.IMMORTAL_STREAK - 1;
+      if (t.kind === 'wonder') hh.winLen = D.trophyRule.WONDER_LEN - 1;
+      const race = Object.assign({}, m.get(finalShort), { year: G.year });
+      const ns = SP.pending(hh, race).filter(x => x.g.id === 't:' + id).map(x => x.d.name);
+      hh.owner = 'AI';
+      return { surface: race.surface, ns };
+    };
+    const cases = [['bc2', 'BCクラシック'], ['bc2', 'BCターフ'], ['legend', '凱旋門賞', ['ドバイワールドカップ']], ['legend', 'ドバイワールドカップ', ['凱旋門賞']],
+      ['immortal', 'フェブラリーステークス'], ['immortal', '有馬記念'], ['wonder', 'フェブラリーステークス'], ['wonder', '有馬記念']];
+    const seen = [];
+    for (const [id, fin, prev] of cases) {
+      const { surface, ns } = reachOn(id, fin, prev);
+      const want = HS.DATA.trophyHorses[id].filter(x => x.surf === surface && !x.when).map(x => x.name);
+      assert(want.length && want.every(n => ns.includes(n)) && ns.every(n => HS.DATA.trophyHorses[id].find(x => x.name === n).surf === surface), `${TR.BY[id].label}・${fin}（${surface}）：${ns}`);
+      seen.push(`${fin}${ns.join('・')}`);
+    }
+    return `下限 ${FL.slice(1).join('・')}・上げた ${lifted}（${out.slice(0, 6).join(' ')}…）／${seen.join('／')}`;
   });
 
   check('trophy: 同じトロフィーを別の馬で取ると、毎回同じ額のお金が入る（持ち主の決定 2026-10-20）', () => {

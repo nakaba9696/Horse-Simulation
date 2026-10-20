@@ -1022,7 +1022,8 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   // 皐月賞と日本ダービーを勝った馬が菊花賞に出ると、歴代の三冠馬が出てくる
   const kk = R.gradedYear(G.year).find(r => r.short === '菊花賞');
   const h = W.all().find(x => x.hist && x.sex !== '牝' && !x.gelding && G.year - x.born === 3 && x.loc === 'stable' && !x.injury);
-  h.owner = 'P'; h.auto = false; h.fatigue = 0; h.earn = 30000; h.wins = 4; h.starts = 5;
+  // 無敗（5戦5勝）：シンボリルドルフ・シンザンは無敗のときだけ出てくる（持ち主の決定 2026-10-20）
+  h.owner = 'P'; h.auto = false; h.fatigue = 0; h.earn = 30000; h.wins = 5; h.starts = 5;
   h.gradedWins.push({ y: G.year, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year, race: '東京優駿', short: '日本ダービー', grade: 'G1' });
   assert(SP.reachInfo(h).some(r => r.group.id === 't:triple' && r.need === '菊花賞'), 'リーチが出ない');
   for (const k of H.STATS) h.pot[k] = 150;
