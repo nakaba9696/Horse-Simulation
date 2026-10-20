@@ -46,6 +46,16 @@ func _ready() -> void:
 							break
 			if OS.get_cmdline_user_args().has("--setup=fatigue"):
 				UiFlow.demo_fatigue()   # 撮影の見本：疲労の段階が並ぶように
+			if OS.get_cmdline_user_args().has("--setup=owners8"):
+				# 撮影の見本：8人の段階がばらばら（会っていない人・OP〜お手馬・やり終えた人）
+				var plan := {"makino": [1, 30.0], "sengoku": [3, 62.0], "yuni": [2, 47.0], "takenouchi": [0, 18.0], "takarada": [5, 100.0], "dakota": [4, 80.0]}
+				for o in HSOwners.LIST():
+					var st := HSOwners.of(String(o.id))
+					st.known = plan.has(o.id)
+					if plan.has(o.id):
+						st.known = true; st.stage = float(plan[o.id][0]); st.pts = plan[o.id][1]; st.rides = 12.0; st.wins = 3.0
+						if st.stage >= HSOwners.WEAR_STAGE: st.got.t2 = { y = HSWorld.G.year }
+						if st.stage >= HSOwners.DONE: st.got.item = { y = HSWorld.G.year }
 			if OS.get_cmdline_user_args().has("--setup=met2"):
 				# 撮影の見本：縁があるのは2人だけ（馬主の一覧で、縁のある馬主とまだの馬主が並ぶ）
 				for o in HSOwners.LIST():
@@ -66,10 +76,16 @@ func _ready() -> void:
 	if args.has("--setup=celebrate"):
 		celebrate("トロフィーを手にした", "三冠", "サンプルホース・ボーナス賞金 5億円")
 	elif args.has("--setup=scene"):
-		owner_scene({"oid": "makino", "kind": "up1", "reward": "祝いの品 100万円"})
+		owner_scene({"oid": "makino", "kind": "m1", "horse": "サンプルホース", "race": "3歳未勝利", "reward": "お礼 300万円"})
 	elif args.has("--setup=meet"):
 		# 縁ができたときの場面（初めて声をかけてくる）
 		owner_scene({"oid": "sengoku", "kind": "meet", "horse": "サンプルホース", "race": "2歳未勝利", "reward": ""})
+	elif args.has("--setup=meet_yuni"):
+		# 絵の無い人（コードで描いた顔）の出会い
+		owner_scene({"oid": "yuni", "kind": "meet", "horse": "サンプルホース", "race": "2歳新馬", "reward": ""})
+	elif args.has("--setup=scene_violaine"):
+		# 課題をやり終えた場面（G2 の課題・勝負服）
+		owner_scene({"oid": "violaine", "kind": "m3", "horse": "サンプルホース", "race": "目黒記念", "reward": "お礼 1,000万円・ヴィオレーヌ・ド・サン＝クレールさんの勝負服を自分の馬に着せられる"})
 	if shots.size() > 0:
 		_capture()
 	else:
@@ -377,9 +393,17 @@ static func owner_q_face(w: float, h: float) -> PanelContainer:
 	p.add_child(q)
 	return p
 
+# 馬主の顔の絵：持ち主の絵（webp）、無ければコードで描いた顔（svg。tools/owner_faces.js）。どちらも無ければ ""
+static func owner_face_path(oid: String, mood: String) -> String:
+	for ext in ["webp", "svg"]:
+		var p := "res://assets/owners/%s_%s.%s" % [oid, mood, ext]
+		if ResourceLoader.exists(p): return p
+	return ""
+
 # 馬主のご褒美の場面（js/ui/ownersui.js の ownerScene）：胸から上の顔・何が起きたか・名前と立場・台詞・ご褒美・「ありがとうございます」
 # 縁ができたとき（kind "meet"）は、初めて声をかけてくる場面（看板の特徴・次の週から依頼が来る・「よろしくお願いします」）
-const OWNER_KICK := {"meet": "新しい馬主から声がかかった", "up1": "間柄が「信頼」になった", "up2": "間柄が「主戦」になった", "up3": "間柄が「相棒」になった", "bond": "好感度がいっぱいになった", "gift": "引退した馬を譲ってもらった", "award": "名コンビ賞"}
+# 課題をやり終えたとき（kind "m1"〜"m5"）は、お礼と、次の依頼（課題）を出す
+const OWNER_KICK := {"meet": "新しい馬主から声がかかった", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞"}
 func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	var o = HSOwners.by(String(q.oid))
 	if o == null:
@@ -395,8 +419,8 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	hb.add_theme_constant_override("separation", 28)
 	p.add_child(hb)
 	var meet: bool = q.get("kind") == "meet"
-	var fp := "res://assets/owners/%s_%s.webp" % [q.oid, "smile" if meet else "joy"]
-	if ResourceLoader.exists(fp):
+	var fp := owner_face_path(String(q.oid), "smile" if meet else "joy")
+	if fp != "":
 		var tr := TextureRect.new()
 		tr.texture = load(fp)
 		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -440,6 +464,16 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 		nl.modulate.a = 0.0
 		v.add_child(nl)
 		labs.append(nl)
+	# 次の依頼（課題）：出会いなら OP の課題、m1〜m4 なら次の段階の課題
+	var k := 0 if meet else (int(String(q.kind).substr(1)) if String(q.kind) in ["m1", "m2", "m3", "m4"] else -1)
+	if k >= 0 and o.get("missions") and k < o.missions.size():
+		var mi: Dictionary = o.missions[k]
+		var al := UiTheme.label("「%s」\n次の依頼（%s）：%s" % [HSOwners.fill_(String(mi.say), {}), HSOwners.STAGES[k].label, mi.text], 15, UiTheme.IVORY)
+		al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		al.custom_minimum_size.x = 520
+		al.modulate.a = 0.0
+		v.add_child(al)
+		labs.append(al)
 	var b := UiScreen.button("よろしくお願いします" if meet else "ありがとうございます", true, 300, 54, 20)
 	var done := func():
 		close_modal()

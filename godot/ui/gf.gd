@@ -32,6 +32,7 @@ func build() -> void:
 	tab_box = VBoxContainer.new()
 	tab_box.position = Vector2(PAD_X, TOP + 4)
 	add_child(tab_box)
+	_host()
 	inv_box = VBoxContainer.new()
 	inv_box.position = Vector2(PAD_X, TOP + 66)
 	inv_box.custom_minimum_size = Vector2(1600 - PAD_X * 2, 0)
@@ -136,6 +137,43 @@ func _fill() -> void:
 		list.add_child(b)
 		rows.append(b)
 	focus_first()
+
+# GF を開いている一族の人（data/gfhost.js・HSGFHost）：右上に顔とひと言（場面で変わる。台詞は下書き）
+func _host() -> void:
+	var d = HSGFHost.data()
+	if not d: return
+	var sc := HSGFHost.scene()
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.SURFACE, Color(String(d.silks.sub)).darkened(0.3), 1, 12, Vector4(8, 4, 12, 4)))
+	p.position = Vector2(1600 - PAD_X - 600, TOP + 2)
+	p.custom_minimum_size = Vector2(600, 58)
+	add_child(p)
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 10)
+	p.add_child(hb)
+	var fr := PanelContainer.new()
+	fr.add_theme_stylebox_override("panel", UiTheme.box(Color(String(d.silks.base)), Color(String(d.silks.sub)), 1, 8, Vector4(0, 0, 0, 0)))
+	fr.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+	fr.custom_minimum_size = Vector2(48, 48)
+	fr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var fp := UiScreen.owner_face_path(String(d.id), "joy" if sc == "kincsem" else "base")
+	if fp != "":
+		var tr := TextureRect.new()
+		tr.texture = load(fp)
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		tr.custom_minimum_size = Vector2(48, 48)
+		fr.add_child(tr)
+	hb.add_child(fr)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 0)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hb.add_child(v)
+	v.add_child(UiTheme.label("%s（%s）" % [d.name, d.title], 12, UiTheme.GOLD_BRIGHT))
+	var l := UiTheme.label("「%s」" % HSGFHost.line(sc, String(HSSeason.gf_order()[cat])), 13, UiTheme.IVORY)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = 510
+	v.add_child(l)
 
 func focus_first() -> void:
 	if acts.size():

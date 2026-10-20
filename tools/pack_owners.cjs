@@ -6,16 +6,18 @@ const fs = require('fs');
 const path = require('path');
 
 // 馬主 → 絵の id。表情は、その絵の差分のうち上から順に有るものを使い、無ければ基本の絵
+// 2026-10-19：仕様書の8つのジャンルに合わせて、鷺ノ宮・霧島・花房を外し（絵も外した）、ヴィオレーヌ・ファリナ（持ち主の指定。trpg-game の同じ名前の絵）を足した。
+// 絵の無い人（ユニ・ダコタ）は data/owners.js の face の SVG（js/ui/ownerface.js。Godot は tools/owner_faces.js）
 const PICK = {
   takenouchi: 'gensai',
-  saginomiya: 'farina',
   makino: 'tiria',
-  kirishima: 'constance',
   sengoku: 'dil',
-  hanabusa: 'shione',
   takarada: 'dorothea',
+  violaine: 'violaine',
+  farina: 'farina',
 };
-const MOODS = { base: [''], smile: ['_faint_smile', '_joy'], joy: ['_fun', '_sparkle', '_joy'], sad: ['_sorrow', '_troubled'] };
+const MOODS = { base: [''], smile: ['_faint_smile', '_joy'], joy: ['_fun', '_sparkle', '_joy'], sad: ['_sorrow', '_troubled', '_panic'] };
+const ONLY = process.argv.slice(3);   // 名前を渡すと、その馬主だけ書き出す
 const MAX = 80 * 1024;
 
 function main() {
@@ -23,6 +25,7 @@ function main() {
   if (!src) { console.error('使い方：node tools/pack_owners.cjs <portraits のフォルダ>'); process.exit(1); }
   const out = path.join(__dirname, '..', 'assets');
   for (const [oid, pid] of Object.entries(PICK)) {
+    if (ONLY.length && !ONLY.includes(oid)) continue;
     const parts = [], used = [];
     for (const [mood, sufs] of Object.entries(MOODS)) {
       let file = null;

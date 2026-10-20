@@ -50,7 +50,6 @@ static func record(race: Dictionary, sim: Dictionary, runners: Array) -> void:
 	var meR = null
 	for x in sim.results:
 		if x.get("rider") == "P": meR = x; break
-	if meR: HSOwners.meet_check(race, meR)   # 縁（依頼が始まる条件）
 	var s := HSOwners.state()
 	var a = s.week.acc.get(race.key) if s.get("week") else null
 	if not a: return

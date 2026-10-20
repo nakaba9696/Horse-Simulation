@@ -92,6 +92,7 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	var h := HSWorld.horse_from_foal(f, s.name, m.name, born, nm)
 	h.trigFixed = pick.filter(func(id): return not HSHorse.SKILLS.has(id))
 	h.owner = "P"; h.loc = "farm"; h.original = true; h.auto = true; h.bonusFromParents = bonus
+	HSOwners.apply_items(h)   # 馬主の依頼をやり終えてもらったアイテム（繁殖の永続のボーナス）
 	HSHorse.sync_apt(h)
 	G.horses[h.id] = h
 	HSWorld.used_names()[nm] = true

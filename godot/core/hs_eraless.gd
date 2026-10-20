@@ -227,6 +227,7 @@ static func restock(reroll: bool) -> Array:
 			names.append(list[k].name); list.remove_at(k)
 			i += 1
 	G.shopStock = { y = G.year, m = G.month, n = n, names = names }
+	if HSOwners.on(): HSOwners.shop_bias(names)   # owners.js の包み（馬主に頼んだ月は、好みの馬を入れる）
 	return names
 static func shop() -> Array:
 	var G = HSWorld.G

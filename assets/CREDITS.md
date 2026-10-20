@@ -50,17 +50,16 @@ Poly Haven の素材はすべて CC0（https://polyhaven.com/license）。人物
 
 ## 馬主の顔
 
-持ち主が別のゲームのために作った絵（Stable Diffusion）。持ち主の決定 2026-10-16「馬主の顔は別のゲームで素材作ったのでそれでいきます」。`tools/pack_owners.cjs` で、表情4つ（ふだん・ほほえみ・喜び・残念。無い表情は近いものか基本の絵）を base64 にした。
+持ち主が別のゲームのために作った絵（Stable Diffusion）。持ち主の決定 2026-10-16「馬主の顔は別のゲームで素材作ったのでそれでいきます」。`tools/pack_owners.cjs` で、表情4つ（ふだん・ほほえみ・喜び・残念。無い表情は近いものか基本の絵）を base64 にした。2026-10-19 に鷺ノ宮・霧島・花房の絵を外し（馬主を仕様書の8つのジャンルに合わせた）、ヴィオレーヌ・ファリナ（持ち主の指定）を足した。絵の無い馬主（ユニ・ダコタ）は、コードで描く顔（`js/ui/ownerface.js`。Godot 版は `tools/owner_faces.js` が書き出す SVG）。
 
 | ファイル | 馬主 | 元の絵 | 作者 | ライセンス | 出典 |
 |---|---|---|---|---|---|
 | `assets/owners_takenouchi.js` | 竹之内 源三郎 | `gensai.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
-| `assets/owners_saginomiya.js` | 鷺ノ宮 澪 | `farina.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
 | `assets/owners_makino.js` | 牧野 ひなた | `tiria.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
-| `assets/owners_kirishima.js` | 霧島 玲 | `constance.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
 | `assets/owners_sengoku.js` | 千石 悠斗 | `dil.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
-| `assets/owners_hanabusa.js` | 花房 つむぎ | `shione.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
 | `assets/owners_takarada.js` | 宝田 マリエ | `dorothea.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
+| `assets/owners_violaine.js` | ヴィオレーヌ・ド・サン＝クレール | `violaine.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
+| `assets/owners_farina.js` | ファリナ | `farina.webp` と表情の差分 | 持ち主 | 持ち主の作った絵（このゲームで使ってよい） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits |
 
 ## 骨入りの馬（`js/ui/horse_rigged.js`）
 
