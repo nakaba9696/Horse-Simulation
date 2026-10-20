@@ -6,61 +6,217 @@
       "width": 360,
       "height": 72,
       "corner_px": 24,
-      "nine_patch": true
+      "nine_patch": true,
+      "slice_margins_px": [
+        24,
+        24,
+        24,
+        24
+      ]
     },
     "btn_main_focus.png": {
       "width": 360,
       "height": 72,
       "corner_px": 24,
-      "nine_patch": true
+      "nine_patch": true,
+      "slice_margins_px": [
+        24,
+        24,
+        24,
+        24
+      ]
     },
     "btn_main_pressed.png": {
       "width": 360,
       "height": 72,
       "corner_px": 24,
-      "nine_patch": true
+      "nine_patch": true,
+      "slice_margins_px": [
+        24,
+        24,
+        24,
+        24
+      ]
     },
     "btn_main_disabled.png": {
       "width": 360,
       "height": 72,
       "corner_px": 24,
-      "nine_patch": true
+      "nine_patch": true,
+      "slice_margins_px": [
+        24,
+        24,
+        24,
+        24
+      ]
     },
     "btn_sub_normal.png": {
       "width": 360,
       "height": 72,
       "corner_px": 24,
-      "nine_patch": true
+      "nine_patch": true,
+      "slice_margins_px": [
+        24,
+        24,
+        24,
+        24
+      ]
     },
     "btn_sub_focus.png": {
       "width": 360,
       "height": 72,
       "corner_px": 24,
-      "nine_patch": true
+      "nine_patch": true,
+      "slice_margins_px": [
+        24,
+        24,
+        24,
+        24
+      ]
     },
     "btn_sub_pressed.png": {
       "width": 360,
       "height": 72,
       "corner_px": 24,
-      "nine_patch": true
+      "nine_patch": true,
+      "slice_margins_px": [
+        24,
+        24,
+        24,
+        24
+      ]
     },
     "btn_sub_disabled.png": {
       "width": 360,
       "height": 72,
       "corner_px": 24,
-      "nine_patch": true
+      "nine_patch": true,
+      "slice_margins_px": [
+        24,
+        24,
+        24,
+        24
+      ]
     },
     "btn_round_normal.png": {
       "width": 96,
       "height": 96,
       "corner_px": 48,
-      "nine_patch": false
+      "nine_patch": false,
+      "slice_margins_px": [
+        48,
+        48,
+        48,
+        48
+      ]
     },
     "btn_round_focus.png": {
       "width": 96,
       "height": 96,
       "corner_px": 48,
-      "nine_patch": false
+      "nine_patch": false,
+      "slice_margins_px": [
+        48,
+        48,
+        48,
+        48
+      ]
+    },
+    "panel_card.png": {
+      "width": 480,
+      "height": 320,
+      "corner_px": 64,
+      "nine_patch": true,
+      "slice_margins_px": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    "panel_card_focus.png": {
+      "width": 480,
+      "height": 320,
+      "corner_px": 64,
+      "nine_patch": true,
+      "slice_margins_px": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    "panel_racecard.png": {
+      "width": 960,
+      "height": 540,
+      "corner_px": 64,
+      "nine_patch": true,
+      "slice_margins_px": [
+        64,
+        64,
+        64,
+        64
+      ]
+    },
+    "row_normal.png": {
+      "width": 1200,
+      "height": 56,
+      "corner_px": 24,
+      "nine_patch": true,
+      "slice_margins_px": [
+        56,
+        24,
+        56,
+        24
+      ]
+    },
+    "row_focus.png": {
+      "width": 1200,
+      "height": 56,
+      "corner_px": 24,
+      "nine_patch": true,
+      "slice_margins_px": [
+        56,
+        24,
+        56,
+        24
+      ]
+    },
+    "tab_normal.png": {
+      "width": 200,
+      "height": 48,
+      "corner_px": 20,
+      "nine_patch": true,
+      "slice_margins_px": [
+        20,
+        20,
+        20,
+        20
+      ]
+    },
+    "tab_active.png": {
+      "width": 200,
+      "height": 48,
+      "corner_px": 20,
+      "nine_patch": true,
+      "slice_margins_px": [
+        20,
+        20,
+        20,
+        20
+      ]
+    },
+    "tab_track.png": {
+      "width": 1200,
+      "height": 56,
+      "corner_px": 24,
+      "nine_patch": true,
+      "slice_margins_px": [
+        56,
+        24,
+        56,
+        24
+      ]
     }
   }
 }
