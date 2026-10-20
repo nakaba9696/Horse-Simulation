@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { load, ROOT } = require('../tests/load.js');
+const GR = require('./growth_rule.js');
 
 const OUT = 'data/historic_auto.js';
 const HS = load({ skip: [OUT], allowMissing: true });
@@ -101,8 +102,9 @@ for (const { name, rows: rs } of byKey.values()) {
   dMin = Math.max(1000, Math.round(dMin / 100) * 100); dMax = Math.min(4000, Math.round(dMax / 100) * 100);
   // 成長型：勝った年齢から
   const ages = rs.map(r => r.age).filter(Boolean);
-  const minA = Math.min(...ages), maxA = Math.max(...ages);
-  const growth = maxA <= 3 && minA <= 2 ? '早熟' : maxA <= 3 ? '早め' : maxA >= 7 ? '晩成' : maxA >= 6 ? '遅め' : '普通';
+  const maxA = Math.max(...ages);
+  // 超早熟・早熟・早め・普通・遅め・晩成・超晩成・持続の8つ（tools/growth_rule.js）
+  const growth = GR.growthOf(rs.filter(r => r.age).map(r => ({ age: r.age, year: r.year, at: GR.atOf(r.age, GR.monthOf(D, r.race, r.year)) })));
   // 脚質：名前ごとに決まった引き（短距離は前へ）
   const r0 = U.hashRng('style:' + name);
   const sprint = dMax <= 1600;

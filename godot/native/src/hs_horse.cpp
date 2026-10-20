@@ -17,12 +17,16 @@ static inline double smooth(double t) { t = clamp(t, 0.0, 1.0); return t * t * (
 
 static double growth_factor(const Dictionary &horse, double w_idx) {
 	double age = (w_idx - ((double)horse["born"] * 48.0 + 12.0)) / 48.0;
-	double p0 = 3.5, p1 = 5.0;
+	// 成長型は8つ（js/core/horse.js の H.PEAK・H.DECAY と同じ数）
+	double p0 = 3.5, p1 = 5.0, k0 = 0.04, k1 = 0.02;
 	Variant g = horse.get("growth", Variant());
-	if (is_str(g, "早熟")) { p0 = 2.6; p1 = 3.6; }
+	if (is_str(g, "超早熟")) { p0 = 2.3; p1 = 3.2; }
+	else if (is_str(g, "早熟")) { p0 = 2.6; p1 = 3.6; }
 	else if (is_str(g, "早め")) { p0 = 3.0; p1 = 4.2; }
 	else if (is_str(g, "遅め")) { p0 = 4.0; p1 = 5.8; }
 	else if (is_str(g, "晩成")) { p0 = 4.6; p1 = 6.8; }
+	else if (is_str(g, "超晩成")) { p0 = 5.5; p1 = 7.8; }
+	else if (is_str(g, "持続")) { p0 = 3.5; p1 = 7.5; k0 = 0.02; k1 = 0.008; }
 	double shift = num_or(horse.get("peakShift", Variant()), 0.0);
 	double ps = p0 + shift, pe = p1 + shift;
 	if (age < ps) {
@@ -31,7 +35,7 @@ static double growth_factor(const Dictionary &horse, double w_idx) {
 	}
 	if (age <= pe) return 1.0;
 	double d = age - pe;
-	return mx(0.55, 1.0 - 0.04 * d - 0.02 * d * d);
+	return mx(0.55, 1.0 - k0 * d - k1 * d * d);
 }
 
 static const char *STATS[7] = { "spd", "sta", "dspd", "dsta", "guts", "mind", "slope" };

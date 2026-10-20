@@ -68,6 +68,11 @@ static func candidates(s: Dictionary, m: Dictionary) -> Array:
 	for id in skills_of(s) + skills_of(m):
 		if not out.has(id): out.append(id)
 	return out
+# 成長型：父から 0.4・母から 0.4・8つの型からでたらめに 0.2（仕様書「両親から引き継ぐ：それ以外を 4:4:2」。js/core/original.js の O.childGrowth）
+static func child_growth(rng: HSRng, s: Dictionary, m: Dictionary) -> String:
+	var r: float = rng.next()
+	var g: Variant = HSU.or_(s.get("growth"), "普通") if r < 0.4 else (HSU.or_(m.get("growth"), "普通") if r < 0.8 else rng.pick(HSHorse.GROWTHS))
+	return String(g) if HSHorse.GROWTHS.has(g) else "普通"
 static func make(sireId: String, damId: String, name: String = "") -> Dictionary:
 	var G = HSWorld.G
 	var s = HSWorld.horse(sireId); var m = HSWorld.horse(damId)
@@ -92,7 +97,7 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	var f := {}
 	f.sex = "牡" if rng.chance(0.5) else "牝"; f.pot = pot; f.distMin = dMin; f.distMax = dMax
 	f.apt = { heavy = HSMath.round_js(HSU.clamp((float(HSU.or_(HSU.or_(s.get("apt"), {}).get("heavy"), 50.0)) + float(HSU.or_(HSU.or_(m.get("apt"), {}).get("heavy"), 50.0))) / 2.0 + rng.normal(0.0, 8.0), 20.0, 100.0)) }
-	f.growth = rng.pick([HSU.or_(s.get("growth"), "普通"), HSU.or_(m.get("growth"), "普通")]); f.peakShift = 0.0
+	f.growth = child_growth(rng, s, m); f.peakShift = 0.0
 	f.style = HSU.or_(rng.pick([s.get("style"), m.get("style")].filter(func(x): return HSU.truthy(x))), "先行")
 	f.kire = HSU.clamp(HSMath.round_js((float(HSU.or_(s.get("kire"), 4.0)) + float(HSU.or_(m.get("kire"), 4.0))) / 2.0 + rng.normal(0.0, 1.0)), 1.0, 8.0)
 	f.skills = pick.filter(func(id): return HSHorse.SKILLS.has(id)); f.health = HSMath.round_js(HSU.clamp((float(HSU.or_(s.get("health"), 70.0)) + float(HSU.or_(m.get("health"), 70.0))) / 2.0 + rng.normal(0.0, 8.0), 40.0, 100.0))
