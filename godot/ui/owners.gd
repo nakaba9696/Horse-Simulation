@@ -173,26 +173,24 @@ func _preview(i: int) -> void:
 	var gb = st.got.get("bond")
 	if gb and gb.get("pending"):
 		var bc := UiScreen.button("思い出の名馬を受け取る（前の版の約束）", true, 420, 44, 16)
-		bc.focus_mode = Control.FOCUS_NONE
 		bc.pressed.connect(func():
 			var err = HSOwners.claim(oid)
 			if err: toast(String(err), "bad"); return
 			UiFlow.save()
-			_preview(sel))
+			_after_press())
 		pv.add_child(bc)
 	# 来月の店に頼む（G3 の段階から）
 	if HSOwners.can_ask(oid):
 		var a = HSOwners.state().get("ask")
 		var asked: bool = a != null and a.oid == oid
 		var ba := UiScreen.button(("%d月の店に頼んだ" % int(a.m)) if asked else "来月の店に、好みの馬を頼む", not asked, 420, 40, 15)
-		ba.focus_mode = Control.FOCUS_NONE
 		ba.disabled = asked
 		ba.pressed.connect(func():
 			var err = HSOwners.ask(oid)
 			if err: toast(String(err), "bad"); return
 			toast("%s「%s」" % [o.name, HSOwners.fill_(String(HSU.or_(o.scenes.get("ask"), [""])[0]), {})], "good")
 			UiFlow.save()
-			_preview(sel))
+			_after_press())
 		pv.add_child(ba)
 	# 勝負服を着せる
 	var mine := HSWorld.mine("stable") + HSWorld.mine("farm")
@@ -202,13 +200,12 @@ func _preview(i: int) -> void:
 		for h in mine.slice(0, 3):
 			var on: bool = wear.get(h.id) == oid
 			var bw := UiScreen.button("%s：%s" % [h.name, "%sさんの勝負服" % o.name if on else "自分の勝負服"], false, 0, 34, 14)
-			bw.focus_mode = Control.FOCUS_NONE
 			var hid: String = h.id
 			bw.pressed.connect(func():
 				var err = HSOwners.wear(hid, null if on else oid)
 				if err: toast(String(err), "bad"); return
 				UiFlow.save()
-				_preview(sel))
+				_after_press())
 			pv.add_child(bw)
 
 # まだ会っていないオーナーの右の見本：伏せた顔・ジャンル・出会いのヒント・出会いの点
@@ -262,3 +259,9 @@ func _ladder(name: String, job: String, reward: String, on: bool) -> PanelContai
 func focus_first() -> void:
 	if rows.size():
 		rows[clampi(sel, 0, rows.size() - 1)].grab_focus()
+
+# 見本のボタン（受け取る・店に頼む・勝負服）を押したあと：見本を組み直すと押した札が消えるので、カーソルを左の行へ戻す
+func _after_press() -> void:
+	_preview(sel)
+	if sel < rows.size():
+		rows[sel].grab_focus()

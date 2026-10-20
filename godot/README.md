@@ -69,6 +69,8 @@
 | `ui/theme.gd` | 共通の部品（深緑と金。見出しの帯・表の行・数値の札・枠の色・ボタン） |
 | `ui/ride_hud.gd` | 騎乗の計器（docs/FEEL.md 4：左上＝順位と残り・上＝ペース・右上＝時計・右＝馬群のレーダー・左下の塊＝丸い計器と手綱・STAMINA・FIGHT・WHIP）、英語の合図・着順・確定の表。JS 版 `js/ui/ride.js` の hud() と同じ形 |
 | `ui/style_arrows.gd` | 脚質の矢印（出走表） |
+| `ui/pad.gd`（`UiPad`） | 騎乗の外の画面のパッド：A＝決定・B＝もどる、十字キーの押しっぱなし、左スティックを向きに直す。画面の子に置く（docs/UI.md 4。確かめは `tests/test_focus.gd`） |
+| `ui/marks.gd`（`UiMarks`） | 出走表の印（スピード・スタミナ・サブパラ・実績の1〜4位に ◎○▲△。docs/UI.md「出走表の印」） |
 | `view/horse_lab.gd`・`scenes/horse_lab.tscn` | 馬の確かめ場（立ち姿・常歩・襲歩を並べて撮る） |
 | `assets/` | 素材（出典とライセンスは [CREDITS.md](CREDITS.md)） |
 

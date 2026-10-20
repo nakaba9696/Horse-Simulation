@@ -12,6 +12,7 @@ var _t0 := 0
 var _s := 0
 var _p0 := 0
 var _f0 := 0
+var _busy := false   # 何フレームか待つテスト（run_async。画面を組んで並べてから見る）を回している間
 
 func ok(c: bool, msg: String) -> void:
 	if c: passed += 1
@@ -36,6 +37,7 @@ func _done_file() -> void:
 	_running = ""
 
 func _tick() -> void:
+	if _busy: return
 	if _running != "":
 		failed += 1; print("  NG %s が途中で止まった（実行時の誤り）" % _running); _done_file()
 	_k += 1
@@ -47,5 +49,11 @@ func _tick() -> void:
 	var sc = load("res://tests/" + _running)
 	if sc == null or not sc.can_instantiate():
 		failed += 1; print("  NG %s を読めない" % _running); _done_file(); return
-	sc.new().run(self)
+	var inst = sc.new()
+	if inst.has_method("run_async"):
+		_busy = true
+		await inst.run_async(self)
+		_busy = false
+	else:
+		inst.run(self)
 	_done_file()

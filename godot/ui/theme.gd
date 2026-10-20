@@ -152,6 +152,10 @@ static func get_theme() -> Theme:
 	fo.border_color = GOLD
 	fo.set_border_width_all(2)
 	fo.border_width_bottom = 4
+	# 選んでいる札は金の光で囲む（パッドで遊ぶときの手がかり。docs/UI.md 4「選んでいる札は3つの手がかり」）
+	fo.shadow_color = Color(GOLD.r, GOLD.g, GOLD.b, 0.5)
+	fo.shadow_size = 10
+	fo.shadow_offset = Vector2(0, 0)
 	t.set_stylebox("normal", "Button", nb[0])
 	t.set_stylebox("hover", "Button", hv)
 	t.set_stylebox("focus", "Button", fo)
@@ -285,6 +289,8 @@ static func row_box(_i: int, selected := false, mine := false) -> StyleBoxFlat:
 		sb.border_width_bottom = 1
 		sb.border_width_left = 3
 		sb.border_color = GOLD
+		sb.shadow_color = Color(GOLD.r, GOLD.g, GOLD.b, 0.28)
+		sb.shadow_size = 6
 	elif mine:
 		sb.border_width_left = 3
 		sb.border_color = GOLD
@@ -324,6 +330,7 @@ static func tabs(items: Array, cur: int, pad := false, on_pick = null) -> PanelC
 		var b := Button.new()
 		b.text = String(items[i])
 		b.focus_mode = Control.FOCUS_NONE
+		b.set_meta("pad", "LB/RB")   # パッドは LB・RB で替える（tests/test_focus.gd）
 		b.custom_minimum_size = Vector2(120, 38)
 		b.add_theme_font_size_override("font_size", 15)
 		if i == cur:
