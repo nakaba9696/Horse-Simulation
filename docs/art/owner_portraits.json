@@ -1,0 +1,139 @@
+[
+ {
+  "id": "hs_hinata",
+  "group": "hs_owner",
+  "name": "牧園 ひなた（ターフの系譜）",
+  "file": "assets/portraits/hs_hinata.webp",
+  "identity": "1girl, adult, young woman, 26 years old, medium height, slim, fair skin, light tan, brown hair, soft chestnut brown hair, long hair, single braid over right shoulder, soft bangs, hazel eyes, gentle eyes, droopy eyes, thin eyebrows, small smudge of dirt on cheek, wheat ear hair ornament, white collared blouse, rolled-up sleeves, teal green pinafore apron dress, ranch worker",
+  "tags": "holding a wicker basket with both hands in front of her, warm and caring",
+  "face": "smile, closed mouth, kind eyes",
+  "variants": {
+   "joy": "smile, open mouth, happy",
+   "fun": "laughing, open mouth, closed eyes",
+   "sorrow": "sad, teary eyes, worried eyebrows, closed mouth"
+  },
+  "memo": "ターフの系譜のオーナー（地方・ダート）。北海道の牧場を回す五人きょうだいの長女。面倒見のいい姉。仕事着のまま競馬場へ来る"
+ },
+ {
+  "id": "hs_sengoku",
+  "group": "hs_owner",
+  "name": "千石 悠斗（ターフの系譜）",
+  "type": "classic",
+  "file": "assets/portraits/hs_sengoku.webp",
+  "identity": "1boy, male focus, adult, young man, 28 years old, lean, slim build, tan skin, black hair, jet black hair, short hair, messy spiky hair, swept bangs, amber eyes, sharp eyes, thin eyebrows, narrow face, sharp chin, white dress shirt, open collar, no necktie, rolled-up sleeves, brown vest, smartwatch, young company president",
+  "tags": "one hand in pocket, holding a smartphone, gold stopwatch on a chain clipped to vest",
+  "face": "smirk, confident",
+  "variants": {
+   "joy": "smile, closed mouth, pleased",
+   "fun": "grin, teeth, excited",
+   "sorrow": "frown, looking down, downturned mouth, annoyed"
+  },
+  "memo": "ターフの系譜のオーナー（短距離）。アプリで当てた若社長。せっかちで結論から話す。スマートフォンから目を上げない"
+ },
+ {
+  "id": "hs_yuni",
+  "group": "hs_owner",
+  "name": "ユニ（ターフの系譜）",
+  "file": "assets/portraits/hs_yuni.webp",
+  "identity": "1girl, adult, young woman, 21 years old, petite, fair skin, light brown hair, milk tea hair, short hair, bob cut, inward curled hair, straight bangs, green eyes, round eyes, thin eyebrows, white frilled maid headdress, dark navy maid dress, long sleeves, knee-length skirt, white apron, white collar, neat and tidy",
+  "tags": "holding a navy notebook against chest, holding a pen, good posture",
+  "face": "smile, closed mouth, polite",
+  "variants": {
+   "faint_smile": "gentle smile, soft eyes, closed mouth",
+   "fun": "excited, sparkling eyes, smile, open mouth",
+   "sorrow": "sad, worried eyebrows, notebook covering mouth"
+  },
+  "memo": "ターフの系譜のナビゲーター（メイド）兼クラシックのオーナー。丁寧でよく気がつく。ご主人様の一週間を手帳で先回りしている"
+ },
+ {
+  "id": "hs_marie",
+  "group": "hs_owner",
+  "name": "宝田 マリエ（ターフの系譜）",
+  "file": "assets/portraits/hs_marie.webp",
+  "identity": "1girl, adult, woman, 35 years old, tall, fair skin, black hair, jet black hair, hair bun, elegant updo, small feathered hat tilted, violet eyes, narrow eyes, confident eyes, long eyelashes, red lips, gold earrings, purple gem brooch, burgundy dress, high collar, gold buttons, long sleeves, jewelry shop owner",
+  "tags": "hand on hip, holding a closed folding fan",
+  "face": "confident smile, closed mouth",
+  "variants": {
+   "joy": "gentle smile, closed mouth, soft eyes",
+   "fun": "laughing, folding fan covering mouth, closed eyes",
+   "sorrow": "sad, downcast eyes, closed mouth"
+  },
+  "memo": "ターフの系譜のオーナー（牝馬）。銀座の宝石店の主人。華やかで世話好き。牝馬を「お嬢さん」と呼ぶ"
+ },
+ {
+  "id": "hs_genzaburo",
+  "group": "hs_owner",
+  "name": "竹之内 源三郎（ターフの系譜）",
+  "type": "elder",
+  "file": "assets/portraits/hs_genzaburo.webp",
+  "identity": "1boy, male focus, old man, 68 years old, tall, slender, grey hair, short grey hair, small topknot, squinting eyes, closed eyes, black eyes, thin eyebrows, grey stubble, nasolabial folds, wrinkles, dark navy kimono, black haori with white family crests",
+  "tags": "holding a closed folding fan in one hand, pocket watch chain at chest",
+  "face": "gentle smile, closed eyes, calm",
+  "variants": {
+   "faint_smile": "slight smile, closed eyes, closed mouth",
+   "fun": "laughing, closed eyes, open mouth",
+   "sorrow": "closed eyes, closed mouth, quiet sad smile"
+  },
+  "memo": "ターフの系譜のオーナー（長距離）。老舗の料亭のご隠居。紋付きの羽織で五十年競馬場へ通う。笑ったまま人を試す。崩した顔・涙は作らない"
+ },
+ {
+  "id": "hs_violaine",
+  "group": "hs_owner",
+  "name": "ヴィオレーヌ（ターフの系譜）",
+  "file": "assets/portraits/hs_violaine.webp",
+  "identity": "1girl, adult, young woman, 22 years old, tall, slender, pale skin, light blue hair, pale blue hair, medium hair, low ponytail, violet eyes, sharp eyes, long eyelashes, thin eyebrows, black long coat, fitted coat, high collar, white trim, white ribbon tie, silver family crest brooch, black gloves, french noblewoman",
+  "tags": "standing straight, hands clasped in front of her, formal",
+  "face": "serious, stiff expression, closed mouth",
+  "variants": {
+   "faint_smile": "faint relieved smile, soft eyes",
+   "fun": "gentle smile, closed eyes, happy",
+   "sorrow": "sad, downcast eyes, biting lip"
+  },
+  "memo": "ターフの系譜のオーナー（欧州）。フランスの古い馬主の家の当主。真面目すぎてレースを決闘と呼ぶ。剣は持たせない"
+ },
+ {
+  "id": "hs_lucy",
+  "group": "hs_owner",
+  "name": "ルーシー・ホイットフィールド（仮。ターフの系譜）",
+  "file": "assets/portraits/hs_lucy.webp",
+  "identity": "1girl, child, 12 years old, petite, small body, round face, fair skin, freckles across nose, blonde hair, honey blonde hair, long hair, twin braids, low twin braids over shoulders, short bangs, blue eyes, round eyes, thin eyebrows, oversized tan felt cowboy hat, cream shirt, long sleeves, cherry red quilted vest, denim skirt, horseshoe badge on vest",
+  "tags": "lifting the brim of her hat with one hand, energetic",
+  "face": "confident smile, closed mouth",
+  "variants": {
+   "joy": "smile, bright eyes, closed mouth",
+   "fun": "big grin, open mouth, teeth, happy",
+   "sorrow": "pout, puffed cheeks, looking down"
+  },
+  "memo": "ターフの系譜のオーナー（米国）。ケンタッキーの牧場の孫娘。子どもらしく元気に描く。性的な描き方はしない。名前は仮"
+ },
+ {
+  "id": "hs_farina",
+  "group": "hs_owner",
+  "name": "ファリナ（ターフの系譜）",
+  "file": "assets/portraits/hs_farina.webp",
+  "identity": "1girl, adult, woman, 28 years old, slim, pale skin, black hair, blue-black hair, long hair, low ponytail, straight bangs, grey eyes, narrow eyes, thin eyebrows, silver-rimmed glasses, dark navy dress, high collar, long sleeves, silver chain necklace",
+  "tags": "adjusting glasses with one hand, holding a red notebook",
+  "face": "expressionless, serious, closed mouth",
+  "variants": {
+   "faint_smile": "rare gentle smile, soft eyes",
+   "fun": "smile, closed eyes",
+   "sorrow": "sad, looking down, closed mouth, frown"
+  },
+  "memo": "ターフの系譜のオーナー（豪州）。シドニーの馬主。赤い表紙の帳面に全部の馬の数字を書く。めったに笑わない"
+ },
+ {
+  "id": "hs_ilona",
+  "group": "hs_owner",
+  "name": "イロナ（ターフの系譜）",
+  "file": "assets/portraits/hs_ilona.webp",
+  "identity": "1girl, adult, young woman, 25 years old, slender, pale skin, auburn hair, reddish chestnut hair, very long hair, wavy hair, hair down, green eyes, deep green eyes, soft eyes, long eyelashes, thin eyebrows, flower wreath on head, white pink and yellow flowers, black hooded travel cloak, open cloak, cream high-collar blouse, small red and green folk embroidery on collar, thin gold chain necklace",
+  "tags": "holding a black cat in her arms",
+  "face": "gentle smile, closed mouth, calm",
+  "variants": {
+   "faint_smile": "slight smile, half-closed eyes, soft eyes",
+   "fun": "gentle smile, closed eyes, happy",
+   "sorrow": "downcast eyes, faint sad smile"
+  },
+  "memo": "ターフの系譜の GF を開いている一族の人。静かで年の分からない人。大口・涙・慌ては作らない"
+ }
+]
