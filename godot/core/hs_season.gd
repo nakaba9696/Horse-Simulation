@@ -8,21 +8,30 @@ const BROKE_MONTHS := 2.0
 # 調子は無い（持ち主の決定 2026-10-20「調子のパラメータは無し。疲労だけにする」）。馬の状態は疲労（HSFatigue）の段階で見せる
 
 # ---------- 総合力（芝・ダートそれぞれ 1〜99） ----------
+# その馬場のスピードとスタミナだけから出す（js/core/season.js の T.fhOf と同じ式。持ち主の決定 2026-10-20「スピードスタミナから出す」）。
+# スタミナの重みは得意な距離（distMin と distMax の真ん中）で 0.25（1200m 以下）〜0.35（2000m）〜0.45（2800m 以上）。残りがスピード
 const FH_NAME := "総合力"
-const FH_KNOTS := [[72.0, 45.0], [93.6, 70.0], [104.3, 85.0]]
-static func fh(h: Dictionary, wIdx: Variant, surface: String) -> float: return fh_of(HSHorse.cur(h, wIdx), surface)
-static func fh_of(c0: Dictionary, surface: String) -> float:
-	var c := c0.duplicate(); c.merge(HSHorse.on_surface(c0, surface), true)
-	var w: Dictionary = { spd = 0.42, sta = 0.20, guts = 0.15, mind = 0.11, slope = 0.12 } if surface == "ダ" else { spd = 0.45, sta = 0.22, guts = 0.16, mind = 0.12, slope = 0.05 }
-	var a := 0.0
-	for k in w: a += float(HSU.or_(c.get(k), 0.0)) * w[k]
+const FH_KNOTS := [[76.0, 53.0], [94.0, 70.0], [106.7, 85.0], [118.0, 99.0]]
+# スタミナの重み（d は馬か distMin・distMax を持つ辞書か距離の数。null なら 2000m とみる）
+static func fh_sta_w(d: Variant) -> float:
+	var m := 2000.0
+	if d is Dictionary: m = (float(HSU.or_(d.get("distMin"), 1600.0)) + float(HSU.or_(d.get("distMax"), 2400.0))) / 2.0
+	elif d != null: m = float(d)
+	return HSU.clamp(0.35 + (m - 2000.0) / 8000.0, 0.25, 0.45)
+static func fh_raw(c0: Dictionary, surface: String, d: Variant = null) -> float:
+	var s := HSHorse.on_surface(c0, surface)
+	var w := fh_sta_w(d)
+	return float(HSU.or_(s.get("spd"), 0.0)) * (1.0 - w) + float(HSU.or_(s.get("sta"), 0.0)) * w
+static func fh(h: Dictionary, wIdx: Variant, surface: String) -> float: return fh_of(HSHorse.cur(h, wIdx), surface, h)
+static func fh_of(c0: Dictionary, surface: String, d: Variant = null) -> float:
+	var a := fh_raw(c0, surface, d)
 	var K := FH_KNOTS
 	var i := 0
 	while i < K.size() - 2 and a > K[i + 1][0]: i += 1
 	var x0: float = K[i][0]; var y0: float = K[i][1]; var x1: float = K[i + 1][0]; var y1: float = K[i + 1][1]
 	return HSU.clamp(HSMath.round_js(y0 + (a - x0) * (y1 - y0) / (x1 - x0)), 1.0, 99.0)
 static func fh_both(h: Dictionary, wIdx: Variant) -> Dictionary: return { turf = fh(h, wIdx, "芝"), dirt = fh(h, wIdx, "ダ") }
-static func fh_peak(h: Dictionary) -> Dictionary: return { turf = fh_of(h.pot, "芝"), dirt = fh_of(h.pot, "ダ") }
+static func fh_peak(h: Dictionary) -> Dictionary: return { turf = fh_of(h.pot, "芝", h), dirt = fh_of(h.pot, "ダ", h) }
 # 入厩している現役の馬の中での順位
 static func rank(h: Dictionary, wIdx: float) -> Dictionary:
 	var c := HSWorld.wc()

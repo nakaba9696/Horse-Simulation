@@ -33,8 +33,9 @@
   // ---------- 能力の段（docs/UI.md「能力の段」。持ち主の指摘 2026-10-17「ステータスの数値によって色つけてください　数字だけだとわかりにくいので」） ----------
   // 段：0 低い（暗い青）・1 ふつう（灰）・2 良い（緑）・3 とても良い（金）・4 飛び抜けている（紅。光る）。色は css/ui.css の .u-num.t0〜t4
   // 境目は「この値から上がその段」。Godot 版（godot/ui/theme.gd の TIER_*）と同じ値（tests/extra_ui.js が比べる）
+  // 総合力の段は持ち主の仕様書「総合力の目安」の帯に合わせる：〜50 OP 馬・51〜60 G3〜G2 馬・61〜65 G1 馬・66〜80 G1 を何度も勝った名馬・81〜 神話の名馬とオリジナルホース
   K.TIER_NAMES = ['低い', 'ふつう', '良い', 'とても良い', '飛び抜けている'];
-  K.TIER = { fh: [45, 55, 65, 75], stat: [60, 75, 85, 95], kire: [3, 5, 7, 8] };
+  K.TIER = { fh: [51, 61, 66, 81], stat: [60, 75, 85, 95], kire: [3, 5, 7, 8] };
   // kind：'fh'（総合力 1〜99）・'stat'（能力 20〜120）・'kire'（脚の切れ 1〜8）
   K.tier = (v, kind) => { const cut = K.TIER[kind] || K.TIER.stat; const r = Math.round(v); return cut.filter(c => r >= c).length; };
   // 能力の数値の札：段の色の地・字・縁。数は等幅。4つ目の引数に前の呼び方の lo（数）が来たら、40 台なら総合力の段
@@ -44,7 +45,7 @@
     return `<span class="u-num t${t} ${big ? 'big' : ''}" title="${e((title ? title + '・' : '') + K.TIER_NAMES[t])}">${v == null ? '－' : Math.round(v)}</span>`;
   };
   // 総合力（芝・ダート）の札：それぞれの段の色で
-  K.fh = (turf, dirt) => `<span class="u-fh"><span class="u-num t${K.tier(turf, 'fh')}" title="総合力（芝）・${K.TIER_NAMES[K.tier(turf, 'fh')]}"><small>芝</small>${turf}</span><span class="u-num t${K.tier(dirt, 'fh')}" title="総合力（ダート）・${K.TIER_NAMES[K.tier(dirt, 'fh')]}"><small>ダ</small>${dirt}</span></span>`;
+  K.fh = (turf, dirt) => `<span class="u-fh"><span class="u-num t${K.tier(turf, 'fh')}" title="総合力（芝のスピードとスタミナから）・${K.TIER_NAMES[K.tier(turf, 'fh')]}"><small>芝</small>${turf}</span><span class="u-num t${K.tier(dirt, 'fh')}" title="総合力（ダートのスピードとスタミナから）・${K.TIER_NAMES[K.tier(dirt, 'fh')]}"><small>ダ</small>${dirt}</span></span>`;
   // 値段：資金が足りなければ赤
   K.price = (v, money) => `<span class="u-price ${money != null && v > money ? 'over' : ''}"${money != null && v > money ? ' title="資金が足りない"' : ''}>${U.money(v)}</span>`;
   // 適性の印（◎○△×）

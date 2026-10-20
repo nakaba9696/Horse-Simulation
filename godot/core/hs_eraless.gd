@@ -79,11 +79,11 @@ static func shop_born() -> float: return HSWorld.G.year - shop_age(HSWorld.G.mon
 # 店で見える評価値は、その馬のいまの総合力（早熟は高く、晩成は低く見える）
 static func shop_fh(h: Dictionary, wIdx: float) -> Dictionary: return HSSeason.fh_both(h, wIdx)
 # 値段は、いまの評価点（いまの総合力。芝・ダの良いほう）だけで決める（js/core/eraless.js の E.priceOf と同じ式。持ち主の決定 2026-10-20）：
-#   値段 ＝ 2,000万円 × 2^((評価点 − 52) ÷ 6) × 物価 × 1.3 × 成長型の掛け（300万円から）。スペシャルホースはその1.6倍
+#   値段 ＝ 2,000万円 × 2^((評価点 − 55) ÷ 5) × 物価 × 1.3 × 成長型の掛け（300万円から）。スペシャルホースはその1.6倍
 #   成長型の掛け：評価点が同じなら晩成ほど少し高い（早熟 0.9・早め 0.95・普通 1・遅め 1.07・晩成 1.15）
 const PRICE_BASE := 2000.0
-const PRICE_DOUBLE := 6.0
-const PRICE_FH := 52.0
+const PRICE_DOUBLE := 5.0
+const PRICE_FH := 55.0
 const GROWTH_PRICE := { "早熟": 0.9, "早め": 0.95, "普通": 1.0, "遅め": 1.07, "晩成": 1.15 }
 static func growth_price(h: Dictionary) -> float: return float(GROWTH_PRICE.get(String(HSU.or_(h.get("growth"), "")), 1.0))
 static func shop_value(h: Dictionary, wIdx: float) -> float:
@@ -101,7 +101,7 @@ static var _raceCountries: Variant = null
 static func _country_of_race(r: Dictionary) -> String:
 	return HSU.or_(HSData.d().courses.get(r.course, {}).get("country"), HSU.or_(r.get("country"), "海外"))
 static var _lockCache := {}
-const GF_FH := 70.0
+const GF_FH := 71.0
 const GF_RATING := 98.0
 static func elite_cat(d: Dictionary) -> Variant:
 	var pk := HSSeason.fh_peak(HSHorse.from_historic(d, "lock:" + d.name))

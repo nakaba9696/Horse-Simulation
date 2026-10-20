@@ -638,14 +638,43 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・疲労の
   assert(!T.condLevel && !('cond' in x), '調子が残っている');
   const fh = T.fhBoth(x, W.wIdx());
   assert(fh.turf >= 1 && fh.turf <= 99 && fh.dirt >= 1 && fh.dirt <= 99, JSON.stringify(fh));
-  // 総合力：史実馬は伸びきったとき45〜85に入る（ごく弱い馬を除く）。エアグルーヴ70・キンチェム85。能力の上限がそろうと99
-  const pks = HS.Eraless.pool().map(d => { const p = T.fhPeak(H.fromHistoric(d, 'x')); return Math.max(p.turf, p.dirt); }).sort((a, b) => a - b);
+  // 総合力：その馬場のスピードとスタミナだけから出す（持ち主の決定 2026-10-20）。目盛りは仕様書の「総合力の目安」。
+  // 史実馬は伸びきったとき45〜85に入る（重賞も平場も勝っていないハルウララ（評価30）だけは除く）。エアグルーヴ70・セクレタリアト80前後・キンチェム85。能力の上限がそろうと99
+  const fhPk = d => { const p = T.fhPeak(H.fromHistoric(d, 'x')); return Math.max(p.turf, p.dirt); };
+  const hist = HS.DATA.historic.concat(HS.Special.pool()).filter(d => (d.rating || 0) >= 40);
+  const outR = hist.filter(d => { const v = fhPk(d); return v < 45 || v > 85; });
+  assert(!outR.length, `史実馬の総合力が45〜85の外：${outR.slice(0, 5).map(d => d.name + fhPk(d)).join('・')}`);
+  const pks = HS.Eraless.pool().map(fhPk).sort((a, b) => a - b);
   const q = f => pks[Math.floor(f * (pks.length - 1))];
-  assert(q(0.02) >= 44 && q(0.5) >= 55 && q(0.5) <= 65 && pks[pks.length - 1] >= 77 && pks[pks.length - 1] <= 81, `史実馬の総合力 ${q(0.02)}〜${q(0.5)}〜${pks[pks.length - 1]}`);
-  const fhN = n => { const p = T.fhPeak(H.fromHistoric(HS.Special.data(n) || W.histByName.get(n), 'x')); return Math.max(p.turf, p.dirt); };
-  for (const [n, lo, hi] of [['キンチェム', 84, 86], ['エアグルーヴ', 69, 71]]) assert(fhN(n) >= lo && fhN(n) <= hi, `${n}の総合力 ${fhN(n)}`);
+  assert(q(0.02) >= 46 && q(0.5) >= 58 && q(0.5) <= 66 && pks[pks.length - 1] >= 78 && pks[pks.length - 1] <= 81, `史実馬の総合力 ${q(0.02)}〜${q(0.5)}〜${pks[pks.length - 1]}`);
+  // 勝ち鞍の格ごとのまん中が仕様書の帯に入る（G3 馬 51〜55・G2 馬 56〜60・G1 馬 61〜65・G1 を2つ以上 66〜80）
+  const clsOf = d => { const ws = H.winRaces(d), g1 = ws.filter(r => r.grade === 'G1').length; return g1 >= 2 ? 'G1x2' : g1 ? 'G1' : ws.some(r => r.grade === 'G2') ? 'G2' : ws.some(r => r.grade === 'G3') ? 'G3' : null; };
+  const byC = {}; for (const d of HS.Eraless.pool()) { const c = clsOf(d); if (c) (byC[c] = byC[c] || []).push(fhPk(d)); }
+  const med = xs => xs.slice().sort((a, b) => a - b)[Math.floor((xs.length - 1) / 2)];
+  for (const [c, lo, hi] of [['G3', 51, 55], ['G2', 56, 60], ['G1', 61, 65], ['G1x2', 66, 80]]) assert(byC[c] && med(byC[c]) >= lo && med(byC[c]) <= hi, `${c}の馬の総合力のまん中 ${byC[c] && med(byC[c])}`);
+  const fhN = n => fhPk(HS.Special.data(n) || W.histByName.get(n) || HS.DATA.historic.find(d => d.name === n));
+  for (const [n, lo, hi] of [['キンチェム', 84, 86], ['エアグルーヴ', 69, 71], ['セクレタリアト', 77, 81]]) assert(fhN(n) >= lo && fhN(n) <= hi, `${n}の総合力 ${fhN(n)}`);
   const top = {}; for (const k of H.STATS) top[k] = 118;
   assert(T.fhOf(top, '芝') === 99 && T.fhOf(top, 'ダ') === 99, '能力の上限で99にならない');
+  // スピードとスタミナのほか（根性・気性・坂・健康・切れ・特殊能力）では変わらない。スピードやスタミナを上げると上がる
+  {
+    const base = H.fromHistoric(W.histByName.get('エアグルーヴ') || HS.DATA.historic.find(d => d.name === 'エアグルーヴ'), 'fhx');
+    const f0 = T.fhPeak(base);
+    const weak = Object.assign({}, base, { pot: Object.assign({}, base.pot, { guts: 20, mind: 20, slope: 20 }), health: 1, kire: 1, skills: ['kakari', 'deokure'] });
+    const f1 = T.fhPeak(weak);
+    assert(f1.turf === f0.turf && f1.dirt === f0.dirt, `根性・気性・坂・健康・切れ・特殊能力で総合力が変わる（${JSON.stringify(f0)} → ${JSON.stringify(f1)}）`);
+    for (const [k, sf] of [['spd', 'turf'], ['sta', 'turf'], ['dspd', 'dirt'], ['dsta', 'dirt']]) {
+      const up = Object.assign({}, base, { pot: Object.assign({}, base.pot, { [k]: base.pot[k] + 6 }) });
+      assert(T.fhPeak(up)[sf] > f0[sf], `${k}を上げても総合力（${sf}）が上がらない`);
+    }
+    // いまの値（成長の途中）でも同じ：健康や気性を下げても変わらない
+    const wi = W.wIdx(), n0 = T.fhBoth(base, wi);
+    const n1 = T.fhBoth(Object.assign({}, weak, { born: base.born }), wi);
+    assert(n0.turf === n1.turf && n0.dirt === n1.dirt, 'いまの総合力が健康・気性で変わる');
+    // スタミナの重みは得意な距離で変わる（短距離 0.25・2000m 0.35・長距離 0.45）
+    const near = (x, y) => Math.abs(x - y) < 1e-9;
+    assert(near(T.fhStaW({ distMin: 1000, distMax: 1400 }), 0.25) && near(T.fhStaW(null), 0.35) && near(T.fhStaW({ distMin: 2400, distMax: 3200 }), 0.45) && near(T.fhStaW({ distMin: 3000, distMax: 4000 }), 0.45), 'スタミナの重み');
+  }
   // 出走の予約：1年先までの重賞を押さえると、その週に出走登録になる
   G.gameOver = null; G.broke = 0; G.player.money = 1e9;
   const y = W.all().find(m => m.owner !== 'P' && m.loc === 'stable' && G.year - m.born === 4 && !m.injury);
