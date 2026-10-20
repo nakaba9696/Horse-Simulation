@@ -20,6 +20,7 @@ func _run(t) -> void:
 	HSWorld.load_save(save)
 	t.eq(HSData.digest_save(HSJson.parse(HSWorld.serialize())), g.late.start, "world: JS のセーブを読んだ状態")
 	_play(t, "late", g.late.weeks)
+	_no_fillers(t)
 	# 前の年の GF の勝ち馬：12月1週の招待・GF に伝説級の名馬
 	HSWorld.load_save(FileAccess.get_file_as_string("res://tests/golden/world_gf.json"))
 	t.eq(HSData.digest_save(HSJson.parse(HSWorld.serialize())), g.gf.start, "world: GF の場面のセーブを読んだ状態")
@@ -137,3 +138,22 @@ func _play(t, name: String, weeks: Array) -> void:
 				t.eq(a, b, "world %s %s: %s" % [name, want.date, k]); break
 		if ok: t.ok(true, "")
 		else: return
+
+# 架空の馬なし（持ち主の決定 2026-10-20「架空馬は無し」）：今週の出走表に架空の馬がいない・頭数は最低の頭数（8頭）以上・
+# 1頭が同じ週に2つのレースに出ない（GF は除く）・AI の馬は疲労がたまらない
+func _no_fillers(t) -> void:
+	var cs := HSWorld.cards()
+	var seen := {}
+	var bad: Array = []
+	for c in cs:
+		var gf: bool = c.race.get("grade") == "GF"
+		if c.runners.size() < 8: bad.append("%s %d頭" % [c.race.name, c.runners.size()])
+		for x in c.runners:
+			if x.horse.get("filler"): bad.append("架空の馬 " + x.horse.name)
+			if gf: continue
+			if seen.has(x.horse.id): bad.append("2つのレース " + x.horse.name)
+			seen[x.horse.id] = true
+	var tired := 0
+	for h in HSWorld.all():
+		if h.get("owner") != "P" and float(HSU.or_(h.get("fatigue"), 0.0)) > 0.0: tired += 1
+	t.ok(cs.size() > 0 and bad.is_empty() and tired == 0, "world: 架空の馬なし・頭数・同じ週に1レース・AI の疲労なし（%s／疲れた AI の馬 %d）" % [", ".join(bad.slice(0, 5)), tired])

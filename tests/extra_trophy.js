@@ -449,6 +449,7 @@ module.exports = function (check, assert, HS) {
     // 組Aのいちばん良い牡 × 組Bのいちばん良い牝、組Bの牡 × 組Aの牝（きょうだい同士はインブリードの決まりで作れない。js/core/inbreed.js）
     const lines = (nt, kids, gens, seed) => {
       const G = newGame(seed); G.player.money = 1e12;
+      G.nextId = Math.max(G.nextId, 100000); // 仔の乱数は馬の id から決まるので、世界の馬の数（毎年のデビューの数）で見積もりが揺れないように id をそろえる
       // 店の候補はオーナーのミッションの馬（デビューと店に出ない32頭）を抜く前の全部から（ミッションの馬を決め直しても、この見積もりが変わらないように）
       const pool = (D.historic || []).filter(HS.Eraless.isPool).map(d => H.fromHistoric(d, 'p:' + d.name));
       const ranked = sex => pool.filter(h => sex === '牝' ? h.sex === '牝' : h.sex === '牡').sort((a, b) => fh(b) - fh(a));
@@ -491,7 +492,7 @@ module.exports = function (check, assert, HS) {
       assert(none.every(r => r[0] < 90 && r[1] < 90) && avg(none.map(r => r[2])) < 90 && flat(none).every(x => x < 95), `トロフィー無しで90台（${none.map(r => r.join('→')).join('／')}）`);
       assert(avg(many.map(r => r[0])) < 90, `1世代目で90台（${many.map(r => r.join('→')).join('／')}）`);
       assert(flat(many).every(x => x < 99), `3世代で99（${many.map(r => r.join('→')).join('／')}）`);
-      assert(avg(many.map(r => r[2])) > avg(none.map(r => r[2])) + 5, 'トロフィーを集めても仔が良くならない');
+      assert(avg(many.map(r => r[2])) > avg(none.map(r => r[2])) + 5, `トロフィーを集めても仔が良くならない（無し ${none.map(r => r.join('→')).join('／')}・8個ずつ ${many.map(r => r.join('→')).join('／')}）`);
       return `いちばん良い仔の総合力（3世代）：トロフィー無し ${none.map(r => r.join('→')).join('／')}・両親が8個ずつ ${many.map(r => r.join('→')).join('／')}`;
     } finally { S.canBuy = canBuy; O.FOALS = foals; }
   });

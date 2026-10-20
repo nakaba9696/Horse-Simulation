@@ -4,7 +4,7 @@ class_name HSEraless
 
 const ERA := 2025.0
 const START := 2025.0
-const CROP := 110
+const CROP := 300   # 毎年デビューする史実馬の数（eraless.js と同じ。架空の馬をやめたので 110 から増やした）
 const AGES := [2.0, 3.0, 4.0, 5.0, 6.0]
 
 static func _last_year(d: Dictionary) -> float: return float(HSU.or_(d.get("retire"), d.born + 5.0))

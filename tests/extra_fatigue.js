@@ -10,7 +10,7 @@ module.exports = function (check, assert, HS) {
   // 着順の並び（lengths＝前の馬との差・endE＝残りのスタミナ）
   const duel = [{ lengths: 0, endE: 0 }, { lengths: 0.05, endE: -0.02 }, { lengths: 2, endE: -0.1 }];
   const easy = [{ lengths: 0, endE: 0.25 }, { lengths: 6, endE: 0.02 }, { lengths: 1, endE: -0.05 }];
-  const field = (rng, lvMe, lvOpp, n) => { const me = H.makeFiller(rng, { level: lvMe, surface: '芝', dist: 2400, born: 2021 }); me.name = 'me'; me.health = 75; me.distMin = 2000; me.distMax = 2800; me.fatigue = 0; const opp = []; for (let i = 0; i < n; i++) { const h = H.makeFiller(rng, { level: lvOpp, surface: '芝', dist: 2400, born: 2021 }); h.name = 'o' + i; opp.push(h); } return { me, opp }; };
+  const field = (rng, lvMe, lvOpp, n) => { const me = H.makeFiller(rng, { level: lvMe, surface: '芝', dist: 2400, born: 2021 }); me.name = 'me'; me.owner = 'P'; /* 疲労がたまるのは自分の馬だけ（AI の馬は疲労なし。持ち主の補足 2026-10-20） */ me.health = 75; me.distMin = 2000; me.distMax = 2800; me.fatigue = 0; const opp = []; for (let i = 0; i < n; i++) { const h = H.makeFiller(rng, { level: lvOpp, surface: '芝', dist: 2400, born: 2021 }); h.name = 'o' + i; opp.push(h); } return { me, opp }; };
   const runners = (me, opp) => [me, ...opp].map((h, i) => ({ horse: h, jockey: { skill: 75 }, weight: 57, num: i + 1, frame: 1 }));
 
   check('fatigue: 故障が起きない（調教・レース・牧場のどこでも）。故障の仕組みが無い', () => {

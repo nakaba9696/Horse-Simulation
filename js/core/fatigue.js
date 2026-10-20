@@ -101,7 +101,8 @@
   F.gain = (race, results, k) => (F.GAIN.base + race.dist / 100 * F.GAIN.per100) * F.gradeMult(race) * F.severity(results, k);
   // レースのあと（グランドフェスティバルは呼ばない）：移動の疲れとレースの疲れを足し、いる国を移す
   F.afterRace = function (h, race, results, k, travel) {
-    h.fatigue = Math.min(100, (h.fatigue || 0) + (travel || 0) + F.gain(race, results, k));
+    // AI の馬（自分の馬でない馬）は疲労がたまらない（持ち主の補足 2026-10-20「CPUの馬に疲労はない」）。いる国は移す
+    if (h.owner === 'P') h.fatigue = Math.min(100, (h.fatigue || 0) + (travel || 0) + F.gain(race, results, k));
     const c = F.countryOf(race);
     if (c === F.home(h)) delete h.at; else h.at = c;
   };

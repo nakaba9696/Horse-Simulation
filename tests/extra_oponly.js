@@ -104,12 +104,12 @@ module.exports = function (check, assert, HS) {
     assert(row && row.why && row.why.startsWith(R.G1_WHY) && !row.can, '番組表に「賞金が足りない」が出ない');
     h.earn = R.g1Need(fut, fut.year);
     assert(T.reserve(h.id, fut) === null, '賞金が足りるのに G1 を予約できない');
-    // 自動で遊んだ G1 の出走表：出た馬（その場限りの馬・スペシャルホース・外国調教馬を除く）はみな賞金か優先出走権を持っている
+    // 自動で遊んだ G1 の出走表：出た馬（頭数を埋めるときに最後の手で賞金を問わずに入れた馬（x.fill）・スペシャルホース・外国調教馬を除く）はみな賞金か優先出走権を持っている
     let g1s = 0, runners = 0;
     for (let i = 0; i < 30; i++) {
       for (const c of W.cards()) if (c.race.grade === 'G1' && c.race.region === 'JRA') {
         g1s++;
-        for (const x of c.runners) { if (x.horse.filler || x.legend || x.horse.legend || x.horse.foreignTrained) continue; runners++; assert(R.g1Why(x.horse, c.race, G.year) === null, `${c.race.name}に賞金の足りない ${x.horse.name}（${x.horse.earn || 0}）`); }
+        for (const x of c.runners) { if (x.horse.filler || x.fill || x.legend || x.horse.legend || x.horse.foreignTrained) continue; runners++; assert(R.g1Why(x.horse, c.race, G.year) === null, `${c.race.name}に賞金の足りない ${x.horse.name}（${x.horse.earn || 0}）`); }
       }
       W.finishWeek({});
     }

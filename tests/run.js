@@ -930,6 +930,49 @@ check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデ�
   return `史実馬 ${hist.length}頭・店 ${shop.length}頭・2年目の2歳 ${crop}頭`;
 });
 
+// 持ち主の決定 2026-10-20「架空馬はなえるので無し」：出走馬は史実馬（と自分の馬・オリジナルホース・スペシャルホース）だけ。
+// 何週か遊んで、架空の馬が0頭・頭数が最低の頭数（8頭。docs/BALANCE.md「18」）以上・1頭が同じ週に2レースに出ない・走っている史実馬の名前の重複が無い・AI の馬は疲労がたまらない
+check('eraless: 架空の馬なし（出走表は史実馬で埋める・頭数は8頭以上・重複なし・AI の疲労なし）、前のセーブも動く', () => {
+  const E = HS.Eraless;
+  W.newGame({ seed: 41, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  const G = W.get();
+  const weeks = QUICK ? 16 : 60;
+  let races = 0, runners = 0, small = [], fake = 0, twice = 0;
+  const mk0 = H.makeFiller; let made = 0; H.makeFiller = function () { made++; return mk0.apply(this, arguments); };
+  try {
+    for (let i = 0; i < weeks; i++) {
+      const cs = W.cards();
+      const ids = new Set();
+      for (const c of cs) {
+        races++; runners += c.runners.length;
+        if (c.runners.length < 8) small.push(`${c.race.name} ${c.runners.length}頭`);
+        for (const x of c.runners) {
+          if (x.horse.filler || !(x.horse.hist || x.horse.owner === 'P' || x.horse.legend || x.horse.original)) fake++;
+          if (c.race.grade === 'GF') continue; // GF は別枠（同じ馬が続けて出られる）
+          if (ids.has(x.horse.id)) twice++; ids.add(x.horse.id);
+        }
+      }
+      const names = W.all().filter(h => h.loc === 'stable' || h.loc === 'farm').map(h => h.name);
+      assert(new Set(names).size === names.length, `走っている馬の名前が重なる（${i}週目）`);
+      W.finishWeek({});
+    }
+  } finally { H.makeFiller = mk0; }
+  assert(!made && !fake, `架空の馬が出た（作った ${made}・出走 ${fake}）`);
+  assert(!small.length, `頭数が8頭より少ないレース：${small.slice(0, 5).join('・')}`);
+  assert(!twice, `同じ週に2つのレースに出た馬 ${twice}`);
+  const tired = W.all().filter(h => h.owner !== 'P' && h.fatigue > 0).length;
+  assert(!tired, `AI の馬に疲労がたまっている（${tired}頭）`);
+  // 前のセーブ：前に名を残した頭数合わせの馬（promoted。架空の名前）は消さず、引退まで走る
+  const src = W.all().find(h => h.hist && h.owner !== 'P' && h.loc === 'stable' && G.year - h.born === 3);
+  const old = JSON.parse(JSON.stringify(src));
+  Object.assign(old, { id: 'h-old-filler', name: 'テストノマエノウマ', hist: false, promoted: true, retireYear: G.year + 1 });
+  const sv = JSON.parse(W.serialize()); sv.horses[old.id] = old;
+  W.load(JSON.stringify(sv));
+  for (let i = 0; i < 6; i++) W.finishWeek({});
+  assert(W.horse('h-old-filler') && W.horse('h-old-filler').name === 'テストノマエノウマ', '前のセーブの名を残した馬が消えた');
+  return `${weeks}週・${races}レース・平均${(runners / races).toFixed(1)}頭・毎年のデビュー ${E.CROP}頭`;
+});
+
 // 持ち主の決定 2026-10-20「登場する馬」：デビューする馬（と馬の店の馬）は、重賞を勝っていないハルウララを除いて全員、重賞の勝ち鞍がある。
 // 勝ち鞍の無い馬を足すときは、出典で勝ち鞍を確かめて書くか、血統表の母などとしてだけ持つなら noDebut:true を付ける
 check('eraless: デビューする馬はハルウララを除いて全員、重賞の勝ち鞍がある（オリエンタルアートは母としてだけ持つ）', () => {
