@@ -884,6 +884,7 @@
       }
       // スタミナ：8つの斜めの升。減るほど緑→金→赤、残り2つで点滅、空なら赤い枠だけ
       let staPrev = 8, staLost = null;
+      const mudWet = !!race.ground && race.ground !== '良', mudE = HS.Sim.groundFx ? HS.Sim.groundFx(me.h, race).e : 1; // 道悪か・馬場の状態でのスタミナの減りの倍率
       function stamina(x, y, now) {
         tag('STAMINA', x, y + 8);
         const nB = me.E <= 0 ? 0 : Math.ceil(U.clamp(me.E, 0, 1) * 8);
@@ -891,10 +892,27 @@
         staPrev = nB;
         const col = nB <= 2 ? HUD.bad : nB <= 4 ? HUD.warn : HUD.good;
         const blink = nB <= 2 && !me.done ? 0.55 + 0.45 * Math.sin(now / 110) : 1;
+        // いちばん先の升は、残りの割合だけ満たす（減っていく速さが見える）
+        const frac = nB > 0 ? U.clamp(me.E * 8 - (nB - 1), 0.08, 1) : 0;
         for (let i = 0; i < 8; i++) {
           const cx = x + i * 27, cy = y + 13;
-          if (i < nB) { ctx.globalAlpha = blink; cell(cx, cy, 23, 17, col, 6); ctx.globalAlpha = 1; }
+          if (i < nB - 1) { ctx.globalAlpha = blink; cell(cx, cy, 23, 17, col, 6); ctx.globalAlpha = 1; }
+          else if (i === nB - 1) { cell(cx, cy, 23, 17, HUD.off); ctx.globalAlpha = blink; cell(cx, cy, 23 * frac, 17, col, 6); ctx.globalAlpha = 1; }
           else cell(cx, cy, 23, 17, HUD.off);
+        }
+        // 道悪（馬場が良でない）：升の下に泥がかかり、いちばん先の升から泥のしずくが垂れる。脚がなくなるのが速い馬ほどしずくが速い（文字は出さない）
+        if (mudWet && nB > 0 && !me.done) {
+          ctx.fillStyle = 'rgba(110,74,40,0.85)';
+          for (let i = 0; i < nB; i++) ctx.fillRect(x + i * 27 + 1, y + 13 + 11, i === nB - 1 ? 22 * frac : 22, 6);
+        }
+        if (mudWet && mudE > 1.005 && nB > 0 && !me.done) {
+          const lx = x + (nB - 1) * 27 + 23 * frac - 3, rate = 1.1 + (mudE - 1) * 9;
+          for (let d = 0; d < 3; d++) {
+            const u = ((now / 1000) * rate + d / 3) % 1;
+            ctx.globalAlpha = 0.95 * (1 - u * 0.7); ctx.fillStyle = '#8a5f34';
+            ctx.beginPath(); ctx.arc(lx - d * 5, y + 32 + u * 16, 3.2 - u * 1.4, 0, TAU); ctx.fill();
+          }
+          ctx.globalAlpha = 1;
         }
         // 1つ減った瞬間：その升が白く光って消える
         if (staLost && now - staLost.t < 380) {
