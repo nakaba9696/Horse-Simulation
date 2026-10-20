@@ -199,19 +199,64 @@ static func dist_label(mn: float, mx: float) -> String:
 
 const LEGEND_MUL := 1.035
 # 史実馬のデータから、能力の素質を作る（名前ごとに毎回同じ）
+# 史実馬の能力は、データ（実績の格から決めた強さ rating・馬場・距離・脚質・勝ち鞍・戦績）から決まった値で作る（JS の H.fromHistoric と同じ）。
+# 名前ごとの運で揺らさない（持ち主の決定 2026-10-20）。逸話で決める値はデータ（data/horse_fix.js・名馬の表）に手で書く
+static var _re_rec: RegEx = null
+static func record_of(d: Dictionary) -> Variant:
+	if _re_rec == null:
+		_re_rec = RegEx.new(); _re_rec.compile("(\\d+)戦(\\d+)勝")
+	var src = d.get("record")
+	if src == null or str(src) == "": src = d.get("note")
+	var m := _re_rec.search(str(src) if src != null else "")
+	if m == null: return null
+	return { starts = float(m.get_string(1)), wins = float(m.get_string(2)) }
+# 芝・ダートの向き（100＝得意）。その馬場での実績で決める（JS の H.surfaceApt）
+const SURF_APT := { "G1": 100.0, "G2": 95.0, "G3": 90.0 }
+const SURF_RACED := 90.0
+const SURF_NONE := 55.0
+const SURF_OFF_MAIN := 3.0
+static func surface_apt(d: Dictionary) -> Dictionary:
+	var ws := win_races(d)
+	var bt = null; var bd = null
+	for r in ws:
+		var v: float = SURF_APT.get(r.get("grade"), SURF_APT["G3"])
+		if r.get("surface") == "ダ":
+			if bd == null or v > bd: bd = v
+		else:
+			if bt == null or v > bt: bt = v
+	var turf: float; var dirt: float
+	if d.get("surface") == "芝ダ":
+		turf = bt if bt != null else SURF_RACED; dirt = bd if bd != null else SURF_RACED
+		var top := HSU.mx(turf, dirt); turf += 100.0 - top; dirt += 100.0 - top
+	elif d.get("surface") == "ダ":
+		dirt = 100.0; turf = bt - SURF_OFF_MAIN if bt != null else SURF_NONE
+	else:
+		turf = 100.0; dirt = bd - SURF_OFF_MAIN if bd != null else SURF_NONE
+	return { turf = turf, dirt = dirt }
+const STYLE_MIND := { "逃げ": -3.0, "先行": 2.0, "差し": 0.0, "追込": -2.0 }
 static func from_historic(d: Dictionary, id: Variant) -> Dictionary:
-	var rng := HSU.hash_rng("hist:" + d.name)
+	var rng := HSU.hash_rng("hist:" + d.name) # 毛色の無い馬の毛色だけに使う
 	var r: float = d.rating
-	var dirt: bool = d.get("surface") == "ダ"; var both: bool = d.get("surface") == "芝ダ"
+	var dirt: bool = d.get("surface") == "ダ"
 	var longH: bool = d.distMax >= 2400 if d.get("distMax") != null else false
 	var sprint: bool = d.distMax <= 1400 if d.get("distMax") != null else false
 	var st: String = d.style if STYLES.has(d.get("style")) else "先行"
+	var rec = record_of(d)
+	var ws := win_races(d)
+	var guts_adj := 0.0
+	if rec != null and rec.starts > 0:
+		var wr: float = rec.wins / rec.starts
+		guts_adj = HSU.clamp(HSMath.round_js((wr - 0.45) * 12.0), -3.0, 5.0) + (2.0 if rec.starts >= 5 and rec.wins == rec.starts else 0.0)
+	var steep := 0
+	for x in ws:
+		var g = _geo(x)
+		if g and g.get("slope") == "急": steep += 1
 	var pot := {}
-	pot.spd = r + rng.normal(0.0, 2.0) + (3.0 if sprint else 0.0) + (1.0 if st == "逃げ" else 0.0)
-	pot.sta = r + rng.normal(0.0, 2.0) + (3.0 if longH else 0.0) - (6.0 if sprint else 0.0)
-	pot.guts = r - 1.0 + rng.normal(0.0, 5.0)
-	pot.mind = r - 6.0 + rng.normal(0.0, 7.0)
-	pot.slope = r - 5.0 + rng.normal(0.0, 5.0) + (3.0 if dirt else 0.0)
+	pot.spd = r + (3.0 if sprint else 0.0) + (1.0 if st == "逃げ" else 0.0)
+	pot.sta = r + (3.0 if longH else 0.0) - (6.0 if sprint else 0.0)
+	pot.guts = r - 1.0 + guts_adj
+	pot.mind = r - 6.0 + STYLE_MIND[st]
+	pot.slope = r - 5.0 + (3.0 if dirt else 0.0) + (2.0 if steep >= 2 else 0.0)
 	for k in pot: pot[k] = HSU.clamp(pot[k], 30.0, 106.0)
 	if d.get("tier") == "legend":
 		for k in pot: pot[k] = HSU.clamp(pot[k] * LEGEND_MUL, 30.0, 112.0)
@@ -223,36 +268,43 @@ static func from_historic(d: Dictionary, id: Variant) -> Dictionary:
 	elif d.get("temper") != null:
 		pot.mind = (pot.mind + d.temper) / 2.0
 	var growth: String = d.growth if GROWTHS.has(d.get("growth")) else "普通"
-	var kire0: float = { "逃げ": 3.0, "先行": 4.0, "差し": 6.0, "追込": 6.0 }[st] + rng.int_(-1, 1) - (1.0 if dirt else 0.0) + (0.0 if sprint else (-1.0 if longH and st != "追込" else 0.0))
+	var kire0: float = { "逃げ": 3.0, "先行": 4.0, "差し": 6.0, "追込": 6.0 }[st] - (1.0 if dirt else 0.0) + (0.0 if sprint else (-1.0 if longH and st != "追込" else 0.0))
+	var skills: Array
+	if d.get("skills") is Array:
+		skills = []
+		for x in d.skills:
+			if SKILLS.has(x): skills.append(x)
+	else:
+		skills = hist_skills(d)
+	var sa := surface_apt(d)
+	var health: float
+	if d.get("health") != null: health = d.health
+	else:
+		health = 75.0
+		if rec != null:
+			if rec.starts >= 40: health += 8.0
+			elif rec.starts >= 25: health += 4.0
+			elif rec.starts <= 8: health -= 4.0
 	var h := {}
 	h.id = id; h.name = d.name; h.sex = "牡" if d.get("sex") == "セ" else d.get("sex"); h.gelding = d.get("sex") == "セ"; h.born = d.born
 	h.coat = d.coat if COATS.has(d.get("coat")) else pick_coat(rng)
 	h.sire = HSU.or_(d.get("sire"), null); h.dam = HSU.or_(d.get("dam"), null); h.damsire = HSU.or_(d.get("damsire"), null)
 	h.hist = true; h.owner = "AI"; h.loc = "farm"
 	h.pot = pot
-	var apt := {}
-	apt.turf = 45.0 if dirt else (85.0 if both else 100.0)
-	apt.dirt = 100.0 if dirt else (90.0 if both else 40.0 + rng.int_(0, 15))
-	apt.heavy = HSU.clamp(66.0 + rng.normal(0.0, 12.0), 20.0, 100.0)
-	h.apt = apt
+	h.apt = { turf = sa.turf, dirt = sa.dirt, heavy = 90.0 if skills.has("mud") else 66.0 }
 	h.distMin = HSU.or_(d.get("distMin"), 1600.0); h.distMax = HSU.or_(d.get("distMax"), 2400.0)
 	h.style = st; h.kire = HSU.clamp(d.kire if d.get("kire") != null else kire0, 1.0, 8.0)
 	h.growth = growth; h.peakShift = 0.0
-	h.health = d.health if d.get("health") != null else HSU.clamp(75.0 + rng.normal(0.0, 9.0), 30.0, 100.0)
-	if d.get("skills") is Array:
-		var sk: Array = []
-		for x in d.skills:
-			if SKILLS.has(x): sk.append(x)
-		h.skills = sk
-	else:
-		h.skills = hist_skills(d, rng)
+	h.health = health
+	h.skills = skills
 	h.bonus = {}; h.fatigue = 0.0
 	h.wins = 0.0; h.starts = 0.0; h.w2 = 0.0; h.w3 = 0.0; h.earn = 0.0; h.prize = 0.0; h.gradedWins = []; h.results = []
 	h.restUntil = 0.0; h.retireYear = HSU.or_(d.get("retire"), d.born + 5.0)
+	if d.get("trig") is Array: h.trigFixed = d.trig.duplicate()
 	for k in ["turf", "dirt", "heavy"]:
 		if d.get(k) != null: h.apt[k] = d[k]
 	if custom and custom.get("dspd") != null and custom.get("dsta") != null: sync_apt(h)
-	else: split_surface(h, rng)
+	else: split_surface(h)
 	if not (custom and custom.get("mind") != null) and (h.skills.has("kakari") or h.skills.has("deokure")): pot.mind = HSU.clamp(pot.mind - 14.0, 20.0, 120.0)
 	if not (d.get("skills") is Array): hist_skills2(d, h)
 	return h
@@ -277,7 +329,7 @@ static func _geo(r: Dictionary) -> Variant:
 	if not c: return null
 	return HSU.or_(c.get("dirt"), c.get("turf")) if r.surface == "ダ" else HSU.or_(c.get("turf"), c.get("dirt"))
 
-static func hist_skills(d: Dictionary, rng: HSRng) -> Array:
+static func hist_skills(d: Dictionary) -> Array:
 	var ws := win_races(d)
 	var C: Dictionary = HSData.d().get("courses", {})
 	var sk: Array = []
@@ -318,25 +370,14 @@ static func hist_skills(d: Dictionary, rng: HSRng) -> Array:
 		if sum_ >= 2 and float(sum_) / n >= 0.5: sk.append("summer")
 		elif win >= 2 and float(win) / n >= 0.5: sk.append("winter")
 	if not HSData.is_foreign(d) and cnt.call(func(r): return r.get("region") == "海外") >= 1: sk.append("travel")
-	if sk.size() < 2 and rng.chance(0.25):
-		var pool: Array
-		if d.get("style") == "逃げ": pool = ["hipace"]
-		elif d.get("style") == "先行": pool = ["fresh", "tataki"]
-		else: pool = ["longspurt", "slowpace", "hipace", "tataki", "fresh"]
-		var x = rng.pick(pool)
-		if not sk.has(x): sk.append(x)
-	if rng.chance(0.06): sk.append(rng.pick(["deokure", "kakari", "sora"]))
-	if (d.get("style") == "逃げ" or d.get("style") == "先行") and cnt.call(func(r): return r.surface == "ダ") >= 1 and rng.chance(0.2): sk.append("sunaB")
+	# 勝ち鞍から見えない癖は運で付けない（持ち主の決定 2026-10-20）
 	return sk
 
 # 架空の馬（モブ・生産馬）の素質を、総合の目安 mean から作る
-# あとから足した特性（2026-10-17）。前の見立ての運（hist:名前）の並びを変えないよう、別の運（hist2:名前）を使う
+# あとから足した特性（2026-10-17）。外枠○の運はやめた（持ち主の決定 2026-10-20）
 const MUD_HEAVY := 86.0
-const OUTER_P := 0.06
-static func hist_skills2(d: Dictionary, h: Dictionary) -> void:
-	var rng := HSU.hash_rng("hist2:" + d.name)
-	if float(HSU.or_(h.apt.get("heavy"), 0.0)) >= MUD_HEAVY: h.skills.append("mud") # 道悪○：道悪の適性がとくに高い馬
-	if rng.chance(OUTER_P): h.skills.append("outer") # 外枠○：勝ち鞍からは見えない癖なので、運で少しだけ
+static func hist_skills2(_d: Dictionary, h: Dictionary) -> void:
+	if float(HSU.or_(h.apt.get("heavy"), 0.0)) >= MUD_HEAVY and not h.skills.has("mud"): h.skills.append("mud") # 道悪○：道悪の適性がとくに高い馬（データの heavy）
 static func make_stats(rng: HSRng, mean: float, sd: float) -> Dictionary:
 	var pot := {}
 	for k in STATS: pot[k] = HSU.clamp(mean + rng.normal(0.0, sd), 20.0, 106.0)

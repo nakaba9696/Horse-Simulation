@@ -107,7 +107,8 @@ module.exports = function (check, assert, HS) {
     const pct = a => { const n = a.reduce((x, y) => x + y, 0); return a.map(x => Math.round(x / n * 1000) / 10); };
     const pf = pct(cnt.fh), ps = pct(cnt.stat);
     assert(pf[4] < 3 && pf[0] < 5 && pf[2] > 20 && pf[3] > 5, '総合力の段の割合が偏っている ' + pf.join('/'));
-    assert(ps[4] < 8 && ps[0] < 12 && ps.every(x => x > 1), '能力の段の割合が偏っている ' + ps.join('/'));
+    // 能力の運をやめてから（持ち主の決定 2026-10-20）、いちばん低い段（強さの元から大きく下の能力）はほとんどいない
+    assert(ps[4] < 8 && ps[0] < 12 && ps.slice(1).every(x => x > 1), '能力の段の割合が偏っている ' + ps.join('/'));
     return `総合力（良いほう）の段 ${pf.join('/')}%・能力の段 ${ps.join('/')}%`;
   });
 };

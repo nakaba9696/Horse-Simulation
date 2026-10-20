@@ -1,0 +1,404 @@
+[
+ {
+  "name": "ハクチカラ",
+  "adopt": null,
+  "target": 72,
+  "note": ""
+ },
+ {
+  "name": "ガンシンド",
+  "adopt": null,
+  "target": 69,
+  "note": ""
+ },
+ {
+  "name": "ドミノ",
+  "adopt": null,
+  "target": 73,
+  "note": ""
+ },
+ {
+  "name": "サンオーイ",
+  "adopt": false,
+  "target": null,
+  "note": "芝のG1勝ってないなら59くらいじゃない？"
+ },
+ {
+  "name": "タイムチャーター",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "マンノウォー",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "テューダーミンストレル",
+  "adopt": null,
+  "target": 77,
+  "note": ""
+ },
+ {
+  "name": "ドクターフェイガー",
+  "adopt": null,
+  "target": 77,
+  "note": ""
+ },
+ {
+  "name": "タロック",
+  "adopt": false,
+  "target": 72,
+  "note": ""
+ },
+ {
+  "name": "ファーラップ",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "アジャックス",
+  "adopt": null,
+  "target": 75,
+  "note": ""
+ },
+ {
+  "name": "ギャロレット",
+  "adopt": null,
+  "target": 70,
+  "note": ""
+ },
+ {
+  "name": "トウショウボーイ",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "サイテーション",
+  "adopt": null,
+  "target": 78,
+  "note": ""
+ },
+ {
+  "name": "ラウンドテーブル",
+  "adopt": null,
+  "target": 74,
+  "note": ""
+ },
+ {
+  "name": "パーソナルエンスン",
+  "adopt": null,
+  "target": 78,
+  "note": "健康は低めでいい"
+ },
+ {
+  "name": "リボー",
+  "adopt": null,
+  "target": 80,
+  "note": ""
+ },
+ {
+  "name": "ファラリス",
+  "adopt": null,
+  "target": 74,
+  "note": ""
+ },
+ {
+  "name": "オーモンド",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "エクリプス",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "ネアルコ",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "サイレントウィットネス",
+  "adopt": null,
+  "target": 74,
+  "note": ""
+ },
+ {
+  "name": "ニホンピロウイナー",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "ハイペリオン",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "ネレイーデ",
+  "adopt": null,
+  "target": 70,
+  "note": ""
+ },
+ {
+  "name": "ネイティヴダンサー",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "フィフィネラ",
+  "adopt": null,
+  "target": 69,
+  "note": ""
+ },
+ {
+  "name": "キンチェム",
+  "adopt": true,
+  "target": null,
+  "note": "タフネス系はほしい\nお利口なので折り合い上手系も"
+ },
+ {
+  "name": "ザテトラーク",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "ダマスカス",
+  "adopt": null,
+  "target": 77,
+  "note": ""
+ },
+ {
+  "name": "ロマンチックウォリアー",
+  "adopt": null,
+  "target": 77,
+  "note": ""
+ },
+ {
+  "name": "トムフール",
+  "adopt": null,
+  "target": 75,
+  "note": ""
+ },
+ {
+  "name": "トキノミノル",
+  "adopt": true,
+  "target": null,
+  "note": "77"
+ },
+ {
+  "name": "サルダナパル",
+  "adopt": null,
+  "target": 72,
+  "note": ""
+ },
+ {
+  "name": "エクスターミネーター",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "バックパサー",
+  "adopt": null,
+  "target": 78,
+  "note": ""
+ },
+ {
+  "name": "プリティーポリー",
+  "adopt": null,
+  "target": 80,
+  "note": ""
+ },
+ {
+  "name": "メイヂヒカリ",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "クリフジ",
+  "adopt": true,
+  "target": 77,
+  "note": ""
+ },
+ {
+  "name": "メルド",
+  "adopt": null,
+  "target": 74,
+  "note": ""
+ },
+ {
+  "name": "アイシングラス",
+  "adopt": null,
+  "target": 77,
+  "note": ""
+ },
+ {
+  "name": "ティーノソ",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "アバーナント",
+  "adopt": null,
+  "target": 78,
+  "note": ""
+ },
+ {
+  "name": "セントサイモン",
+  "adopt": true,
+  "target": null,
+  "note": "気性難なのでそれ系は欲しい"
+ },
+ {
+  "name": "サンチャリオット",
+  "adopt": null,
+  "target": 76,
+  "note": ""
+ },
+ {
+  "name": "スウヰイスー",
+  "adopt": null,
+  "target": 72,
+  "note": ""
+ },
+ {
+  "name": "ムトト",
+  "adopt": null,
+  "target": 75,
+  "note": ""
+ },
+ {
+  "name": "ウォーアドミラル",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "ザフライングダッチマン",
+  "adopt": null,
+  "target": 76,
+  "note": ""
+ },
+ {
+  "name": "シービスケット",
+  "adopt": null,
+  "target": 76,
+  "note": ""
+ },
+ {
+  "name": "カーバイン",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "ゴールドリヴァー",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "ソードダンサー",
+  "adopt": null,
+  "target": 74,
+  "note": ""
+ },
+ {
+  "name": "キタノオー",
+  "adopt": null,
+  "target": 71,
+  "note": ""
+ },
+ {
+  "name": "セントライト",
+  "adopt": true,
+  "target": 72,
+  "note": ""
+ },
+ {
+  "name": "バヤルド",
+  "adopt": null,
+  "target": 75,
+  "note": ""
+ },
+ {
+  "name": "コリン",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "メジロラモーヌ",
+  "adopt": null,
+  "target": 69,
+  "note": ""
+ },
+ {
+  "name": "マニカト",
+  "adopt": null,
+  "target": 77,
+  "note": ""
+ },
+ {
+  "name": "クリス",
+  "adopt": null,
+  "target": 68,
+  "note": ""
+ },
+ {
+  "name": "ボールドルーラー",
+  "adopt": null,
+  "target": 75,
+  "note": ""
+ },
+ {
+  "name": "ムムタズマハル",
+  "adopt": false,
+  "target": 70,
+  "note": ""
+ },
+ {
+  "name": "アレッジド",
+  "adopt": true,
+  "target": 79,
+  "note": "リボーを80に"
+ },
+ {
+  "name": "カウントフリート",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "バーラム",
+  "adopt": null,
+  "target": 78,
+  "note": "オーモンドには劣る？　レース内容見てないからわからない"
+ },
+ {
+  "name": "グラディアトゥール",
+  "adopt": true,
+  "target": null,
+  "note": ""
+ },
+ {
+  "name": "ダイヤモンドジュビリー",
+  "adopt": null,
+  "target": 77,
+  "note": ""
+ }
+]

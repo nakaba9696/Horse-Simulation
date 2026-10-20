@@ -58,7 +58,7 @@
     h.tier = 'legend'; h.gf = gf;
   }
   // 能力の見直しで持ち主が採った値（data/horse_fix.js。tools/special_audit_apply.js が書く）。遊びの値だけを上書きする
-  HS.FIX_KEYS = ['rating', 'pot', 'turf', 'dirt', 'style', 'distMin', 'distMax', 'skills', 'kire'];
+  HS.FIX_KEYS = ['rating', 'pot', 'turf', 'dirt', 'heavy', 'health', 'style', 'distMin', 'distMax', 'skills', 'trig', 'kire'];
   {
     const extra = new Map((D.legendsExtra || []).map(d => [d.name, d]));
     for (const [n, f] of Object.entries(D.horseFix || {})) {

@@ -199,19 +199,53 @@
   };
 
   H.LEGEND_MUL = 1.035;
-  // 史実馬のデータから、能力の素質を作る（名前ごとに毎回同じ）
+  // 史実馬の能力は、データ（実績の格から決めた強さ rating・馬場・距離・脚質・勝ち鞍・戦績）から決まった値で作る。
+  // 名前ごとの運で揺らさない（持ち主の決定 2026-10-20「運ってなに？　実績や逸話ベースで総合力やサブステ、スキルは決めて」）。
+  // 逸話で決める値（能力・特殊能力・健康など）は、データ（data/horse_fix.js・名馬の表）に手で書く
+  // 戦績（名鑑の record か note の「NN戦MM勝」）
+  H.recordOf = function (d) {
+    const m = /(\d+)戦(\d+)勝/.exec(String(d.record || d.note || ''));
+    return m ? { starts: +m[1], wins: +m[2] } : null;
+  };
+  // 芝・ダートの向き（100＝得意）。その馬場での実績で決める（持ち主の決定 2026-10-20「ダート勝ってたらダートの評価が上がって芝勝ってたら芝の評価があがるだけ
+  // 走ってない場合は片方の能力に引っ張られて少し上げて　-15くらい？」）：
+  //   データの馬場（surface）が走った馬場。芝ダは両方。勝ち鞍の格がいちばん上の馬場を 100 にし、もう片方はその馬場の勝ち鞍の格で
+  //   （G1 100・G2 95・G3 90。芝ダで記録が無ければ 90）。芝だけ・ダートだけの馬がもう片方で重賞を勝っていれば、その格から 3 引く。
+  //   走っていない馬場は 55（能力で −15）。データの turf・dirt があればそちらが正
+  H.SURF_APT = { G1: 100, G2: 95, G3: 90, raced: 90, none: 55, offMain: 3 };
+  H.surfaceApt = function (d) {
+    const ws = H.winRaces(d), A = H.SURF_APT;
+    const best = s => { let b = null; for (const r of ws) if ((r.surface === 'ダ') === (s === 'ダ')) { const v = A[r.grade] || A.G3; if (b == null || v > b) b = v; } return b; };
+    const bt = best('芝'), bd = best('ダ');
+    let turf, dirt;
+    if (d.surface === '芝ダ') {
+      turf = bt != null ? bt : A.raced; dirt = bd != null ? bd : A.raced;
+      const top = Math.max(turf, dirt); turf += 100 - top; dirt += 100 - top;
+    } else if (d.surface === 'ダ') { dirt = 100; turf = bt != null ? bt - A.offMain : A.none; }
+    else { turf = 100; dirt = bd != null ? bd - A.offMain : A.none; }
+    return { turf, dirt };
+  };
+  H.STYLE_MIND = { '逃げ': -3, '先行': 2, '差し': 0, '追込': -2 };
+  // 史実馬のデータから、能力の素質を作る（データだけで決まる）
   H.fromHistoric = function (d, id) {
-    const rng = U.hashRng('hist:' + d.name);
+    const rng = U.hashRng('hist:' + d.name); // 毛色の無い馬の毛色だけに使う（能力には使わない）
     const r = d.rating;
-    const dirt = d.surface === 'ダ', both = d.surface === '芝ダ';
+    const dirt = d.surface === 'ダ';
     const longH = d.distMax >= 2400, sprint = d.distMax <= 1400;
     const st = H.STYLES.includes(d.style) ? d.style : '先行';
+    const rec = H.recordOf(d);
+    const ws = H.winRaces(d), C = HS.DATA.courses || {};
+    // 根性：勝ち切った割合（戦績）から。無敗なら上乗せ
+    const wr = rec && rec.starts ? rec.wins / rec.starts : null;
+    const gutsAdj = wr == null ? 0 : U.clamp(Math.round((wr - 0.45) * 12), -3, 5) + (rec.starts >= 5 && rec.wins === rec.starts ? 2 : 0);
+    // 坂：急な坂のある競馬場（中山・阪神など）で重賞を2つ以上勝った馬
+    const steep = ws.filter(x => { const c = C[x.course]; const g = c && (x.surface === 'ダ' ? c.dirt || c.turf : c.turf || c.dirt); return g && g.slope === '急'; }).length;
     const pot = {
-      spd: r + rng.normal(0, 2) + (sprint ? 3 : 0) + (st === '逃げ' ? 1 : 0),
-      sta: r + rng.normal(0, 2) + (longH ? 3 : 0) - (sprint ? 6 : 0),
-      guts: r - 1 + rng.normal(0, 5),
-      mind: r - 6 + rng.normal(0, 7),
-      slope: r - 5 + rng.normal(0, 5) + (dirt ? 3 : 0),
+      spd: r + (sprint ? 3 : 0) + (st === '逃げ' ? 1 : 0),
+      sta: r + (longH ? 3 : 0) - (sprint ? 6 : 0),
+      guts: r - 1 + gutsAdj,
+      mind: r - 6 + H.STYLE_MIND[st],
+      slope: r - 5 + (dirt ? 3 : 0) + (steep >= 2 ? 2 : 0),
     };
     for (const k of Object.keys(pot)) pot[k] = U.clamp(pot[k], 30, 106);
     // 伝説級（data/legends.js の tier:'legend'。キンチェム・セントサイモンなど）は、史実馬のいちばん上よりもうひとつ強い
@@ -223,28 +257,34 @@
       for (const k of H.STATS) if (custom[k] != null) pot[k] = U.clamp(custom[k], 20, 120);
     } else if (d.temper != null) pot.mind = (pot.mind + d.temper) / 2;
     const growth = H.GROWTHS.includes(d.growth) ? d.growth : '普通';
-    const kire0 = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[st] + rng.int(-1, 1) - (dirt ? 1 : 0) + (sprint ? 0 : longH && st !== '追込' ? -1 : 0);
+    const kire0 = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[st] - (dirt ? 1 : 0) + (sprint ? 0 : longH && st !== '追込' ? -1 : 0);
+    const skills = Array.isArray(d.skills) ? d.skills.filter(x => H.SKILLS[x]) : H.histSkills(d);
+    const sa = H.surfaceApt(d);
+    // 健康：たくさん走った（戦績の数が多い）馬は丈夫
+    const health = d.health != null ? d.health : 75 + (rec ? (rec.starts >= 40 ? 8 : rec.starts >= 25 ? 4 : rec.starts <= 8 ? -4 : 0) : 0);
     const h = {
       id, name: d.name, sex: d.sex === 'セ' ? '牡' : d.sex, gelding: d.sex === 'セ', born: d.born,
       coat: H.COATS.includes(d.coat) ? d.coat : H.pickCoat(rng),
       sire: d.sire || null, dam: d.dam || null, damsire: d.damsire || null,
       hist: true, owner: 'AI', loc: 'farm',
       pot,
-      apt: { turf: dirt ? 45 : both ? 85 : 100, dirt: dirt ? 100 : both ? 90 : 40 + rng.int(0, 15), heavy: U.clamp(66 + rng.normal(0, 12), 20, 100) },
+      apt: { turf: sa.turf, dirt: sa.dirt, heavy: skills.includes('mud') ? 90 : 66 },
       distMin: d.distMin || 1600, distMax: d.distMax || 2400,
       style: st, kire: U.clamp(d.kire != null ? d.kire : kire0, 1, 8),
       growth, peakShift: 0,
-      health: d.health != null ? d.health : U.clamp(75 + rng.normal(0, 9), 30, 100),
-      skills: Array.isArray(d.skills) ? d.skills.filter(x => H.SKILLS[x]) : H.histSkills(d, rng),
+      health,
+      skills,
       bonus: {}, fatigue: 0,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [],
       restUntil: 0, retireYear: d.retire || (d.born + 5),
     };
+    // 発動する特殊能力を逸話で決めた名馬（data/horse_fix.js の trig）。固有の能力はそのまま先頭に付く（js/core/skills.js の K.of）
+    if (Array.isArray(d.trig)) h.trigFixed = d.trig.slice();
     // エディットで芝・ダート・道悪を決めた馬
     for (const k of ['turf', 'dirt', 'heavy']) if (d[k] != null) h.apt[k] = d[k];
     // 芝とダートの能力を分ける（個別に決めた能力に芝・ダートの両方があれば、そのまま使う）
     if (custom && custom.dspd != null && custom.dsta != null) H.syncApt(h);
-    else H.splitSurface(h, rng);
+    else H.splitSurface(h);
     // 出遅れ癖・掛かり癖のある馬は気性が荒い（気性を個別に決めた馬は除く）
     if (!(custom && custom.mind != null) && (h.skills.includes('kakari') || h.skills.includes('deokure'))) pot.mind = U.clamp(pot.mind - 14, 20, 120);
     if (!Array.isArray(d.skills)) H.histSkills2(d, h);
@@ -266,7 +306,7 @@
     }
     return out;
   };
-  H.histSkills = function (d, rng) {
+  H.histSkills = function (d) {
     const ws = H.winRaces(d);
     const C = HS.DATA.courses || {};
     const sk = [];
@@ -295,23 +335,14 @@
       else if (win >= 2 && win / n >= 0.5) sk.push('winter');
     }
     if (HS.DATA.isForeign && !HS.DATA.isForeign(d) && cnt(r => r.region === '海外') >= 1) sk.push('travel');
-    // 勝ち鞍から見えない癖は、名前ごとに決まった運で少しだけ
-    if (sk.length < 2 && rng.chance(0.25)) {
-      const pool = d.style === '逃げ' ? ['hipace'] : d.style === '先行' ? ['fresh', 'tataki'] : ['longspurt', 'slowpace', 'hipace', 'tataki', 'fresh'];
-      const x = rng.pick(pool); if (!sk.includes(x)) sk.push(x);
-    }
-    if (rng.chance(0.06)) sk.push(rng.pick(['deokure', 'kakari', 'sora']));
-    // ダートで前に行く馬は、砂をかぶるのを嫌って前に行っている見立て（運で）
-    if ((d.style === '逃げ' || d.style === '先行') && cnt(r => r.surface === 'ダ') >= 1 && rng.chance(0.2)) sk.push('sunaB');
+    // 勝ち鞍から見えない癖（出遅れ・掛かり・砂かぶりなど）は運で付けない。逸話のある馬だけ、名馬の表か data/horse_fix.js に手で書く（持ち主の決定 2026-10-20）
     return sk;
   };
 
-  // あとから足した特性（2026-10-17）。前の見立ての運（hist:名前）の並びを変えないよう、別の運（hist2:名前）を使う
-  H.MUD_HEAVY = 86; H.OUTER_P = 0.06;
+  // あとから足した特性（2026-10-17）。外枠○は運で付けていたが、運はやめた（持ち主の決定 2026-10-20）
+  H.MUD_HEAVY = 86;
   H.histSkills2 = function (d, h) {
-    const rng = U.hashRng('hist2:' + d.name);
-    if ((h.apt.heavy || 0) >= H.MUD_HEAVY) h.skills.push('mud'); // 道悪○：道悪の適性がとくに高い馬
-    if (rng.chance(H.OUTER_P)) h.skills.push('outer'); // 外枠○：勝ち鞍からは見えない癖なので、運で少しだけ
+    if ((h.apt.heavy || 0) >= H.MUD_HEAVY && !h.skills.includes('mud')) h.skills.push('mud'); // 道悪○：道悪の適性がとくに高い馬（データの heavy）
   };
 
   // 架空の馬（モブ・生産馬）の素質を、総合の目安 mean から作る
