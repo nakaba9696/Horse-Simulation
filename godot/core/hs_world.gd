@@ -785,12 +785,18 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 	var pr: float = HSU.or_(race.get("prize"), 500.0)
 	var share := [1.0, 0.4, 0.25, 0.15, 0.1]
 	HSRating.annotate(race, sim.results, wIdx)   # 1走ごとのレーティング（hs_rating.gd）
+	# 人気を先に付ける（お手馬のレースの記録に出走馬の人気を入れるため。JS と同じ）
+	for res in sim.results:
+		for rr in runners:
+			if is_same(rr.horse, res.horse):
+				res.odds = rr.get("odds"); res.pop = rr.get("pop"); res.mine = HSU.truthy(rr.get("mine")) or rr.get("rider") == "P"
+				break
+	var recOf = null
 	for res in sim.results:
 		var h: Dictionary = res.horse
 		var x = null
 		for rr in runners:
 			if is_same(rr.horse, h): x = rr; break
-		res.odds = x.get("odds"); res.pop = x.get("pop"); res.mine = HSU.truthy(x.get("mine")) or x.get("rider") == "P"
 		if h.get("legend"): continue
 		if h.get("filler"):
 			if race.get("graded") and (res.pos == 1 or (race.get("grade") == "G1" and res.pos <= 3)) and race.get("region") == "JRA": promote(h, race, res, wIdx)
@@ -817,6 +823,10 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 			h.rights[race.trialFor] = year
 		var rr := { y = year, m = race.month, w = race.week, race = HSU.or_(race.get("short"), race.name), grade = HSRaces.grade_badge(race), course = race.course, surface = race.surface, dist = race.dist, ground = race.get("ground"), pos = float(res.pos), n = float(sim.results.size()),
 			time = HSMath.round_js(res.time * 10.0) / 10.0, margin = res.margin, last3f = HSMath.round_js(res.last3f * 10.0) / 10.0 if HSU.truthy(res.last3f) else null, jockey = res.jockey.name if res.get("jockey") else null, pop = res.pop, rt = res.get("rt") }
+		# 自分の持ち馬は、出走馬・ラップ・勝ち時計の記録も残す（hs_racerec.gd。引退で消え、殿堂入りなら殿堂に残る）
+		if h.get("owner") == "P":
+			if recOf == null: recOf = HSRaceRec.make(race, sim)
+			rr.rec = recOf
 		h.results.append(rr)
 		var keep := 80 if h.get("owner") == "P" else 12
 		while h.results.size() > keep: h.results.pop_front()

@@ -25,7 +25,7 @@ var b_buy: Button
 var stat_own: PanelContainer
 
 func hint() -> String:
-	return "芝・ダはいまの総合力（晩成はまだ低く、値段も安い）。行を選ぶと詳しく"
+	return "芝・ダはいまの総合力。値段はこの値で決まる（同じなら晩成ほど少し高い）。行を選ぶと詳しく"
 
 func keys() -> Array:
 	return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "詳しく"], ["Q/E", "LB/RB", "牡馬・牝馬"], ["R", "Y", "並べ替え"], ["Esc", "B", "もどる"]]

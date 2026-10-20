@@ -232,7 +232,7 @@ module.exports = function (check, assert, HS) {
     const fees = O.list().reduce((a, o) => a + O.of(o.id).fees, 0);
     assert(fees > 0 && G.player.money > money0, '騎乗料が入っていない');
     const d = O.offers()[0]; assert(d, '依頼が無い');
-    const st = O.of(d.oid); st.pts = 20; const before = st.pts;
+    const st = O.of(d.oid); st.stage = 0; st.pts = 20; const before = st.pts; // 10週のうちに段階が上がっていることがある（種で変わる）ので、OP の段階に置いて確かめる
     assert(!O.decline(d.raceKey) && st.pts < before && st.dec >= 1, '断っても下がらない');
     assert(!O.offers().some(o => o.raceKey === d.raceKey), '断った依頼が残る');
     for (let i = 0; i < 30; i++) O.addPts(d.oid, -10);

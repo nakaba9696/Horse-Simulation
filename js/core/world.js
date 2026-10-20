@@ -661,10 +661,12 @@
     const pr = race.prize || 500;
     const share = [1, 0.4, 0.25, 0.15, 0.1];
     if (HS.Rating) HS.Rating.annotate(race, sim.results, wIdx); // 1走ごとのレーティング（js/core/rating.js）
+    // 人気を先に付ける（お手馬のレースの記録に出走馬の人気を入れるため。前は下の繰り返しの中で1頭ずつ付けていた）
+    for (const res of sim.results) { const x = runners.find(r => r.horse === res.horse); res.odds = x.odds; res.pop = x.pop; res.mine = !!(x.mine || x.rider === 'P'); }
+    let recOf = null;
     for (const res of sim.results) {
       const h = res.horse;
       const x = runners.find(r => r.horse === h);
-      res.odds = x.odds; res.pop = x.pop; res.mine = !!(x.mine || x.rider === 'P');
       if (h.legend) continue; // スペシャルホースはその場限り（記録だけ残る）
       if (h.filler) {
         // 重賞を勝った・G1で3着以内の「その場限りの馬」は名を残して走り続ける
@@ -685,7 +687,10 @@
       if (res.pos === 1 && h.owner === 'P' && G.eraless && HS.Eraless) HS.Eraless.unlockWin(race);
       if (race.graded && res.pos === 1) { h.gradedWins.push({ y: year, race: race.name, short: race.short, grade: race.grade, region: race.region }); if (h.owner === 'P' && HS.Season) { HS.Season.onWin(h, race, year); if (gf && HS.Season.onGFWin) HS.Season.onGFWin(h, race); } }
       if (race.trialFor && res.pos <= (race.trialTop || 2)) { h.rights = h.rights || {}; h.rights[race.trialFor] = year; }
-      h.results.push({ y: year, m: race.month, w: race.week, race: race.short || race.name, grade: R.gradeBadge(race), course: race.course, surface: race.surface, dist: race.dist, ground: race.ground, pos: res.pos, n: sim.results.length, time: Math.round(res.time * 10) / 10, margin: res.margin, last3f: res.last3f ? Math.round(res.last3f * 10) / 10 : null, jockey: res.jockey && res.jockey.name, pop: res.pop, rt: res.rt });
+      const entry = { y: year, m: race.month, w: race.week, race: race.short || race.name, grade: R.gradeBadge(race), course: race.course, surface: race.surface, dist: race.dist, ground: race.ground, pos: res.pos, n: sim.results.length, time: Math.round(res.time * 10) / 10, margin: res.margin, last3f: res.last3f ? Math.round(res.last3f * 10) / 10 : null, jockey: res.jockey && res.jockey.name, pop: res.pop, rt: res.rt };
+      // 自分の持ち馬は、出走馬・ラップ・勝ち時計の記録も残す（js/core/racerec.js。引退で消え、殿堂入りなら殿堂に残る）
+      if (h.owner === 'P' && HS.RaceRec) entry.rec = recOf || (recOf = HS.RaceRec.make(race, sim));
+      h.results.push(entry);
       // AI の馬は最近の成績だけ残す（セーブを小さく）
       const keep = h.owner === 'P' ? 80 : 12;
       while (h.results.length > keep) h.results.shift();

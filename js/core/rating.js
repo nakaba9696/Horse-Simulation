@@ -38,7 +38,7 @@
     let s = 0; for (let i = 0; i < k; i++) s += xs[i];
     return { v: Math.round(s / k), n: xs.length, best: xs[0] };
   };
-  // 総合力の部門すべて（画面の表に）
+  // レーティングの部門すべて（画面の表に）
   R.table = h => { const o = { all: R.of(h, null) }; for (const d of R.DIVS) o[d.id] = R.of(h, d.id); return o; };
   // 総合力からの見積もり（まだ走りの少ない馬の評価）
   R.prior = (h, surface, wIdx) => R.BASE + R.PER_FH * (HS.Season.fh(h, wIdx, surface) - R.FH0);

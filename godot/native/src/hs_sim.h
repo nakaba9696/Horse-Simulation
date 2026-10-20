@@ -128,6 +128,8 @@ struct Sim {
 	bool hasCheck = false; double checkT = 0; godot::String checkVerdict; int checkLead = -1;
 	double top = 0;
 	double gateWait = 0; // ゲートで待つ秒（レースの種から）
+	// ラップ（JS の sim.marks・sim.splits・sim.lapN）：200m ごとの区切りと、先頭が過ぎた時刻
+	std::vector<double> marks, splits; std::vector<bool> hasSplit; int lapN = 0;
 	~Sim() { if (ownTrack) delete track; }
 };
 

@@ -13,7 +13,8 @@
   E.AGES = [2, 3, 4, 5, 6]; // 始めたときにいる世代
 
   const lastYear = d => d.retire || d.born + 5;
-  E.isPool = d => lastYear(d) >= 1989 && d.born <= 2023;
+  // noDebut：血統表の母などとしてだけ持つ馬（重賞を勝っていない名牝の母。持ち主の決定 2026-10-20「オリエンタルアートは登場する馬から外す」）
+  E.isPool = d => lastYear(d) >= 1989 && d.born <= 2023 && !d.noDebut;
   E.isLegend = d => lastYear(d) < 1989;
   let poolCache = null;
   E.pool = () => poolCache || (poolCache = (HS.DATA.historic || []).filter(E.isPool));
@@ -70,26 +71,19 @@
   E.shopBorn = () => { const G = W.get(); return G.year - E.shopAge(G.month); };
   // 店で見える評価値は、その馬のいまの総合力（持ち主の仕様書「店」。早熟は高く、晩成は低く見える）
   E.shopFh = (h, wIdx) => HS.Season.fhBoth(h, wIdx);
-  // 値段もいまの総合力で決める（同じ完成の強さなら、いまは弱い晩成ほど安い。仕様書「早熟より晩成の馬のほうをコスパ良く」）。
-  //   値 v ＝ いまの総合力（芝・ダの良いほう）＋ 時期の補い（「普通」の成長の馬が、この年齢でまだ伸びていない分）
-  //   値段 ＝ 2,000万円 × 2^((v − 52) ÷ 6) × 物価 × 1.3（300万円から）。スペシャルホースはその1.6倍
-  // 時期の補いで、普通の馬の値段は6月でも翌年の5月でも変わらない（6月2歳は＋26・12月は＋13・1月3歳は＋11・5月は＋4ほど）。
-  // 早熟はいま強いので高く、晩成はいま弱いので安い（完成の総合力60の馬のなかほどで、6月の2歳は早熟 約3.7億・普通 約6,600万・晩成 約3,300万円、
-  // 1月の3歳は早熟 約2.3億・普通 約6,500万・晩成 約1,600万円。前はどれも約8,800万円）。
-  // 前の値段は史実の評価（rating）だけで決めていた（評価が4上がると2倍）。強さの開き（総合力が6上がると2倍）はほぼ同じにした
-  E.PRICE_BASE = 2000; E.PRICE_DOUBLE = 6; E.PRICE_FH = 52; E.PRICE_REF = 85;
-  // 総合力の折れ線（HS.Season.fhOf と同じ。丸めない）
-  E.fhLine = function (a) {
-    const K = HS.Season.FH_KNOTS;
-    let i = 0; while (i < K.length - 2 && a > K[i + 1][0]) i++;
-    return K[i][1] + (a - K[i][0]) * (K[i + 1][1] - K[i][1]) / (K[i + 1][0] - K[i][0]);
-  };
-  E.seasonAdj = (born, wIdx) => E.fhLine(E.PRICE_REF) - E.fhLine(E.PRICE_REF * H.growthFactor({ born, growth: '普通' }, wIdx));
+  // 値段は、いまの評価点（いまの総合力。芝・ダの良いほう）だけで決める（持ち主の決定 2026-10-20「値段を今の評価点にすれば良い気がする
+  // 早熟なら2-3歳で能力高いので高くなるし晩成でも強い馬なら高くなる むしろ晩成型になるほど評価点が同じでもちょっと値段あげたほうがいいかも」）。
+  //   値段 ＝ 2,000万円 × 2^((評価点 − 52) ÷ 6) × 物価 × 1.3 × 成長型の掛け（300万円から）。スペシャルホースはその1.6倍
+  // 成長型の掛け（E.GROWTH_PRICE）：評価点が同じなら、晩成ほど少し高い（このあと伸びる分）。早熟 0.9・早め 0.95・普通 1・遅め 1.07・晩成 1.15
+  // 前は「時期の補い」（普通の馬がこの年齢でまだ伸びていない分）を足していた。いまはいまの評価点だけ
+  E.PRICE_BASE = 2000; E.PRICE_DOUBLE = 6; E.PRICE_FH = 52;
+  E.GROWTH_PRICE = { '早熟': 0.9, '早め': 0.95, '普通': 1, '遅め': 1.07, '晩成': 1.15 };
+  E.growthPrice = h => E.GROWTH_PRICE[h.growth] || 1;
   E.shopValue = function (h, wIdx) { const f = E.shopFh(h, wIdx); return Math.max(f.turf, f.dirt); };
   E.priceOf = function (h, legend, wIdx) {
     if (wIdx == null) wIdx = W.wIdx();
-    const v = E.shopValue(h, wIdx) + E.seasonAdj(h.born, wIdx);
-    return Math.round(Math.max(300, E.PRICE_BASE * Math.pow(2, (v - E.PRICE_FH) / E.PRICE_DOUBLE)) * U.priceIndex() * 1.3 * (legend ? 1.6 : 1) / 10) * 10;
+    const v = E.shopValue(h, wIdx);
+    return Math.round(Math.max(300, E.PRICE_BASE * Math.pow(2, (v - E.PRICE_FH) / E.PRICE_DOUBLE)) * U.priceIndex() * 1.3 * E.growthPrice(h) * (legend ? 1.6 : 1) / 10) * 10;
   };
   const priceOf = E.priceOf;
 

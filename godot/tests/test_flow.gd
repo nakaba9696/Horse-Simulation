@@ -133,7 +133,7 @@ func run(t) -> void:
 		if n == "week_result": ok = ok and sc.b_next != null
 		if n == "stable": ok = ok and sc.rows.size() > 0
 		if n == "horse":
-			for k in sc.TABS.size():
+			for k in sc.tabs_.size():
 				sc.on_tab(1)
 			ok = ok and not sc.h.is_empty() and sc.b_prog != null
 		if n == "breed": ok = ok and sc.rows.size() == 2
@@ -203,7 +203,7 @@ func _horse(t) -> void:
 	UiFlow.program_id = String(hit.id)
 	var sc = load("res://scenes/horse.tscn").instantiate()
 	t.root.add_child(sc)
-	while sc.TABS[sc.tab][0] != "rec": sc.on_tab(1)
+	while sc.tabs_[sc.tab][0] != "rec": sc.on_tab(1)
 	t.ok(sc.rows.size() == HSU.or_(hit.get("results"), []).size(), "horse: 戦績が1走1行")
 	sc.race_detail(hr)
 	t.ok(sc._modal != null and sc.detail_replay != "", "horse: レースの詳しい記録（リプレイあり・その1走のもの）")
@@ -213,7 +213,72 @@ func _horse(t) -> void:
 	for x in laps: sum += float(x)
 	t.ok(laps.size() == ceili(float(rep.race.dist) / 200.0) and absf(sum - float(rep.winnerTime)) < 0.3, "horse: ラップは200mごとで、足すと勝ち時計（%d本・%.1f秒）" % [laps.size(), sum])
 	sc.close_modal()
+	# お手馬のレースの記録（HSRaceRec）：自分で乗った1走にも、おまかせの1走にも、出走馬とラップが残る（持ち主の決定 2026-10-20）
+	var all_rec := true
+	for h in HSWorld.mine():
+		if h.get("loc") == "retired": continue   # 引退した馬は記録が消える
+		for r in HSU.or_(h.get("results"), []):
+			if not HSRaceRec.has(r): all_rec = false
+	t.ok(all_rec, "horse: 自分の馬の全部の1走に出走馬とラップの記録がある")
+	var rl := HSRaceRec.laps(hr)
+	var rsum := 0.0
+	for x in rl: rsum += float(x)
+	t.ok(rl.size() == laps.size() and absf(rsum - float(HSRaceRec.rows(hr)[0].time)) < 0.05 and absf(rsum - float(rep.winnerTime)) < 0.3, "horse: 記録のラップはリプレイのラップと同じ本数で、足すと勝ち時計（%.1f秒）" % rsum)
+	var rws := HSRaceRec.rows(hr)
+	t.ok(rws.size() == int(hr.n) and String(rws[int(hr.pos) - 1].name) == String(hit.name), "horse: 記録の出走馬（%d頭・自分の馬は%d着）" % [rws.size(), int(hr.pos)])
+	sc.race_detail(hr)
+	t.ok(sc._modal != null, "horse: 1走の記録の小窓")
+	sc.close_modal()
+	var old: Dictionary = hr.duplicate()
+	old.erase("rec")
+	sc.race_detail(old)
+	t.ok(sc._modal != null and not HSRaceRec.has(old), "horse: 記録の無い前の1走も開ける（記録なし）")
+	sc.close_modal()
 	sc.free()
+	# 殿堂入り：トロフィー1つで案内（HSHall.ask）・はいで殿堂に入り、記録は殿堂の写しに残る（馬の戦績からは消える）・殿堂から馬の画面を開ける
+	var G = HSWorld.G
+	if not G.get("trophies"): G.trophies = {}
+	G.trophies[String(HSTrophy.list()[0].id)] = { hid = hit.id, horse = hit.name, y = G.year, bonus = 0.0 }
+	t.ok(HSHall.NEED == 1 and HSHall.ask(hit), "hall: トロフィー1つで殿堂入りの案内が出る")
+	var nrec := 0
+	for r in hit.results:
+		if HSRaceRec.has(r): nrec += 1
+	var hid := String(hit.id)
+	var rr: Dictionary = HSJockey.retire(hid, { hall = true })
+	t.ok(not rr.has("err") and rr.get("hall") != null and HSHall.by_id(hid) != null, "hall: はいで殿堂入り")
+	var x = HSWorld.horse(hid)
+	var gone := true
+	if x != null:
+		for r in HSU.or_(x.get("results"), []):
+			if r.has("rec"): gone = false
+	var kept := 0
+	for r in HSHall.by_id(hid).results:
+		if HSRaceRec.has(r): kept += 1
+	t.ok(gone and kept == nrec, "hall: 引退で馬の記録は消え、殿堂の写しに残る（%d走）" % kept)
+	UiFlow.hall_id = hid
+	var hs = load("res://scenes/horse.tscn").instantiate()
+	t.root.add_child(hs)
+	t.ok(hs.hall_mode and hs.rows.size() == HSHall.by_id(hid).results.size(), "hall: 殿堂から馬の画面（戦績）を開ける")
+	for k in hs.tabs_.size(): hs.on_tab(1)
+	hs.race_detail(HSHall.by_id(hid).results[0])
+	t.ok(hs._modal != null, "hall: 殿堂の馬の1走の記録を開ける")
+	hs.close_modal()
+	hs.free()
+	UiFlow.hall_id = ""
+	# いいえ：トロフィーがあっても殿堂に入らず、記録も消える
+	var other = null
+	for h in HSWorld.mine():
+		if h.get("loc") != "retired" and HSU.or_(h.get("results"), []).size(): other = h; break
+	if other != null:
+		G.trophies[String(HSTrophy.list()[1].id)] = { hid = other.id, horse = other.name, y = G.year, bonus = 0.0 }
+		var oid := String(other.id)
+		var ro: Dictionary = HSJockey.retire(oid, { hall = false })
+		var y = HSWorld.horse(oid)
+		var none := true
+		if y != null:
+			for r in HSU.or_(y.get("results"), []):
+				if r.has("rec"): none = false
+		t.ok(not ro.has("err") and HSHall.by_id(oid) == null and none, "hall: いいえなら殿堂に入らず、記録も消える")
 
 # 決まった乗り方（test_world.gd と同じ型）：出たらすぐしごき、直線の手前から追い、残り 250m でムチ、詰まったら外へ
 func _ride(L: ViewLive) -> Dictionary:

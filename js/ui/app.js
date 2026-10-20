@@ -118,10 +118,11 @@
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 2600);
   };
-  App.confirm = function (text, okLabel) {
+  // noLabel：断るボタンの名前（既定は「やめる」）。okFirst：キー・パッドで初めから「はい」を選んでおく（殿堂入りの案内など、断るほうが取り返しのつかないとき）
+  App.confirm = function (text, okLabel, noLabel, okFirst) {
     return new Promise(res => {
-      const bg = App.modal(`<h3>確認</h3><p>${text}</p><div class="btns"><button class="btn gold" data-x="ok">${okLabel || 'はい'}</button><button class="btn" data-x="no">やめる</button></div>`, { noClose: true });
-      if (/^(key|pad)$/.test(document.body.dataset.input || '')) App.navSelect(bg.querySelector('[data-x=no]')); // キー・パッドでは「やめる」を選んでおく（取り返しのつかない操作を連打で通さない）
+      const bg = App.modal(`<h3>確認</h3><p>${text}</p><div class="btns"><button class="btn gold" data-x="ok">${okLabel || 'はい'}</button><button class="btn" data-x="no">${noLabel || 'やめる'}</button></div>`, { noClose: true });
+      if (/^(key|pad)$/.test(document.body.dataset.input || '')) App.navSelect(bg.querySelector(okFirst ? '[data-x=ok]' : '[data-x=no]')); // キー・パッドでは「やめる」を選んでおく（取り返しのつかない操作を連打で通さない）
       bg.querySelector('[data-x=ok]').onclick = () => { App.closeModal(); res(true); };
       bg.querySelector('[data-x=no]').onclick = () => { App.closeModal(); res(false); };
     });

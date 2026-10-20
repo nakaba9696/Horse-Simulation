@@ -274,7 +274,7 @@ func _preview(i: int) -> void:
 		var keep: bool = HSOriginal.on() and not h.get("gelding")
 		var br := UiScreen.danger_button("引退させる", 140, 46, 16)
 		br.focus_mode = Control.FOCUS_NONE
-		br.pressed.connect(func(): confirm("%sを引退させますか？%s" % [h.name, "（牧場に残り、オリジナルホースの親にできます）" if keep else "（手もとを離れます）"], "引退させる", func(): _retire(id)))
+		br.pressed.connect(func(): retire_flow(id, _retired))
 		bh.add_child(br)
 		var bp := UiScreen.button("番組表", false, 120, 46, 16)
 		bp.focus_mode = Control.FOCUS_NONE
@@ -297,18 +297,17 @@ func _unhandled_input(ev: InputEvent) -> void:
 		if h.loc == "retired":
 			confirm("%sを牧場から放しますか？（親にできなくなります）" % h.name, "放す", func(): _release(id))
 		else:
-			confirm("%sを引退させますか？" % h.name, "引退させる", func(): _retire(id))
+			retire_flow(id, _retired)
 		get_viewport().set_input_as_handled()
 		return
 	super._unhandled_input(ev)
 
-func _retire(id: String) -> void:
-	var r := HSJockey.retire(id)
+func _retired(r: Dictionary) -> void:
 	if r.has("err"):
 		toast(String(r.err), "bad")
 		return
 	UiFlow.save()
-	toast("引退させた（%s）" % ("牧場に残った" if r.get("to") == "retired" else "おつかれさま"), "good")
+	toast("引退させた（%s%s）" % ["牧場に残った" if r.get("to") == "retired" else "おつかれさま", "・殿堂入り" if r.get("hall") else ""], "good")
 	_fill()
 
 func _release(id: String) -> void:

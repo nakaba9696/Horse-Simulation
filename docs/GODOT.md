@@ -23,7 +23,7 @@ JS 版は遊べる見本として残し、遊びの決まり・データ・模�
 | `godot/core/hs_world.gd`（`HSWorld`） | 世界（`HS.World`。新しいゲーム・週の流れ prepare_week → cards → finish_week・AI の出走・出走表・結果・調教・暦・市場・表彰・セーブ・古いセーブの直し） |
 | `godot/core/hs_races.gd`・`hs_ped.gd`・`hs_program.gd` | 週のレース（`HS.Races`）・血統（`HS.Ped`）・番組表（`HS.Program`。1年先までのレースと出られるか・オープンの予約） |
 | `godot/core/hs_rating.gd`（`HSRating`） | レーティング（`HS.Rating`。1走の値を `annotate` でレースの結果に付け、`h.results[].rt` に残す。馬の値＝良かった3走の平均・部門ごと）。式の並びは JS と同じで、世界の進行の一致テストで確かめる |
-| `godot/core/hs_jockey.gd`・`hs_season.gd`・`hs_eraless.gd`・`hs_special.gd`・`hs_owners.gd`・`hs_trophy.gd`・`hs_hall.gd`・`hs_original.gd`・`hs_edits.gd`・`hs_datafix.gd` | 騎手のゲーム・シーズンと GF（season.js と dream.js）・年代なしと馬の店・スペシャルホース・馬主・トロフィー・殿堂・オリジナルホース・エディット |
+| `godot/core/hs_jockey.gd`・`hs_season.gd`・`hs_eraless.gd`・`hs_special.gd`・`hs_owners.gd`・`hs_trophy.gd`・`hs_hall.gd`・`hs_racerec.gd`・`hs_original.gd`・`hs_edits.gd`・`hs_datafix.gd` | 騎手のゲーム・シーズンと GF（season.js と dream.js）・年代なしと馬の店・スペシャルホース・馬主・トロフィー・殿堂・お手馬のレースの記録（racerec.js）・オリジナルホース・エディット |
 | `godot/data/*.json` | `node tools/export_godot.js` が書き出す（生成物。手で直さない） |
 | `godot/tests/` | 中身のテスト（`sh godot/tests/run.sh`）と、一致テストの答え（`golden/`） |
 
