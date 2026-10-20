@@ -107,6 +107,7 @@ check('profiles: スペシャルホースは全頭に名鑑（年代・戦績・
   HS.U.ERA = HS.Eraless.ERA;
   const SP = HS.Special, bad = [];
   for (const { d } of SP.list()) {
+    if (SP.isModern(d)) continue; // 香港の三冠の隠し馬（1989年からの馬。ふだんは店やデビューに出る馬）は名鑑が無くてもよい
     if (!/^\d{4}(〜\d{4})?年$/.test(d.years || '')) bad.push(d.name + ':年代');
     if (!/^\d+戦\d+勝/.test(d.record || '')) bad.push(d.name + ':戦績');
     if (!(d.mainWins || []).length) bad.push(d.name + ':主な勝鞍');
@@ -119,7 +120,7 @@ check('profiles: スペシャルホースは全頭に名鑑（年代・戦績・
   for (const d of D.historic || []) if (d.text && !d.record) bad.push(d.name + ':名鑑なし');
   for (const p of D.profiles || []) if (/……|どこか|ふと|まるで|です。|ます。/.test(p.text)) bad.push(p.name + ':避ける癖');
   assert(!bad.length, bad.slice(0, 10).join(', '));
-  const lens = SP.list().map(x => x.d.text.length);
+  const lens = SP.list().filter(x => !SP.isModern(x.d)).map(x => x.d.text.length);
   return `スペシャルホース ${SP.list().length}頭・解説 ${Math.min(...lens)}〜${Math.max(...lens)}字・名鑑 ${prof.size}頭`;
 });
 
@@ -613,7 +614,7 @@ check('ride: しごく・引くの段は手を止めても保たれ、追い通�
   return `平均着順 直線でしごく ${late.toFixed(1)}・追い通す ${all.toFixed(1)}・何もしない ${none.toFixed(1)}`;
 });
 
-check('season: お手馬10頭まで・資金切れで終わり・冠・調子の8段階・総合力', () => {
+check('season: お手馬10頭まで・資金切れで終わり・冠・疲労の段階・総合力', () => {
   const T = HS.Season;
   W.newGame({ year: 2003, seed: 5, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
@@ -629,11 +630,12 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・調子の
   const h = { gradedWins: [{ y: 2005, short: '皐月賞', grade: 'G1' }, { y: 2005, short: '日本ダービー', grade: 'G1' }, { y: 2005, short: '菊花賞', grade: 'G1' }, { y: 2006, short: '宝塚記念', grade: 'G1' }, { y: 2006, short: '有馬記念', grade: 'G1' }] };
   const tl = T.titles(h).map(t => t.label);
   assert(tl.includes('三冠') && tl.includes('グランプリ制覇') && !tl.includes('二冠') && tl.includes('G1五勝'), tl.join('・'));
-  // 調子と総合力
+  // 馬の状態は疲労の段階だけ（調子は無い：持ち主の決定 2026-10-20）と総合力
   const x = W.mine()[0];
-  x.fatigue = 80; assert(T.condLevel(x, W.wIdx()) === 7, "使いすぎにならない");
-  x.fatigue = 0; x.cond = 30; x.lastRaceW = W.wIdx() - 3; assert(T.condLevel(x, W.wIdx()) === 2, '絶好調にならない');
-  x.lastRaceW = W.wIdx() - 30; assert(T.condLevel(x, W.wIdx()) === 0, '休みすぎにならない');
+  x.fatigue = 80; assert(HS.Fatigue.view(x).label === '使いすぎ', '使いすぎにならない');
+  x.fatigue = 40; assert(HS.Fatigue.view(x).label === '疲れ', '疲れにならない');
+  x.fatigue = 0; x.lastRaceW = W.wIdx() - 30; assert(HS.Fatigue.view(x).label === '万全', '長く休んで万全にならない');
+  assert(!T.condLevel && !('cond' in x), '調子が残っている');
   const fh = T.fhBoth(x, W.wIdx());
   assert(fh.turf >= 1 && fh.turf <= 99 && fh.dirt >= 1 && fh.dirt <= 99, JSON.stringify(fh));
   // 総合力：史実馬は伸びきったとき45〜85に入る（ごく弱い馬を除く）。エアグルーヴ70・キンチェム85。能力の上限がそろうと99
@@ -915,7 +917,7 @@ check('hall: トロフィーを2つ以上手にした自分の馬は、引退し
   W.buy(shop[0]); W.buy(shop[1]);
   const [a, b] = W.mine();
   a.results = [{ y: G.year, m: 5, w: 4, race: '日本ダービー', course: '東京', surface: '芝', dist: 2400, pos: 1, n: 18, time: 143.5, jockey: 'テスト騎手' }]; a.starts = 1; a.wins = 1;
-  G.trophies = { triple: { y: G.year, horse: a.name, hid: a.id, bonus: 1 }, autumn: { y: G.year, horse: a.name, bonus: 1 }, spring: { y: G.year, horse: b.name, hid: b.id, bonus: 1 } }; // autumn は前のセーブの形（名前だけ）
+  G.trophies = { triple: { y: G.year, horse: a.name, hid: a.id, bonus: 1 }, uk3: { y: G.year, horse: a.name, bonus: 1 }, us3: { y: G.year, horse: b.name, hid: b.id, bonus: 1 } }; // uk3 は前のセーブの形（名前だけ）
   assert(HL.trophiesOf(a).length === 2 && HL.eligible(a) && !HL.eligible(b), 'トロフィーの数え方が違う');
   assert(!(J.retire(a.id) || {}).err && !(J.retire(b.id) || {}).err, '引退できない');
   const x = HL.byId(a.id);
@@ -946,7 +948,7 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   assert(mem('local').includes('ハイセイコー'), `地方から来た名馬 ${mem('local').join('・')}`);
   assert(mem('arima2').includes('スピードシンボリ') && mem('t:arc2').includes('リボー') && mem('t:usf3').includes('ラフィアン') && mem('unbeaten').includes('トキノミノル'), 'スピードシンボリ・リボー・ラフィアン・トキノミノルのグループが違う');
   assert(!SP.list().some(x => x.groups.length !== 1), '2つ以上のグループに入る名馬がいる');
-  assert(!SP.list().some(x => HS.Eraless.isPool(x.d)), '1989年以降の馬がスペシャルホースになっている');
+  assert(!SP.list().some(x => HS.Eraless.isPool(x.d) && !(SP.isModern(x.d) && ['t:hk3', 't:hksp'].includes(x.groups[0]))), '1989年以降の馬がスペシャルホースになっている（香港の三冠の隠し馬のほか）');
   // 皐月賞と日本ダービーを勝った馬が菊花賞に出ると、歴代の三冠馬が出てくる
   const kk = R.gradedYear(G.year).find(r => r.short === '菊花賞');
   const h = W.all().find(x => x.hist && x.sex !== '牝' && !x.gelding && G.year - x.born === 3 && x.loc === 'stable' && !x.injury);

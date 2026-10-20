@@ -1,5 +1,5 @@
 # お手馬の詳しい画面（docs/UI.md「馬の画面」・持ち主の仕様書 2026-10-19「お手馬画面」「ゲームメニュー画面」）
-# 左 420px：3D の馬・名前・調子と疲労と次走・「番組表（出走登録）」（金）・引退。右：タブ（Q/E・LB/RB）
+# 左 420px：3D の馬・名前・疲労と次走・「番組表（出走登録）」（金）・引退。右：タブ（Q/E・LB/RB）
 #   能力：総合力（いま・完成）・能力（いま・完成）・距離・脚質・成長・特殊能力・トロフィーと冠・重賞の勝ち鞍
 #   戦績：1走 1行（新しい順。着順・人気・タイム・着差・上がり・レーティング）。行を押すとそのレースの詳しい記録（出走馬・着順・ラップは、自分で乗ってリプレイが残っているレースだけ）
 #   レーティング：総合と部門（短距離・マイル・中距離・長距離・ダート）。式は HSRating（godot/core/hs_rating.gd）
@@ -132,14 +132,15 @@ func _build_left() -> void:
 	fr.add_child(UiTheme.label("ダ", 13, UiTheme.MUTED))
 	fr.add_child(UiTheme.stat_chip(float(now.dirt), "fh", true))
 	v.add_child(fr)
-	var c: Dictionary = HSSeason.cond(h, wi)
-	var ct := "入厩前" if h.loc == "farm" else ("故障" if h.get("injury") else String(c.label))
-	v.add_child(_kv("調子", ct, Color(String(c.color)) if h.loc == "stable" and not h.get("injury") else UiTheme.FAINT))
-	var fh := HBoxContainer.new()
-	fh.add_child(UiTheme.label("疲労", 14, UiTheme.MUTED))
-	fh.add_child(UiScreen.spacer())
-	fh.add_child(fatigue_label(h, 15))
-	v.add_child(fh)
+	# 馬の状態は疲労の段階だけ（調子は無い：持ち主の決定 2026-10-20）
+	if h.loc == "farm":
+		v.add_child(_kv("疲労", "入厩前", UiTheme.FAINT))
+	else:
+		var fh := HBoxContainer.new()
+		fh.add_child(UiTheme.label("疲労", 14, UiTheme.MUTED))
+		fh.add_child(UiScreen.spacer())
+		fh.add_child(fatigue_label(h, 15))
+		v.add_child(fh)
 	v.add_child(_kv("次走", next_text(h), UiTheme.GOLD_BRIGHT if HSProgram.next(h) != null else UiTheme.FAINT))
 	v.add_child(_kv("戦績", "%s・獲得 %s" % [record_text(h), HSU.money(float(HSU.or_(h.get("earn"), 0.0)))]))
 	v.add_child(_kv("近走", recent_text(h, 5)))

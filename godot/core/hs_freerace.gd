@@ -47,7 +47,7 @@ static func _peak_age(h: Dictionary) -> float:
 	var p: Array = HSHorse.PEAK.get(h.get("growth"), HSHorse.PEAK["普通"])
 	return HSMath.round_js((p[0] + p[1]) / 2.0)
 static func _fresh(h: Dictionary, id: String) -> Dictionary:
-	h.id = id; h.cond = 0.0; h.fatigue = 0.0; h.erase("at"); h.erase("lastRaceW"); h.results = HSU.or_(h.get("results"), []).slice(-3)
+	h.id = id; h.erase("cond"); h.fatigue = 0.0; h.erase("at"); h.erase("lastRaceW"); h.results = HSU.or_(h.get("results"), []).slice(-3)
 	return h
 # spec：{ kind: "mine"|"hist"|"special", key: id か名前 }。snap：{ g, live }（自分の馬を出すとき）
 static func horse(spec: Dictionary, snap: Variant) -> Variant:

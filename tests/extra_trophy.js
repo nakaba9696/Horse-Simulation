@@ -7,13 +7,13 @@ module.exports = function (check, assert, HS) {
     '日本三冠': ['皐月賞', '日本ダービー', '菊花賞'], '英国三冠': ['英2000ギニー', '英ダービー', '英セントレジャー'], '米国三冠': ['ケンタッキーダービー', 'プリークネスS', 'ベルモントS'],
     '仏国三冠': ['仏2000ギニー', '仏ダービー', 'パリ大賞'], '日本ダート三冠': ['羽田盃', '東京ダービー', 'ジャパンダートクラシック'], '欧州三冠': ['英ダービー', 'キングジョージ', '凱旋門賞'],
     '欧州マイル三冠': ['英2000ギニー', 'ジャックルマロワ賞', 'QE2世S'], '豪州三冠': ['ランドウィックギニー', 'ローズヒルギニー', '豪ダービー'],
-    '豪州2歳三冠': ['ゴールデンスリッパー', 'サイアーズプロデュースS', 'シャンペンS'], '香港トリプルクラウン': ['スチュワーズC', '香港ゴールドカップ', 'チャンピオンズ＆チャターC'],
+    '香港トリプルクラウン': ['スチュワーズC', '香港ゴールドカップ', 'チャンピオンズ＆チャターC'],
     '香港スプリント三冠': ['センテナリースプリントC', 'クイーンズシルヴァージュビリーC', 'チェアマンズスプリントプライズ'], '豪州スプリント三冠': ['ブラックキャビアライトニング', 'TJスミスS', 'ジ・エベレスト'],
     '日本牝馬三冠': ['桜花賞', 'オークス', '秋華賞'], '英国牝馬三冠': ['英1000ギニー', '英オークス', '英セントレジャー'], '米国牝馬三冠': ['エイコーンS', 'CCAオークス', 'アラバマS'],
     '仏国牝馬三冠': ['仏1000ギニー', '仏オークス', 'ヴェルメイユ賞'], '欧州オークス三冠': ['英オークス', '仏オークス', '愛オークス'],
     'ワールドスプリント GS': ['スプリンターズS', 'ジ・エベレスト', 'BCターフスプリント', '香港スプリント'], 'ワールドマイル GS': ['安田記念', 'BCマイル', 'ジャックルマロワ賞', 'サセックスS'],
     'ワールドターフ GS': ['ドバイシーマクラシック', 'エクリプスS', 'キングジョージ', '凱旋門賞'], 'ワールドステイヤー GS': ['天皇賞・春', 'アスコットGC', 'グッドウッドC', 'メルボルンカップ'],
-    'ワールドダート GS': ['サウジカップ', 'ドバイワールドカップ', 'ペガサスWC', 'BCクラシック'], 'ワールドティアラ GS': ['ヴィクトリアマイル', '仏オークス', 'ヴェルメイユ賞', 'BCフィリー＆メアターフ'],
+    'ワールドダート GS': ['サウジカップ', 'ドバイワールドカップ', 'ペガサスWC', 'BCクラシック'], 'ワールドティアラ GS': ['ヴィクトリアマイル', 'ナッソーS', 'ヴェルメイユ賞', 'BCフィリー＆メアターフ'],
     'ヨーロピアン GS': ['プリンスオブウェールズS', '英インターナショナルS', '愛チャンピオンS', '英チャンピオンS'], 'アメリカン GS': ['ペガサスWC', 'メトロポリタンH', 'ホイットニーS', 'BCクラシック'],
     'ジャパン GS': ['天皇賞・春', '宝塚記念', '天皇賞・秋', 'ジャパンC', '有馬記念'], 'ジャパンダート GS': ['フェブラリーステークス', '帝王賞', '南部杯', 'JBCクラシック', '東京大賞典'],
     'オーストラリアン GS': ['メルボルンカップ', 'コックスプレート', 'ジ・エベレスト'],
@@ -43,12 +43,15 @@ module.exports = function (check, assert, HS) {
       assert(t, `トロフィー「${label}」が無い`);
       if (races) assert(t.races.join() === races.join(), `${label}の条件 ${t.races.join('・')}`);
     }
+    // 仕様書に無いトロフィー（秋の古馬三冠など5つ）と豪州2歳三冠は外した（持ち主の決定 2026-10-20）。ドイツのディアナ賞（独オークス）は番組から外した
+    assert(!D.races.some(r => r.name === 'ディアナ賞'), 'ディアナ賞が番組にある');
     const extra = TR.LIST.filter(t => !(t.label in SPEC));
-    assert(extra.every(t => t.cat === 'extra'), `仕様書に無いトロフィーが extra でない（${extra.filter(t => t.cat !== 'extra').map(t => t.label)}）`);
+    assert(!extra.length && !TR.CATS.some(c => c.id === 'extra'), `仕様書に無いトロフィーがある（${extra.map(t => t.label)}）`);
+    assert(D.trophyRule.REMOVED.every(id => !TR.BY[id] && !(id in D.trophyHorses)), '外したトロフィーが残っている');
     assert(TR.LIST.every(t => t.tier >= 1 && t.tier <= 6 && t.focus.length && t.focus.every(k => H.STATS.includes(k))), '難しさか、上がる能力の書き方が違う');
     for (const a of TR.LIST) for (const b of TR.LIST) if (a.tier < b.tier) assert(TR.money(a) < TR.money(b), `${a.label} が ${b.label} より高い`);
     assert(new Set(labels).size === labels.length && new Set(TR.LIST.map(t => t.id)).size === TR.LIST.length, '名前か id が重なる');
-    return `${TR.LIST.length}個（仕様書 ${Object.keys(SPEC).length}・前からのもの ${extra.map(t => t.label).join('・')}）`;
+    return `${TR.LIST.length}個（仕様書 ${Object.keys(SPEC).length}）`;
   });
 
   check('trophy: 足したレースが年代なしの暦にあり、条件のレースは全部いまの番組で走れる（同じ年のものは、出られる年齢がそろい週が重ならない）', () => {
@@ -65,9 +68,11 @@ module.exports = function (check, assert, HS) {
       const wk = rs.map(r => r.month * 10 + r.week);
       assert(new Set(wk).size === wk.length, `${t.label}：同じ週に重なる（${rs.map(r => r.short + r.month + '/' + r.week)}）`);
     }
-    // ワールドティアラ GS は同じ年に出られない（ヴィクトリアマイルは4歳から・ディアヌ賞は3歳）ので、年をまたいでよい
-    const ti = TR.BY.gs_tiara;
-    assert(!ti.same && ![3, 4, 5].some(a => ti.races.map(n => m.get(n)).every(r => fitAge(r, a))), 'ワールドティアラ GS の扱い');
+    // ワールドティアラ GS は古馬の牝馬が同じ年に4つとも出られる（ディアヌ賞をナッソーSに変えた。持ち主の決定 2026-10-20）
+    const ti = TR.BY.gs_tiara, tr = ti.races.map(n => m.get(n));
+    assert(ti.same && [4, 5].every(a => tr.every(r => fitAge(r, a))) && tr.every(r => r.sex === '牝') && m.get('ナッソーS').course === 'グッドウッド', 'ワールドティアラ GS の扱い');
+    const tw = tr.map(r => r.month * 10 + r.week);
+    assert(tw.every((w, i) => !i || w > tw[i - 1]) && tw.every((w, i) => !i || (tr[i].month - tr[i - 1].month) * 4 + tr[i].week - tr[i - 1].week >= 2), `ワールドティアラ GS の週 ${tr.map(r => r.short + r.month + '/' + r.week)}`);
     out.push(`足したレース ${ADDED.length}・世界の有名な重賞 ${D.races.filter(r => r.from === 2015 && r.uncertain && (r.to || 9999) >= 9999 && D.courses[r.course].region === '海外').length}`);
     return out.join('');
   });
@@ -167,13 +172,14 @@ module.exports = function (check, assert, HS) {
   });
 
   check('trophy: 隠し馬はトロフィーのリーチで出てきて、手持ちでない最低人気の馬と入れ替わる（お手馬の馬は出ない・勝つと店に並び、また達成をねらうと出てくる）', () => {
-    // 紐づけの表：1989年より前の名馬だけ・1頭は1つのトロフィーだけ・伝説級（GF の担当）は入れない
+    // 紐づけの表：1989年より前の名馬だけ（香港の三冠2つだけは1989年からの馬も。持ち主の決定 2026-10-20）・1頭は1つのトロフィーだけ・伝説級（GF の担当）は入れない
     const seen = new Set();
     for (const [id, xs] of Object.entries(D.trophyHorses)) {
       assert(TR.BY[id], `トロフィー ${id} が無い`);
       for (const x of xs) {
         const d = SP.data(x.name);
-        assert(d && !HS.Eraless.isPool(d) && !SP.isTop(d) && x.why, `${x.name}（${id}）は隠し馬にできない`);
+        const modernOk = ['hk3', 'hksp'].includes(id) && x.modern;
+        assert(d && (modernOk ? HS.Eraless.isPool(d) : !HS.Eraless.isPool(d)) && !SP.isTop(d) && x.why, `${x.name}（${id}）は隠し馬にできない`);
         assert(!seen.has(x.name), `${x.name}が2つのトロフィーにいる`); seen.add(x.name);
         assert(SP.byName(x.name).groups.join() === 't:' + id, `${x.name}のグループ ${SP.byName(x.name).groups}`);
       }
@@ -219,5 +225,122 @@ module.exports = function (check, assert, HS) {
     const h2 = Object.assign({}, h, { id: 'h2', gradedWins: [{ y: G.year + 1, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year + 1, race: '東京優駿', short: '日本ダービー', grade: 'G1' }] });
     assert(SP.pending(h2, Object.assign({}, race, { year: G.year + 1 })).some(x => x.d.name === sps[0]), '再達成のときに出てこない');
     return `菊花賞に ${sps.join('・')}（入れ替わり ${gone.map(x => x.horse.name).join('・')}）`;
+  });
+
+  check('trophy: 同じトロフィーを別の馬で取ると、毎回同じ額のお金が入る（持ち主の決定 2026-10-20）', () => {
+    const G = newGame(65);
+    const m = cal();
+    const t = TR.BY.triple, got = [];
+    for (let i = 0; i < 3; i++) {
+      const h = myHorse(G, '牡'), money0 = G.player.money;
+      for (const n of t.races) winIt(h, m.get(n), G.year + i);
+      assert(TR.has(h, t.id), `${i + 1}頭目が日本三冠を手にしない`);
+      got.push(G.player.money - money0);
+    }
+    assert(got.every(x => x === TR.money(t)) && TR.holders(t.id).length === 3 && TR.holders(t.id).every(x => x.bonus === TR.money(t)), `お金 ${got.join('・')}（${TR.money(t)}）`);
+    return `日本三冠を3頭で：${got.map(x => U.money(x)).join('・')}`;
+  });
+
+  check('trophy: 外したトロフィー（仕様書に無い5つ・豪州2歳三冠）は、前のセーブに残っていても消え、殿堂入りの数に入らない', () => {
+    const G = newGame(66);
+    const h = myHorse(G, '牡');
+    G.trophies.autumn = { y: G.year, horse: h.name, hid: h.id, bonus: 30000 };
+    G.trophies.arima2 = { y: G.year, horse: h.name, hid: h.id, bonus: 10000, more: [{ y: G.year, horse: 'x', hid: 'x' }] };
+    G.trophies.au2 = { y: G.year, horse: 'だれか', bonus: 30000 };
+    G.trophies.triple = { y: G.year, horse: h.name, hid: h.id, bonus: 50000 };
+    // 読み込む前でも、殿堂は外したトロフィーを数えない
+    assert(HS.Hall.trophiesOf(h).map(x => x.id).join() === 'triple', `殿堂の数 ${HS.Hall.trophiesOf(h).map(x => x.id)}`);
+    G.hallOwn.push({ id: 'old', name: '前の馬', trophies: [{ id: 'tenno', label: '天皇賞の春秋制覇', y: 1 }, { id: 'triple', label: '日本三冠', y: 1 }], g1: 3, retiredY: 1 });
+    const money = G.player.money;
+    W.load(W.serialize());
+    const G2 = W.get();
+    assert(D.trophyRule.REMOVED.every(id => !(id in G2.trophies)) && G2.trophies.triple, `残ったトロフィー ${Object.keys(G2.trophies)}`);
+    assert(G2.hallOwn.find(x => x.id === 'old').trophies.map(x => x.id).join() === 'triple', '殿堂の写しに外したトロフィーが残る');
+    assert(G2.player.money === money, 'もらったお金が変わる');
+    assert(TR.sig().every(k => TR.BY[k.split('|')[0]]), '外したトロフィーが一覧に出る');
+    return '前のセーブの autumn・arima2・au2 を消した';
+  });
+
+  check('trophy: 香港の三冠の隠し馬は1989年からの有名な馬。その年に世界で走っているときは出てこず、倒すと店にいつも並び、デビューに選ばれない', () => {
+    const E = HS.Eraless;
+    for (const id of ['hk3', 'hksp']) {
+      const ms = SP.members(SP.BY['t:' + id]).map(d => d.name);
+      assert(ms.length >= 1 && ms.length <= 3 && ms.every(n => E.isPool(SP.data(n))), `${id} の隠し馬 ${ms}`);
+    }
+    assert(SP.members(SP.BY['t:hk3']).some(d => d.name === 'ロマンチックウォリアー') && SP.members(SP.BY['t:hksp']).some(d => d.name === 'サイレントウィットネス'), '香港の名馬がいない');
+    // ほかのトロフィー・グループに1989年からの馬は入らない
+    assert(SP.list().every(x => !E.isPool(x.d) || (x.groups.length === 1 && ['t:hk3', 't:hksp'].includes(x.groups[0]))), '1989年からの馬が香港の三冠のほかにいる');
+    const G = newGame(67);
+    G.player.money = 1e9;
+    const m = cal();
+    const h = myHorse(G, '牡');
+    for (const k of H.STATS) h.pot[k] = 150;
+    const r3 = m.get('チャンピオンズ＆チャターC');
+    for (const n of ['スチュワーズC', '香港ゴールドカップ']) winIt(h, m.get(n), G.year);
+    const race = Object.assign({}, r3, { year: G.year });
+    const names = () => SP.pending(h, race).map(x => x.d.name);
+    const rw = 'ロマンチックウォリアー';
+    assert(names().includes(rw), `香港三冠のリーチで出てこない（${names()}）`);
+    // 同じ馬がその年に世界で走っている（ランダムにデビューした）ときは出てこない
+    const d = SP.data(rw);
+    const live = E.spawn(d, 5, true);
+    assert(live && E.activeNames().has(rw) && !names().includes(rw) && names().length, `世界にいるのに隠し馬で出る（${names()}）`);
+    live.loc = 'retired';
+    assert(names().includes(rw), '引退したあとも出てこない');
+    // 倒すと店に並ぶ（1頭だけ）。そのあとは毎年のデビューに選ばれない
+    G.unlocked.push(rw);
+    const shop = W.marketHistoric().filter(x => x.horse.name === rw);
+    assert(shop.length === 1 && shop[0].legend, `店の並び ${shop.length}`);
+    assert(E.market().filter(x => x.horse.name === rw).length === 1, '開いている馬に二重に入る');
+    const rng = new U.RNG(5);
+    assert(!E.pick(100000, rng).some(x => x.name === rw), '倒した隠し馬がデビューに選ばれる');
+    const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で変わる');
+    return `香港トリプルクラウン：${SP.members(SP.BY['t:hk3']).map(x => x.name).join('・')}／香港スプリント三冠：${SP.members(SP.BY['t:hksp']).map(x => x.name).join('・')}`;
+  });
+
+  check('trophy: 引退の能力の上がりは控えめ（focus で CAP まで）。何世代も重ねる：トロフィー無しは史実の名馬どまり、多く取れば90台、1世代目はふつう90に届かず・3世代で99には届かない', () => {
+    const O = HS.Original, S = HS.Season, RULE = D.trophyRule;
+    // 持ち主の決定 2026-10-20「上げすぎなくていいよ すぐ総合力99ができてもつまらないし」
+    assert(RULE.CAP <= 10 && Math.max(...RULE.TIER_PTS) <= 5, `上がりが大きい（TIER_PTS ${RULE.TIER_PTS}・CAP ${RULE.CAP}）`);
+    const fh = h => S.fhPeak(h).turf;
+    const turfT = TR.LIST.filter(t => t.kind === 'set' && !t.focus.includes('dspd')).sort((a, b) => b.tier - a.tier);
+    const canBuy = S.canBuy; S.canBuy = () => true;
+    // 店のいちばん強い牡・牝から始め、両親に nt 個のトロフィー（難しい順）を取らせて引退 → 仔を kids 頭 → いちばん良い牡・牝で次の世代
+    const lines = (nt, kids, gens, seed) => {
+      const G = newGame(seed); G.player.money = 1e12;
+      const pool = HS.Eraless.pool().map(d => H.fromHistoric(d, 'p:' + d.name));
+      const best = sex => pool.filter(h => sex === '牝' ? h.sex === '牝' : h.sex === '牡').sort((a, b) => fh(b) - fh(a))[0];
+      let s = best('牡'), d = best('牝');
+      const out = [];
+      for (let g = 0; g < gens; g++) {
+        for (const h of [s, d]) {
+          if (!G.horses[h.id]) h.id = W.newId();
+          h.owner = 'P'; h.loc = 'stable'; G.horses[h.id] = h; W.dirty();
+          for (const t of turfT.slice(0, nt)) TR.give(h, t, G.year);
+          assert(O.retire(h.id).to === 'retired', '引退できない');
+          assert(H.STATS.every(k => (h.potUp[k] || 0) <= RULE.CAP), `上がりが CAP を超える ${JSON.stringify(h.potUp)}`);
+        }
+        const ks = [];
+        for (let i = 0; i < kids; i++) { d.foalY = null; G.year++; const r = O.make(s.id, d.id, `セダイ${seed}x${g}x${i}`); assert(!r.err, r.err); ks.push(r.horse); }
+        out.push(Math.max(...ks.map(fh)));
+        delete G.horses[s.id]; delete G.horses[d.id];
+        const pick = sex => ks.filter(h => sex === '牝' ? h.sex === '牝' : h.sex !== '牝').sort((a, b) => fh(b) - fh(a))[0];
+        s = pick('牡') || s; d = pick('牝') || d;
+        for (const k of ks) if (k !== s && k !== d) delete G.horses[k.id];
+        W.dirty();
+      }
+      return out;
+    };
+    try {
+      const none = [], many = [];
+      for (const seed of [71, 72, 73]) { none.push(lines(0, 8, 3, seed)); many.push(lines(8, 8, 3, seed)); }
+      const flat = xs => [].concat(...xs);
+      assert(flat(none).every(x => x < 90), `トロフィー無しで90台（${none.map(r => r.join('→')).join('／')}）`);
+      const avg = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
+      assert(avg(many.map(r => r[0])) < 90, `1世代目で90台（${many.map(r => r.join('→')).join('／')}）`);
+      assert(flat(many).every(x => x < 99), `3世代で99（${many.map(r => r.join('→')).join('／')}）`);
+      assert(avg(many.map(r => r[2])) > avg(none.map(r => r[2])) + 5, 'トロフィーを集めても仔が良くならない');
+      return `いちばん良い仔の総合力（3世代）：トロフィー無し ${none.map(r => r.join('→')).join('／')}・両親が8個ずつ ${many.map(r => r.join('→')).join('／')}`;
+    } finally { S.canBuy = canBuy; }
   });
 };

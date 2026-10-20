@@ -30,6 +30,8 @@ static const double W_K = 0.4, W_WIND = 0.6, W_COST = 0.96, W_WINDCOST = 0.98, W
 static const double CALM_SAVE = 0.97, PACE_HI = 1.006, PACE_LO = 0.994, PACE_K = 25.0, DRAFT = 0.08, PACE_TOP = 50.0, PACE_EARLY = 60.0;
 static const double PACE_NIGE[4] = { -0.009, -0.002, 0.003, 0.008 };
 static const double PACE_SD = 0.006;
+// その日の出来の揺れ（点）。前の 1.9 に調子（sd 0.89 点）の分を合わせた（racesim.js の S.FORM_SD）
+static const double FORM_SD = 2.1;
 static const double STYLE_MULT[4] = { 1.03, 1.014, 0.995, 0.982 };
 static const double STYLE_GAP[4] = { 0.0, 6.0, 13.0, 21.0 };
 static const double STYLE_SPURT[4] = { 0.0, 60.0, 120.0, 170.0 };
@@ -135,7 +137,7 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 		if (skv.get_type() == Variant::ARRAY) { Array sa = skv; for (int k = 0; k < sa.size(); k++) s.skills.add(skill_id(sa[k])); }
 		s.style = style_of(h.get("style", Variant()));
 		Dictionary pw = power(h, race, w_idx, ctx);
-		double form = rng.normal(0.0, 1.9);
+		double form = rng.normal(0.0, FORM_SD);
 		double A = (double)pw["total"] + form;
 		double vc = v0 * (1.0 + 0.0012 * (A - 85.0));
 		Dictionary cur = pw["cur"];

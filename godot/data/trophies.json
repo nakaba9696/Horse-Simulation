@@ -7,7 +7,6 @@
 {"cat":"classic","id":"eu3","label":"欧州三冠","kind":"set","races":["英ダービー","キングジョージ","凱旋門賞"],"same":true,"tier":4,"focus":["sta","guts"],"note":"英ダービー・キングジョージ・凱旋門賞を同じ年に"},
 {"cat":"classic","id":"eumile","label":"欧州マイル三冠","kind":"set","races":["英2000ギニー","ジャックルマロワ賞","QE2世S"],"same":true,"tier":3,"focus":["spd","mind"],"note":"英2000ギニー・ジャックルマロワ賞・クイーンエリザベス2世Sを同じ年に"},
 {"cat":"classic","id":"au3","label":"豪州三冠","kind":"set","races":["ランドウィックギニー","ローズヒルギニー","豪ダービー"],"same":true,"tier":3,"focus":["spd","sta"],"note":"ランドウィックギニー・ローズヒルギニー・豪ダービーを同じ年に"},
-{"cat":"classic","id":"au2","label":"豪州2歳三冠","kind":"set","races":["ゴールデンスリッパー","サイアーズプロデュースS","シャンペンS"],"same":true,"tier":3,"focus":["spd","guts"],"note":"ゴールデンスリッパーS・サイアーズプロデュースS・シャンペンSを同じ年に"},
 {"cat":"classic","id":"hk3","label":"香港トリプルクラウン","kind":"set","races":["スチュワーズC","香港ゴールドカップ","チャンピオンズ＆チャターC"],"same":true,"tier":3,"focus":["spd","sta"],"note":"スチュワーズC・香港ゴールドC・チャンピオンズ＆チャターCを同じ年に"},
 {"cat":"classic","id":"hksp","label":"香港スプリント三冠","kind":"set","races":["センテナリースプリントC","クイーンズシルヴァージュビリーC","チェアマンズスプリントプライズ"],"same":true,"tier":3,"focus":["spd","guts"],"note":"センテナリースプリントC・クイーンズシルヴァージュビリーC・チェアマンズスプリントプライズを同じ年に"},
 {"cat":"classic","id":"ausp","label":"豪州スプリント三冠","kind":"set","races":["ブラックキャビアライトニング","TJスミスS","ジ・エベレスト"],"same":true,"tier":3,"focus":["spd","guts"],"note":"ブラックキャビアライトニング・TJスミスS・ジ・エベレストを同じ年に"},
@@ -21,7 +20,7 @@
 {"cat":"gs","id":"gs_turf","label":"ワールドターフ GS","kind":"set","races":["ドバイシーマクラシック","エクリプスS","キングジョージ","凱旋門賞"],"same":true,"tier":5,"focus":["spd","sta"],"note":"ドバイシーマクラシック・エクリプスS・キングジョージ・凱旋門賞を同じ年に"},
 {"cat":"gs","id":"gs_stayer","label":"ワールドステイヤー GS","kind":"set","races":["天皇賞・春","アスコットGC","グッドウッドC","メルボルンカップ"],"same":true,"tier":5,"focus":["sta","guts"],"note":"天皇賞・春・ゴールドカップ（アスコット）・グッドウッドカップ・メルボルンカップを同じ年に"},
 {"cat":"gs","id":"gs_dirt","label":"ワールドダート GS","kind":"set","races":["サウジカップ","ドバイワールドカップ","ペガサスWC","BCクラシック"],"same":true,"tier":5,"focus":["dspd","dsta"],"note":"サウジカップ・ドバイワールドカップ・ペガサスワールドカップ・BCクラシックを同じ年に"},
-{"cat":"gs","id":"gs_tiara","label":"ワールドティアラ GS","kind":"set","races":["ヴィクトリアマイル","仏オークス","ヴェルメイユ賞","BCフィリー＆メアターフ"],"same":false,"tier":5,"focus":["spd","mind"],"note":"ヴィクトリアマイル・ディアヌ賞・ヴェルメイユ賞・BCフィリー＆メアターフを全部（ヴィクトリアマイルは4歳から・ディアヌ賞は3歳なので、年はまたいでよい）"},
+{"cat":"gs","id":"gs_tiara","label":"ワールドティアラ GS","kind":"set","races":["ヴィクトリアマイル","ナッソーS","ヴェルメイユ賞","BCフィリー＆メアターフ"],"same":true,"tier":5,"focus":["spd","mind"],"note":"ヴィクトリアマイル・ナッソーS・ヴェルメイユ賞・BCフィリー＆メアターフを同じ年に"},
 {"cat":"gs","id":"gs_eu","label":"ヨーロピアン GS","kind":"set","races":["プリンスオブウェールズS","英インターナショナルS","愛チャンピオンS","英チャンピオンS"],"same":true,"tier":4,"focus":["spd","sta"],"note":"プリンスオブウェールズS・インターナショナルS・愛チャンピオンS・英チャンピオンSを同じ年に"},
 {"cat":"gs","id":"gs_us","label":"アメリカン GS","kind":"set","races":["ペガサスWC","メトロポリタンH","ホイットニーS","BCクラシック"],"same":true,"tier":4,"focus":["dspd","dsta"],"note":"ペガサスWC・メトロポリタンH・ホイットニーS・BCクラシックを同じ年に"},
 {"cat":"gs","id":"gs_jp","label":"ジャパン GS","kind":"set","races":["天皇賞・春","宝塚記念","天皇賞・秋","ジャパンC","有馬記念"],"same":true,"tier":5,"focus":["sta","guts"],"note":"天皇賞・春・宝塚記念・天皇賞・秋・ジャパンC・有馬記念を同じ年に"},
@@ -34,10 +33,5 @@
 {"cat":"title","id":"legend","label":"レジェンドホース","kind":"set","races":["凱旋門賞","ドバイワールドカップ"],"same":true,"tier":5,"focus":["spd","dspd"],"note":"凱旋門賞とドバイワールドカップを同じ年に"},
 {"cat":"title","id":"hof","label":"ホールオブフェイム","kind":"hof","races":[],"same":true,"tier":6,"focus":["guts","mind"],"note":"1年を無敗で過ごし、その年に G1 を6勝（年末の表彰で）"},
 {"cat":"title","id":"wonder","label":"ワンダーホース","kind":"wonder","races":[],"same":true,"tier":5,"focus":["spd","guts"],"note":"勝ったレースで2着につけた着差の合計が100馬身（1レースは10馬身まで数える・GF は数えない）"},
-{"cat":"title","id":"immortal","label":"インモータルロード","kind":"immortal","races":[],"same":true,"tier":6,"focus":["guts","mind"],"note":"G1 を10連勝（G1 に出たときだけ数える。G1 で負けると0から。GF は数えない）"},
-{"cat":"extra","id":"autumn","label":"秋の古馬三冠","kind":"set","races":["天皇賞・秋","ジャパンC","有馬記念"],"same":true,"tier":3,"focus":["sta","guts"],"note":"天皇賞・秋・ジャパンC・有馬記念を同じ年に"},
-{"cat":"extra","id":"spring","label":"春の古馬三冠","kind":"set","races":["大阪杯","天皇賞・春","宝塚記念"],"same":true,"tier":3,"focus":["sta","guts"],"note":"大阪杯・天皇賞・春・宝塚記念を同じ年に"},
-{"cat":"extra","id":"grandprix","label":"グランプリ制覇","kind":"set","races":["宝塚記念","有馬記念"],"same":false,"tier":1,"focus":["sta","guts"],"note":"宝塚記念と有馬記念の両方"},
-{"cat":"extra","id":"tenno","label":"天皇賞の春秋制覇","kind":"set","races":["天皇賞・春","天皇賞・秋"],"same":false,"tier":1,"focus":["sta","guts"],"note":"天皇賞・春と天皇賞・秋の両方"},
-{"cat":"extra","id":"arima2","label":"有馬記念連覇","kind":"repeat","races":["有馬記念"],"same":true,"tier":1,"focus":["sta","guts"],"note":"有馬記念を2年続けて"}
+{"cat":"title","id":"immortal","label":"インモータルロード","kind":"immortal","races":[],"same":true,"tier":6,"focus":["guts","mind"],"note":"G1 を10連勝（G1 に出たときだけ数える。G1 で負けると0から。GF は数えない）"}
 ]

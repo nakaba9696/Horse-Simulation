@@ -206,7 +206,7 @@ static func horse_from_foal(f: Dictionary, sireName: Variant, damName: Variant, 
 	var h := {}
 	h.id = new_id(); h.name = HSU.or_(name, ""); h.sex = f.sex; h.born = born; h.sire = sireName; h.dam = damName; h.hist = false; h.owner = "AI"; h.loc = "farm"
 	h.pot = f.pot; h.apt = f.apt; h.distMin = f.distMin; h.distMax = f.distMax; h.growth = f.growth; h.peakShift = f.peakShift; h.style = f.style
-	h.kire = f.kire; h.skills = HSU.or_(f.get("skills"), []); h.health = f.health; h.bonus = {}; h.cond = 0.0; h.fatigue = 0.0
+	h.kire = f.kire; h.skills = HSU.or_(f.get("skills"), []); h.health = f.health; h.bonus = {}; h.fatigue = 0.0
 	h.wins = 0.0; h.starts = 0.0; h.w2 = 0.0; h.w3 = 0.0; h.earn = 0.0; h.prize = 0.0; h.gradedWins = []; h.results = []; h.restUntil = 0.0; h.coat = HSU.or_(f.get("coat"), "鹿毛")
 	return h
 static func display_name(h: Dictionary) -> String:
@@ -795,7 +795,7 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 		if h.get("filler"):
 			if race.get("graded") and (res.pos == 1 or (race.get("grade") == "G1" and res.pos <= 3)) and race.get("region") == "JRA": promote(h, race, res, wIdx)
 			else: continue
-		var gf: bool = race.get("grade") == "GF"   # GF は特別枠：出走数・勝ち数・疲れ・調子・休みに数えない
+		var gf: bool = race.get("grade") == "GF"   # GF は特別枠：出走数・勝ち数・疲れ・休みに数えない
 		if not gf:
 			h.starts = float(HSU.or_(h.get("starts"), 0.0)) + 1.0
 			if res.pos == 1: h.wins = float(HSU.or_(h.get("wins"), 0.0)) + 1.0
@@ -820,10 +820,9 @@ static func apply_results(race: Dictionary, sim: Dictionary, runners: Array, wId
 		h.results.append(rr)
 		var keep := 80 if h.get("owner") == "P" else 12
 		while h.results.size() > keep: h.results.pop_front()
-		# 疲れ（HSFatigue：格×距離×激戦の度合い＋移動）・調子・休み（GF は動かさない）。故障は無い
+		# 疲れ（HSFatigue：格×距離×激戦の度合い＋移動）・休み（GF は動かさない）。故障も調子も無い
 		if not gf:
 			HSFatigue.after_race(h, race, sim.results, int(res.pos) - 1, x.get("travel"))
-			h.cond = float(HSU.or_(h.get("cond"), 0.0)) - 15.0
 			h.restUntil = wIdx + (5.0 + rng.int_(0, 4) if race.get("grade") == "G1" else 3.0 + rng.int_(0, 4))
 			h.lastRaceW = wIdx
 		if h.get("owner") == "P":
@@ -892,11 +891,9 @@ static func weekly_care(wIdx: float, report: Dictionary) -> void:
 					var menu: String = auto_menu(h, wIdx) if (G.mode == "jockey" or h.get("auto") or not h.get("menu")) else h.menu
 					var tr := HSHorse.train(h, menu, rng, wIdx)
 					h.lastTrain = { menu = menu, time = tr.time, date = report.date }
-				else:
-					h.cond = HSU.clamp(float(HSU.or_(h.get("cond"), 0.0)) * 0.8 + rng.normal(5.0, 15.0), -100.0, 100.0)
 			HSFatigue.weekly(h)
 		elif h.get("loc") == "farm":
-			HSHorse.rest(h, rng)
+			HSHorse.rest(h)
 static func auto_menu(h: Dictionary, wIdx: float) -> String:
 	var st := HSFatigue.stage(h)
 	if st >= 3: return "休養"
@@ -1196,6 +1193,7 @@ static func migrate(g: Dictionary) -> void:
 	if not g.get("edits"): g.edits = {}
 	if not g.get("bond"): g.bond = {}
 	if g.get("dc"): HSSeason.dc_upgrade(g)
+	HSTrophy.migrate_removed(g)   # 外したトロフィー（仕様書に無い5つ・豪州2歳三冠）の記録を消す
 	if g.get("eraless") and not g.get("gfTrophy"):   # 前のセーブ（GF ごとのトロフィーより前）：勝った GF の区分のトロフィーを付ける
 		HSTrophy.migrate_gf(g)
 		g.gfTrophy = 1.0
@@ -1218,6 +1216,7 @@ static func migrate(g: Dictionary) -> void:
 		if g.mode == "jockey" and h.get("parked"): h.erase("parked")
 		# 故障は無くなった（持ち主の仕様書「故障はなしにする」）：前のセーブで故障していた馬は治った扱い
 		if h.has("injury"): h.erase("injury")
+		if h.has("cond"): h.erase("cond")   # 調子は無くなった（持ち主の決定 2026-10-20）：前のセーブの調子の値は読み捨てる
 	# レースが OP 以上だけになる前のセーブ（world.js と同じ）：条件戦（鍵が -c…）の予約・出走登録・騎乗を外す。デビュー戦の予約は、その週の2歳オープンに出る
 	g.reserve = g.reserve.filter(func(x): return not HSRaces.is_old_key(x.get("key")))
 	for x in g.reserve:

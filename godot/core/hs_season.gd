@@ -1,28 +1,11 @@
-# シーズンの決まり（js/core/season.js と js/core/dream.js の HS.Season と同じ）：お手馬の上限・資金切れ・調子の8段階・総合力・冠と殿堂・出走の予約・
+# シーズンの決まり（js/core/season.js と js/core/dream.js の HS.Season と同じ）：お手馬の上限・資金切れ・総合力・冠と殿堂・出走の予約・
 # 年末のグランドフェスティバル（GF。12月4週のあとに海外の競馬場で6つ。招待・出るかの選択・出走表）・天気
 class_name HSSeason
 
 const MAX_OWN := 10.0
 const BROKE_MONTHS := 2.0
 
-# ---------- 調子の8段階 ----------
-const COND := [
-	{ label = "休みすぎ", color = "#e0443a" }, { label = "休み明け", color = "#9a5ad6" }, { label = "絶好調", color = "#2f7ff0" }, { label = "好調", color = "#3fb56a" },
-	{ label = "普通", color = "#e5c443" }, { label = "疲れ", color = "#e8892e" }, { label = "疲れが濃い", color = "#8a5a32" }, { label = "使いすぎ", color = "#8c8c8c" },
-]
-static func gap(h: Dictionary, wIdx: Variant) -> Variant:
-	return wIdx - h.lastRaceW if (h.get("lastRaceW") != null and wIdx != null) else null
-static func cond_level(h: Dictionary, wIdx: Variant) -> int:
-	# 疲労の段階（HSFatigue）：疲れ・疲れが濃い・使いすぎはそのまま、軽い疲れは「普通」まで
-	var st := HSFatigue.stage(h); var c: float = HSU.or_(h.get("cond"), 0.0); var g = gap(h, wIdx)
-	if st >= 2: return st + 3
-	if st == 1: return 4
-	if g != null and g >= 24: return 0
-	if g != null and g >= 12: return 1
-	if c >= 15: return 2
-	if c >= -20: return 3
-	return 4
-static func cond(h: Dictionary, wIdx: Variant) -> Dictionary: return COND[cond_level(h, wIdx)]
+# 調子は無い（持ち主の決定 2026-10-20「調子のパラメータは無し。疲労だけにする」）。馬の状態は疲労（HSFatigue）の段階で見せる
 
 # ---------- 総合力（芝・ダートそれぞれ 1〜99） ----------
 const FH_NAME := "総合力"
@@ -230,7 +213,7 @@ static func weather_icon(w: String) -> String: return { "晴": "☀", "曇": "�
 
 # ================= グランドフェスティバル（js/core/dream.js） =================
 # 区分は data/gf.js（godot/data/gf.json）。12月4週のあとの「GF の週」（G.week＝5）に全部を走る。
-# GF は特別枠（疲れ・調子・休み（移動の疲れも無い）・出走数・勝ち数・リーディングに数えない）。同じ馬でいくつの GF にも出られる（連戦）
+# GF は特別枠（疲れ・休み（移動の疲れも無い）・出走数・勝ち数・リーディングに数えない）。同じ馬でいくつの GF にも出られる（連戦）
 const DC_NAME := "グランドフェスティバル"
 const DC_FIELD := 16
 const GF_WEEK := 5.0

@@ -171,7 +171,7 @@
     const h = {
       id: newId(), name: name || '', sex: f.sex, born, sire: sireName, dam: damName, hist: false, owner: 'AI', loc: 'farm',
       pot: f.pot, apt: f.apt, distMin: f.distMin, distMax: f.distMax, growth: f.growth, peakShift: f.peakShift, style: f.style,
-      kire: f.kire, skills: f.skills || [], health: f.health, bonus: {}, cond: 0, fatigue: 0,
+      kire: f.kire, skills: f.skills || [], health: f.health, bonus: {}, fatigue: 0,
       wins: 0, starts: 0, w2: 0, w3: 0, earn: 0, prize: 0, gradedWins: [], results: [], restUntil: 0, coat: f.coat || '鹿毛',
     };
     return h;
@@ -671,7 +671,7 @@
         if (race.graded && (res.pos === 1 || (race.grade === 'G1' && res.pos <= 3)) && race.region === 'JRA') W.promote(h, race, res, wIdx);
         else continue;
       }
-      const gf = race.grade === 'GF'; // グランドフェスティバルは特別枠：出走数・勝ち数・疲れ・調子・休みに数えない（賞金・勝ち鞍・成績は残る）
+      const gf = race.grade === 'GF'; // グランドフェスティバルは特別枠：出走数・勝ち数・疲れ・休みに数えない（賞金・勝ち鞍・成績は残る）
       if (!gf) {
         h.starts = (h.starts || 0) + 1;
         if (res.pos === 1) h.wins = (h.wins || 0) + 1;
@@ -689,10 +689,9 @@
       // AI の馬は最近の成績だけ残す（セーブを小さく）
       const keep = h.owner === 'P' ? 80 : 12;
       while (h.results.length > keep) h.results.shift();
-      // 疲れ（js/core/fatigue.js：格×距離×激戦の度合い＋移動）・調子・休み（GF は動かさない）。故障は無い
+      // 疲れ（js/core/fatigue.js：格×距離×激戦の度合い＋移動）・休み（GF は動かさない）。故障も調子も無い
       if (!gf) {
         HS.Fatigue.afterRace(h, race, sim.results, res.pos - 1, x.travel);
-        h.cond = (h.cond || 0) - 15;
         h.restUntil = wIdx + (race.grade === 'G1' ? 5 + rng.int(0, 4) : 3 + rng.int(0, 4));
         h.lastRaceW = wIdx;
       }
@@ -761,14 +760,11 @@
             const menu = G.mode === 'jockey' || h.auto || !h.menu ? W.autoMenu(h, wIdx) : h.menu; // 騎手のゲームでは調教は調教師にまかせる
             const tr = H.train(h, menu, rng, wIdx);
             h.lastTrain = { menu, time: tr.time, date: report.date };
-          } else {
-            // AI は軽く整える
-            h.cond = U.clamp((h.cond || 0) * 0.8 + rng.normal(5, 15), -100, 100);
           }
         }
         HS.Fatigue.weekly(h);
       } else if (h.loc === 'farm') {
-        H.rest(h, rng);
+        H.rest(h);
       }
     }
   };
@@ -1164,6 +1160,7 @@
     g.farmLevel = g.farmLevel || 1;
     g.erased = g.erased || []; g.rides = g.rides || {}; g.broke = g.broke || 0; g.gameOver = g.gameOver || null; g.reserve = g.reserve || []; g.dc = g.dc || null; g.lineup = g.lineup || {}; g.unlocked = g.unlocked || []; if (g.eraless && !g.shopKeys) g.shopKeys = HS.Eraless ? HS.Eraless.migrateKeys(g) : []; /* 前のセーブは、自分の馬の勝ち鞍で馬の店を開けておく */ g.trophies = g.trophies || {}; g.hallOwn = g.hallOwn || []; if (g.eraless && !g.startYear) g.startYear = 2025; g.mode = g.mode || 'owner'; g.bornHist = g.bornHist || []; g.pedExtra = g.pedExtra || {}; g.edits = g.edits || {}; g.bond = g.bond || {}; /* 絆：馬ごとの、自分で乗った回数 */
     if (g.dc && HS.Season && HS.Season.dcUpgrade) HS.Season.dcUpgrade(g); // 前の形の招待（12月2〜4週に GF を走っていた頃）を、GF の週の形に
+    if (HS.Trophy && HS.Trophy.migrateRemoved) HS.Trophy.migrateRemoved(g); // 外したトロフィー（仕様書に無い5つ・豪州2歳三冠）の記録を消す
     if (g.eraless && !g.gfTrophy && HS.Trophy && HS.Trophy.migrateGF) { HS.Trophy.migrateGF(g); g.gfTrophy = 1; } // 前のセーブ（GF ごとのトロフィーより前）：勝った GF の区分のトロフィーを付ける
     if (g.eraless && !g.gfShop && HS.Eraless && HS.Eraless.gfKeys) { for (const k of HS.Eraless.gfKeys(g)) if (!g.shopKeys.includes(k)) g.shopKeys.push(k); g.gfShop = 1; } // 前のセーブ（GF の馬の段より前）：自分の馬が勝った GF の区分を開けておく
     for (const h of Object.values(g.horses)) {
@@ -1177,6 +1174,8 @@
       if (g.mode === 'jockey' && h.parked) delete h.parked;
       // 故障は無くなった（持ち主の仕様書「故障はなしにする」）：前のセーブで故障していた馬は治った扱い
       if ('injury' in h) delete h.injury;
+      // 調子は無くなった（持ち主の決定 2026-10-20「調子のパラメータは無し。疲労だけにする」）：前のセーブの調子の値は読み捨てる
+      if ('cond' in h) delete h.cond;
     }
     // レースが OP 以上だけになる前のセーブ（持ち主の決定 2026-10-20）：条件戦（鍵が -c…）の予約・出走登録・騎乗を外す。デビュー戦の予約は、その週の2歳オープンに出る
     if (HS.Races && HS.Races.isOldKey) {

@@ -139,7 +139,8 @@ Dictionary power(const Dictionary &horse, const Dictionary &race, const Variant 
 	double layoff = (lrw.get_type() != Variant::NIL && w_idx.get_type() != Variant::NIL && (double)w_idx - (double)lrw >= 12) ? 1.2 : 0.0;
 	bool ctxOk = !ctx.is_empty();
 	double trav = ctxOk ? num_or(ctx.get("travel", Variant()), 0.0) : 0.0; // このレースへの移動の疲れ（HSFatigue.travel）
-	double condAdj = num_or(horse.get("cond", Variant()), 0.0) / 100.0 * 3.0 - fatigue_pen(num_or(horse.get("fatigue", Variant()), 0.0) + trav, a) - layoff;
+	// 調子は無い（持ち主の決定 2026-10-20）。調子の揺れの分はその日の出来（hs_sim.cpp の FORM_SD）に入れた
+	double condAdj = -fatigue_pen(num_or(horse.get("fatigue", Variant()), 0.0) + trav, a) - layoff;
 	double jockAdj = 0.0;
 	if (ctxOk && ctx.get("jockey", Variant()).booleanize()) jockAdj = ((double)((Dictionary)ctx["jockey"])["skill"] - 75.0) * 0.06;
 	double wtAdj = 0.0;

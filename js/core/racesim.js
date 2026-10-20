@@ -37,6 +37,10 @@
     return p * U.clamp(1 - (a - F.strong) / (F.top - F.strong) * (1 - F.keep), F.keep, 1);
   };
 
+  // その日の出来の揺れ（点。1頭ずつ、レースごとに）。前は 1.9 に調子（sd 0.89 点）が別に足されていた。
+  // 調子を無くしたので、合わせた揺れ（√(1.9²＋0.89²)≒2.1）をここで保つ（docs/BALANCE.md「疲労」）
+  S.FORM_SD = 2.1;
+
   // 1頭の、このレースでの強さ（点）を計算する。内訳も返す（人気・説明に使う）
   S.power = function (horse, race, wIdx, ctx) {
     const c0 = H.cur(horse, wIdx);
@@ -55,7 +59,8 @@
     // 休み明け（12週以上あいた）は少し割り引く（鉄砲駆けの馬は別に足す）
     const layoff = horse.lastRaceW != null && wIdx != null && wIdx - horse.lastRaceW >= 12 ? 1.2 : 0;
     // 疲労の下げ（段階ごと。強い馬ほど小さい）。ctx.travel＝このレースへの移動の疲れ（国が変わるとき。js/core/fatigue.js）
-    const condAdj = (horse.cond || 0) / 100 * 3 - S.fatiguePen((horse.fatigue || 0) + ((ctx && ctx.travel) || 0), a) - layoff;
+    // 調子は無い（持ち主の決定 2026-10-20「調子のパラメータは無し。疲労だけにする」）。調子の揺れの分は、その日の出来（S.FORM_SD）に入れた
+    const condAdj = -S.fatiguePen((horse.fatigue || 0) + ((ctx && ctx.travel) || 0), a) - layoff;
     const jockAdj = ctx && ctx.jockey ? (ctx.jockey.skill - 75) * 0.06 : 0;
     const wtAdj = ctx && ctx.weight ? -(ctx.weight - 56) * 1.4 : 0;
     const skillAdj = S.skillAdj(horse, race, wIdx, ctx);
@@ -199,7 +204,7 @@
     const st = runners.map((r, i) => {
       const h = r.horse;
       const pw = S.power(h, race, wIdx, Object.assign({ paceF }, r));
-      const form = rng.normal(0, 1.9);
+      const form = rng.normal(0, S.FORM_SD);
       const A = pw.total + form;
       const vc = v0 * (1 + 0.0012 * (A - 85));
       const sta = pw.cur.sta, guts = pw.cur.guts, mind = pw.cur.mind, slopeP = pw.cur.slope;

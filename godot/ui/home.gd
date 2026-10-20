@@ -135,7 +135,8 @@ func _cmd(key: String) -> void:
 			go("title")
 
 # ---- お手馬（左下） ----
-const HCOLS := [["馬名", 0], ["性齢", 52], ["調子", 96], ["芝", 44], ["ダ", 44], ["次走", 250]]
+# 馬の状態は疲労の段階（調子は無い：持ち主の決定 2026-10-20）
+const HCOLS := [["馬名", 0], ["性齢", 52], ["疲労", 96], ["芝", 44], ["ダ", 44], ["次走", 250]]
 
 func _build_stable() -> void:
 	var G = HSWorld.G
@@ -184,8 +185,9 @@ func _build_stable() -> void:
 		var sa := UiTheme.num_label("%s%d" % ["セ" if h.get("gelding") else h.sex, int(G.year - float(h.born))], 15)
 		sa.custom_minimum_size.x = HCOLS[1][1]
 		hb.add_child(sa)
-		var cond_txt := "入厩前" if h.loc == "farm" else String(HSSeason.cond(h, wi).label)
-		var cc := Color(String(HSSeason.cond(h, wi).color)) if h.loc == "stable" else UiTheme.FAINT
+		var fv := HSFatigue.view(h)
+		var cond_txt := "入厩前" if h.loc == "farm" else String(fv.label)
+		var cc := Color(String(fv.color)) if h.loc == "stable" else UiTheme.FAINT
 		var cl := HBoxContainer.new()
 		cl.custom_minimum_size.x = HCOLS[2][1]
 		cl.add_theme_constant_override("separation", 6)

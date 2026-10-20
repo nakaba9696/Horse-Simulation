@@ -195,6 +195,8 @@ static var PACE_TOP := 50.0
 static var PACE_EARLY := 60.0
 static var PACE_NIGE := [-0.009, -0.002, 0.003, 0.008]
 static var PACE_SD := 0.006
+# その日の出来の揺れ（点）。前の 1.9 に調子（sd 0.89 点）の分を合わせた（racesim.js の S.FORM_SD）
+static var FORM_SD := 2.1
 static var STYLE_MULT := { "逃げ": 1.03, "先行": 1.014, "差し": 0.995, "追込": 0.982 }
 static var STYLE_GAP := { "逃げ": 0.0, "先行": 6.0, "差し": 13.0, "追込": 21.0 }
 static var STYLE_SPURT := { "逃げ": 0.0, "先行": 60.0, "差し": 120.0, "追込": 170.0 }
@@ -274,7 +276,8 @@ static func _power_gd(horse: Dictionary, race: Dictionary, w_idx: Variant, ctx: 
 	var groundAdj: float = gl * (float(HSU.or_(horse.apt.get("heavy"), 50.0)) - 55.0) / 45.0 * 1.3
 	var layoff := 1.2 if (horse.get("lastRaceW") != null and w_idx != null and w_idx - horse.lastRaceW >= 12) else 0.0
 	var trav: float = float(HSU.or_(ctx.get("travel"), 0.0)) if ctx else 0.0   # このレースへの移動の疲れ（HSFatigue.travel）
-	var condAdj: float = float(HSU.or_(horse.get("cond"), 0.0)) / 100.0 * 3.0 - fatigue_pen(float(HSU.or_(horse.get("fatigue"), 0.0)) + trav, a) - layoff
+	# 調子は無い（持ち主の決定 2026-10-20）。調子の揺れの分はその日の出来（FORM_SD）に入れた
+	var condAdj: float = -fatigue_pen(float(HSU.or_(horse.get("fatigue"), 0.0)) + trav, a) - layoff
 	var jockAdj := 0.0
 	if ctx and ctx.get("jockey"): jockAdj = (ctx.jockey.skill - 75.0) * 0.06
 	var wtAdj := 0.0
@@ -450,7 +453,7 @@ static func _create_gd(race: Dictionary, runners: Array, w_idx: Variant, rng: HS
 		var h: Dictionary = r.horse
 		var ctx := { paceF = paceF }; ctx.merge(r, true)
 		var pw := power(h, race, w_idx, ctx)
-		var form := rng.normal(0.0, 1.9)
+		var form := rng.normal(0.0, FORM_SD)
 		var A: float = pw.total + form
 		var vc := v0 * (1.0 + 0.0012 * (A - 85.0))
 		var sta: float = pw.cur.sta; var guts: float = pw.cur.guts; var mind: float = pw.cur.mind; var slopeP: float = pw.cur.slope
