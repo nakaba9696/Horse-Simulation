@@ -50,7 +50,7 @@
 | `scenes/shop.tscn`・`ui/shop.gd` | 馬の店（牡馬・牝馬のタブ・並べ替え・右の見本。行を押すと詳しい小窓 →「買う」→ 確かめで買う。撮影は `--setup=shop_detail`・`--setup=shop_confirm`） |
 | `scenes/week_result.tscn`・`ui/week_result.gd` | 週の結果（騎乗したレースの着順と進上金・着順の表・馬主のひと言・ご褒美・ニュース） |
 | `scenes/stable.tscn`・`ui/stable.gd` | 厩舎＝お手馬画面（お手馬と牧場の馬のタブ・戦績と近走・疲労・次走・右の見本・詳しく・番組表・引退させる・放す。確かめは「やめる」から） |
-| `scenes/horse.tscn`・`ui/horse.gd`（`UiHorseScreen`） | お手馬の詳しい画面（能力・戦績とレースの記録・レーティング・血統と名鑑のタブ、番組表で出走登録。撮影は `--setup=ridden --tab=rec --setup=race_detail`） |
+| `scenes/horse.tscn`・`ui/horse.gd`（`UiHorseScreen`） | お手馬の詳しい画面（能力・戦績とレースの記録・レーティング・血統と名鑑のタブ、番組表で出走登録。撮影は `--setup=ridden --tab=rec --setup=race_detail`。殿堂から開く読むだけの形は `UiFlow.hall_id`、撮影は `--setup=hall_view`・`--setup=hall_ask`・`--setup=race_detail_old`） |
 | `scenes/breed.tscn`・`ui/breed.gd` | 生産（牧場の牡馬と牝馬から父と母を選び、オリジナルホースを作る） |
 | `scenes/data.tscn`・`ui/data.gd` | データ（わたしの成績・スペシャルホース・トロフィー・リーディング・騎手の表彰・殿堂・コースレコード・リプレイ・乗った馬・騎乗の記録・GF） |
 | リプレイ（`UiFlow.save_replay`） | 自分で乗ったレースの描画のコマを 0.2 秒ごとに `user://replays/<id>.json` へ（セーブとは別。20本まで・お気に入りは消さない）。騎乗の画面が記録の再生（`ViewReplay`）で開く |

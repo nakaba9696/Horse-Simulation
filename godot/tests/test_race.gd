@@ -111,6 +111,7 @@ func _case(t, cs: Dictionary, kind: String = "gd") -> void:
 		rs.append({ pos = float(x.pos), num = x.num, time = H.hex(x.time), margin = x.margin, lengths = H.hex(x.lengths), last3f = H.hex(x.last3f) if x.last3f != null else null, endE = H.hex(x.endE), power = H.hex(x.power), late = x.late, blocked = x.blocked })
 	t.eq(rs, cs.results, "race %s: 着順・タイム・着差" % name)
 	t.eq(HSU.time(res.winnerTime), cs.winnerTime, "race %s: 勝ちタイム" % name)
+	t.eq(res.splits.map(func(x): return H.hex(x)), cs.get("splits", []), "race %s: ラップの通過の時刻" % name)
 	var ev: Array = []
 	for e in res.events: ev.append([H.hex(e.t), e.text, e.kind])
 	t.eq(ev, cs.events, "race %s: 実況" % name)

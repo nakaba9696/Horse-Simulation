@@ -1,15 +1,21 @@
 # お手馬の詳しい画面（docs/UI.md「馬の画面」・持ち主の仕様書 2026-10-19「お手馬画面」「ゲームメニュー画面」）
 # 左 420px：3D の馬・名前・調子と疲労と次走・「番組表（出走登録）」（金）・引退。右：タブ（Q/E・LB/RB）
 #   能力：総合力（いま・完成）・能力（いま・完成）・距離・脚質・成長・特殊能力・トロフィーと冠・重賞の勝ち鞍
-#   戦績：1走 1行（新しい順。着順・人気・タイム・着差・上がり・レーティング）。行を押すとそのレースの詳しい記録（出走馬・着順・ラップは、自分で乗ってリプレイが残っているレースだけ）
+#   戦績：1走 1行（新しい順。着順・人気・タイム・着差・上がり・レーティング）。行を押すとそのレースの詳しい記録
+#     （出走馬・枠・着順・タイム・着差・人気・騎手・ラップ・勝ち時計。HSRaceRec の記録から。リプレイが残っていれば「リプレイを見る」も。記録の無い前のセーブの1走は「記録なし」）
 #   レーティング：総合と部門（短距離・マイル・中距離・長距離・ダート）。式は HSRating（godot/core/hs_rating.gd）
 #   血統・名鑑：2代の血統表と、史実馬の名鑑
 # 厩舎（stable）から UiFlow.program_id の馬で開く。もどると厩舎の同じ行へ
+# 殿堂（データの殿堂タブ）から UiFlow.hall_id で開くと、殿堂の写し（HSHall）を読むだけの画面（戦績・殿堂の記録・レーティング・血統）。もどるとデータへ
 class_name UiHorseScreen
 extends UiScreen
 
 const TABS := [["stat", "能力"], ["rec", "戦績"], ["rating", "レーティング"], ["ped", "血統・名鑑"]]
+const HALL_TABS := [["rec", "戦績"], ["hall", "殿堂の記録"], ["rating", "レーティング"], ["ped", "血統・名鑑"]]
 const LEFT_W := 420.0
+
+var tabs_: Array = TABS
+var hall_mode := false
 
 var tab := 0
 var h: Dictionary = {}
@@ -23,15 +29,21 @@ var b_prog: Button
 var portrait: UiHorsePortrait
 
 func hint() -> String:
-	match TABS[tab][0]:
+	match tabs_[tab][0]:
 		"rec": return "行を選ぶと、そのレースの詳しい記録"
-		"rating": return "1走の値＝負かした相手の評価＋着差。馬の値＝良かった3走の平均"
+		"rating": return "1走の値＝負かした相手のレーティング＋着差。馬の値＝良かった3走の平均"
+	if hall_mode: return "殿堂入りした馬の記録（読むだけ）"
 	return "お手馬の中身。番組表で次走を決める"
 
 func keys() -> Array:
+	if hall_mode: return [["↑↓←→", "十字", "選ぶ"], ["Enter", "A", "決定"], ["Q/E", "LB/RB", "切り替え"], ["Esc", "B", "もどる"]]
 	return [["↑↓←→", "十字", "選ぶ"], ["Enter", "A", "決定"], ["Q/E", "LB/RB", "切り替え"], ["Y", "Y", "番組表"], ["Esc", "B", "もどる"]]
 
 func on_back() -> void:
+	if hall_mode:
+		UiFlow.hall_id = ""
+		go("data")
+		return
 	go("stable")
 
 # 撮影の見本（--setup=ridden）：決まった種で週を進め、最後の週は自分で乗ってから開く（戦績の行からリプレイの記録を出せるように）
@@ -40,7 +52,7 @@ func demo_week() -> bool:
 
 func on_tab(d: int) -> void:
 	if _modal != null: return
-	tab = posmod(tab + d, TABS.size())
+	tab = posmod(tab + d, tabs_.size())
 	sel = 0
 	_fill()
 	refresh_keybar()
@@ -60,6 +72,11 @@ func build() -> void:
 			var sc := n + (1000 if has else 0)
 			if best == null or sc > best[0]: best = [sc, x]
 		if best: UiFlow.program_id = String(best[1].id)
+	if args.has("--setup=hall_view"): _setup_hall_view()
+	if UiFlow.hall_id != "" and HSHall.by_id(UiFlow.hall_id) != null:
+		_build_hall(args)
+		return
+	UiFlow.hall_id = ""
 	var hh = HSWorld.horse(UiFlow.program_id)
 	if hh == null:
 		var ms := HSWorld.mine("stable") + HSWorld.mine("farm")
@@ -98,16 +115,140 @@ func build() -> void:
 	var want := String(UiFlow.focus.get("horse_tab", "stat"))
 	for a in args:
 		if a.begins_with("--tab="): want = a.substr(6)   # 撮影：開くタブ
-	var k := TABS.map(func(x): return x[0]).find(want)
+	var k := tabs_.map(func(x): return x[0]).find(want)
 	tab = maxi(0, k)
-	sel = int(UiFlow.focus.get("horse_row", 0)) if TABS[tab][0] == "rec" else 0
+	sel = int(UiFlow.focus.get("horse_row", 0)) if tabs_[tab][0] == "rec" else 0
 	_fill()
+	_setup_shots(args)
+
+# 撮影：1走の記録（記録の残っているいちばん新しい1走。--setup=race_detail_old は記録の無い1走）・殿堂入りの案内
+func _setup_shots(args: PackedStringArray) -> void:
 	if args.has("--setup=race_detail"):
-		# 撮影：リプレイの残っている1走の記録を開く
 		for r in results:
-			if find_replay(String(h.name), r) != "":
+			if HSRaceRec.has(r):
 				race_detail(r)
 				break
+	elif args.has("--setup=race_detail_old"):
+		if results.size():
+			var r: Dictionary = results[0].duplicate()
+			r.erase("rec")
+			race_detail(r)
+	elif args.has("--setup=hall_ask") and not hall_mode:
+		_give_trophy(h)
+		ask_hall(h, func(_r): pass)
+
+# 撮影の見本：その馬にトロフィーを1つ持たせる（殿堂入りの条件）
+static func _give_trophy(x: Dictionary) -> void:
+	var G = HSWorld.G
+	if not G.get("trophies"): G.trophies = {}
+	var id := String(HSTrophy.list()[0].id)
+	G.trophies[id] = { hid = x.id, horse = x.name, y = G.year, bonus = 0.0 }
+
+# 撮影の見本：戦績のいちばん多いお手馬にトロフィーを持たせ、殿堂入りさせて引退させ、殿堂から開く
+static func _setup_hall_view() -> void:
+	var best = null
+	for x in HSWorld.mine():
+		if x.get("loc") == "retired": continue
+		if best == null or HSU.or_(x.get("results"), []).size() > HSU.or_(best.get("results"), []).size(): best = x
+	if best == null: return
+	_give_trophy(best)
+	var id := String(best.id)
+	HSJockey.retire(id, { hall = true })
+	UiFlow.hall_id = id
+
+# 殿堂の写しを読むだけの画面（殿堂入りした馬。引退したあとも戦績と1走ごとの記録を見られる）
+func _build_hall(args: PackedStringArray) -> void:
+	hall_mode = true
+	tabs_ = HALL_TABS
+	h = HSHall.by_id(UiFlow.hall_id)
+	var rt = HSRating.of(h)
+	make_band("殿", String(h.name), "%s・%s・殿堂入り（%s引退）" % [String(h.sex), String(HSU.or_(h.get("coat"), "")), _yl(h.retiredY)],
+		[["戦績", record_text(h)], ["トロフィー", "%d" % (h.trophies as Array).size()], ["レーティング", "%d" % int(rt.v) if rt != null else "－"]])
+	var pb := UiScreen.panel_box(true, 8)
+	var p: PanelContainer = pb[0]
+	p.position = Vector2(PAD_X, TOP + 4)
+	p.custom_minimum_size = Vector2(LEFT_W, 1000 - TOP - 4 - 60)
+	add_child(p)
+	var v: VBoxContainer = pb[1]
+	portrait = UiHorsePortrait.new()
+	portrait.custom_minimum_size = Vector2(0, 270)
+	v.add_child(portrait)
+	portrait.set_horse(String(h.name), String(HSU.or_(h.get("coat"), "鹿毛")), float(h.retiredY) - float(h.born))
+	v.add_child(UiTheme.chip("殿堂入り", UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 15))
+	var fh = h.get("fh")
+	if fh is Dictionary:
+		var fr := HBoxContainer.new()
+		fr.add_theme_constant_override("separation", 8)
+		fr.add_child(UiTheme.label("総合力 完成", 14, UiTheme.MUTED))
+		fr.add_child(UiScreen.spacer())
+		fr.add_child(UiTheme.label("芝", 13, UiTheme.MUTED))
+		fr.add_child(UiTheme.stat_chip(float(fh.turf), "fh", true))
+		fr.add_child(UiTheme.label("ダ", 13, UiTheme.MUTED))
+		fr.add_child(UiTheme.stat_chip(float(fh.dirt), "fh", true))
+		v.add_child(fr)
+	v.add_child(_kv("戦績", "%s（%d-%d）" % [record_text(h), int(HSU.or_(h.get("w2"), 0.0)), int(HSU.or_(h.get("w3"), 0.0))]))
+	v.add_child(_kv("G1", "%d勝" % int(HSU.or_(h.get("g1"), 0.0))))
+	v.add_child(_kv("獲得賞金", HSU.money(float(HSU.or_(h.get("prize"), 0.0)))))
+	v.add_child(_kv("走った年", "%s〜%s" % [_yl(h.first), _yl(h.retiredY)]))
+	v.add_child(_kv("父・母", "%s・%s" % [String(HSU.or_(h.get("sire"), "－")), String(HSU.or_(h.get("dam"), "－"))]))
+	tab_box = VBoxContainer.new()
+	tab_box.position = Vector2(PAD_X + LEFT_W + 20, TOP + 4)
+	tab_box.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, 0)
+	add_child(tab_box)
+	var pbr := UiScreen.panel_box(false, 0)
+	var rp: PanelContainer = pbr[0]
+	rp.position = Vector2(PAD_X + LEFT_W + 20, TOP + 66)
+	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, 1000 - TOP - 66 - 60)
+	rp.size = rp.custom_minimum_size
+	add_child(rp)
+	scroll = ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	(pbr[1] as VBoxContainer).add_child(scroll)
+	list = VBoxContainer.new()
+	list.add_theme_constant_override("separation", 6)
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(list)
+	var want := "rec"
+	for a in args:
+		if a.begins_with("--tab="): want = a.substr(6)
+	tab = maxi(0, tabs_.map(func(x): return x[0]).find(want))
+	sel = 0
+	_fill()
+	_setup_shots(args)
+
+# ---- 殿堂の記録（トロフィー・冠・特殊能力・重賞の勝ち鞍） ----
+func _hall_info() -> void:
+	var tro: Array = HSU.or_(h.get("trophies"), [])
+	var tit: Array = HSU.or_(h.get("titles"), [])
+	list.add_child(UiScreen.section("トロフィー・冠", "%d個" % (tro.size() + tit.size())))
+	var tl := HFlowContainer.new()
+	tl.add_theme_constant_override("h_separation", 6)
+	tl.add_theme_constant_override("v_separation", 6)
+	for x in tro: tl.add_child(UiTheme.chip("🏆 %s　%s" % [String(x.label) if x is Dictionary else String(x), _yl(x.y) if x is Dictionary else ""], UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
+	for x in tit: tl.add_child(UiTheme.chip("冠 " + String(x), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 13))
+	list.add_child(tl)
+	var sk: Array = HSU.or_(h.get("skills"), [])
+	if sk.size():
+		list.add_child(UiScreen.section("特殊能力"))
+		var fl := HFlowContainer.new()
+		fl.add_theme_constant_override("h_separation", 6)
+		for id in sk: fl.add_child(UiTheme.chip(HSSkills.label(String(id)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY, 13))
+		list.add_child(fl)
+	var gw: Array = HSU.or_(h.get("gradedWins"), [])
+	list.add_child(UiScreen.section("重賞の勝ち鞍", "%d勝" % gw.size()))
+	if gw.is_empty(): list.add_child(UiTheme.label("なし", 14, UiTheme.FAINT))
+	var gl := HFlowContainer.new()
+	gl.add_theme_constant_override("h_separation", 10)
+	gl.add_theme_constant_override("v_separation", 6)
+	for g in gw:
+		var hb := HBoxContainer.new()
+		hb.add_theme_constant_override("separation", 4)
+		hb.add_child(UiTheme.grade_chip(String(HSU.or_(g.get("grade"), "")), 12))
+		hb.add_child(UiTheme.label("%s %s" % [_yl(g.y), HSU.or_(g.get("short"), g.race)], 13))
+		gl.add_child(hb)
+	list.add_child(gl)
 
 func _build_left() -> void:
 	var G = HSWorld.G
@@ -153,15 +294,14 @@ func _build_left() -> void:
 	var br := UiScreen.danger_button("引退させる", 0, 44, 16)
 	var id := String(h.id)
 	var nm := String(h.name)
-	br.pressed.connect(func(): confirm("%sを引退させますか？%s" % [nm, "（牧場に残り、オリジナルホースの親にできます）" if keep else "（手もとを離れます）"], "引退させる", func(): _retire(id)))
+	br.pressed.connect(func(): retire_flow(id, _retired))
 	v.add_child(br)
 
 func _program() -> void:
 	UiFlow.program_back = "horse"
 	go("program")
 
-func _retire(id: String) -> void:
-	var r := HSJockey.retire(id)
+func _retired(r: Dictionary) -> void:
 	if r.has("err"):
 		toast(String(r.err), "bad")
 		return
@@ -173,11 +313,12 @@ func _fill() -> void:
 	for c in tab_box.get_children(): c.queue_free()
 	for c in list.get_children(): c.queue_free()
 	rows.clear()
-	UiFlow.focus["horse_tab"] = TABS[tab][0]
-	tab_box.add_child(UiTheme.tabs(TABS.map(func(x): return x[1]), tab, pad, func(k): tab = k; sel = 0; _fill(); refresh_keybar(); focus_first()))
+	if not hall_mode: UiFlow.focus["horse_tab"] = tabs_[tab][0]
+	tab_box.add_child(UiTheme.tabs(tabs_.map(func(x): return x[1]), tab, pad, func(k): tab = k; sel = 0; _fill(); refresh_keybar(); focus_first()))
 	scroll.scroll_vertical = 0
-	match TABS[tab][0]:
+	match tabs_[tab][0]:
 		"stat": _stat()
+		"hall": _hall_info()
 		"rec": _rec()
 		"rating": _rating()
 		"ped": _ped()
@@ -305,7 +446,9 @@ func _rec() -> void:
 			hb.add_child(l)
 		UiScreen.pass_mouse(hb)
 		var k2 := i
-		b.focus_entered.connect(func(): sel = k2; UiFlow.focus["horse_row"] = k2)
+		b.focus_entered.connect(func():
+			sel = k2
+			if not hall_mode: UiFlow.focus["horse_row"] = k2)
 		b.pressed.connect(func(): race_detail(results[k2]))
 		list.add_child(b)
 		rows.append(b)
@@ -314,7 +457,7 @@ func _head(cols: Array) -> Control:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
 	for c in cols:
-		var l := UiTheme.label(String(c[0]), 11, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_LEFT if c[0] in ["日付", "レース", "コース", "部門"] else HORIZONTAL_ALIGNMENT_CENTER)
+		var l := UiTheme.label(String(c[0]), 11, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_LEFT if c[0] in ["日付", "レース", "コース", "部門", "馬名", "騎手"] else HORIZONTAL_ALIGNMENT_CENTER)
 		if c[1] > 0: l.custom_minimum_size.x = c[1]
 		else: l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(l)
@@ -387,24 +530,26 @@ func _ped() -> void:
 
 func focus_first() -> void:
 	if h.is_empty(): return
-	if TABS[tab][0] == "rec" and rows.size():
+	if tabs_[tab][0] == "rec" and rows.size():
 		rows[clampi(sel, 0, rows.size() - 1)].grab_focus()
 	elif b_prog:
 		b_prog.grab_focus()
 
 func _unhandled_input(ev: InputEvent) -> void:
-	if _modal == null and not h.is_empty() and ((ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_Y) or (ev is InputEventJoypadButton and ev.pressed and ev.button_index == JOY_BUTTON_Y)):
+	if _modal == null and not h.is_empty() and not hall_mode and ((ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_Y) or (ev is InputEventJoypadButton and ev.pressed and ev.button_index == JOY_BUTTON_Y)):
 		_program()
 		get_viewport().set_input_as_handled()
 		return
 	super._unhandled_input(ev)
 
-# ---- レースの詳しい記録（戦績の行から）：自分の馬の記録と、残っていれば出走馬の着順とラップ ----
+# ---- レースの詳しい記録（戦績の行から）：自分の馬の記録・出走馬（枠・着順・タイム・着差・人気・騎手）・ラップ・勝ち時計 ----
+# 記録は HSRaceRec（1走に付けた rec）。リプレイが残っていれば「リプレイを見る」も出す。記録の無い前のセーブの1走は「記録なし」
+const DETAIL_COLS := [["着", 34], ["枠", 34], ["馬名", 0], ["タイム", 74], ["着差", 64], ["人気", 46], ["騎手", 150]]
 var detail_replay := ""
 func race_detail(r: Dictionary) -> void:
-	var pb := UiScreen.panel_box(true, 12)
+	var pb := UiScreen.panel_box(true, 10)
 	var p: PanelContainer = pb[0]
-	p.custom_minimum_size = Vector2(1200, 780)
+	p.custom_minimum_size = Vector2(1320, 0)
 	var root: VBoxContainer = pb[1]
 	var th := HBoxContainer.new()
 	th.add_theme_constant_override("separation", 12)
@@ -412,14 +557,14 @@ func race_detail(r: Dictionary) -> void:
 	if g != "": th.add_child(UiTheme.grade_chip(g, 15))
 	th.add_child(UiTheme.title(String(r.race), 28))
 	th.add_child(UiScreen.spacer())
-	th.add_child(UiTheme.label("%s　%s %s%sm　%s" % [_date(r), r.course, r.surface, HSU.num(r.dist), HSU.or_(r.get("ground"), "")], 15, UiTheme.MUTED))
+	th.add_child(UiTheme.label("%s　%s %s%sm　%s" % [_date(r), r.course, "ダート" if r.surface == "ダ" else "芝", HSU.num(r.dist), HSU.or_(r.get("ground"), "")], 15, UiTheme.MUTED))
 	root.add_child(th)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 26)
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(cols)
 	var lv := VBoxContainer.new()
-	lv.custom_minimum_size.x = 380
+	lv.custom_minimum_size.x = 360
 	lv.add_theme_constant_override("separation", 6)
 	cols.add_child(lv)
 	lv.add_child(UiScreen.section(String(h.name)))
@@ -431,66 +576,70 @@ func race_detail(r: Dictionary) -> void:
 	for x in [["人気", "%d番人気" % int(r.pop) if r.get("pop") != null else "－"], ["タイム", HSU.time(float(r.time)) if r.get("time") != null else "－"], ["着差", String(HSU.or_(r.get("margin"), "")) if pos > 1 else "－"],
 			["上がり3F", "%.1f" % float(r.last3f) if r.get("last3f") != null else "－"], ["騎手", String(HSU.or_(r.get("jockey"), "－"))], ["レーティング", "%d" % int(r.rt) if r.get("rt") != null else "－"]]:
 		lv.add_child(_kv(String(x[0]), String(x[1])))
+	var has := HSRaceRec.has(r)
+	if has:
+		var wt = HSRaceRec.rows(r)[0].time
+		lv.add_child(UiScreen.section("勝ち時計"))
+		lv.add_child(UiTheme.num_label(HSU.time(float(wt)), 26, UiTheme.GOLD_BRIGHT, HORIZONTAL_ALIGNMENT_LEFT))
+		var laps := HSRaceRec.laps(r)
+		lv.add_child(UiScreen.section("ラップ", "先頭の200mごと"))
+		var lt := UiTheme.num_label(" - ".join(PackedStringArray(laps.map(func(x): return "%.1f" % x))) if laps.size() else "－", 15, UiTheme.IVORY, HORIZONTAL_ALIGNMENT_LEFT)
+		lt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		lt.custom_minimum_size.x = 350
+		lv.add_child(lt)
 	var rv := VBoxContainer.new()
 	rv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rv.add_theme_constant_override("separation", 6)
+	rv.add_theme_constant_override("separation", 2)
 	cols.add_child(rv)
 	detail_replay = find_replay(String(h.name), r)
-	var rep = null
 	if detail_replay != "":
 		var path := UiFlow.replay_dir.path_join(detail_replay + ".json")
-		if FileAccess.file_exists(path): rep = JSON.parse_string(FileAccess.get_file_as_string(path))
-		if not replay_matches(rep, String(h.name), r):
-			rep = null
-			detail_replay = ""
-	if rep is Dictionary:
-		var res: Array = rep.get("results", [])
-		rv.add_child(UiScreen.section("出走馬", "%d頭" % res.size()))
+		var rep = JSON.parse_string(FileAccess.get_file_as_string(path)) if FileAccess.file_exists(path) else null
+		if not replay_matches(rep, String(h.name), r): detail_replay = ""
+	if has:
+		var rs := HSRaceRec.rows(r)
+		rv.add_child(UiScreen.section("出走馬", "%d頭" % rs.size()))
+		rv.add_child(_head(DETAIL_COLS))
 		var me_name := String(h.name)
-		var gl := GridContainer.new()
-		gl.columns = 2
-		gl.add_theme_constant_override("h_separation", 18)
-		gl.add_theme_constant_override("v_separation", 3)
-		for x in res:
-			var hb := HBoxContainer.new()
-			hb.add_theme_constant_override("separation", 8)
-			hb.custom_minimum_size.x = 370
+		for x in rs:
 			var mine := String(x.name) == me_name
-			var pl := UiTheme.num_label("%d" % int(x.pos), 14, UiTheme.GOLD_BRIGHT if int(x.pos) <= 3 else UiTheme.MUTED)
-			pl.custom_minimum_size.x = 26
-			hb.add_child(pl)
-			var nl := UiTheme.label(String(x.name), 14, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY)
-			nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			nl.clip_text = true
-			hb.add_child(nl)
-			var tl := UiTheme.num_label(HSU.time(float(x.time)), 13, UiTheme.MUTED)
-			tl.custom_minimum_size.x = 64
-			hb.add_child(tl)
-			var ml := UiTheme.num_label(String(x.get("margin", "")), 13, UiTheme.MUTED)
-			ml.custom_minimum_size.x = 50
-			hb.add_child(ml)
-			gl.add_child(hb)
-		rv.add_child(gl)
-		var laps := laps_of(rep)
-		rv.add_child(UiScreen.section("ラップ", "先頭の200mごと"))
-		var lt := UiTheme.num_label("-".join(PackedStringArray(laps.map(func(x): return "%.1f" % x))) if laps.size() else "－", 15, UiTheme.IVORY, HORIZONTAL_ALIGNMENT_LEFT)
-		lt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lt.custom_minimum_size.x = 760
-		rv.add_child(lt)
+			var rb := UiScreen.row_button(29, mine)
+			var b: Button = rb[0]
+			b.focus_mode = Control.FOCUS_NONE
+			var hb: HBoxContainer = rb[1]
+			var xp := int(x.pos)
+			var cells := [["%d" % xp, UiTheme.GOLD_BRIGHT if xp <= 3 else UiTheme.MUTED], ["", null], [String(x.name), UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY],
+				[HSU.time(float(x.time)), UiTheme.IVORY], [String(x.margin) if xp > 1 else "", UiTheme.MUTED], ["%d" % int(x.pop) if float(x.pop) > 0 else "－", UiTheme.MUTED], [String(x.jockey), UiTheme.MUTED]]
+			for k in DETAIL_COLS.size():
+				var w: float = DETAIL_COLS[k][1]
+				if k == 1:
+					var fc := CenterContainer.new()
+					fc.custom_minimum_size.x = w
+					if x.num != null: fc.add_child(UiTheme.frame_box(int(x.frame), int(x.num), 24, 13))
+					hb.add_child(fc)
+					continue
+				var l := UiTheme.num_label(String(cells[k][0]), 14, cells[k][1], HORIZONTAL_ALIGNMENT_LEFT if k in [2, 6] else HORIZONTAL_ALIGNMENT_CENTER)
+				if k in [2, 6]: l.add_theme_font_override("font", UiTheme.font())
+				if w > 0: l.custom_minimum_size.x = w
+				else: l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				l.clip_text = true
+				hb.add_child(l)
+			UiScreen.pass_mouse(hb)
+			rv.add_child(b)
 	else:
 		rv.add_child(UiScreen.section("出走馬・ラップ"))
-		var nl := UiTheme.label("このレースの出走馬とラップは残っていません（自分で乗ったレースの、新しい20本だけ残る）", 15, UiTheme.MUTED)
+		var nl := UiTheme.label("記録なし（出走馬とラップを残す前のレース）", 16, UiTheme.MUTED)
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		nl.custom_minimum_size.x = 740
 		rv.add_child(nl)
 	var bh := HBoxContainer.new()
 	bh.alignment = BoxContainer.ALIGNMENT_END
 	bh.add_theme_constant_override("separation", 12)
-	var back := UiScreen.button("もどる", rep == null, 160, 50, 18)
+	var back := UiScreen.button("もどる", detail_replay == "", 160, 50, 18)
 	back.pressed.connect(close_modal)
 	bh.add_child(back)
 	var first: Button = back
-	if rep is Dictionary:
+	if detail_replay != "":
 		var bw := UiScreen.button("リプレイを見る", true, 220, 52, 20)
 		var id := detail_replay
 		bw.pressed.connect(func():

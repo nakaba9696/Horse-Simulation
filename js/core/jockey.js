@@ -153,10 +153,12 @@
     if (HS.Season) HS.Season.applyReserves(); // グランドフェスティバルの招待は12月4週のあと（W.nextWeek → HS.Season.gfStage）
   };
   // 引退：自分の手を離れる（種牡馬・繁殖牝馬になっても持ち馬にはしない）
-  J.retire = function (id) {
-    if (HS.Original && HS.Original.on()) return HS.Original.retire(id); // 年代なしのゲームは、牧場に残してオリジナルホースの親にする
+  // opts.hall：殿堂入りさせるか（条件を満たす馬は、引退の画面で「殿堂入りさせますか」と聞く。HS.Hall.ask）。入らなければレースの記録は消える
+  J.retire = function (id, opts) {
+    if (HS.Original && HS.Original.on()) return HS.Original.retire(id, opts); // 年代なしのゲームは、牧場に残してオリジナルホースの親にする
     const h = W.horse(id); if (!h) return { err: '持ち馬ではない' };
-    if (HS.Hall && h.owner === 'P') HS.Hall.onRetire(h); // トロフィー2つ以上なら殿堂入り
+    if (opts && opts.hall && HS.Hall && h.owner === 'P') HS.Hall.onRetire(h); // トロフィー1つ以上で、殿堂入りを選んだとき
+    if (HS.RaceRec) HS.RaceRec.strip(h);
     const r = W.retire(id);
     if (!r.err && W.horse(id)) { W.horse(id).owner = 'AI'; W.dirty(); }
     return r;

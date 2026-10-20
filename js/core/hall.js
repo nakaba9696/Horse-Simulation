@@ -1,11 +1,12 @@
-// 殿堂（お手馬）：トロフィーを2つ以上手にした自分の馬は、引退したときに殿堂入りし、その記録をあとから振り返れる
-// （持ち主の指摘 2026-10-16「トロフィーを2個以上獲得した馬は引退時に殿堂入りして記録を振り返れるように。歴代の殿堂入りお手馬を見れるように」）
-// 記録は引退したときの写し（G.hallOwn）。馬を牧場から放しても残る
+// 殿堂（お手馬）：トロフィーを1つ以上手にした自分の馬は、引退するときに「殿堂入りさせますか」と聞かれ、「はい」なら殿堂入りし、その記録をあとから振り返れる
+// （持ち主の指摘 2026-10-16「トロフィーを2個以上獲得した馬は引退時に殿堂入りして記録を振り返れるように。歴代の殿堂入りお手馬を見れるように」、
+//  持ち主の決定 2026-10-20「殿堂入りの条件は一個以上トロフィーを獲得していることにします　引退時に殿堂入りさせるか案内がきます」「引退後も見れるのは殿堂入り馬のみです」）
+// 記録は引退したときの写し（G.hallOwn。1走ごとの出走馬・ラップの記録 rec も含む）。馬を牧場から放しても残る。「いいえ」なら殿堂に入らず、レースの記録も消える
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
   const W = HS.World;
   const HL = HS.Hall = {};
-  HL.NEED = 2;
+  HL.NEED = 1;
 
   // その馬が手にしたトロフィー（前のセーブは馬の名前で引く）
   HL.trophiesOf = function (h) {
@@ -20,10 +21,12 @@
     return out.sort((a, b) => a.y - b.y);
   };
   HL.eligible = h => !!h && h.owner === 'P' && HL.trophiesOf(h).length >= HL.NEED;
+  // 引退の画面で「殿堂入りさせますか」と聞くか（条件を満たし、まだ殿堂にいない）
+  HL.ask = h => HL.eligible(h) && !HL.byId(h.id);
   HL.list = () => (W.get().hallOwn || []).slice().sort((a, b) => b.trophies.length - a.trophies.length || b.g1 - a.g1 || a.retiredY - b.retiredY);
   HL.byId = id => (W.get().hallOwn || []).find(x => x.id === id) || null;
 
-  // 引退したときに呼ぶ（original.js・jockey.js の引退から）。殿堂入りしたら写しを返す
+  // 殿堂入りさせる（original.js・jockey.js の引退から。殿堂入りを選んだときだけ）。殿堂入りしたら写しを返す
   HL.onRetire = function (h) {
     const G = W.get();
     if (!HL.eligible(h)) return null;

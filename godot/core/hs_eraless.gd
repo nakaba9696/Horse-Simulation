@@ -68,27 +68,21 @@ static func shop_age(month: float) -> float: return 2.0 if month >= 6.0 else 3.0
 static func shop_born() -> float: return HSWorld.G.year - shop_age(HSWorld.G.month)
 # 店で見える評価値は、その馬のいまの総合力（早熟は高く、晩成は低く見える）
 static func shop_fh(h: Dictionary, wIdx: float) -> Dictionary: return HSSeason.fh_both(h, wIdx)
-# 値段もいまの総合力で決める（js/core/eraless.js の E.priceOf と同じ式）：
-#   値 v ＝ いまの総合力（芝・ダの良いほう）＋ 時期の補い（「普通」の成長の馬が、この年齢でまだ伸びていない分）
-#   値段 ＝ 2,000万円 × 2^((v − 52) ÷ 6) × 物価 × 1.3（300万円から）。スペシャルホースはその1.6倍。同じ完成の強さなら晩成ほど安い
+# 値段は、いまの評価点（いまの総合力。芝・ダの良いほう）だけで決める（js/core/eraless.js の E.priceOf と同じ式。持ち主の決定 2026-10-20）：
+#   値段 ＝ 2,000万円 × 2^((評価点 − 52) ÷ 6) × 物価 × 1.3 × 成長型の掛け（300万円から）。スペシャルホースはその1.6倍
+#   成長型の掛け：評価点が同じなら晩成ほど少し高い（早熟 0.9・早め 0.95・普通 1・遅め 1.07・晩成 1.15）
 const PRICE_BASE := 2000.0
 const PRICE_DOUBLE := 6.0
 const PRICE_FH := 52.0
-const PRICE_REF := 85.0
-static func fh_line(a: float) -> float:
-	var K := HSSeason.FH_KNOTS
-	var i := 0
-	while i < K.size() - 2 and a > K[i + 1][0]: i += 1
-	return K[i][1] + (a - K[i][0]) * (K[i + 1][1] - K[i][1]) / (K[i + 1][0] - K[i][0])
-static func season_adj(born: float, wIdx: float) -> float:
-	return fh_line(PRICE_REF) - fh_line(PRICE_REF * HSHorse.growth_factor({ born = born, growth = "普通" }, wIdx))
+const GROWTH_PRICE := { "早熟": 0.9, "早め": 0.95, "普通": 1.0, "遅め": 1.07, "晩成": 1.15 }
+static func growth_price(h: Dictionary) -> float: return float(GROWTH_PRICE.get(String(HSU.or_(h.get("growth"), "")), 1.0))
 static func shop_value(h: Dictionary, wIdx: float) -> float:
 	var f := shop_fh(h, wIdx)
 	return HSU.mx(float(f.turf), float(f.dirt))
 static func price_of(h: Dictionary, legend: bool, wIdx: Variant = null) -> float:
 	var w: float = HSWorld.w_idx() if wIdx == null else float(wIdx)
-	var v := shop_value(h, w) + season_adj(float(h.born), w)
-	return HSMath.round_js(HSU.mx(300.0, PRICE_BASE * HSMath.pow_(2.0, (v - PRICE_FH) / PRICE_DOUBLE)) * HSU.price_index() * 1.3 * (1.6 if legend else 1.0) / 10.0) * 10.0
+	var v := shop_value(h, w)
+	return HSMath.round_js(HSU.mx(300.0, PRICE_BASE * HSMath.pow_(2.0, (v - PRICE_FH) / PRICE_DOUBLE)) * HSU.price_index() * 1.3 * growth_price(h) * (1.6 if legend else 1.0) / 10.0) * 10.0
 
 const COUNTRY_NEAR := { "新": "豪", "伊": "仏" }
 const COUNTRY_NAME := { "英": "イギリス", "仏": "フランス", "米": "アメリカ", "愛": "アイルランド", "独": "ドイツ", "豪": "オーストラリア", "香港": "香港", "UAE": "UAE", "サウジ": "サウジアラビア", "加": "カナダ", "星": "シンガポール", "海外": "そのほかの国" }

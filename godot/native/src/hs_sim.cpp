@@ -223,6 +223,14 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 		}
 	}
 	{ Rng g; g.s = sim.rng.s ^ 0x9E3779B9u; if (!g.s) g.s = 1; sim.gateWait = G_WAIT + G_SPREAD * g.next(); }
+	// ラップの区切り（JS の S.lapMarks）：ゴールから200mごと。最初は端数。ゴールそのものは入れない
+	{
+		sim.marks.clear();
+		double m = std::fmod(sim.D, 200.0);
+		if (m < 1.0) m = 200.0;
+		for (; m < sim.D - 0.5; m += 200.0) sim.marks.push_back(m);
+		sim.splits.assign(sim.marks.size(), 0.0); sim.hasSplit.assign(sim.marks.size(), false); sim.lapN = 0;
+	}
 	say(sim, 0.0, U8("スタートしました！"), "start");
 	for (auto &s : sim.st) if (s.late) say(sim, 0.6, s.name + U8("、出遅れた！"), "trouble");
 	return simp;
@@ -612,12 +620,19 @@ bool sim_step(Sim &sim) {
 		s.x += dx;
 		mood_out(sim, s, s.me ? c : nullptr);
 		if (!s.hasT600 && s.x >= D - 600) { s.hasT600 = true; s.t600 = t - DT + (D - 600.0 - xPrev) / maxf(0.1, s.x - xPrev) * DT; }
+		// ラップ：区切りをいちばん早く過ぎた馬の時刻（JS と同じ）
+		for (size_t k = (size_t)sim.lapN; k < sim.marks.size() && sim.marks[k] <= s.x; k++) {
+			if (sim.marks[k] <= xPrev) continue;
+			double tc = t - DT + (sim.marks[k] - xPrev) / maxf(0.1, s.x - xPrev) * DT;
+			if (!sim.hasSplit[k] || tc < sim.splits[k]) { sim.hasSplit[k] = true; sim.splits[k] = tc; }
+		}
 		if (s.x >= D) {
 			s.hasFinishT = true; s.finishT = t - DT + (D - xPrev) / maxf(0.1, s.x - xPrev) * DT;
 			s.done = true; sim.finished += 1;
 			if (!sim.hasWinnerT) { sim.hasWinnerT = true; sim.winnerT = s.finishT; }
 		}
 	}
+	while ((size_t)sim.lapN < sim.marks.size() && sim.hasSplit[sim.lapN]) sim.lapN++;
 	if (sim.step % 2 == 1) skills_step(sim, order, DT * 2.0);
 	for (auto &s : st) {
 		if (s.done) continue;
@@ -796,6 +811,9 @@ Dictionary sim_finish(Sim &sim) {
 	Dictionary out;
 	out["results"] = results; out["events"] = sim.events; out["frames"] = sim.optFrames ? Variant(sim.frames) : Variant();
 	out["D"] = D; out["straight"] = sim.straight; out["lap"] = sim.geo.get("lap", Variant()); out["winnerTime"] = winner.finishT;
+	Array splits;
+	for (size_t k = 0; k < sim.marks.size() && sim.hasSplit[k]; k++) splits.push_back(sim.splits[k]);
+	out["splits"] = splits;
 	return out;
 }
 

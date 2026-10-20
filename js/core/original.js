@@ -25,14 +25,17 @@
   O.childBonus = (s, m) => Math.min(O.BONUS_MAX, O.legacyBonus(s) + O.legacyBonus(m));
 
   // 引退：牡馬・牝馬は牧場に残る（せん馬は乗馬になる）
-  O.retire = function (id) {
+  // opts.hall：殿堂入りさせるか（引退の画面で「殿堂入りさせますか」に「はい」と答えたとき true。持ち主の決定 2026-10-20）。
+  // 殿堂に入らなければ、その馬のレースの記録（js/core/racerec.js）は消える
+  O.retire = function (id, opts) {
     const G = W.get(), h = W.horse(id);
     if (!h || h.owner !== 'P' || h.loc === 'retired') return { err: '持ち馬ではない' };
     if (O.retired(h.sex).length >= O.MAX_EACH && !h.gelding) return { err: `引退した${h.sex === '牝' ? '牝馬' : '牡馬'}は${O.MAX_EACH}頭まで。生産の画面で1頭放してから` };
     W.unenter(id);
     G.reserve = (G.reserve || []).filter(x => x.id !== id);
-    if (HS.Hall) HS.Hall.onRetire(h); // トロフィー2つ以上なら殿堂入り
-    if (h.gelding) { delete G.horses[id]; W.dirty(); W.news(`${h.name}は引退して乗馬になった。おつかれさま。`, 'info'); return { to: 'gone' }; }
+    const hall = opts && opts.hall && HS.Hall ? HS.Hall.onRetire(h) : null; // トロフィー1つ以上で、殿堂入りを選んだとき
+    if (HS.RaceRec) HS.RaceRec.strip(h); // レースの記録は消す（殿堂入りなら殿堂の写しに残る）
+    if (h.gelding) { delete G.horses[id]; W.dirty(); W.news(`${h.name}は引退して乗馬になった。おつかれさま。`, 'info'); return { to: 'gone', hall }; }
     const b = O.bonusOf(h);
     h.loc = 'retired'; h.retiredY = G.year; h.auto = false; h.parentBonus = b.pts;
     // トロフィーで能力が上がる（上がった分は potUp に残す）
@@ -40,7 +43,7 @@
     for (const k of H.STATS) { if (h.pot[k] == null) continue; const v = h.pot[k], up = Math.min(b.by[k] || 0, Math.max(0, O.POT_MAX - v)); h.potUp[k] = Math.round(up * 10) / 10; if (up > 0) h.pot[k] = Math.round((v + up) * 10) / 10; }
     W.dirty();
     W.news(`${h.name}は引退し、牧場に残った。オリジナルホースの${h.sex === '牝' ? '母' : '父'}にできる${b.pts ? `（トロフィー${b.trophies}つで能力が上がった。最大 +${b.pts}）` : ''}。`, 'info');
-    return { to: 'retired' };
+    return { to: 'retired', hall };
   };
   // 放す（牧場の枠を空ける）。放した馬は、また馬の店に並ぶことがある
   O.release = function (id) {
