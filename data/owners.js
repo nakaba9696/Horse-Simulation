@@ -30,7 +30,7 @@
 //          wonRegion（その地域の重賞を前に勝った馬）・count（何回）
 //   item：最後のミッションまでやり終えるともらえる、繁殖の永続のボーナス（オリジナルホースに効く）。bonus：pot（能力）・health・distMax・kire・heavy
 //   portrait：持ち主が作った絵（assets/owners_<id>.js）の顔の中心（横・縦の％）と、札で切り抜く幅（％）。無い人は face の SVG
-//   face：絵が無い・読めないときの顔（js/ui/ownerface.js が SVG で描く。Godot 版は tools/owner_faces.js が書き出した SVG）
+//   face：絵が無い・読めないときの顔（js/ui/ownerface.js が SVG で描く。Godot 版では使わない。絵の無い人は顔を出さない）
 //   look：持ち主が絵を描くときの手がかり（髪型・髪の色・目・服・小物・表情4つ）。docs/OWNERS_DRAFT.md に出す
 //   voice：口調の表（一人称・呼び方・語尾・言わないこと）。書き足すときはこれに合わせる
 //   only：これ以外の馬は持たない（filly＝牝馬だけ）

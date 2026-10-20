@@ -7,7 +7,7 @@ const path = require('path');
 
 // 馬主 → 絵の id。表情は、その絵の差分のうち上から順に有るものを使い、無ければ基本の絵
 // 2026-10-19：仕様書の8つのジャンルに合わせて、鷺ノ宮・霧島・花房を外し（絵も外した）、ヴィオレーヌ・ファリナ（持ち主の指定。trpg-game の同じ名前の絵）を足した。
-// 絵の無い人（ユニ・ダコタ）は data/owners.js の face の SVG（js/ui/ownerface.js。Godot は tools/owner_faces.js）
+// 絵の無い人は顔を出さない（Godot 版は名前とその人の色の帯だけ。コードで描いた顔は作らない。持ち主の指示 2026-10-20）
 const PICK = {
   takenouchi: 'gensai',
   makino: 'tiria',

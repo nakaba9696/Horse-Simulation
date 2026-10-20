@@ -345,11 +345,7 @@ func _note_panel(text: String) -> PanelContainer:
 	p.add_child(l)
 	return p
 
-static func face_tex(oid: String, mood := "base") -> Texture2D:
-	var p := UiScreen.owner_face_path(oid, mood)
-	return load(p) if p != "" else null
-
-# 依頼の札（ミッション）：顔（胸から上の角丸）・名前と段階・ひと言・レースと時期・依頼の馬・見送る（自分の馬に乗る）
+# 依頼の札（ミッション）：顔（胸から上の角丸。絵の無い人は色の帯）・名前と段階・ひと言・レースと時期・依頼の馬・見送る（自分の馬に乗る）
 func _offer_card(o: Dictionary) -> Variant:
 	var ow = HSOwners.by(o.oid)
 	if not ow: return null
@@ -376,20 +372,7 @@ func _offer_card(o: Dictionary) -> Variant:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 12)
 	p.add_child(hb)
-	var tex := face_tex(o.oid, "smile" if riding else "base")
-	if tex:
-		var fr := PanelContainer.new()
-		var fs := UiTheme.box(Color(ow.silks.base), Color(ow.silks.sub), 2, 10, Vector4(0, 0, 0, 0))
-		fr.add_theme_stylebox_override("panel", fs)
-		fr.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
-		fr.custom_minimum_size = Vector2(92, 112)
-		var tr := TextureRect.new()
-		tr.texture = tex
-		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		tr.custom_minimum_size = Vector2(92, 112)
-		fr.add_child(tr)
-		hb.add_child(fr)
+	hb.add_child(UiScreen.owner_face(ow, "smile" if riding else "base", 92, 112))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL

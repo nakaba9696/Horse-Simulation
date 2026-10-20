@@ -137,8 +137,6 @@ module.exports = function (check, assert, HS) {
     assert(sc === 'wait', `はじめの場面が ${sc}`);
     const ln = F.line('invite', 'classic');
     assert(ln && !/\{/.test(ln) && ln === F.line('invite', 'classic'), `ひと言が選べない・決まらない（${ln}）`);
-    const f = path.join(__dirname, '..', 'godot', 'assets', 'owners', `${d.id}_base.svg`);
-    assert(fs.existsSync(f), 'Godot 版の顔の SVG が無い');
     return `${d.name}：「${ln}」・${d.item.name}`;
   });
 
@@ -470,12 +468,15 @@ module.exports = function (check, assert, HS) {
     return '';
   });
 
-  check('owners: 絵の無い人の顔（Godot 版の SVG）が data/owners.js と同じ（node tools/owner_faces.js で書き出す）', () => {
-    const files = require('../tools/owner_faces.js').build();
+  // コードで描いた顔は作らない・置かない（持ち主の指示 2026-10-20「つなぎでも残さないで　見るだけでやる気をなくすので二度と作らないで」）
+  check('owners: Godot 版にコードで描いた顔（SVG）が無く、顔は持ち主の絵（webp）だけを読む', () => {
     const dir = path.join(__dirname, '..', 'godot', 'assets', 'owners');
-    for (const [f, txt] of Object.entries(files)) assert(fs.existsSync(path.join(dir, f)) && fs.readFileSync(path.join(dir, f), 'utf8') === txt, `godot/assets/owners/${f} が古い（node tools/owner_faces.js）`);
+    const svg = fs.readdirSync(dir).filter(f => /\.svg(\.import)?$/.test(f));
+    assert(!svg.length, `godot/assets/owners にコードで描いた顔がある：${svg.join(' ')}`);
+    assert(!fs.existsSync(path.join(__dirname, '..', 'tools', 'owner_faces.js')), 'tools/owner_faces.js（顔の SVG を作る道具）が残っている');
+    const scr = fs.readFileSync(path.join(__dirname, '..', 'godot', 'ui', 'screen.gd'), 'utf8');
+    assert(!/svg/i.test(scr.match(/static func owner_face_path[\s\S]*?\n\n/)[0]), 'owner_face_path が svg を探している');
     const noArt = O.list().filter(o => !o.portrait).map(o => o.id);
-    for (const id of noArt) assert(files[`${id}_base.svg`], `${id} の顔の SVG が無い`);
-    return `${Object.keys(files).length}枚（${noArt.join('・')}）`;
+    return `絵の無い人（${noArt.join('・') || 'なし'}）は顔を出さず色の帯`;
   });
 };

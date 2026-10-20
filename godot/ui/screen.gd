@@ -105,7 +105,7 @@ func _ready() -> void:
 		# GF を全制覇したときのイロナの花輪（アイテム）
 		owner_scene({"oid": "gfhost", "kind": "wreath", "horse": "", "race": "", "reward": "一族の花輪（1頭の馬からオリジナルホースを作れる数＋1）"})
 	elif args.has("--setup=meet_yuni"):
-		# 絵の無い人（コードで描いた顔）の出会い
+		# 絵の無い人の出会い（顔は出さず色の帯だけ）
 		owner_scene({"oid": "yuni", "kind": "meet", "horse": "サンプルホース", "race": "2歳オープン", "reward": ""})
 	elif args.has("--setup=scene_violaine"):
 		# 課題をやり終えた場面（G2 の課題・勝負服）
@@ -415,24 +415,39 @@ static func owner_sign_chip(o: Dictionary, size := 12) -> PanelContainer:
 	p.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	return p
 
-# まだ縁の無いオーナーの顔（伏せて「？」）
-static func owner_q_face(w: float, h: float) -> PanelContainer:
+# まだ縁の無いオーナー：顔の枠は出さず、色の無い細い帯だけ（伏せる）
+static func owner_q_face(_w: float, h: float) -> PanelContainer:
+	return owner_band(UiTheme.SUNK, UiTheme.LINE_STRONG, h)
+
+# オーナーの色の帯（絵の無い人の顔の代わり。顔の枠・仮の丸・頭文字は描かない。持ち主の指示 2026-10-20）
+static func owner_band(base: Color, edge: Color, h: float) -> PanelContainer:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.SUNK, UiTheme.LINE_STRONG, 2, 10, Vector4(0, 0, 0, 0)))
-	p.custom_minimum_size = Vector2(w, h)
+	p.add_theme_stylebox_override("panel", UiTheme.box(base, edge, 1, 3, Vector4(0, 0, 0, 0)))
+	p.custom_minimum_size = Vector2(8, h)
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var q := UiTheme.title("？", int(minf(w, h) * 0.5), UiTheme.GOLD_DIM)
-	q.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	q.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	p.add_child(q)
 	return p
 
-# オーナーの顔の絵：持ち主の絵（webp）、無ければコードで描いた顔（svg。tools/owner_faces.js）。どちらも無ければ ""
+# オーナーの顔の絵：持ち主の絵（webp）だけ。無ければ ""（コードで描いた顔は作らない・置かない。持ち主の指示 2026-10-20）
 static func owner_face_path(oid: String, mood: String) -> String:
-	for ext in ["webp", "svg"]:
-		var p := "res://assets/owners/%s_%s.%s" % [oid, mood, ext]
-		if ResourceLoader.exists(p): return p
-	return ""
+	var p := "res://assets/owners/%s_%s.webp" % [oid, mood]
+	return p if ResourceLoader.exists(p) else ""
+
+# オーナーの顔：絵がある人は勝負服の色の角丸の枠に絵、無い人は顔の枠ごと出さず勝負服の色の帯だけ
+static func owner_face(o: Dictionary, mood: String, w: float, h: float, radius := 10, border := 2) -> Control:
+	var p := owner_face_path(String(o.id), mood)
+	if p == "": return owner_band(Color(String(o.silks.base)), Color(String(o.silks.sub)), h)
+	var fr := PanelContainer.new()
+	fr.add_theme_stylebox_override("panel", UiTheme.box(Color(String(o.silks.base)), Color(String(o.silks.sub)), border, radius, Vector4(0, 0, 0, 0)))
+	fr.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+	fr.custom_minimum_size = Vector2(w, h)
+	fr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var tr := TextureRect.new()
+	tr.texture = load(p)
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	tr.custom_minimum_size = Vector2(w, h)
+	fr.add_child(tr)
+	return fr
 
 # オーナーの場面（js/ui/ownersui.js の ownerScene）：胸から上の顔・何が起きたか・名前と立場・台詞・ご褒美・「ありがとうございます」
 # 縁ができたとき（kind "meet"）は、初めて声をかけてくる場面（看板の特徴・最初のミッション・「よろしくお願いします」）
@@ -455,7 +470,7 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	hb.add_theme_constant_override("separation", 28)
 	p.add_child(hb)
 	var meet: bool = q.get("kind") == "meet"
-	var fp := owner_face_path(String(q.oid), "smile" if meet else "joy")
+	var fp := owner_face_path(String(o.id), "smile" if meet else "joy")
 	if fp != "":
 		var tr := TextureRect.new()
 		tr.texture = load(fp)
@@ -463,6 +478,9 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tr.custom_minimum_size = Vector2(380, 480)
 		hb.add_child(tr)
+	else:
+		# 絵の無い人は顔を出さず、その人の色の帯だけ（文を詰めて左に寄せる）
+		hb.add_child(owner_band(Color(String(o.silks.base)), Color(String(o.silks.sub)), 440))
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.alignment = BoxContainer.ALIGNMENT_CENTER

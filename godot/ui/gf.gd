@@ -138,7 +138,7 @@ func _fill() -> void:
 		rows.append(b)
 	focus_first()
 
-# GF を開いている一族の人（data/gfhost.js・HSGFHost）：右上に顔とひと言（場面で変わる。台詞は下書き）
+# GF を開いている一族の人（data/gfhost.js・HSGFHost）：右上に顔（絵がある人だけ。無ければ色の帯）とひと言（場面で変わる。台詞は下書き）
 func _host() -> void:
 	var d = HSGFHost.data()
 	if not d: return
@@ -151,20 +151,7 @@ func _host() -> void:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 10)
 	p.add_child(hb)
-	var fr := PanelContainer.new()
-	fr.add_theme_stylebox_override("panel", UiTheme.box(Color(String(d.silks.base)), Color(String(d.silks.sub)), 1, 8, Vector4(0, 0, 0, 0)))
-	fr.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
-	fr.custom_minimum_size = Vector2(48, 48)
-	fr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var fp := UiScreen.owner_face_path(String(d.id), "joy" if sc == "kincsem" else "base")
-	if fp != "":
-		var tr := TextureRect.new()
-		tr.texture = load(fp)
-		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		tr.custom_minimum_size = Vector2(48, 48)
-		fr.add_child(tr)
-	hb.add_child(fr)
+	hb.add_child(UiScreen.owner_face(d, "joy" if sc == "kincsem" else "base", 48, 48, 8, 1))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 0)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
