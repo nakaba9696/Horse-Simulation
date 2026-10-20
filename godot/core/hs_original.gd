@@ -48,6 +48,7 @@ static func retire(id: String) -> Dictionary:
 		var up: float = HSU.mn(float(HSU.or_(b.by.get(k), 0.0)), HSU.mx(0.0, POT_MAX - v))
 		h.potUp[k] = HSMath.round_js(up * 10.0) / 10.0
 		if up > 0: h.pot[k] = HSMath.round_js((v + up) * 10.0) / 10.0
+	HSInbreed.remember(h)   # オリジナルホースのインブリードの因子をセーブに残す（牧場を去っても、子孫の血統表で効く）
 	HSWorld.dirty()
 	HSWorld.news("%sは引退し、牧場に残った。オリジナルホースの%sにできる%s。" % [h.name, "母" if h.sex == "牝" else "父", ("（トロフィー%sつで能力が上がった。最大 +%s）" % [HSU.num(b.trophies), HSU.num(b.pts)]) if b.pts else ""], "info")
 	return { to = "retired", hall = hall }
@@ -79,6 +80,9 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	if not s or not m or s.get("loc") != "retired" or m.get("loc") != "retired" or s.get("owner") != "P" or m.get("owner") != "P": return { err = "引退馬を選んでください" }
 	if s.sex == "牝" or m.sex != "牝": return { err = "父は牡馬、母は牝馬" }
 	if m.get("foalY") == G.year: return { err = "%sは今年もう仔を産んだ（来年また作れる）" % m.name }
+	# インブリード（hs_inbreed.gd）：近すぎる組み合わせは作れない。クロスで因子の能力が上がり、濃いと健康が下がりやすい
+	var an := HSInbreed.analyze(s.name, m.name)
+	if an.block != null: return { err = an.block }
 	for p in [s, m]:
 		if not foals_left(p): return { err = "%sはもう仔を作れない（1頭から%d頭まで）" % [p.name, foals_max()] }
 	if not HSSeason.can_buy(): return { err = "お手馬は%s頭まで" % HSU.num(HSSeason.MAX_OWN) }
@@ -87,7 +91,8 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	var pot := {}
 	for k in HSHorse.STATS:
 		var a: float = HSU.or_(s.pot.get(k), 70.0); var b: float = m.pot[k] if m.pot.get(k) != null else a
-		pot[k] = HSMath.round_js(HSU.clamp(inherit((a + b) / 2.0) + rng.normal(0.0, 6.0) + bonus, 40.0, 118.0) * 10.0) / 10.0
+		# インブリードの上がりは両親の平均に足してから受け継ぐ（original.js と同じ）
+		pot[k] = HSMath.round_js(HSU.clamp(inherit((a + b) / 2.0 + float(an.up[k])) + rng.normal(0.0, 6.0) + bonus, 40.0, 118.0) * 10.0) / 10.0
 	var dMin := HSMath.round_js(HSU.clamp((s.distMin + m.distMin) / 2.0 + rng.normal(0.0, 150.0), 1000.0, 3600.0) / 100.0) * 100.0
 	var dMax := HSMath.round_js(HSU.clamp((s.distMax + m.distMax) / 2.0 + rng.normal(0.0, 150.0), 1200.0, 4000.0) / 100.0) * 100.0
 	if dMax < dMin + 400: dMax = HSU.mn(4000.0, dMin + 400.0)
@@ -102,6 +107,9 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	f.kire = HSU.clamp(HSMath.round_js((float(HSU.or_(s.get("kire"), 4.0)) + float(HSU.or_(m.get("kire"), 4.0))) / 2.0 + rng.normal(0.0, 1.0)), 1.0, 8.0)
 	f.skills = pick.filter(func(id): return HSHorse.SKILLS.has(id)); f.health = HSMath.round_js(HSU.clamp((float(HSU.or_(s.get("health"), 70.0)) + float(HSU.or_(m.get("health"), 70.0))) / 2.0 + rng.normal(0.0, 8.0), 40.0, 100.0))
 	f.coat = rng.pick([HSU.or_(s.get("coat"), "鹿毛"), HSU.or_(m.get("coat"), "鹿毛")])
+	# 健康の下がり（濃いクロスほど下がりやすい）。仔の能力と同じ乱数の列を変えないよう、別の種で
+	var drop := HSInbreed.health_drop(HSRng.new(float(HSU.hash32("inbr:%s:%s:%s:%s" % [HSU.num(G.seed), HSU.num(G.year), s.id, m.id]))), an)
+	if drop: f.health = HSU.mx(HSInbreed.HEALTH_MIN, f.health - drop)
 	var born: float = G.year - (1.0 if G.month >= 10 else 2.0)
 	var nm := name.strip_edges()
 	if nm == "": nm = HSHorse.make_name(rng, HSWorld.used_names())
@@ -116,11 +124,13 @@ static func make(sireId: String, damId: String, name: String = "") -> Dictionary
 	HSPed.register(nm, s.name, m.name)
 	m.foalY = G.year
 	HSWorld.dirty()
-	HSWorld.news("オリジナルホース「%s」が生まれた！（父 %s・母 %s%s）" % [nm, s.name, m.name, ("・ボーナス +%s" % HSU.num(bonus)) if bonus else ""], "g1")
+	var upT := HSInbreed.up_text(an.up)
+	HSWorld.news("オリジナルホース「%s」が生まれた！（父 %s・母 %s%s%s）" % [nm, s.name, m.name, ("・ボーナス +%s" % HSU.num(bonus)) if bonus else "", ("・インブリードで%s" % upT) if upT != "" else ""], "g1")
 	# 作った数を数え、決まった数の仔を残した親は牧場を去る
 	for p in [s, m]:
 		p.origN = float(HSU.or_(p.get("origN"), 0.0)) + 1.0
+		HSInbreed.remember(p)   # 牧場を去っても、因子は子孫の血統表で効く
 		if not foals_left(p):
 			G.horses.erase(p.id)
 			HSWorld.news("%sは仔を%s頭残して、牧場を去った。" % [p.name, HSU.num(p.origN)], "info")
-	return { horse = h, bonus = bonus, skills = pick }
+	return { horse = h, bonus = bonus, skills = pick, inbreed = an, drop = drop }

@@ -27,6 +27,7 @@ static func build(ext: Variant = null) -> void:
 	for n in extra:
 		var pd: Array = extra[n]; put.call(n, pd[0], pd[1], true)
 	index = idx
+	HSInbreed.reset()   # インブリードの因子の覚え（エディットで史実馬の能力が変わるので、読み直すたびに）
 static func register(name: String, sire: Variant, dam: Variant) -> void:
 	extra[name] = [HSU.or_(sire, null), HSU.or_(dam, null)]; index[name] = [HSU.or_(sire, null), HSU.or_(dam, null)]
 static func parents(name: Variant) -> Array:

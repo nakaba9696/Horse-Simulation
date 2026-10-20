@@ -61,24 +61,31 @@
     if (!O || !O.on()) return '<div class="panel empty mt">この遊び方では使えません。</div>';
     const sires = O.retired('牡'), dams = O.retired('牝');
     const ps = sires.find(h => h.id === st.osire), pd = dams.find(h => h.id === st.odam);
-    const card = (h, role, on) => `<div class="card ${on ? 'sel' : ''}" data-act="orig-pick" data-role="${role}" data-id="${h.id}">${UI.thumb(h)}<div class="grow">
-        <div class="row"><span class="nm">${e(h.name)}</span>${h.hist ? UI.histMark(h) : ''}${h.parentBonus ? `<span class="chip crown">${h.potUp ? `引退で能力 最大+${h.parentBonus}` : `ボーナス +${h.parentBonus}`}</span>` : ''}${role === 'dam' && h.foalY === G.year ? '<span class="chip">今年は産んだ</span>' : ''}<span class="chip">仔はあと${O.foalsLeft(h)}頭</span><button class="btn sm right" data-act="orig-release" data-id="${h.id}">放す</button></div>
+    // インブリード（js/core/inbreed.js）：片方を選んだら、もう片方の近すぎる馬を灰色に
+    const I = HS.Inbreed;
+    const near = (h, role) => role === 'dam' ? (ps ? I.analyze(ps.name, h.name).block : null) : (pd ? I.analyze(h.name, pd.name).block : null);
+    const card = (h, role, on) => { const nb = on ? null : near(h, role); return `<div class="card ${on ? 'sel' : ''}${nb ? ' off' : ''}" data-act="orig-pick" data-role="${role}" data-id="${h.id}">${UI.thumb(h)}<div class="grow">
+        <div class="row"><span class="nm">${e(h.name)}</span>${nb ? `<span class="chip near">${e(nb)}</span>` : ''}${h.hist ? UI.histMark(h) : ''}${h.parentBonus ? `<span class="chip crown">${h.potUp ? `引退で能力 最大+${h.parentBonus}` : `ボーナス +${h.parentBonus}`}</span>` : ''}${role === 'dam' && h.foalY === G.year ? '<span class="chip">今年は産んだ</span>' : ''}<span class="chip">仔はあと${O.foalsLeft(h)}頭</span><button class="btn sm right" data-act="orig-release" data-id="${h.id}">放す</button></div>
         <div class="sub">${h.starts || 0}戦${h.wins || 0}勝・${e(H.styleText(h))}・${H.distLabel(h.distMin, h.distMax)}</div>${potStats(h)}
-        <div class="skills">${O.skillsOf(h).map(skillChip).join('')}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}</div></div>`;
+        <div class="skills">${O.skillsOf(h).map(skillChip).join('')}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}</div></div>`; };
+    const an = ps && pd ? I.analyze(ps.name, pd.name) : null;
+    const crossT = an ? I.shown(an).map(c => `<span class="chip ${c.tier === 0 ? 'near' : 'cross'}">${e(I.text(c))}</span>`).join('') : '';
     const cand = ps && pd ? O.candidates(ps, pd) : [];
     const bonus = ps && pd ? O.childBonus(ps, pd) : 0;
     return `<h2 class="sec">オリジナルホース<span class="r">お手馬 ${T.ownCount()}/${T.MAX_OWN}</span></h2>
-      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬は、引退したときにトロフィーの数と種類で能力が上がるので、良い仔ができやすい。牝馬は1年に1頭。1頭の馬から作れる仔は${O.foalsMax()}頭までで、作り終えた親は牧場を去る。</div>
+      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬は、引退したときにトロフィーの数と種類で能力が上がるので、良い仔ができやすい。同じ祖先が父方と母方の両方にいる（クロス）と、その祖先の得意な能力が上がる。近すぎる組み合わせは作れない。牝馬は1年に1頭。1頭の馬から作れる仔は${O.foalsMax()}頭までで、作り終えた親は牧場を去る。</div>
       ${ps && pd ? `<div class="panel gold mt"><b>${e(ps.name)} × ${e(pd.name)}</b>${bonus ? `<span class="chip crown" style="margin-left:6px">ボーナス +${bonus}</span>` : ''}
+        <div class="small mt">クロス${an.block ? '' : `（合わせて ${I.upText(an.up) || '上がりなし'}）`}</div><div class="skills">${an.block ? `<span class="chip near">${e(an.block)}</span>` : crossT || '<span class="small muted">なし</span>'}</div>
         <div class="small mt">受け継ぐ特殊能力の候補（${cand.length}つ${cand.length > O.MAX_SKILLS ? '。この中から4つ' : ''}）</div><div class="skills">${cand.map(skillChip).join('') || '<span class="small muted">なし</span>'}</div>
-        <div class="row mt"><input id="orig-name" maxlength="12" placeholder="名前（空ならおまかせ）" class="grow"><button class="btn gold" data-act="orig-make">オリジナルホースを作る</button></div></div>`
+        <div class="row mt"><input id="orig-name" maxlength="12" placeholder="名前（空ならおまかせ）" class="grow"><button class="btn gold" data-act="orig-make"${an.block ? ' disabled' : ''}>オリジナルホースを作る</button></div></div>`
         : '<div class="panel small mt">父と母を1頭ずつ選んでください。</div>'}
       <h2 class="sec">父（引退した牡馬）<span class="r">${sires.length} / ${O.MAX_EACH}</span></h2>
       ${sires.length ? `<div class="list">${sires.map(h => card(h, 'sire', h === ps)).join('')}</div>` : '<div class="panel empty">まだいません。牡馬を引退させると、ここに残ります。</div>'}
       <h2 class="sec">母（引退した牝馬）<span class="r">${dams.length} / ${O.MAX_EACH}</span></h2>
       ${dams.length ? `<div class="list">${dams.map(h => card(h, 'dam', h === pd)).join('')}</div>` : '<div class="panel empty">まだいません。牝馬を引退させると、ここに残ります。</div>'}`;
   };
-  App.act['orig-pick'] = d => { const v = App.st.view || {}; if (d.role === 'sire') v.osire = d.id; else v.odam = d.id; App.st.view = Object.assign({ name: 'breed' }, v); App.render(); };
+  App.act['orig-pick'] = d => { const v = App.st.view || {}; const W0 = HS.World, oth = W0.horse(d.role === 'sire' ? v.odam : v.osire), me = W0.horse(d.id);
+    if (oth && me) { const b = HS.Inbreed.analyze(d.role === 'sire' ? me.name : oth.name, d.role === 'sire' ? oth.name : me.name).block; if (b) { App.toast(b); return; } } if (d.role === 'sire') v.osire = d.id; else v.odam = d.id; App.st.view = Object.assign({ name: 'breed' }, v); App.render(); };
   App.act['orig-release'] = async d => {
     const h = W.horse(d.id); if (!h) return;
     if (!(await App.confirm(`${e(h.name)}を牧場から放しますか？（親にできなくなります）`, '放す'))) return;

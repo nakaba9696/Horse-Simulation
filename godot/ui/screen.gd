@@ -44,6 +44,15 @@ func _ready() -> void:
 						if h.get("loc") != "retired" and (h.sex == "牝") == (sx == "牝"):
 							HSJockey.retire(h.id)
 							break
+			if OS.get_cmdline_user_args().has("--setup=inbreed"):
+				# 撮影の見本：インブリードの見える牧場（史実の名馬を引退馬として置く。ディープインパクト × ジェンティルドンナは親子で選べない）
+				for nm in ["ディープインパクト", "ドゥラメンテ", "ゴールドシップ", "ジェンティルドンナ", "アーモンドアイ", "デアリングタクト"]:
+					var d = HSWorld.histByName.get(nm)
+					if d == null: continue
+					var h := HSHorse.from_historic(d, HSWorld.new_id())
+					h.owner = "P"; h.loc = "retired"; h.retiredY = HSWorld.G.year
+					HSWorld.G.horses[h.id] = h
+				HSWorld.dirty()
 			if OS.get_cmdline_user_args().has("--setup=fatigue"):
 				UiFlow.demo_fatigue()   # 撮影の見本：疲労の段階が並ぶように
 			if OS.get_cmdline_user_args().has("--setup=owners8"):
