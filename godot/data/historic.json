@@ -3947,7 +3947,7 @@
 {"name":"ヴェルヴェーヌ","born":1989,"sex":"牝","rating":80,"surface":"芝","distMin":1600,"distMax":2200,"style":"差し","growth":"普通","retire":1993,"wins":["1993オペラ賞"],"auto":true,"nameEn":"Verveine","country":"仏"},
 {"name":"ステートタジ","born":1989,"sex":"セ","rating":80,"surface":"芝","distMin":1500,"distMax":2100,"style":"先行","growth":"普通","retire":1994,"wins":["1994香港カップ"],"auto":true,"nameEn":"State Taj","country":"豪"},
 {"name":"パルティプラル","born":1989,"sex":"牡","rating":80,"surface":"芝","distMin":2100,"distMax":2700,"style":"差し","growth":"遅め","retire":1995,"wins":["1995香港ヴァーズ"],"auto":true,"nameEn":"Partipral","country":"仏"},
-{"name":"サンエイサンキュー","born":1989,"sex":"牝","rating":78,"surface":"芝","distMin":1400,"distMax":2200,"style":"差し","growth":"早め","retire":1993,"wins":["1992クイーンカップ","1992サファイヤステークス","1992札幌記念"],"auto":true},
+{"name":"サンエイサンキュー","born":1989,"sex":"牝","rating":84,"surface":"芝","distMin":1400,"distMax":2200,"style":"差し","growth":"早め","retire":1993,"wins":["1992クイーンカップ","1992サファイヤステークス","1992札幌記念"],"auto":true},
 {"name":"ヒシマサル（1989）","born":1989,"sex":"牡","rating":78,"surface":"芝","distMin":1600,"distMax":2200,"style":"逃げ","growth":"早め","retire":1993,"wins":["1992きさらぎ賞","1992京都4歳特別","1992毎日杯"],"auto":true},
 {"name":"チェリーコウマン","born":1989,"sex":"牝","rating":77,"surface":"ダ","distMin":2000,"distMax":2600,"style":"差し","growth":"早め","retire":1993,"wins":["1992ウインターステークス"],"auto":true},
 {"name":"アイルトンシンボリ","born":1989,"sex":"牡","rating":77,"surface":"芝","distMin":3300,"distMax":3900,"style":"逃げ","growth":"普通","retire":1993,"wins":["1992ステイヤーズステークス","1993ステイヤーズステークス"],"auto":true},
