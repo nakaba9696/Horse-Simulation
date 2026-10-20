@@ -2,11 +2,11 @@
 // 史実馬の勝ち鞍のうち、ゲームの暦（HS.DATA.races）にその年の形が無いレースの格・馬場・距離・時期を、ここから引く（js/core/horse.js の H.winRaces・
 // Godot の HSHorse.win_races・tools/growth_rule.js の monthOf）。芝とダートの向き・大舞台・回りなどが、暦に無い大レースの勝ちからも出し直される。
 // 勝ち鞍そのものは記録の補い（data/src/winners_world_hand.jsonl。手で確かめたもの）から tools/build_auto.js が史実馬に足す。
-// 書くのは出典で確かめた年と形だけ。course は data/courses.js にある競馬場だけ書く（無ければ書かない）。month は出典に日付の無いものは uncertain:true。
+// 書くのは出典で確かめた年と形だけ。course は data/courses.js にある競馬場だけ書く（無ければ空の文字。Godot が r.course を読むので項目は必ず置く）。month は出典に日付の無いものは uncertain:true。
 // 1979年より前の豪州は格付けが無いので、いまの G1 にあたる大レース（ダービー・ギニー・コーフィールドカップ・ブリスベンカップ）を G1 として扱う（暦の1960年代の豪州の大レースと同じ扱い）。
 (function () {
   const HS = globalThis.HS = globalThis.HS || {}; HS.DATA = HS.DATA || {};
-  const O = (name, grade, country, surface, dist, month, year, o) => Object.assign({ name, grade, region: '海外', country, surface, dist, month, week: 2, from: year, to: year }, o || {});
+  const O = (name, grade, country, surface, dist, month, year, o) => Object.assign({ name, short: name, grade, region: '海外', country, course: '', surface, dist, month, week: 2, from: year, to: year }, o || {});
   const U = { uncertain: true };
   HS.DATA.histRaces = [
     // ---- タロック（1957年の3歳の大レースと1961年のブリスベンカップ。出典：en.wikipedia「Tulloch (horse)」・名鑑） ----
