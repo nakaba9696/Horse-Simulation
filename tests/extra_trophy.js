@@ -307,6 +307,7 @@ module.exports = function (check, assert, HS) {
     const fh = h => S.fhPeak(h).turf;
     const turfT = TR.LIST.filter(t => t.kind === 'set' && !t.focus.includes('dspd')).sort((a, b) => b.tier - a.tier);
     const canBuy = S.canBuy; S.canBuy = () => true;
+    const foals = O.FOALS; O.FOALS = 99;   // 世代を重ねる見積もり：1組の親から8頭ずつ作るので、1頭から作れる数（オーナーの依頼の子が足した決まり）は外す
     // 店のいちばん強い牡・牝から始め、両親に nt 個のトロフィー（難しい順）を取らせて引退 → 仔を kids 頭 → いちばん良い牡・牝で次の世代
     const lines = (nt, kids, gens, seed) => {
       const G = newGame(seed); G.player.money = 1e12;
@@ -343,6 +344,6 @@ module.exports = function (check, assert, HS) {
       assert(flat(many).every(x => x < 99), `3世代で99（${many.map(r => r.join('→')).join('／')}）`);
       assert(avg(many.map(r => r[2])) > avg(none.map(r => r[2])) + 5, 'トロフィーを集めても仔が良くならない');
       return `いちばん良い仔の総合力（3世代）：トロフィー無し ${none.map(r => r.join('→')).join('／')}・両親が8個ずつ ${many.map(r => r.join('→')).join('／')}`;
-    } finally { S.canBuy = canBuy; }
+    } finally { S.canBuy = canBuy; O.FOALS = foals; }
   });
 };

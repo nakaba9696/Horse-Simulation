@@ -20,7 +20,7 @@ module.exports = function (check, assert, HS) {
         assert(!BAD.test(r.name), `条件戦の名前 ${r.name}`);
         if (!r.graded) {
           op++; if (r.listed) { listed++; assert(R.gradeBadge(r) === 'L' && r.prize > R.CLS_PRIZE.OP, 'リステッドの札と賞金'); } else assert(R.gradeBadge(r) === 'OP', 'オープンの札');
-          assert(/-o\d+-\d+$/.test(r.key) && !R.isOldKey(r.key) && F.countryOfKey(r.key) === '日', `オープンの鍵 ${r.key}`);
+          assert((/-o\d+-\d+$/.test(r.key) || (HS.DATA.ownerRaces || []).some(o => r.key === `${G.year}-${m}-${w}-${o.name}`)) && !R.isOldKey(r.key) && F.countryOfKey(r.key) === '日', `オープンの鍵 ${r.key}`);
           if (r.age === '2') { two++; assert(m >= 6, '2歳のオープンが6月より前にある'); }
         }
       }
