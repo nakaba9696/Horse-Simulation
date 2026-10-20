@@ -181,7 +181,7 @@ main > h2.sec:first-child, main > .tabs:first-child + h2.sec { margin-top: var(-
   display: inline-block; min-width: 36px; text-align: center; padding: 1px 6px; border-radius: 5px; font-size: var(--fs-xs); font-weight: 900; letter-spacing: .03em;
   color: #fff; vertical-align: middle; box-shadow: 0 1px 0 rgba(255, 255, 255, .2) inset;
 }
-.grade.G1 { background: var(--g1); } .grade.G2 { background: var(--g2); } .grade.G3 { background: var(--g3); } .grade.Jpn { background: var(--jpn); } .grade.OP { background: #5a6270; } .grade.Pre { background: #8a6a1c; }
+.grade.G1 { background: var(--g1); } .grade.G2 { background: var(--g2); } .grade.G3 { background: var(--g3); } .grade.Jpn { background: var(--jpn); } .grade.OP { background: #5a6270; } .grade.L { background: #4d6b80; } .grade.Pre { background: #8a6a1c; }
 
 /* ---------- 一覧 ---------- */
 .list { display: flex; flex-direction: column; gap: var(--sp-2); }

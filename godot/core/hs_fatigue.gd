@@ -43,7 +43,7 @@ static var _re_cls: RegEx = null
 static func country_of_key(key: Variant) -> String:
 	if _re_key == null:
 		_re_key = RegEx.new(); _re_key.compile("^(\\d+)-(\\d+)-(\\d+)-(.*)$")
-		_re_cls = RegEx.new(); _re_cls.compile("^c\\d+-\\d+$")
+		_re_cls = RegEx.new(); _re_cls.compile("^[co]\\d+-\\d+$")   # オープン（o…）と前の版の条件戦（c…）
 	var m := _re_key.search(String(HSU.or_(key, "")))
 	if m == null or _re_cls.search(m.get_string(4)) != null: return "日"
 	if _by_name == null:

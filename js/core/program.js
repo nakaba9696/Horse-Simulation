@@ -1,4 +1,4 @@
-// 番組表：1頭の馬について、今週から1年先までの週ごとのレース（重賞と条件戦）と、出られるか・適性・出走登録と予約の状態をまとめる
+// 番組表：1頭の馬について、今週から1年先までの週ごとのレース（重賞とオープン。レースは OP 以上だけ）と、出られるか・適性・出走登録と予約の状態をまとめる
 // 画面（js/ui/program.js）はこの行を読んで描くだけ。今週は出走登録、来週から先は出走の予約（js/core/season.js の T.reserve）
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
@@ -21,12 +21,12 @@
     }
     return out;
   };
-  // その週のレース。今週は世界の一覧（グランドフェスティバルなども入る）、先の週は重賞と条件戦（種と日付で決まるので、その週になっても同じもの）
+  // その週のレース。今週は世界の一覧（グランドフェスティバルなども入る）、先の週は重賞とオープン（種と日付で決まるので、その週になっても同じもの）
   P.racesOf = function (wk) {
     if (wk.i === 0) return W().weekRaces();
     return R.ofWeek(W().get().seed, wk.y, wk.m, wk.w);
   };
-  // 出られない理由（出られるなら null）。今週は入厩まで、先の週は年齢・性と、いまの勝ち星・移動（連闘で別の国へは行けない）で見る
+  // 出られない理由（出られるなら null）。今週は入厩まで、先の週は年齢・性と、いまの獲得賞金（G1）・移動（連闘で別の国へは行けない）で見る
   P.why = function (h, race, wk) {
     const G = W().get();
     if (wk.i === 0) {
@@ -56,7 +56,7 @@
         if (!state) {
           if (o.kind === 'graded' && !race.graded) continue;
           if (o.surf && race.surface !== o.surf) continue;
-          if (why && why !== HS.Fatigue.WHY && (o.show !== 'all' || !race.graded)) continue; // 条件戦は「すべて」でも出られないものは出さない（年齢違いで埋まる）。移動が間に合わないものは理由を見せる
+          if (why && why !== HS.Fatigue.WHY && (o.show !== 'all' || !race.graded)) continue; // オープンは「すべて」でも出られないものは出さない（年齢違いで埋まる）。移動が間に合わないものは理由を見せる
         }
         const dist = P.fitDist(h, race.dist), surf = P.fitSurf(h, race.surface);
         const can = why || state ? null : wk.i === 0 ? 'enter' : busyKey ? null : 'reserve';

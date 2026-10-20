@@ -662,7 +662,7 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・調子の
   return `予約 ${target.short || target.name}・冠 ${tl.join('・')}・総合力 芝${fh.turf} ダ${fh.dirt}（史実馬の完成 ${q(0.02)}〜${pks[pks.length - 1]}）`;
 });
 
-check('season: デビュー前の馬も、新馬戦と重賞を1年先まで予約できる', () => {
+check('season: デビュー前の馬も、デビュー戦（2歳オープン）と重賞を1年先まで予約できる', () => {
   const T = HS.Season;
   W.newGame({ year: 2004, seed: 8, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get(); G.player.money = 1e9;
@@ -675,12 +675,12 @@ check('season: デビュー前の馬も、新馬戦と重賞を1年先まで予�
   const dw = T.debutWeeks(h);
   assert(dw.length > 10, 'デビュー戦の週が無い');
   const wk = dw[2];
-  assert(!T.reserveDebut(h.id, wk.y, wk.m, wk.w), '新馬戦を予約できない');
+  assert(!T.reserveDebut(h.id, wk.y, wk.m, wk.w), 'デビュー戦を予約できない');
   let guard = 0;
   while (!(G.year === wk.y && G.month === wk.m && G.week === wk.w) && guard++ < 60) W.finishWeek({});
   const ent = W.entryOf(h.id);
   const race = ent && W.raceByKey(ent.raceKey);
-  assert((race && race.cls === 'newcomer') || G.news.some(n => n.text.includes('予約していた')), `新馬戦に登録されない（${h.loc}）`);
+  assert((race && !race.graded && race.cls === 'OP' && race.age === '2') || G.news.some(n => n.text.includes('予約していた')), `デビュー戦（2歳オープン）に登録されない（${h.loc}）`);
   return `${h.name}：${wk.y}年${wk.m}月${wk.w}週 ${race ? race.name + ' ' + race.course + race.surface + race.dist : '（ニュースで知らせた）'}`;
 });
 
@@ -1332,6 +1332,7 @@ require('./extra_skills2.js')(check, assert, HS); // 逃げ・追込の能力・
 require('./extra_shop.js')(check, assert, HS); // 馬の店の年齢・値段（いまの総合力・晩成が安い）とレーティング
 require('./extra_gf.js')(check, assert, HS); // グランドフェスティバル（6つ・GF の週・連戦・伝説級の担当・店と牧場・トロフィー・キンチェム）
 require('./extra_trophy.js')(check, assert, HS); // トロフィー（仕様書の表・お金・引退の能力）・足したレース・トロフィーの隠し馬（入れ替わり）
+require('./extra_oponly.js')(check, assert, HS); // レースは OP 以上だけ・G1 の獲得賞金の条件・海外の仮の条件・前のセーブの条件戦の予約
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
 require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
 require('./extra_gdgame.js')(check, assert); // Godot 版の週の流れを本物の画面で自動で遊ぶ

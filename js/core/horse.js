@@ -152,7 +152,7 @@
     return real + bias * unc;
   };
 
-  // クラス（勝ち数で決める簡略版）
+  // クラス（勝ち数で決める簡略版）。レースが OP 以上だけになってからは出走の条件に使わない（前の版の名残）
   H.classOf = function (horse) {
     if ((horse.gradedWins || []).length > 0) return 'OP';
     const w = horse.wins || 0;
