@@ -67,11 +67,18 @@ module.exports = function (check, assert, HS) {
     return `GOOD の幅 ${G.buf}＋${G.good} 秒（実時間 ${((G.buf + G.good) / 1.35 * 1000).toFixed(0)}ms）・前触れは ${G.tell} 秒前（実時間 ${(G.tell / 1.35 * 1000).toFixed(0)}ms）`;
   });
 
-  check('style: 騎乗中の左上の板に脚質の矢印4つ（追込・差し・先行・逃げ）と得意な位置の帯・いまの位置の点を描く（JS・Godot とも）', () => {
+  check('style: 騎乗中に脚質の矢印4つ（追込・差し・先行・逃げ）と得意な位置の帯・いまの位置の点を描く（JS は左上・Godot は左下の板。持ち主の指摘 2026-10-20「脚質は左下に」）', () => {
     const ride = code(read('js/ui/ride.js')), hud = code(read('godot/ui/ride_hud.gd'));
     assert(/STYLE_ORDER = \['追込', '差し', '先行', '逃げ'\]/.test(ride) && /styleRow\(x \+ 12, y \+ 72/.test(ride) && /S\.ZONE\[style\]/.test(ride), 'ride.js に脚質の矢印が無い');
-    assert(/func _style_row/.test(hud) && /_style_row\(x \+ 12, y \+ 72/.test(hud) && /UiStyleArrows\.ORDER/.test(hud) && /HSSim\.ZONE/.test(hud), 'ride_hud.gd に脚質の矢印が無い');
+    assert(/func _style_row/.test(hud) && /_style_row\(x \+ 12, y \+ 8,/.test(hud) && /var y := VH - /.test(hud.split('func _style_panel')[1] || '') && /UiStyleArrows\.ORDER/.test(hud) && /HSSim\.ZONE/.test(hud), 'ride_hud.gd に脚質の矢印が無い');
     assert(/const ORDER := \["追込", "差し", "先行", "逃げ"\]/.test(read('godot/ui/style_arrows.gd')), '脚質の印の並びが出走表と違う');
+  });
+
+  check('ride: Godot の騎乗の計器に FIGHT・WHIP の表示が無く、折り合いは馬の頭・手綱は HOLD／PUSH の帯（持ち主の指摘 2026-10-20）', () => {
+    const hud = code(read('godot/ui/ride_hud.gd'));
+    assert(!/"FIGHT"|"WHIP"/.test(hud), 'ride_hud.gd に FIGHT・WHIP の文字が残っている');
+    assert(!/func _fight_meter|func _whip_hand/.test(hud), 'ride_hud.gd に気合の目盛り・ムチの手の札が残っている');
+    assert(/func _temper/.test(hud) && /func _reins/.test(hud) && /"HOLD"/.test(hud) && /"PUSH"/.test(hud), 'ride_hud.gd に馬の頭の札・手綱の帯が無い');
   });
 
   check('farm: 騎手のゲームでは「放牧に出す」を出さない（前のセーブで放牧中の馬は次の週に入厩へ戻る）', () => {

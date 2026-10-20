@@ -48,6 +48,10 @@ var skel: Skeleton3D
 var bmat: ShaderMaterial
 var B := {}                   # 骨の名前 → 番号
 var _head_up := Vector3.ZERO  # 頭の骨の中の、頭の上を指す点
+# 左右を見る（view/race_view.gd が毎コマ入れる。＋が右・rad）：首・頭・肩で分けて、馬の上の軸のまわりに回す。少し首をかしげる
+var head_yaw := 0.0
+const LOOK_SHARE := {"spine_03": 0.18, "neck_01": 0.32, "Head": 0.5}
+const LOOK_TILT := 0.12       # 振り向ききったときの首のかしげ（rad）
 static var _mesh_cache: ArrayMesh
 static var _src: PackedScene
 
@@ -189,6 +193,9 @@ func pose(P: PackedFloat32Array) -> void:
 		if i == 24:
 			n.position = base + Vector3(0, P[ViewGait.JY] + UP_HIP[1] * _up, P[ViewGait.JX] + UP_HIP[0] * _up)
 		n.basis = ViewHorse._rot(P[i * 3] + float(add.get(i, 0.0)) * _up, P[i * 3 + 1], P[i * 3 + 2])
+		if i == 26 and absf(head_yaw) > 1e-4:
+			# 素材の体が無いときの頭：上の軸のまわりに回す（＋Y のまわりの ＋ は左。右を見るのは −）
+			n.basis = Basis(Vector3.UP, -head_yaw * 0.8) * n.basis
 	if skel != null:
 		_ik()
 		return
@@ -393,6 +400,19 @@ func _ik() -> void:
 	# 頭の向きは馬の胴に合わせる（追って上体を前後に送っても前を見たまま）。体を起こすほど上体に合わせる
 	var up_d := _dir(1, 0.15, 0.99, 0.0).lerp(_dir(26, 0.15, 0.99, 0.0), _up).normalized()
 	_aim(B.Head, hg * _head_up, hg.origin + up_d)
+	# 左右を見る：肩・首・頭で分けて、馬の上の軸のまわりに回す（上の軸のまわりの ＋ は左。右を見るのは −）。首を見る側へ少しかしげる
+	if absf(head_yaw) > 1e-4:
+		var up_ax := _dir(1, 0.0, 1.0, 0.0)
+		for bn in LOOK_SHARE:
+			var bi: int = B.get(bn, -1)
+			if bi < 0:
+				continue
+			var g := skel.get_bone_global_pose(bi)
+			var rot := Basis(up_ax, -head_yaw * float(LOOK_SHARE[bn]))
+			if bn == "Head":
+				var fw := _dir(1, 1.0, 0.0, 0.0)
+				rot = Basis(fw, head_yaw / 1.25 * LOOK_TILT) * rot
+			skel.set_bone_global_pose(bi, Transform3D(rot * g.basis, g.origin))
 	# 腕：手綱を持つ手へ。肘は外・上へ
 	for arm in [["l", 28, -1.0], ["r", 30, 1.0]]:
 		var s: String = arm[0]
@@ -429,6 +449,14 @@ func _ik() -> void:
 		w31.global_transform = Transform3D(Basis(Quaternion(v0, d)) * w31.global_basis, skel.global_transform * palm)
 	else:
 		w31.global_transform = Transform3D(Basis(axis, -(UP_TORSO + UP_ARM + UP_FORE) * _up) * w31.global_basis, skel.global_transform * palm)
+
+# 頭の真ん中（世界の座標）。左右を見るカメラの置き場（view/race_view.gd）
+func head_world() -> Vector3:
+	if skel != null and body != null and body.is_inside_tree() and B.has("Head"):
+		var g := skel.get_bone_global_pose(B.Head)
+		return skel.global_transform * (g * (_head_up * 0.6))
+	var n26: Node3D = nodes[26]
+	return n26.global_transform * Vector3(0, 0.1, 0.07)
 
 # ムチの右手の位置（WHIP_PATH をなめらかにつなぐ）
 static func _whip_at(u: float) -> Vector3:

@@ -3,7 +3,7 @@
 #   しごく：十字キー↑・左スティック↑・↑・スペース（ゲートの中ならスタート。開く 150ms 前からの押しは覚えておく）／引く：十字キー↓・左スティック↓・↓
 #   進路：十字キー←→・左スティック←→・←→（押し続けると、すぐ1つ・0.28 秒でもう1つ・あとは 0.2 秒ごと）
 #   ムチ：右＝B（○）・X キー／左＝X（□）・Z キー／持ち替え：A（×）・C（ゴールのあとの A は「次へ」）
-#   左右を見る：LT・RT・Q/E／照準：LB・RB・A/S キー／視点：Back（Select）・V／カメラを戻す：R3・R
+#   左右を見る：LT・RT・Q/E（押している間だけ 0.3 秒で振り向く）／照準：LB・RB・A/S キー／視点：Back（Select）・V／カメラを戻す：R3・R
 #   次へ：A・Enter／ガッツポーズ：Y・G／一時停止：Start・Esc・P
 # 持ち主の指摘「パッドの十字キーで横移動できない」：十字キー（hat もボタンとして届く）とスティックの両方を、押した瞬間と押し続けで受ける
 class_name ViewRideInput
@@ -16,8 +16,14 @@ const REPEAT := 0.2
 const STICK := 0.55
 
 var _held := {}       # 行いの名前 → 押してからの秒
-var look := 0.0       # 左右を見る（−1〜1）
+var look := 0.0       # 左右を見る：押している向き（−1＝左・0・1＝右）。振り向く速さとなめらかさは view/race_view.gd が look_step・look_ease で付ける
+var look_force = null # 撮影のとき：押している向きをこの値にする（null なら本当の入力）
 var enabled := true
+
+# 左右を見る（持ち主の指摘 2026-10-20「L2・R2 のカメラが速すぎ、角度もおかしい」）：押している間だけ、騎手の頭の位置から
+# 真横よりやや後ろ（LOOK_YAW）へ LOOK_TIME 秒でなめらかに振り向き、離すと同じ速さで前へ戻る
+const LOOK_TIME := 0.3
+const LOOK_YAW := 1.95     # rad（約 112°。真横より 22° 後ろ：すぐ後ろの馬が見える）
 
 const ACTIONS := ["ride_up", "ride_down", "ride_left", "ride_right", "ride_whip_r", "ride_whip_l", "ride_swap", "ride_ok", "ride_view", "ride_camreset",
 	"ride_tgt_prev", "ride_tgt_next", "ride_pose", "ride_pause"]
@@ -73,6 +79,8 @@ func _ready() -> void:
 	ensure_actions()
 
 func _process(delta: float) -> void:
+	if look_force != null:
+		look = float(look_force)
 	if not enabled:
 		return
 	for a in ACTIONS:
@@ -90,7 +98,27 @@ func _process(delta: float) -> void:
 		else:
 			_held.erase(a)
 	var want := Input.get_action_strength("ride_look_r") - Input.get_action_strength("ride_look_l")
-	look = move_toward(look, want, delta * 6.0)
+	look = clampf(want, -1.0, 1.0) if look_force == null else float(look_force)
+
+# 振り向きの進み（−1〜1）：押している向きへ LOOK_TIME 秒で端まで進み、離すと同じ速さで 0 へ戻る
+static func look_step(t: float, want: float, dt: float) -> float:
+	return move_toward(t, signf(want) if absf(want) > 0.3 else 0.0, dt / LOOK_TIME)
+
+# 進み → 振り向きの割合（−1〜1）。出だしと終わりをなめらかに（smoothstep）
+static func look_ease(t: float) -> float:
+	var a := clampf(absf(t), 0.0, 1.0)
+	return signf(t) * a * a * (3.0 - 2.0 * a)
+
+# 進路の左右（持ち主の指摘 2026-10-20「左右の動きが反対」）：模擬の進路は ＋＝外・−＝内。
+# 画面の右（screen＝1）へ押したら、カメラから見て右へ動くように、外が画面の右か左かで向きを決める
+#   右回り（内ラチが右）では外が画面の左なので、右へ押すと内（−1）へ。左回りでは外が画面の右なので外（＋1）へ
+static func lane_step(screen: int, out_is_right: bool) -> int:
+	return screen if out_is_right else -screen
+
+# 外へ向かう向き（3D）が、カメラの右（前の向き × 上）の側か
+static func out_is_right(fwd: Vector3, out: Vector3) -> bool:
+	var right := fwd.cross(Vector3.UP)
+	return out.dot(right) > 0.0
 
 # 押し続けた秒までに足す数（押した瞬間の1つは別）
 static func _reps(t: float) -> int:

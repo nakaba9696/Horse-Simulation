@@ -28,6 +28,12 @@ const LOOK_AHEAD := 16.0   # 見る所：根から前へ（m）
 const LOOK_H := 0.5       # 見る所の高さ（m）
 const CAM_HFOV := 52.0     # 横の画角（度）。狭めにして、すぐ横の馬を大きく入れず、前の群れを見せる
 const CORNER_ROLL := 0.45  # コーナーでカメラが内へ傾く割合（自分の馬の傾きに対して）。上限 0.05rad
+# 左右を見る（docs/FEEL.md 2）：騎手の頭の位置から真横よりやや後ろへ振り向く。騎手の頭も同じ向きへ回す
+const LOOK_HFOV := 64.0    # 振り向いたときの横の画角（度）。すぐ横・後ろの馬を広く入れる
+const LOOK_PITCH := -0.1   # 振り向いたときの見下ろし（rad）
+const LOOK_OUT := 0.24     # 頭の中心から見る向きへ出す距離（m。帽子の中に入らない）
+const LOOK_UP := 0.06      # 頭の中心からの高さ（m。目の高さ）
+const JOCKEY_HEAD_YAW := 1.25  # 振り向ききったときの騎手の頭の回り（rad。首と肩で分ける）
 
 var src   # ViewLive（模擬）か ViewReplay（記録の再生）
 var live := false
@@ -253,7 +259,8 @@ func _on_act(name: String, arg) -> void:
 			if live:
 				var c = ctl_obj()
 				var l0: float = c.lane if c != null else 0.0
-				src.ctl("lane", arg)
+				# arg は画面の左右（−1＝左・1＝右）。模擬の進路（＋＝外）へは、カメラから見て押した側へ動くように直す
+				src.ctl("lane", ViewRideInput.lane_step(int(arg), _out_is_right()))
 				if c != null and c.lane != l0 and T >= 0.0:
 					input.fx("lane")
 					cam_state["lane_kick"] = float(arg)
@@ -520,6 +527,18 @@ func _feel(_H: Array) -> void:
 				if h > (0.45 if fight_now else 0.6):
 					ViewRideInput.play(50 + roundf(h * 40.0), 0.6 + 0.4 * h, 0.15)
 
+# 外（模擬の進路の＋）がカメラの右か。騎乗の視点は馬の進む向きから、中継はカメラの向きから（横から見ていて決まらないときは進む向き）
+func _out_is_right() -> bool:
+	var f := tr.frame(D - (_me_x() - BODY))
+	var out := tr.out3(f)
+	var fwd := tr.fwd3(f)
+	if view == "tv" and cam != null and T >= 0.0:
+		var cf := -cam.global_transform.basis.z
+		cf.y = 0.0
+		if cf.length() > 0.1 and absf(out.dot(cf.normalized().cross(Vector3.UP))) > 0.5:
+			fwd = cf.normalized()
+	return ViewRideInput.out_is_right(fwd, out)
+
 func _me_x() -> float:
 	return float(_last_H[me][0]) if _last_H.size() > me else 0.0
 
@@ -604,6 +623,7 @@ func update_camera(H: Array, dt: float) -> void:
 		cam_state.u = u_me
 		cam_state.fov = 46.0
 		cam_state.look = 0.0
+		cam_state.look_t = 0.0
 		cam_state.roll = 0.0
 		cam_state.u_prev = u_me
 	var ku := 1.0 - exp(-dt * 2.6) if dt > 0.0 else 1.0
@@ -614,7 +634,13 @@ func update_camera(H: Array, dt: float) -> void:
 	# コーナーでは自分の馬の傾きの CORNER_ROLL だけ内へ傾く（内の柵が斜めに流れる）
 	var lean_r := clampf(-tr.sign * float(lean[me]) * CORNER_ROLL, -0.05, 0.05) if lean.size() > me else 0.0
 	cam_state.roll = lerpf(cam_state.roll, clampf(vu * 0.0175, -0.035, 0.035) + lean_r, 1.0 - exp(-dt * 6.0) if dt > 0.0 else 1.0)
-	cam_state.look = lerpf(cam_state.look, input.look * PI / 2.0, minf(1.0, dt * 8.0) if dt > 0.0 else 1.0)
+	# 左右を見る：押している間だけ LOOK_TIME 秒でなめらかに振り向き、離すと戻る（ゴールのあと・ゲートの中・中継では見ない）
+	var look_in: float = float(input.look_force) if input.look_force != null else input.look   # 撮影のときは場面の進みと同じ刻みで読む
+	var look_want := look_in if (fin == null and T >= 0.0 and mode != "tv") else 0.0
+	cam_state.look_t = ViewRideInput.look_step(float(cam_state.look_t), look_want, dt)
+	cam_state.look = ViewRideInput.look_ease(float(cam_state.look_t))
+	if horses.size() > me:
+		horses[me].jockey.head_yaw = float(cam_state.look) * JOCKEY_HEAD_YAW
 	match mode:
 		"gate":
 			var n := float(src.n)
@@ -643,7 +669,7 @@ func update_camera(H: Array, dt: float) -> void:
 				cp += fwd_t * tug * 0.35
 			vfov = rad_to_deg(2.0 * atan(tan(deg_to_rad(CAM_HFOV / 2.0)) / aspect))
 			var piv := tr.w3(tr.frame(D - qme), u_me, tr.frame(D - qme).e + 1.5)
-			var yaw_o: float = cam_state.look
+			var yaw_o := 0.0
 			var pitch_o := 0.0
 			var zoom := 1.0
 			if mode == "high":
@@ -667,6 +693,13 @@ func update_camera(H: Array, dt: float) -> void:
 				cp = piv + Vector3(sin(ang) * cos(el) * rr, sin(el) * rr, cos(ang) * cos(el) * rr)
 				var w := clampf(absf(yaw_o) / 0.7 + absf(pitch_o) / 0.8, 0.0, 1.0)
 				lk = lk.lerp(piv, w)
+			var e: float = cam_state.look
+			if absf(e) > 1e-4:
+				var hl := _look_from(cp, lk, e)
+				cp = hl[0]
+				lk = hl[1]
+				var hf := lerpf(CAM_HFOV, LOOK_HFOV, absf(e))
+				vfov = rad_to_deg(2.0 * atan(tan(deg_to_rad(hf / 2.0)) / aspect))
 	# なめらかに：騎乗のカメラはすぐ追いつき、中継はゆっくり。視点を替えたときは寄せ直す
 	var kp := 1.0 - exp(-dt * (2.2 if mode == "tv" else 14.0)) if dt > 0.0 else 1.0
 	if not cam_state.has("p") or cam_state.get("mode", "") != mode:
@@ -693,6 +726,37 @@ func update_camera(H: Array, dt: float) -> void:
 	cam.position = p
 	cam.look_at(l + right * float(sh.x), Vector3.UP)
 	cam.rotate_object_local(Vector3(0, 0, 1), float(cam_state.roll) * (0.0 if mode == "tv" or mode == "gate" else 1.0) + float(sh.roll))
+
+# 左右を見る（e＝−1〜1。＋が右）：カメラを騎手の頭の位置へ寄せながら、外を回って（騎手の体の中を通らずに）
+# 真横よりやや後ろ（ViewRideInput.LOOK_YAW）へ向ける。目の高さから少し見下ろす
+func _look_from(cp: Vector3, lk: Vector3, e: float) -> Array:
+	var a := absf(e)
+	var s := signf(e)
+	var head := _head_pos()
+	var d0 := (lk - cp).normalized()
+	var fh := Vector3(d0.x, 0.0, d0.z).normalized()
+	var pitch0 := asin(clampf(d0.y, -1.0, 1.0))
+	# 向き：前から右（e＞0）へは上の軸のまわりに −、左へは ＋ に回す（Godot は上の軸のまわりの ＋ が左）
+	var dh := fh.rotated(Vector3.UP, -s * ViewRideInput.LOOK_YAW * a)
+	var pitch := lerpf(pitch0, LOOK_PITCH, a)
+	var dir := (dh * cos(pitch) + Vector3.UP * sin(pitch)).normalized()
+	# 位置：頭から見た今のカメラの位置（後ろ・上）を、見る側の外を回して頭のすぐ外（LOOK_OUT m）へ寄せる
+	var back := cp - head
+	var hb := Vector2(back.x, back.z).length()
+	var bh := (-fh).rotated(Vector3.UP, s * (PI - ViewRideInput.LOOK_YAW) * a)
+	var p := head + bh * lerpf(hb, LOOK_OUT, a) + Vector3.UP * lerpf(back.y, LOOK_UP, a)
+	return [p, p + dir * 20.0]
+
+# 自分の騎手の頭（世界の座標）。走りの拍子の細かな上下は、馬の根に対する位置をならして抑える
+func _head_pos() -> Vector3:
+	var hm := horses[me]
+	var w := hm.jockey.head_world()
+	var loc := hm.global_transform.affine_inverse() * w
+	var prev = cam_state.get("head_loc")
+	if prev != null:
+		loc = (prev as Vector3).lerp(loc, 0.25)
+	cam_state.head_loc = loc
+	return hm.global_transform * loc
 
 static func _ease(u: float) -> float:
 	if u <= 0.0:
@@ -837,6 +901,9 @@ func _apply_presses() -> void:
 				"ride_view": _on_act("view", null)
 				"ride_ok": _on_act("ok", null)
 				"ride_pause": _on_act("pause", null)
+				"look_r": input.look_force = 1.0
+				"look_l": input.look_force = -1.0
+				"look_0": input.look_force = 0.0
 
 # 早送り：0.5 秒（レースの秒）ずつ進める（操作を入れる秒では止まる）
 func _jump_to(t: float) -> void:
