@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://doysrg3yxbqtt"
-path="res://.godot/imported/hanabusa_smile.webp-2da39e29eeecfb4240ad965e26a18089.ctex"
+uid="uid://dpcbvb143ym73"
+path="res://.godot/imported/dakota_smile.svg-fe1ad6be0f2f7af2037eef759a101075.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/hanabusa_smile.webp"
-dest_files=["res://.godot/imported/hanabusa_smile.webp-2da39e29eeecfb4240ad965e26a18089.ctex"]
+source_file="res://assets/owners/dakota_smile.svg"
+dest_files=["res://.godot/imported/dakota_smile.svg-fe1ad6be0f2f7af2037eef759a101075.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

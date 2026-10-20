@@ -678,6 +678,7 @@ static func finish_week(played: Dictionary = {}) -> Dictionary:
 	G.rngState = floorf(rng.next() * 4294967296.0)
 	G.lastWeek = { date = report.date, races = report.races.map(func(r): return slim_result(r)) }
 	_week = null
+	if HSOwners.on(): HSOwners.after_week(report)   # owners.js の包み（自分が乗ったレースの結果：ジャンルの勝ち・課題・出会い）
 	return report
 
 # コースレコード
@@ -1172,4 +1173,4 @@ static func migrate(g: Dictionary) -> void:
 	for rc in HSU.or_(g.records.get("course"), {}).values():
 		if rc.get("rode") == null: rc.rode = HSU.truthy(rc.get("mine")) and g.mode == "jockey"
 	g.v = SAVE_VERSION
-	if g.mode == "jockey": g.owners = HSOwners.fill(g.get("owners"))   # owners.js の包み
+	if g.mode == "jockey": g.owners = HSOwners.fill(g.get("owners"), g)   # owners.js の包み

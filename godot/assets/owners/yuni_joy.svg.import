@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ddgfnijtc6qk3"
-path="res://.godot/imported/hanabusa_sad.webp-87bc430418ff8fc2f31f3c28057c6306.ctex"
+uid="uid://wt8cc0a8du3y"
+path="res://.godot/imported/yuni_joy.svg-d63672d48a504e2880920bd6c4d53fc9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/hanabusa_sad.webp"
-dest_files=["res://.godot/imported/hanabusa_sad.webp-87bc430418ff8fc2f31f3c28057c6306.ctex"]
+source_file="res://assets/owners/yuni_joy.svg"
+dest_files=["res://.godot/imported/yuni_joy.svg-d63672d48a504e2880920bd6c4d53fc9.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

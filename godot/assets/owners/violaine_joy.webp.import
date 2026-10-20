@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b0vt22riwuhym"
-path="res://.godot/imported/saginomiya_joy.webp-92fbeb78da3a673d54303b022d8052e8.ctex"
+uid="uid://desno6lmji2gt"
+path="res://.godot/imported/violaine_joy.webp-9f0a890c38691262810646de27da3d5c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/saginomiya_joy.webp"
-dest_files=["res://.godot/imported/saginomiya_joy.webp-92fbeb78da3a673d54303b022d8052e8.ctex"]
+source_file="res://assets/owners/violaine_joy.webp"
+dest_files=["res://.godot/imported/violaine_joy.webp-9f0a890c38691262810646de27da3d5c.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ys2me3ymn6d4"
-path="res://.godot/imported/kirishima_base.webp-ee148fe1250ac4a28f1c2a09bfe6eb19.ctex"
+uid="uid://8mn5orq16bsw"
+path="res://.godot/imported/violaine_smile.webp-3016194897b5c1ecb550239dc0002052.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/kirishima_base.webp"
-dest_files=["res://.godot/imported/kirishima_base.webp-ee148fe1250ac4a28f1c2a09bfe6eb19.ctex"]
+source_file="res://assets/owners/violaine_smile.webp"
+dest_files=["res://.godot/imported/violaine_smile.webp-3016194897b5c1ecb550239dc0002052.ctex"]
 
 [params]
 

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://j1pqb5tbq0vv"
-path="res://.godot/imported/saginomiya_sad.webp-79ee25ebb77ecf87bbffc66dfcf61f86.ctex"
+uid="uid://dby0bsr8vmops"
+path="res://.godot/imported/dakota_sad.svg-93a9eb1cc6d1041403cd0253d51fe09a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/saginomiya_sad.webp"
-dest_files=["res://.godot/imported/saginomiya_sad.webp-79ee25ebb77ecf87bbffc66dfcf61f86.ctex"]
+source_file="res://assets/owners/dakota_sad.svg"
+dest_files=["res://.godot/imported/dakota_sad.svg-93a9eb1cc6d1041403cd0253d51fe09a.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

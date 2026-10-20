@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bedd2fehp4mox"
-path="res://.godot/imported/hanabusa_base.webp-96f937bc4bad81b99b6f80be72745603.ctex"
+uid="uid://cm0pub1lb5eb5"
+path="res://.godot/imported/farina_smile.webp-19ff28e6a6b577d4a4dc392a2a24d5cd.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/hanabusa_base.webp"
-dest_files=["res://.godot/imported/hanabusa_base.webp-96f937bc4bad81b99b6f80be72745603.ctex"]
+source_file="res://assets/owners/farina_smile.webp"
+dest_files=["res://.godot/imported/farina_smile.webp-19ff28e6a6b577d4a4dc392a2a24d5cd.ctex"]
 
 [params]
 

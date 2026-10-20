@@ -95,6 +95,7 @@
     const h = W.horseFromFoal(f, s.name, m.name, born, nm);
     h.trigFixed = pick.filter(id => !H.SKILLS[id]); // 発動する特殊能力は、受け継いだものに決める
     h.owner = 'P'; h.loc = 'farm'; h.original = true; h.auto = true; h.bonusFromParents = bonus;
+    if (HS.Owners && HS.Owners.applyItems) HS.Owners.applyItems(h); // 馬主の依頼をやり終えてもらったアイテム（繁殖の永続のボーナス）
     H.syncApt(h);
     G.horses[h.id] = h;
     W.usedNames().add(nm);

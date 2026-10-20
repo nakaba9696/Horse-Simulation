@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://1t743eg5xws3"
-path="res://.godot/imported/saginomiya_base.webp-c2c71640a8804c0b232467f1ae75477c.ctex"
+uid="uid://0crndlbj6iti"
+path="res://.godot/imported/violaine_sad.webp-ee1541fa6c0745a298fae6646491ffd3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/saginomiya_base.webp"
-dest_files=["res://.godot/imported/saginomiya_base.webp-c2c71640a8804c0b232467f1ae75477c.ctex"]
+source_file="res://assets/owners/violaine_sad.webp"
+dest_files=["res://.godot/imported/violaine_sad.webp-ee1541fa6c0745a298fae6646491ffd3.ctex"]
 
 [params]
 

@@ -344,8 +344,8 @@ func _note_panel(text: String) -> PanelContainer:
 	return p
 
 static func face_tex(oid: String, mood := "base") -> Texture2D:
-	var p := "res://assets/owners/%s_%s.webp" % [oid, mood]
-	return load(p) if ResourceLoader.exists(p) else null
+	var p := UiScreen.owner_face_path(oid, mood)
+	return load(p) if p != "" else null
 
 # 依頼の札：顔（丸く切らずに胸から上の角丸）・名前と間柄・ひと言・レース・馬・受ける／断る
 func _offer_card(o: Dictionary) -> Variant:
@@ -390,7 +390,7 @@ func _offer_card(o: Dictionary) -> Variant:
 	who.add_theme_constant_override("separation", 8)
 	who.add_child(UiTheme.label(String(ow.name), 16))
 	who.add_child(UiScreen.owner_sign_chip(ow, 11))
-	who.add_child(UiTheme.chip(String(HSOwners.tier_of(o.oid).label), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
+	who.add_child(UiTheme.chip(HSOwners.stage_label(o.oid), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
 	if o.get("best"):
 		who.add_child(UiTheme.chip("いちばんの馬", UiTheme.SURFACE_3, UiTheme.WARN, 11))
 	v.add_child(who)

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cvetch36amv84"
-path="res://.godot/imported/hanabusa_joy.webp-1fe6d24a3bbfd4f1009ac18a7e86e939.ctex"
+uid="uid://bi47ixtyiia8t"
+path="res://.godot/imported/violaine_base.webp-4db0ef72eb5d2f3f1c5d04854c225e6b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/hanabusa_joy.webp"
-dest_files=["res://.godot/imported/hanabusa_joy.webp-1fe6d24a3bbfd4f1009ac18a7e86e939.ctex"]
+source_file="res://assets/owners/violaine_base.webp"
+dest_files=["res://.godot/imported/violaine_base.webp-4db0ef72eb5d2f3f1c5d04854c225e6b.ctex"]
 
 [params]
 

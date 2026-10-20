@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://blncoydbbrobc"
-path="res://.godot/imported/kirishima_smile.webp-58ae9308c45c963e08ebe0c522bbe7c6.ctex"
+uid="uid://bsendhaknvdvs"
+path="res://.godot/imported/yuni_base.svg-98b99ad4a3fb000bd9d7ebb10ec23f2e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/kirishima_smile.webp"
-dest_files=["res://.godot/imported/kirishima_smile.webp-58ae9308c45c963e08ebe0c522bbe7c6.ctex"]
+source_file="res://assets/owners/yuni_base.svg"
+dest_files=["res://.godot/imported/yuni_base.svg-98b99ad4a3fb000bd9d7ebb10ec23f2e.ctex"]
 
 [params]
 
@@ -38,3 +38,6 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
+svg/scale=1.0
+editor/scale_with_editor_scale=false
+editor/convert_colors_with_editor_theme=false

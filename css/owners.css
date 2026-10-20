@@ -7,7 +7,7 @@ button.own-face:hover .oface { transform: translateY(-2px); transition: transfor
   background: var(--surface-3); color: var(--text-2); border: 1px solid var(--line-2); }
 .own-tier.t1 { background: rgba(130, 200, 255, .14); color: var(--info); border-color: rgba(130, 200, 255, .35); }
 .own-tier.t2 { background: rgba(214, 173, 76, .18); color: var(--accent-hi); border-color: var(--line-strong); }
-.own-tier.t3 { background: var(--gold-grad); color: var(--on-accent); border-color: transparent; }
+.own-tier.t3, .own-tier.t4 { background: var(--gold-grad); color: var(--on-accent); border-color: transparent; }
 .own-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--sp-2); }
 .own-who b { font-size: var(--fs-md); }
 .own-who .own-tier { margin-left: 0; }
@@ -52,6 +52,7 @@ button.own-face:hover .oface { transform: translateY(-2px); transition: transfor
 .own-ladder li b { font-size: var(--fs-base); }
 .own-ladder li em { font-style: normal; font-weight: 700; }
 .own-ladder li em.got { color: var(--good); }
+.own-ladder li.cur { color: var(--text); border-color: var(--accent); }
 .own-ladder li.on { color: var(--text); border-color: var(--line-strong); background: linear-gradient(180deg, rgba(214, 173, 76, .12), transparent), var(--surface-2); }
 @media (max-width: 760px) { .own-ladder { grid-template-columns: 1fr 1fr; } .own-hero { flex-direction: column; text-align: center; } }
 

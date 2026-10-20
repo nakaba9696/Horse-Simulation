@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c0p8f00260avc"
-path="res://.godot/imported/kirishima_joy.webp-1a7e8e48bc805e6d4f8074189e5435fa.ctex"
+uid="uid://dfl36sn6bs717"
+path="res://.godot/imported/farina_sad.webp-e41a5bf0e9044199a8c0cd0f6fbf27cb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/kirishima_joy.webp"
-dest_files=["res://.godot/imported/kirishima_joy.webp-1a7e8e48bc805e6d4f8074189e5435fa.ctex"]
+source_file="res://assets/owners/farina_sad.webp"
+dest_files=["res://.godot/imported/farina_sad.webp-e41a5bf0e9044199a8c0cd0f6fbf27cb.ctex"]
 
 [params]
 

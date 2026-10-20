@@ -25,7 +25,7 @@ function canon(v, out) {
 const digest = v => crypto.createHash('sha256').update(canon(v, []).join(''), 'utf8').digest('hex').slice(0, 16);
 
 // 週の初めに行う操作（ops）：['reserve', 馬の id, レース名]・['retire', 馬の id]・['make', 父の id, 母の id, 名前]・
-//   ['win', 馬の id, 短い名, レース名, 格]（その年の重賞の勝ちを足して、冠とトロフィーを見る）・['pts', 馬主の id, 好感度]（段階とご褒美）・['meet', 馬主の id]（縁を作る）・
+//   ['win', 馬の id, 短い名, レース名, 格]（その年の重賞の勝ちを足して、冠とトロフィーを見る）・['pts', 馬主の id, 好感度]（好感度）・['meet', 馬主の id]（縁を作る）・['adv', 馬主の id]（課題をやり終えたことにする）・['ask', 馬主の id]（店に頼む）・
 //   ['program', 馬の id]（番組表の行の指紋）・['rsvp', 馬の id]（番組表で出られる最初の条件戦を予約）
 function runOps(HS, ops) {
   const { World: W, Jockey: J, Season: T, Original: Ori } = HS;
@@ -35,6 +35,8 @@ function runOps(HS, ops) {
     if (op[0] === 'win') { const h = W.horse(op[1]), G = W.get(); const race = { name: op[3], short: op[2], grade: op[4], region: 'JRA', year: G.year }; h.gradedWins.push({ y: G.year, race: race.name, short: race.short, grade: race.grade, region: race.region }); return T.onWin(h, race, G.year).join(','); }
     if (op[0] === 'pts') return HS.Owners.addPts(op[1], op[2]);
     if (op[0] === 'meet') return HS.Owners.meet(op[1], { horse: 'テストホース', race: 'テストのレース' });
+    if (op[0] === 'adv') return HS.Owners.advance(op[1], { horse: 'テストホース', race: 'テストのレース' });   // 馬主の課題をやり終えたことにする
+    if (op[0] === 'ask') return HS.Owners.ask(op[1]) || 'ok';   // 来月の店に馬を頼む
     // 番組表（js/core/program.js）：行の指紋と、出られる最初の条件戦を予約する
     if (op[0] === 'program') return digest(HS.Program.rows(W.horse(op[1]), { show: 'all' }).map(r => [r.wk.i, r.race.key, r.why || '', r.fit, r.state || '', r.can || '', r.busy, r.others.join(',')]));
     if (op[0] === 'rsvp') { const r = HS.Program.rows(W.horse(op[1])).find(x => x.can === 'reserve' && !x.race.graded); return r ? r.race.key + ':' + (HS.Program.reserve(op[1], r.race.key) || 'ok') : 'no race'; }
@@ -146,7 +148,7 @@ function build(log) {
     W.dirty(); W._week = null;
     var craftSave = W.serialize();
     HS = load(); HS.World.load(craftSave);
-    var ops = { 0: [['reserve', p1.id, 'フェブラリーステークス']], 1: [['win', p2.id, '皐月賞', '皐月賞', 'G1'], ['win', p2.id, '日本ダービー', '東京優駿', 'G1'], ['win', p2.id, '菊花賞', '菊花賞', 'G1'], ['meet', 'takenouchi'], ['meet', 'saginomiya'], ['pts', 'takenouchi', 300], ['pts', 'saginomiya', 900]], 2: [['win', p2.id, '宝塚記念', '宝塚記念', 'G1'], ['win', p2.id, '有馬記念', '有馬記念', 'G1']], 3: [['program', p1.id], ['rsvp', p1.id], ['rsvp', p1.id]], 4: [['program', p1.id]], 5: [['retire', p1.id], ['retire', p2.id]], 6: [['make', p1.sex === '牝' ? p2.id : p1.id, p1.sex === '牝' ? p1.id : p2.id, 'テストホース']] };
+    var ops = { 0: [['reserve', p1.id, 'フェブラリーステークス']], 1: [['win', p2.id, '皐月賞', '皐月賞', 'G1'], ['win', p2.id, '日本ダービー', '東京優駿', 'G1'], ['win', p2.id, '菊花賞', '菊花賞', 'G1'], ['meet', 'takenouchi'], ['meet', 'yuni'], ['pts', 'takenouchi', 30], ['adv', 'takenouchi'], ['ask', 'takenouchi'], ['adv', 'yuni'], ['adv', 'yuni'], ['adv', 'yuni'], ['adv', 'yuni'], ['adv', 'yuni'], ['pts', 'yuni', 5]], 2: [['win', p2.id, '宝塚記念', '宝塚記念', 'G1'], ['win', p2.id, '有馬記念', '有馬記念', 'G1']], 3: [['program', p1.id], ['rsvp', p1.id], ['rsvp', p1.id]], 4: [['program', p1.id]], 5: [['retire', p1.id], ['retire', p2.id]], 6: [['make', p1.sex === '牝' ? p2.id : p1.id, p1.sex === '牝' ? p1.id : p2.id, 'テストホース']] };
     var craftStart = digest(JSON.parse(HS.World.serialize()));
     var craftWeeks = play(HS, 8, log, ops);
   }

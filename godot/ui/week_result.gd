@@ -93,7 +93,7 @@ func build() -> void:
 	side.add_child(nb[0])
 
 const MOOD := {"win": "joy", "bigwin": "joy", "good": "smile", "lose": "sad", "decline": "sad"}
-const KICK := {"meet": "新しい馬主から声がかかった", "up1": "間柄が「信頼」になった", "up2": "間柄が「主戦」になった", "up3": "間柄が「相棒」になった", "bond": "好感度がいっぱいになった", "gift": "引退した馬を譲ってもらった", "award": "名コンビ賞"}
+const KICK := {"meet": "新しい馬主から声がかかった", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞"}
 
 static func _face(oid: String, mood: String, w: float, h: float) -> Control:
 	var o = HSOwners.by(oid)
@@ -101,8 +101,8 @@ static func _face(oid: String, mood: String, w: float, h: float) -> Control:
 	fr.add_theme_stylebox_override("panel", UiTheme.box(Color(o.silks.base), Color(o.silks.sub), 2, 10, Vector4(0, 0, 0, 0)))
 	fr.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
 	fr.custom_minimum_size = Vector2(w, h)
-	var p := "res://assets/owners/%s_%s.webp" % [oid, mood]
-	if ResourceLoader.exists(p):
+	var p := UiScreen.owner_face_path(oid, mood)
+	if p != "":
 		var tr := TextureRect.new()
 		tr.texture = load(p)
 		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -115,7 +115,7 @@ static func _face(oid: String, mood: String, w: float, h: float) -> Control:
 func _react_card(x: Dictionary) -> PanelContainer:
 	var o = HSOwners.by(x.oid)
 	var st := HSOwners.of(x.oid)
-	var set: Array = o.lines.get(x.kind, {}).get("close" if st.tier >= 2 else "near", [])
+	var set: Array = o.lines.get(x.kind, {}).get("close" if st.stage >= 2 else "near", [])
 	var line := HSOwners.fill_(HSOwners.pick_line(set, float(x.line), x.get("tags", [])), {"horse": x.horse, "race": x.race})
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.SURFACE, UiTheme.LINE, 1, UiTheme.R_PANEL, Vector4(10, 8, 14, 8)))
@@ -130,7 +130,7 @@ func _react_card(x: Dictionary) -> PanelContainer:
 	var who := HBoxContainer.new()
 	who.add_theme_constant_override("separation", 8)
 	who.add_child(UiTheme.label(String(o.name), 15))
-	who.add_child(UiTheme.chip(String(HSOwners.tier_of(x.oid).label), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
+	who.add_child(UiTheme.chip(HSOwners.stage_label(x.oid), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
 	who.add_child(UiTheme.label("%s・%d着" % [x.horse, int(x.pos)], 13, UiTheme.MUTED))
 	v.add_child(who)
 	var say := UiTheme.label("「%s」" % line, 14, UiTheme.IVORY)

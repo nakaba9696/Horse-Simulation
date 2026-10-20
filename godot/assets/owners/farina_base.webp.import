@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dygo0bx06ggu2"
-path="res://.godot/imported/saginomiya_smile.webp-c25331f78a33793dc57b986fa41c3fc2.ctex"
+uid="uid://t0s72pbbb3ea"
+path="res://.godot/imported/farina_base.webp-736d15ac3fc8c53a8209709c3d9bf6dc.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/saginomiya_smile.webp"
-dest_files=["res://.godot/imported/saginomiya_smile.webp-c25331f78a33793dc57b986fa41c3fc2.ctex"]
+source_file="res://assets/owners/farina_base.webp"
+dest_files=["res://.godot/imported/farina_base.webp-736d15ac3fc8c53a8209709c3d9bf6dc.ctex"]
 
 [params]
 
