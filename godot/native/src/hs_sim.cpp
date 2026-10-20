@@ -142,9 +142,11 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 		double vc = v0 * (1.0 + 0.0012 * (A - 85.0));
 		Dictionary cur = pw["cur"];
 		double sta = cur["sta"], guts = cur["guts"], mind = cur["mind"], slopeP = cur["slope"];
-		double Ds = mx(800.0, ((double)h["distMax"] + 300.0 + (sta - 75.0) * 12.0) * DS);
+		// 馬場の状態：道悪ほどスタミナの減りが速く（Ds を割る）、終いの伸びが鈍る。道悪の苦手な馬ほど大きく
+		GroundFx gx = ground_fx(h, race);
+		double Ds = mx(800.0, ((double)h["distMax"] + 300.0 + (sta - 75.0) * 12.0) * DS) / gx.e;
 		double kire = clamp(num_or(h.get("kire", Variant()), 4.0), 1.0, 8.0);
-		double kickS = K_S0 + K_S1 * (kire - 1.0) + 0.0006 * ((double)cur["spd"] - 80.0);
+		double kickS = (K_S0 + K_S1 * (kire - 1.0) + 0.0006 * ((double)cur["spd"] - 80.0)) * gx.k;
 		double styleAdd = s.style >= 0 ? STYLE_SPURT[s.style] : 80.0;
 		double spurtR = clamp(straight + 120.0 + styleAdd + (4.5 - kire) * K_R + (s.skills.has(longspurt) ? LONGSPURT_R : 0.0) + rng.normal(0.0, 60.0) * (1.3 - mind / 120.0), 300.0, mn(1300.0, D * 0.6));
 		double delay = std::fabs(rng.normal(0.0, 0.12));

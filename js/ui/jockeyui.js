@@ -61,24 +61,31 @@
     if (!O || !O.on()) return '<div class="panel empty mt">この遊び方では使えません。</div>';
     const sires = O.retired('牡'), dams = O.retired('牝');
     const ps = sires.find(h => h.id === st.osire), pd = dams.find(h => h.id === st.odam);
-    const card = (h, role, on) => `<div class="card ${on ? 'sel' : ''}" data-act="orig-pick" data-role="${role}" data-id="${h.id}">${UI.thumb(h)}<div class="grow">
-        <div class="row"><span class="nm">${e(h.name)}</span>${h.hist ? UI.histMark(h) : ''}${h.parentBonus ? `<span class="chip crown">${h.potUp ? `引退で能力 最大+${h.parentBonus}` : `ボーナス +${h.parentBonus}`}</span>` : ''}${role === 'dam' && h.foalY === G.year ? '<span class="chip">今年は産んだ</span>' : ''}<span class="chip">仔はあと${O.foalsLeft(h)}頭</span><button class="btn sm right" data-act="orig-release" data-id="${h.id}">放す</button></div>
+    // インブリード（js/core/inbreed.js）：片方を選んだら、もう片方の近すぎる馬を灰色に
+    const I = HS.Inbreed;
+    const near = (h, role) => role === 'dam' ? (ps ? I.analyze(ps.name, h.name).block : null) : (pd ? I.analyze(h.name, pd.name).block : null);
+    const card = (h, role, on) => { const nb = on ? null : near(h, role); return `<div class="card ${on ? 'sel' : ''}${nb ? ' off' : ''}" data-act="orig-pick" data-role="${role}" data-id="${h.id}">${UI.thumb(h)}<div class="grow">
+        <div class="row"><span class="nm">${e(h.name)}</span>${nb ? `<span class="chip near">${e(nb)}</span>` : ''}${h.hist ? UI.histMark(h) : ''}${h.parentBonus ? `<span class="chip crown">${h.potUp ? `引退で能力 最大+${h.parentBonus}` : `ボーナス +${h.parentBonus}`}</span>` : ''}${role === 'dam' && h.foalY === G.year ? '<span class="chip">今年は産んだ</span>' : ''}<span class="chip">仔はあと${O.foalsLeft(h)}頭</span><button class="btn sm right" data-act="orig-release" data-id="${h.id}">放す</button></div>
         <div class="sub">${h.starts || 0}戦${h.wins || 0}勝・${e(H.styleText(h))}・${H.distLabel(h.distMin, h.distMax)}</div>${potStats(h)}
-        <div class="skills">${O.skillsOf(h).map(skillChip).join('')}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}</div></div>`;
+        <div class="skills">${O.skillsOf(h).map(skillChip).join('')}</div>${UI.titleChips(h) ? `<div>${UI.titleChips(h)}</div>` : ''}</div></div>`; };
+    const an = ps && pd ? I.analyze(ps.name, pd.name) : null;
+    const crossT = an ? I.shown(an).map(c => `<span class="chip ${c.tier === 0 ? 'near' : 'cross'}">${e(I.text(c))}</span>`).join('') : '';
     const cand = ps && pd ? O.candidates(ps, pd) : [];
     const bonus = ps && pd ? O.childBonus(ps, pd) : 0;
     return `<h2 class="sec">オリジナルホース<span class="r">お手馬 ${T.ownCount()}/${T.MAX_OWN}</span></h2>
-      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬は、引退したときにトロフィーの数と種類で能力が上がるので、良い仔ができやすい。牝馬は1年に1頭。1頭の馬から作れる仔は${O.foalsMax()}頭までで、作り終えた親は牧場を去る。</div>
+      <div class="small muted">引退させた牡馬と牝馬から、オリジナルホースを作る。能力は両親の値をもとにばらつく。特殊能力は両親のもの（合わせて最大8つ）から4つまで受け継ぐ。トロフィーを手にした馬は、引退したときにトロフィーの数と種類で能力が上がるので、良い仔ができやすい。同じ祖先が父方と母方の両方にいる（クロス）と、その祖先の得意な能力が上がる。近すぎる組み合わせは作れない。牝馬は1年に1頭。1頭の馬から作れる仔は${O.foalsMax()}頭までで、作り終えた親は牧場を去る。</div>
       ${ps && pd ? `<div class="panel gold mt"><b>${e(ps.name)} × ${e(pd.name)}</b>${bonus ? `<span class="chip crown" style="margin-left:6px">ボーナス +${bonus}</span>` : ''}
+        <div class="small mt">クロス${an.block ? '' : `（合わせて ${I.upText(an.up) || '上がりなし'}）`}</div><div class="skills">${an.block ? `<span class="chip near">${e(an.block)}</span>` : crossT || '<span class="small muted">なし</span>'}</div>
         <div class="small mt">受け継ぐ特殊能力の候補（${cand.length}つ${cand.length > O.MAX_SKILLS ? '。この中から4つ' : ''}）</div><div class="skills">${cand.map(skillChip).join('') || '<span class="small muted">なし</span>'}</div>
-        <div class="row mt"><input id="orig-name" maxlength="12" placeholder="名前（空ならおまかせ）" class="grow"><button class="btn gold" data-act="orig-make">オリジナルホースを作る</button></div></div>`
+        <div class="row mt"><input id="orig-name" maxlength="12" placeholder="名前（空ならおまかせ）" class="grow"><button class="btn gold" data-act="orig-make"${an.block ? ' disabled' : ''}>オリジナルホースを作る</button></div></div>`
         : '<div class="panel small mt">父と母を1頭ずつ選んでください。</div>'}
       <h2 class="sec">父（引退した牡馬）<span class="r">${sires.length} / ${O.MAX_EACH}</span></h2>
       ${sires.length ? `<div class="list">${sires.map(h => card(h, 'sire', h === ps)).join('')}</div>` : '<div class="panel empty">まだいません。牡馬を引退させると、ここに残ります。</div>'}
       <h2 class="sec">母（引退した牝馬）<span class="r">${dams.length} / ${O.MAX_EACH}</span></h2>
       ${dams.length ? `<div class="list">${dams.map(h => card(h, 'dam', h === pd)).join('')}</div>` : '<div class="panel empty">まだいません。牝馬を引退させると、ここに残ります。</div>'}`;
   };
-  App.act['orig-pick'] = d => { const v = App.st.view || {}; if (d.role === 'sire') v.osire = d.id; else v.odam = d.id; App.st.view = Object.assign({ name: 'breed' }, v); App.render(); };
+  App.act['orig-pick'] = d => { const v = App.st.view || {}; const W0 = HS.World, oth = W0.horse(d.role === 'sire' ? v.odam : v.osire), me = W0.horse(d.id);
+    if (oth && me) { const b = HS.Inbreed.analyze(d.role === 'sire' ? me.name : oth.name, d.role === 'sire' ? oth.name : me.name).block; if (b) { App.toast(b); return; } } if (d.role === 'sire') v.osire = d.id; else v.odam = d.id; App.st.view = Object.assign({ name: 'breed' }, v); App.render(); };
   App.act['orig-release'] = async d => {
     const h = W.horse(d.id); if (!h) return;
     if (!(await App.confirm(`${e(h.name)}を牧場から放しますか？（親にできなくなります）`, '放す'))) return;
@@ -501,13 +508,16 @@
       let sel = rows.indexOf(runner); if (sel < 0) sel = 0;
       const tip = h.style === '逃げ' ? 'ハナを切って、そのまま粘らせてください。' : h.style === '先行' ? '好位につけて、直線で抜け出してください。' : h.style === '差し' ? '中団で脚をためて、直線勝負でお願いします。' : '後ろで脚をためて、最後に外から。';
       const kireTip = (h.kire || 4) >= 6 ? '切れる脚があるので、仕掛けは我慢してください。' : (h.kire || 4) <= 3 ? 'エンジンのかかりが遅いので、早めに動いてください。' : '';
+      // 道悪（馬場が良でないとき）：苦手ならスタミナが早くなくなり切れも鈍る、得意なら好材料（HS.Sim.groundFx）
+      const mud = card.race.ground && card.race.ground !== '良' ? HS.Sim.mudLabel((h.apt && h.apt.heavy) || 50) : null;
+      const mudTip = mud === '苦手' ? '道悪は苦手で、脚がなくなるのが早いです。道中はなるべく楽に運んでください。' : mud === '得意' ? '道悪は得意なので、この馬場はむしろ好材料です。' : '';
       const bg = App.modal(`<div class="paddock"><canvas class="pd-cv" width="720" height="250"></canvas>
           <button class="pd-nav l" data-d="-1" aria-label="前の馬">◀</button><button class="pd-nav r" data-d="1" aria-label="次の馬">▶</button>
           <div class="pd-band"></div></div>
         ${UI.entryTable(card)}
         ${UI.paddockOwner ? UI.paddockOwner(card, runner) : ''}
         <div class="panel mt offer"><div class="row"><b>${e(h.name)}</b><span class="small muted">${e(J.trainerOf(h))}調教師より</span></div>
-          <div class="comment">「${tip}${kireTip}」</div>
+          <div class="comment">「${tip}${kireTip}${mudTip}」</div>
           ${UI.hasSkills(h) ? `<div class="pd-myskills mt">${UI.skillList(h)}</div>` : ''}${UI.numStats(h, wIdx, { surface: card.race.surface })}</div>
         <div class="btns mt"><button class="btn gold" data-x="ride">ゲートイン</button></div>`, { noClose: true, scene: 'paddock' });
       const cv = bg.querySelector('.pd-cv'), ctx = cv.getContext('2d'), band = bg.querySelector('.pd-band');
@@ -518,7 +528,7 @@
       const pdImg = pdSrc ? (UI._pdImg || (UI._pdImg = Object.assign(new Image(), { src: pdSrc }))) : null;
       const show = () => {
         const x = rows[sel], m = UI.mood(x.horse, wIdx), me = x === runner;
-        band.innerHTML = `${UI.waku(x.frame, x.num)}<b class="nm ${me ? 'me' : ''}">${e(x.horse.name)}</b><span>${x.horse.gelding ? 'セ' : x.horse.sex}${W.get().year - x.horse.born}</span><span>${x.weight}kg</span><span>${e(x.jockey ? x.jockey.name : '')}</span><span>単勝 <b>${x.odds}</b>（${x.pop}番人気）</span><span class="md ${m.cls}">${m.text}</span>${x.horse.filler ? '' : `<span>疲労 ${UI.fatigueMark(x.horse, x.travel)}</span>`}<div class="pd-skills">${UI.hasSkills(x.horse) ? UI.skillChips(x.horse) : '<span class="small muted">特殊能力なし</span>'}</div>`;
+        band.innerHTML = `${UI.waku(x.frame, x.num)}<b class="nm ${me ? 'me' : ''}">${e(x.horse.name)}</b><span>${x.horse.gelding ? 'セ' : x.horse.sex}${W.get().year - x.horse.born}</span><span>${x.weight}kg</span><span>${e(x.jockey ? x.jockey.name : '')}</span><span>単勝 <b>${x.odds}</b>（${x.pop}番人気）</span><span class="md ${m.cls}">${m.text}</span>${x.horse.filler ? '' : `<span>疲労 ${UI.fatigueMark(x.horse, x.travel)}</span>`}${card.race.ground && card.race.ground !== '良' ? `<span>${e(card.race.ground)} ${UI.mudMark(x.horse)}</span>` : ''}<div class="pd-skills">${UI.hasSkills(x.horse) ? UI.skillChips(x.horse) : '<span class="small muted">特殊能力なし</span>'}</div>`;
         x0 = -80; t0 = performance.now();
       };
       const move = d => { sel = (sel + d + rows.length) % rows.length; show(); };
@@ -590,8 +600,14 @@
   };
   // 脚質の矢印（左から追込・差し・先行・逃げ。右が前。持ち主の指摘 2026-10-16）。光っているのがこの馬の脚質で、自由自在の馬は全部が光る
   UI.kyakuArrows = (st, h) => { const all = h && H.has(h, 'jiyu'); return `<span class="ka" title="${e(st)}${all ? '・自在' : ''}">${['追込', '差し', '先行', '逃げ'].map(k => `<i class="${all || k === st ? 'on' : ''}"></i>`).join('')}</span>`; };
+  // 道悪の得手不得手の印（得意・ふつう・苦手。HS.Sim.mudLabel）。馬場が良でないときに出走表とパドックに出す（持ち主の決定 2026-10-20「馬場の状態」）
+  UI.mudMark = h => {
+    const a = (h.apt && h.apt.heavy) || 50, lb = HS.Sim.mudLabel(a);
+    return `<span class="cmark mud" style="--c:${lb === '得意' ? 'var(--good)' : lb === '苦手' ? 'var(--bad)' : 'var(--muted)'}" title="道悪 ${Math.round(a)}"><i></i>${lb}</span>`;
+  };
   UI.entryTable = function (card) {
     const { race, runners } = card;
+    const wet = race.ground && race.ground !== '良'; // 道悪のときだけ、道悪の列を出す
     const G = race.free || !W.get() ? { year: race.year, month: race.month, week: race.week, seed: 0 } : W.get(); // フリーレースはセーブの年でなく、そのレースの年で
     const rows = runners.slice().sort((a, b) => a.num - b.num);
     const recent = h => (h.results || []).slice(-3).map(r => `<span class="${r.pos <= 3 ? 'pos' + r.pos : ''}">${r.pos > 9 ? '×' : r.pos}</span>`).join('') || '<span class="muted">新</span>';
@@ -599,13 +615,13 @@
       <div class="entry-head"><div>${UI.gradeTag(race)} <b class="serif" style="font-size:20px">${e(race.short || race.name)}</b></div>
         <div class="small">${race.free ? '' : `${W.yLabel(G.year)}${race.month}月 `}${race.course} ${race.surface === 'ダ' ? 'ダート' : '芝'}${race.dist}m　${(w => `${T.weatherIcon(w)}${w}`)(race.weather || T.weather(G.seed, G.year, G.month, G.week, race.course, race.ground))}・${race.ground}　${runners.length}頭</div></div>
       <div class="entry-top">${UI.courseSvg(race)}</div>
-      <div class="tblwrap mt"><table class="t entry-t"><tr><th>枠</th><th>馬名</th><th>脚質</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th>騎手</th><th>人気</th><th class="hide-sm">疲労</th><th>近走</th></tr>
+      <div class="tblwrap mt"><table class="t entry-t"><tr><th>枠</th><th>馬名</th><th>脚質</th><th class="hide-sm">性齢</th><th class="hide-sm">斤量</th><th>騎手</th><th>人気</th>${wet ? '<th>道悪</th>' : ''}<th class="hide-sm">疲労</th><th>近走</th></tr>
       ${rows.map(x => { const me = x.rider === 'P' || x.mine; return `<tr class="${me ? 'mine' : ''}"><td>${UI.waku(x.frame, x.num)}</td>
         <td class="nm">${e(x.horse.name)}${x.horse.legend ? ' <span class="chip legend">スペシャル</span>' : x.horse.hist ? ' <span class="chip hist">史</span>' : ''}</td>
         <td>${UI.kyakuArrows(x.horse.style, x.horse)}<div class="small muted">${e(H.styleText(x.horse))}</div></td>
         <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td>
         <td class="small">${x.allowance ? J.allowanceMark(x.allowance) : ''}${e(x.jockey ? x.jockey.name : '')}</td>
-        <td class="num">${x.pop}<div class="small muted">${x.odds}</div></td><td class="hide-sm">${x.horse.filler ? '<span class="muted">－</span>' : UI.fatigueMark(x.horse, x.travel)}</td><td class="recent">${recent(x.horse)}</td></tr>`; }).join('')}
+        <td class="num">${x.pop}<div class="small muted">${x.odds}</div></td>${wet ? `<td>${UI.mudMark(x.horse)}</td>` : ''}<td class="hide-sm">${x.horse.filler ? '<span class="muted">－</span>' : UI.fatigueMark(x.horse, x.travel)}</td><td class="recent">${recent(x.horse)}</td></tr>`; }).join('')}
       </table></div></div>`;
   };
 

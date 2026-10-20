@@ -24,7 +24,7 @@ function canon(v, out) {
 }
 const digest = v => crypto.createHash('sha256').update(canon(v, []).join(''), 'utf8').digest('hex').slice(0, 16);
 
-// 週の初めに行う操作（ops）：['reserve', 馬の id, レース名]・['retire', 馬の id]・['make', 父の id, 母の id, 名前]・
+// 週の初めに行う操作（ops）：['reserve', 馬の id, レース名]・['retire', 馬の id]・['make', 父の id, 母の id, 名前]・['inbr', [[父, 母]…], [名前…]]（インブリードの見立ての指紋）・
 //   ['win', 馬の id, 短い名, レース名, 格]（その年の重賞の勝ちを足して、冠とトロフィーを見る）・['pts', オーナーの id, 点]（出会いの点・友好度）・['meet', オーナーの id]（縁を作る）・['adv', オーナーの id]（ミッションをやり終えたことにする）・['ask', オーナーの id]（店に頼む）・
 //   ['program', 馬の id]（番組表の行の指紋）・['rsvp', 馬の id]（番組表で出られる最初のオープンを予約）・
 //   ['away', 馬の id, 国]（その馬が先週その国で走ったことにする）・['fat', 馬の id]（疲労の段階・回復・今週のレースへの移動の疲れと出られるか・決まった着順の並びでたまる量の指紋。js/core/fatigue.js）
@@ -49,6 +49,8 @@ function runOps(HS, ops) {
       return digest([F.stage(h), F.recover(h), h.fatigue || 0, F.where(h) || '', rs.map(r => [r.key, F.countryOf(r), F.travel(h, r), F.travelWhy(h, r) || '', res.map((x, k) => F.gain(r, res, k))])]);
     }
     if (op[0] === 'make') { const r = Ori.make(op[1], op[2], op[3]); return r.err || (r.horse.name + ':' + r.skills.join(',')); }
+    // インブリード（js/core/inbreed.js）：組ごとの見立て（選べない理由・クロス・上がり）と決まった種の健康の下がり・画面の文、名前ごとの因子
+    if (op[0] === 'inbr') { const I = HS.Inbreed; return digest([op[1].map(([s, d]) => { const a = I.analyze(s, d); return [a, I.healthDrop(new HS.U.RNG(7), a), I.shown(a).map(I.text)]; }), op[2].map(n => I.factorOf(n))]); }
     return 'unknown';
   });
 }
@@ -155,7 +157,7 @@ function build(log) {
     W.dirty(); W._week = null;
     var craftSave = W.serialize();
     HS = load(); HS.World.load(craftSave);
-    var ops = { 0: [['reserve', p1.id, 'フェブラリーステークス']], 1: [['win', p2.id, '皐月賞', '皐月賞', 'G1'], ['win', p2.id, '日本ダービー', '東京優駿', 'G1'], ['win', p2.id, '菊花賞', '菊花賞', 'G1'], ['meet', 'takenouchi'], ['meet', 'yuni'], ['pts', 'takenouchi', 30], ['adv', 'takenouchi'], ['ask', 'takenouchi'], ['adv', 'yuni'], ['adv', 'yuni'], ['adv', 'yuni'], ['adv', 'yuni'], ['adv', 'yuni'], ['pts', 'yuni', 5]], 2: [['win', p2.id, '宝塚記念', '宝塚記念', 'G1'], ['win', p2.id, '有馬記念', '有馬記念', 'G1'], ['away', p2.id, '仏'], ['fat', p2.id], ['fat', p1.id], ['program', p2.id]], 3: [['program', p1.id], ['rsvp', p1.id], ['rsvp', p1.id], ['fat', p2.id]], 4: [['program', p1.id], ['fat', p1.id]], 5: [['retire', p1.id], ['retire', p2.id]], 6: [['make', p1.sex === '牝' ? p2.id : p1.id, p1.sex === '牝' ? p1.id : p2.id, 'テストホース']] };
+    var ops = { 0: [['reserve', p1.id, 'フェブラリーステークス']], 1: [['win', p2.id, '皐月賞', '皐月賞', 'G1'], ['win', p2.id, '日本ダービー', '東京優駿', 'G1'], ['win', p2.id, '菊花賞', '菊花賞', 'G1'], ['meet', 'takenouchi'], ['meet', 'yuni'], ['pts', 'takenouchi', 30], ['adv', 'takenouchi'], ['ask', 'takenouchi'], ['adv', 'yuni'], ['adv', 'yuni'], ['adv', 'yuni'], ['adv', 'yuni'], ['adv', 'yuni'], ['pts', 'yuni', 5]], 2: [['win', p2.id, '宝塚記念', '宝塚記念', 'G1'], ['win', p2.id, '有馬記念', '有馬記念', 'G1'], ['away', p2.id, '仏'], ['fat', p2.id], ['fat', p1.id], ['program', p2.id]], 3: [['program', p1.id], ['rsvp', p1.id], ['rsvp', p1.id], ['fat', p2.id]], 4: [['program', p1.id], ['fat', p1.id]], 5: [['retire', p1.id], ['retire', p2.id]], 6: [['make', p1.sex === '牝' ? p2.id : p1.id, p1.sex === '牝' ? p1.id : p2.id, 'テストホース']], 7: [['inbr', [[p1.name, p2.name], [p2.name, p1.name], ['ドゥラメンテ', 'アーモンドアイ'], ['オルフェーヴル', 'ドリームジャーニー'], ['ディープインパクト', 'ウインドインハーヘア'], ['エピファネイア', 'ジェンティルドンナ'], ['キズナ', 'デアリングタクト'], ['ロードカナロア', 'シーザリオ'], ['テストホース', 'ジェンティルドンナ'], ['キタサンブラック', 'シュガーハート']], ['ネアルコ', 'エクリプス', 'ミルジョージ', 'エンドスウィープ', 'ヘイロー', 'ミスタープロスペクター', 'オグリキャップ', 'テストホース', p1.name, '不明な馬']]] };
     var craftStart = digest(JSON.parse(HS.World.serialize()));
     var craftWeeks = play(HS, 8, log, ops);
   }

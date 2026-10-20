@@ -28,6 +28,7 @@
     P.extra = extra || P.extra || {};
     for (const [n, pd] of Object.entries(P.extra)) put(n, pd[0], pd[1], true);
     P.index = idx;
+    if (HS.Inbreed) HS.Inbreed.reset(); // インブリードの因子の覚え（エディットで史実馬の能力が変わるので、読み直すたびに）
   };
   P.register = function (name, sire, dam) { P.extra[name] = [sire || null, dam || null]; P.index.set(name, [sire || null, dam || null]); };
   P.parents = name => (name && P.index.get(name)) || [null, null];

@@ -550,7 +550,7 @@ input[type=range] { accent-color: var(--accent); min-width: 0; min-height: 28px;
 .list > .panel + .panel { margin-top: 0; }
 .legend-call { margin-top: 6px; padding: 6px var(--sp-3); border-radius: var(--r); background: linear-gradient(90deg, rgba(90, 31, 138, .6), rgba(184, 134, 42, .45)); border: 1px solid rgba(220, 180, 255, .25); color: #fff; font-size: 13px; }
 .sp-reach { color: #ffd34d; font-weight: 700; }
-.card.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), var(--sh-1); } .card[data-act="orig-pick"] { cursor: pointer; }
+.card.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), var(--sh-1); } .card.off { opacity: .45; } .chip.near { color: var(--bad); border-color: var(--bad); margin: 0 4px 4px 0; } .chip.cross { color: var(--accent-hi); margin: 0 4px 4px 0; } .card[data-act="orig-pick"] { cursor: pointer; }
 .sp-got { color: #ffd34d; }
 .sp-nm { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
 .sp-nm.sp-got { color: #ffd34d; font-weight: 700; }

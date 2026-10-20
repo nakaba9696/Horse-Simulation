@@ -108,7 +108,8 @@ check('profiles: スペシャルホースは全頭に名鑑（年代・戦績・
   const SP = HS.Special, bad = [];
   for (const { d } of SP.list()) {
     if (SP.isModern(d)) continue; // 香港の三冠の隠し馬（1989年からの馬。ふだんは店やデビューに出る馬）は名鑑が無くてもよい
-    if (!/^\d{4}(〜\d{4})?年$/.test(d.years || '')) bad.push(d.name + ':年代');
+    // 走り始めの年が出典で確かめられない馬は「〜1970年」（最後の年だけ）と書く（ササフラ。確かめていない数字は書かない）
+    if (!/^(\d{4})?(〜\d{4})?年$/.test(d.years || '') || d.years === '年') bad.push(d.name + ':年代');
     if (!/^\d+戦\d+勝/.test(d.record || '')) bad.push(d.name + ':戦績');
     if (!(d.mainWins || []).length) bad.push(d.name + ':主な勝鞍');
     if ((d.text || '').length < 250) bad.push(d.name + ':解説' + (d.text || '').length + '字');
@@ -128,7 +129,7 @@ check('special: 名の知れた名馬（名鑑を書き足した馬）はスペ�
   HS.U.ERA = HS.Eraless.ERA;
   const SP = HS.Special, E = HS.Eraless, bad = [];
   // 持ち主の決定 2026-10-20「有名な馬はいれてほしい　ホーリックスとかトリプティクとかムトトとか」。入れる馬には名鑑を書く（名鑑の無い馬は入れない）
-  for (const n of ['トリプティク', 'ムトト', 'サドラーズウェルズ', 'ブラッシンググルーム', 'ペブルス', 'アルサイド', 'カブトシロー', 'タケシバオー', 'テンポイント', 'ハイセイコー']) {
+  for (const n of ['トリプティク', 'ムトト', 'サドラーズウェルズ', 'ブラッシンググルーム', 'ペブルス', 'アルサイド', 'スターアピール', 'ササフラ', 'カブトシロー', 'タケシバオー', 'テンポイント', 'ハイセイコー']) {
     const x = SP.byName(n);
     if (!x) bad.push(n + ':入らない'); else if (!(x.d.text || '').length || !x.d.record) bad.push(n + ':名鑑なし');
   }
@@ -1386,10 +1387,12 @@ require('./extra_records.js')(check, assert, HS); // お手馬のレースの記
 require('./extra_skills2.js')(check, assert, HS); // 逃げ・追込の能力・道悪○・外枠○・伝説級の固有の能力
 require('./extra_shop.js')(check, assert, HS); // 馬の店の年齢・値段（いまの総合力・晩成が安い）とレーティング
 require('./extra_growth.js')(check, assert, HS); // 成長型の8つ（ピークの順・持続・値段の掛け・史実馬の割り当て・オリジナルホースの引き継ぎ）
+require('./extra_inbreed.js')(check, assert, HS); // インブリード（選べない組み合わせ・因子の上がり・健康・上限・オリジナルホースが祖先・99に届かない）
 require('./extra_gf.js')(check, assert, HS); // グランドフェスティバル（6つ・GF の週・連戦・伝説級の担当・店と牧場・トロフィー・キンチェム）
 require('./extra_trophy.js')(check, assert, HS); // トロフィー（仕様書の表・お金・引退の能力）・足したレース・トロフィーの隠し馬（入れ替わり）
 require('./extra_oponly.js')(check, assert, HS); // レースは OP 以上だけ・G1 の獲得賞金の条件・海外の仮の条件・前のセーブの条件戦の予約
 require('./extra_oneride.js')(check, assert, HS); // おまかせ騎乗は無い・1つのレースに自分が乗るのは1頭（自分の馬・依頼）
+require('./extra_ground.js')(check, assert, HS); // 馬場の状態（道悪でスタミナの減りが速い・切れが鈍る・苦手な馬が大きく損・走破タイム）
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
 require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
 require('./extra_gdgame.js')(check, assert); // Godot 版の週の流れを本物の画面で自動で遊ぶ

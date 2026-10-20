@@ -212,6 +212,36 @@ static var TSUISO := 0.95
 static var SOTO := 0.96
 static var SABAKI := { v = 1.6, gap = 0.55, dx = 1.4, block = 0.4 }
 static var KIRE := { s0 = 0.03, s1 = 0.0035, r = 60.0, a0 = 0.85, a1 = 0.05, c0 = 0.95, c1 = 0.0, cS = 0.035, z = 0.0015, top = 2.2 }
+# 馬場の状態（js/core/racesim.js の S.GROUND・S.mudM・S.mudLabel・S.groundFx と同じ。C++ は hs_horse.cpp の mud_m・ground_fx）。数は docs/BALANCE.md「14. 馬場の状態」
+static var GROUND := { mid = 75.0, bad = 45.0, span = 30.0, q = 0.25, mMax = 2.2, good = 25.0, gain = 0.15, pw = 0.4,
+	e = { "芝": [0.0, 0.06, 0.13, 0.22], "ダ": [0.0, 0.05, 0.1, 0.17] }, k = { "芝": [0.0, 0.1, 0.2, 0.32], "ダ": [0.0, 0.07, 0.14, 0.24] },
+	dLo = 0.6, dHi = 1.6, kw0 = 0.5, kw1 = 0.15, kMin = 0.35 }
+# 道悪の苦手さ（正＝苦手・負＝得意）
+static func mud_m(heavy: Variant) -> float:
+	var G := GROUND
+	var a: float = float(HSU.or_(heavy, 50.0))
+	if a >= G.mid: return -HSU.mn(G.gain, (a - G.mid) / G.good * G.gain)
+	var x: float = (G.mid - a) / G.span
+	return HSU.mn(G.mMax, x * (G.q + (1.0 - G.q) * x))
+# 道悪の得手不得手の印（苦手・ふつう・得意）
+static func mud_label(heavy: Variant) -> String:
+	var a: float = float(HSU.or_(heavy, 50.0))
+	return "苦手" if a < GROUND.bad else ("得意" if a >= GROUND.mid else "ふつう")
+static func _heavy_of(horse: Dictionary) -> Variant:
+	var apt: Variant = horse.get("apt")
+	return apt.get("heavy") if apt is Dictionary else null
+# この馬のこの馬場での効き：e＝スタミナの減りの倍率・k＝終いの伸びの倍率
+static func ground_fx(horse: Dictionary, race: Dictionary) -> Dictionary:
+	var G := GROUND
+	var gl: int = _GROUND.get(race.get("ground"), 0)
+	if gl == 0: return { e = 1.0, k = 1.0, m = 0.0 }
+	var sf := "ダ" if race.get("surface") == "ダ" else "芝"
+	var m := mud_m(_heavy_of(horse))
+	var kire := HSU.clamp(float(HSU.or_(horse.get("kire"), 4.0)), 1.0, 8.0)
+	var dF := HSU.clamp(float(race.dist) / 2000.0, G.dLo, G.dHi)
+	var e: float = 1.0 + G.e[sf][gl] * m * dF
+	var k: float = HSU.mx(G.kMin, 1.0 - G.k[sf][gl] * m * (G.kw0 + G.kw1 * (kire - 1.0)))
+	return { e = e, k = k, m = m }
 static var ORIAI := { ramp = 2.5, calmK = 5.0, over = 0.55, overHot = 0.25, fightAfter = 1.2, fightK = 14.0, surgeT = 6.0, match = 0.35, matchLo = 0.12,
 	keen = 40.0, passed = 9.0, wall = 4.0, sand = 3.0, cover = 4.0, shrinkT = 4.0, shrinkSpd = 0.012, pushSurge = 10.0, surgeMax = 45.0 }
 static var FIGHT := { from = 300.0, dx = 2.4, l0 = 0.45, l1 = 1.8, dv = 0.6, g0 = 72.0, up = 10.0, low = -40.0, decay = 0.05, spd = 0.012, cost = 0.12 }
@@ -276,7 +306,8 @@ static func _power_gd(horse: Dictionary, race: Dictionary, w_idx: Variant, ctx: 
 	if D > horse.distMax: distPen = (D - horse.distMax) / 100.0 * 1.2
 	var surfPen := 0.0
 	var gl: int = _GROUND.get(race.get("ground"), 0)
-	var groundAdj: float = gl * (float(HSU.or_(horse.apt.get("heavy"), 50.0)) - 55.0) / 45.0 * 1.3
+	# 馬場の状態：強さの上下は小さく（道悪の効きはスタミナの減りと脚の切れで。ground_fx）
+	var groundAdj: float = -gl * mud_m(_heavy_of(horse)) * GROUND.pw if gl != 0 else 0.0
 	var layoff := 1.2 if (horse.get("lastRaceW") != null and w_idx != null and w_idx - horse.lastRaceW >= 12) else 0.0
 	var trav: float = float(HSU.or_(ctx.get("travel"), 0.0)) if ctx else 0.0   # このレースへの移動の疲れ（HSFatigue.travel）
 	# 調子は無い（持ち主の決定 2026-10-20）。調子の揺れの分はその日の出来（FORM_SD）に入れた
@@ -460,10 +491,12 @@ static func _create_gd(race: Dictionary, runners: Array, w_idx: Variant, rng: HS
 		var A: float = pw.total + form
 		var vc := v0 * (1.0 + 0.0012 * (A - 85.0))
 		var sta: float = pw.cur.sta; var guts: float = pw.cur.guts; var mind: float = pw.cur.mind; var slopeP: float = pw.cur.slope
-		var Ds := HSU.mx(800.0, (h.distMax + 300.0 + (sta - 75.0) * 12.0) * DS)
+		# 馬場の状態：道悪ほどスタミナの減りが速く（Ds を割る）、終いの伸びが鈍る。道悪の苦手な馬ほど大きく
+		var gx := ground_fx(h, race)
+		var Ds: float = HSU.mx(800.0, (h.distMax + 300.0 + (sta - 75.0) * 12.0) * DS) / gx.e
 		var kire := HSU.clamp(HSU.or_(h.get("kire"), 4.0), 1.0, 8.0)
 		var K := KIRE
-		var kickS: float = K.s0 + K.s1 * (kire - 1.0) + 0.0006 * (pw.cur.spd - 80.0)
+		var kickS: float = (K.s0 + K.s1 * (kire - 1.0) + 0.0006 * (pw.cur.spd - 80.0)) * gx.k
 		var styleAdd: float = STYLE_SPURT[h.style] if STYLE_SPURT.get(h.get("style")) != null else 80.0
 		var spurtR := HSU.clamp(straight + 120.0 + styleAdd + (4.5 - kire) * K.r + (LONGSPURT.r if _has(h, "longspurt") else 0.0) + rng.normal(0.0, 60.0) * (1.3 - mind / 120.0), 300.0, HSU.mn(1300.0, D * 0.6))
 		var delay := absf(rng.normal(0.0, 0.12))

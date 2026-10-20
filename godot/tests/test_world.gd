@@ -74,6 +74,12 @@ func _ops(ops: Array) -> Array:
 			"make":
 				var r := HSOriginal.make(op[1], op[2], op[3])
 				out.append(r.err if r.has("err") else "%s:%s" % [r.horse.name, ",".join(r.skills)])
+			"inbr":   # インブリード（hs_inbreed.gd）：組ごとの見立てと決まった種の健康の下がり・画面の文、名前ごとの因子
+				var res: Array = []
+				for pr in op[1]:
+					var a := HSInbreed.analyze(pr[0], pr[1])
+					res.append([a, HSInbreed.health_drop(HSRng.new(7.0), a), HSInbreed.shown(a).map(func(c): return HSInbreed.text(c))])
+				out.append(HSData.digest_save([res, op[2].map(func(n): return HSInbreed.factor_of(n))]))
 			_: out.append("unknown")
 	return out
 

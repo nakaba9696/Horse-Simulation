@@ -1,6 +1,7 @@
 # 出走表（docs/UI.md「出走表（レースの前・パドック）」）：18頭が 1600×1000 の 1画面に収まる（持ち主「レース時の馬一覧もスクロールなしで全頭見れるようにしてね」）
 # 上の帯（1行）：レース番号・格・レース名（明朝）・競馬場・芝ダと距離・回り・天気・馬場・頭数
 # 表（1行 36px）：馬番（枠の色）・馬名・性齢・斤量・脚質の矢印（右ほど前。その馬の脚質が赤く光る）・騎手・疲労の段階（HSFatigue。移動の疲れ込み）・人気（単勝）。自分の馬の行は左に金の線
+# 馬場が良でないときは、疲労の前に道悪の得手不得手（得意・ふつう・苦手。HSSim.mud_label。持ち主の決定 2026-10-20「馬場の状態」）の列を足す（馬名の列が縮む）
 # 右：コース図（展開予想は出さない。持ち主の指摘 2026-10-17「プレイヤーに判断させたい」）・選んだ馬の札・「パドック」「ゲートイン」（金）・操作の案内。後ろはパドックを歩く馬（3D。選んだ馬をカメラが追う）
 # 操作：十字キー・矢印で選ぶ、A・Enter で決める、B・Esc で戻る（docs/UI.md 4）
 extends Node
@@ -222,6 +223,17 @@ func _stat(head: String, val: String) -> PanelContainer:
 	return p
 
 const COLS := [["馬番", 44], ["馬名", 0], ["性齢", 52], ["斤量", 52], ["脚質", 118], ["騎手", 128], ["疲労", 84], ["人気", 76]]
+const MUD_W := 56
+
+# 道悪のとき（馬場が良でない）か
+func _wet() -> bool:
+	return String(race.race.get("ground", "良")) != "良"
+# 道悪の得手不得手の印と色（適性が無い馬は空）
+func _mud_of(i: int) -> Array:
+	var h: Dictionary = race.horses[i]
+	if h.get("heavy") == null: return []
+	var lb := HSSim.mud_label(float(h.heavy))
+	return [lb, UiTheme.GOOD if lb == "得意" else (UiTheme.BAD if lb == "苦手" else UiTheme.MUTED)]
 
 # 疲労の段階（週の流れの中の本当の出走表だけ。頭数合わせの馬・スペシャルホースは無し）。{ label, color, value, i, travel } か空
 func _fat_of(i: int) -> Dictionary:
@@ -247,7 +259,9 @@ func _build_table() -> void:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
 	head.custom_minimum_size.y = 22
-	for col in COLS:
+	var cols: Array = COLS.duplicate()
+	if _wet(): cols.insert(6, ["道悪", MUD_W])
+	for col in cols:
 		var l := UiTheme.label(col[0], 11, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_CENTER if col[1] > 0 else HORIZONTAL_ALIGNMENT_LEFT)
 		if col[1] > 0:
 			l.custom_minimum_size.x = col[1]
@@ -308,6 +322,11 @@ func _build_table() -> void:
 		jl.custom_minimum_size.x = COLS[5][1]
 		jl.clip_text = true
 		h.add_child(jl)
+		if _wet():
+			var mv := _mud_of(i)
+			var ml := UiTheme.label(String(mv[0]) if not mv.is_empty() else "－", 13, mv[1] if not mv.is_empty() else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
+			ml.custom_minimum_size.x = MUD_W
+			h.add_child(ml)
 		var fv := _fat_of(i)
 		var fl := UiTheme.label(String(fv.label) if not fv.is_empty() else "－", 13, Color(String(fv.color)) if not fv.is_empty() else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
 		fl.custom_minimum_size.x = COLS[6][1]
@@ -432,6 +451,8 @@ func _select(i: int, animate: bool) -> void:
 	card_arrows.style = String(h.style)
 	card_arrows.queue_redraw()
 	card_sub.text = "%d番  %s%d  %s  %s  斤量%.1f  %s" % [int(h.num), h.sex, int(h.get("age", 4)), h.coat, h.style, float(h.weight), info[i].jockey]
+	var mv := _mud_of(i) if _wet() else []
+	if not mv.is_empty(): card_sub.text += "  %s：道悪%s" % [String(race.race.ground), mv[0]]
 	var fv := _fat_of(i)
 	card_fat.visible = not fv.is_empty()
 	if not fv.is_empty():

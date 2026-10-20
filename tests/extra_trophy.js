@@ -311,28 +311,37 @@ module.exports = function (check, assert, HS) {
     const turfT = TR.LIST.filter(t => t.kind === 'set' && !t.focus.includes('dspd')).sort((a, b) => b.tier - a.tier);
     const canBuy = S.canBuy; S.canBuy = () => true;
     const foals = O.FOALS; O.FOALS = 99;   // 世代を重ねる見積もり：1組の親から8頭ずつ作るので、1頭から作れる数（オーナーの依頼の子が足した決まり）は外す
-    // 店のいちばん強い牡・牝から始め、両親に nt 個のトロフィー（難しい順）を取らせて引退 → 仔を kids 頭 → いちばん良い牡・牝で次の世代
+    // 店の強い牡・牝2組から始め、両親に nt 個のトロフィー（難しい順）を取らせて引退 → 組ごとに仔を kids 頭 → 次の世代は
+    // 組Aのいちばん良い牡 × 組Bのいちばん良い牝、組Bの牡 × 組Aの牝（きょうだい同士はインブリードの決まりで作れない。js/core/inbreed.js）
     const lines = (nt, kids, gens, seed) => {
       const G = newGame(seed); G.player.money = 1e12;
       const pool = HS.Eraless.pool().map(d => H.fromHistoric(d, 'p:' + d.name));
-      const best = sex => pool.filter(h => sex === '牝' ? h.sex === '牝' : h.sex === '牡').sort((a, b) => fh(b) - fh(a))[0];
-      let s = best('牡'), d = best('牝');
+      const ranked = sex => pool.filter(h => sex === '牝' ? h.sex === '牝' : h.sex === '牡').sort((a, b) => fh(b) - fh(a));
+      const sires = ranked('牡'), dams = ranked('牝');
+      const mate = (s, used) => dams.find(d => !used.includes(d) && !HS.Inbreed.analyze(s.name, d.name).block);
+      const dA = mate(sires[0], []), dB = mate(sires[1], [dA]);
+      let pairs = [[sires[0], dA], [sires[1], dB]];
       const out = [];
       for (let g = 0; g < gens; g++) {
-        for (const h of [s, d]) {
-          if (!G.horses[h.id]) h.id = W.newId();
-          h.owner = 'P'; h.loc = 'stable'; G.horses[h.id] = h; W.dirty();
-          for (const t of turfT.slice(0, nt)) TR.give(h, t, G.year);
-          assert(O.retire(h.id).to === 'retired', '引退できない');
-          assert(H.STATS.every(k => (h.potUp[k] || 0) <= RULE.CAP), `上がりが CAP を超える ${JSON.stringify(h.potUp)}`);
+        const kidsOf = [];
+        for (const [s, d] of pairs) {
+          for (const h of [s, d]) {
+            if (!G.horses[h.id]) h.id = W.newId();
+            h.owner = 'P'; h.loc = 'stable'; G.horses[h.id] = h; W.dirty();
+            for (const t of turfT.slice(0, nt)) TR.give(h, t, G.year);
+            assert(O.retire(h.id).to === 'retired', '引退できない');
+            assert(H.STATS.every(k => (h.potUp[k] || 0) <= RULE.CAP), `上がりが CAP を超える ${JSON.stringify(h.potUp)}`);
+          }
+          const ks = [];
+          for (let i = 0; i < kids; i++) { d.foalY = null; G.year++; const r = O.make(s.id, d.id, `セダイ${seed}x${g}x${kidsOf.length}x${i}`); assert(!r.err, r.err); ks.push(r.horse); }
+          delete G.horses[s.id]; delete G.horses[d.id];
+          kidsOf.push(ks);
         }
-        const ks = [];
-        for (let i = 0; i < kids; i++) { d.foalY = null; G.year++; const r = O.make(s.id, d.id, `セダイ${seed}x${g}x${i}`); assert(!r.err, r.err); ks.push(r.horse); }
-        out.push(Math.max(...ks.map(fh)));
-        delete G.horses[s.id]; delete G.horses[d.id];
-        const pick = sex => ks.filter(h => sex === '牝' ? h.sex === '牝' : h.sex !== '牝').sort((a, b) => fh(b) - fh(a))[0];
-        s = pick('牡') || s; d = pick('牝') || d;
-        for (const k of ks) if (k !== s && k !== d) delete G.horses[k.id];
+        out.push(Math.max(...[].concat(...kidsOf).map(fh)));
+        const pick = (ks, sex) => ks.filter(h => sex === '牝' ? h.sex === '牝' : h.sex !== '牝').sort((a, b) => fh(b) - fh(a))[0];
+        const next = [[pick(kidsOf[0], '牡') || pairs[0][0], pick(kidsOf[1], '牝') || pairs[1][1]], [pick(kidsOf[1], '牡') || pairs[1][0], pick(kidsOf[0], '牝') || pairs[0][1]]];
+        for (const ks of kidsOf) for (const k of ks) if (!next.some(p => p.includes(k))) delete G.horses[k.id];
+        pairs = next;
         W.dirty();
       }
       return out;

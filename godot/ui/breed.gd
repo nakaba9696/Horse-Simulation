@@ -2,6 +2,8 @@
 # 上：選んだ組み合わせ（父 × 母・ボーナス・受け継ぐ特殊能力の候補・名前・「作る」（金））
 # 下：父（引退した牡馬）と母（引退した牝馬）の表を左右に。行を押すとその馬を選ぶ（もう一度押すと外す）
 # 決まりは HSOriginal（retired・candidates・make）を呼ぶだけ。牝馬は1年に1頭
+# インブリード（HSInbreed）：組み合わせのクロスと効き目（「サンデーサイレンスの3×4（芝スピード＋2・根性＋1）」）を上の板に。
+# 片方を選ぶと、もう片方の表の近すぎる馬（親子・2×2 より濃い・全きょうだい）は灰色にし「近すぎる（〇〇の2×2）」の札。押しても選べない
 extends UiScreen
 
 var sire := ""
@@ -14,7 +16,7 @@ var b_make: Button
 var _focus_id := ""
 
 func hint() -> String:
-	return "能力は両親の値をもとにばらつく。特殊能力は両親のものから4つまで"
+	return "能力は両親の値をもとにばらつく。クロスがあると祖先の得意な能力が上がる。近すぎる組み合わせは作れない"
 
 func keys() -> Array:
 	return [["↑↓←→", "十字", "選ぶ"], ["Enter", "A", "父・母にする"], ["Esc", "B", "もどる"]]
@@ -29,6 +31,13 @@ func build() -> void:
 	if h and h.get("loc") == "retired":
 		if h.sex == "牝": dam = h.id
 		else: sire = h.id
+	# 撮影：-- --pick=馬名（父・母を選んだ形で開く）
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--pick="):
+			for x in HSOriginal.retired("牡") + HSOriginal.retired("牝"):
+				if x.name == a.substr(7):
+					if x.sex == "牝": dam = x.id
+					else: sire = x.id
 	var pb := UiScreen.panel_box(true, 8)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X, TOP + 4)
 	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2, 0)
@@ -68,9 +77,27 @@ func _fill() -> void:
 	top.add_theme_constant_override("separation", 14)
 	pair_box.add_child(top)
 	top.add_child(UiTheme.title("%s　×　%s" % [ps.name if ps else "（父）", pd.name if pd else "（母）"], 24, UiTheme.GOLD_BRIGHT if ps and pd else UiTheme.FAINT))
+	var an = HSInbreed.analyze(ps.name, pd.name) if ps and pd else null
 	if ps and pd:
 		var bonus := HSOriginal.child_bonus(ps, pd)   # 前の版の引退馬だけ（いまは引退で親の能力が上がっている）
 		if bonus > 0: top.add_child(UiTheme.chip("ボーナス +%s" % HSU.num(bonus), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
+	# クロス（インブリード）と効き目
+	if an != null:
+		var cf := HFlowContainer.new()
+		cf.add_theme_constant_override("h_separation", 6)
+		cf.add_theme_constant_override("v_separation", 4)
+		if an.block != null:
+			cf.add_child(UiTheme.label("クロス", 13, UiTheme.MUTED))
+			cf.add_child(UiTheme.chip(String(an.block), UiTheme.SURFACE_3, UiTheme.BAD, 13))
+		else:
+			var tot := HSInbreed.up_text(an.up)
+			cf.add_child(UiTheme.label("クロス（合わせて %s）" % (tot if tot != "" else "上がりなし"), 13, UiTheme.MUTED))
+			var sh := HSInbreed.shown(an)
+			for c in sh.slice(0, 4):   # 板が下の表にかからないよう4つまで（血量の多い順）
+				cf.add_child(UiTheme.chip(HSInbreed.text(c), UiTheme.SURFACE_3, UiTheme.WARN if c.tier == 0 else UiTheme.GOLD_BRIGHT, 12))
+			if sh.size() > 4: cf.add_child(UiTheme.label("ほか%dつ" % (sh.size() - 4), 12, UiTheme.FAINT))
+			if sh.is_empty(): cf.add_child(UiTheme.label("なし", 13, UiTheme.FAINT))
+		pair_box.add_child(cf)
 	var cand: Array = HSOriginal.candidates(ps, pd) if ps and pd else []
 	var fl := HFlowContainer.new()
 	fl.add_theme_constant_override("h_separation", 6)
@@ -91,7 +118,8 @@ func _fill() -> void:
 	name_edit.add_theme_stylebox_override("focus", UiTheme.box(UiTheme.SUNK, UiTheme.GOLD, 2, UiTheme.R_BUTTON, Vector4(14, 6, 14, 6)))
 	mk.add_child(name_edit)
 	var why := ""
-	if ps and pd and pd.get("foalY") == G.year: why = "%sは今年もう仔を産んだ" % pd.name
+	if an != null and an.block != null: why = String(an.block)
+	elif ps and pd and pd.get("foalY") == G.year: why = "%sは今年もう仔を産んだ" % pd.name
 	elif not HSSeason.can_buy(): why = "お手馬がいっぱい"
 	b_make = UiScreen.button("オリジナルホースを作る", true, 330, 52, 20)
 	b_make.disabled = not (ps and pd) or why != ""
@@ -99,11 +127,12 @@ func _fill() -> void:
 	mk.add_child(b_make)
 	if why != "": mk.add_child(UiTheme.label(why, 14, UiTheme.WARN))
 	# 父・母の表
-	_col(cols[0], "父（引退した牡馬）", sires, true)
-	_col(cols[1], "母（引退した牝馬）", dams, false)
+	_col(cols[0], "父（引退した牡馬）", sires, true, pd)
+	_col(cols[1], "母（引退した牝馬）", dams, false, ps)
 	focus_first()
 
-func _col(v: VBoxContainer, title: String, list: Array, is_sire: bool) -> void:
+# other＝もう片方で選んでいる馬（いれば、近すぎる馬を灰色に）
+func _col(v: VBoxContainer, title: String, list: Array, is_sire: bool, other: Variant) -> void:
 	v.add_child(UiScreen.section(title, "%d/%d頭" % [list.size(), HSOriginal.MAX_EACH]))
 	if list.is_empty():
 		var p := PanelContainer.new()
@@ -114,6 +143,8 @@ func _col(v: VBoxContainer, title: String, list: Array, is_sire: bool) -> void:
 	var G = HSWorld.G
 	for h in list:
 		var on: bool = h.id == (sire if is_sire else dam)
+		var near = null   # 選んでいる相手と近すぎる（インブリード）
+		if other and not on: near = HSInbreed.analyze(h.name if is_sire else other.name, other.name if is_sire else h.name).block
 		var rb := UiScreen.row_button(64, on)
 		var b: Button = rb[0]
 		var hb: HBoxContainer = rb[1]
@@ -124,6 +155,7 @@ func _col(v: VBoxContainer, title: String, list: Array, is_sire: bool) -> void:
 		var l1 := HBoxContainer.new()
 		l1.add_theme_constant_override("separation", 8)
 		l1.add_child(UiTheme.label(String(h.name), 16, UiTheme.GOLD_BRIGHT if on else UiTheme.IVORY))
+		if near != null: l1.add_child(UiTheme.chip(String(near), UiTheme.SURFACE_3, UiTheme.BAD, 11))
 		if float(HSU.or_(h.get("parentBonus"), 0.0)) > 0:
 			l1.add_child(UiTheme.chip(("引退で能力 最大+%s" if h.get("potUp") else "ボーナス +%s") % HSU.num(h.parentBonus), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 11))
 		if not is_sire and h.get("foalY") == G.year:
@@ -141,7 +173,12 @@ func _col(v: VBoxContainer, title: String, list: Array, is_sire: bool) -> void:
 		UiScreen.pass_mouse(hb)
 		var id: String = h.id
 		b.set_meta("id", id)
+		if near != null: b.modulate = Color(1, 1, 1, 0.45)   # 近すぎる馬は灰色（押しても選べない）
+		var why_near = near
 		b.pressed.connect(func():
+			if why_near != null:
+				toast(String(why_near), "bad")
+				return
 			_focus_id = id
 			if is_sire: sire = "" if sire == id else id
 			else: dam = "" if dam == id else id
