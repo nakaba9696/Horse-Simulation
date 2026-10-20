@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dby0bsr8vmops"
-path="res://.godot/imported/dakota_sad.svg-93a9eb1cc6d1041403cd0253d51fe09a.ctex"
+uid="uid://nkkb6r2weso1"
+path="res://.godot/imported/lucy_sad.svg-6deafb1e5a7920a0a118b75c67556c7f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/dakota_sad.svg"
-dest_files=["res://.godot/imported/dakota_sad.svg-93a9eb1cc6d1041403cd0253d51fe09a.ctex"]
+source_file="res://assets/owners/lucy_sad.svg"
+dest_files=["res://.godot/imported/lucy_sad.svg-6deafb1e5a7920a0a118b75c67556c7f.ctex"]
 
 [params]
 

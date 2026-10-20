@@ -60,7 +60,7 @@ static func _blank() -> Dictionary: return { pts = 0.0, stage = 0.0, prog = 0.0,
 static func init() -> Dictionary:
 	var st := {}
 	for o in ALL(): st[o.id] = _blank()
-	return { v = 3.0, st = st, log = [], queue = [], react = [], awards = {}, wear = {}, flags = {}, ask = null }
+	return { v = 4.0, st = st, log = [], queue = [], react = [], awards = {}, wear = {}, flags = {}, ask = null }
 # 前の形（好感度 0〜800・段階 顔見知り／信頼／主戦／相棒）を、段階に移す
 static func migrate_st(st: Dictionary) -> Dictionary:
 	var t := int(HSU.or_(st.get("tier"), 0.0)); var p: float = float(HSU.or_(st.get("pts"), 0.0))
@@ -100,11 +100,37 @@ static func fill(s: Variant, g: Variant = null) -> Dictionary:
 	if not s.get("wear"): s.wear = {}
 	if not s.get("flags"): s.flags = {}
 	if not s.has("ask"): s.ask = null
+	if float(HSU.or_(s.get("v"), 0.0)) < 4: migrate_v4(s, g)
 	# 海外の印：前のセーブで、自分が海外の重賞を勝っていれば出たことにする
 	if not s.flags.get("overseas") and g and g.get("records") and g.records.get("player"):
 		if HSU.or_(g.records.player.get("g1"), []).any(func(x): return x.get("region") == "海外"): s.flags.overseas = { y = g.year }
-	s.v = 3.0
+	s.v = 4.0
 	return s
+# v3 まで → v4（2026-10-20）：米系のダコタ・ベルを外してルーシーに代えた（縁・出会いの点・段階・勝負服はルーシーに移す）。
+# ミッションの馬とレースを決め直したので、前の予定（job）がいまのミッションと違えば捨てる（読み込んだあと plan_missing が立て直す）。受けていた依頼の騎乗も外す（js/core/owners.js の O.migrateV4）
+const MOVED := { "dakota": "lucy" }
+static func migrate_v4(s: Dictionary, g: Variant) -> void:
+	var drop := {}
+	for k in MOVED.keys(): drop[k] = true
+	for o in ALL():
+		var st = s.st.get(o.id)
+		var j = st.get("job") if st else null
+		if not j: continue
+		var m = mission_of(o, int(st.stage))
+		if not o.get("retired") and m and m.get("horse") == j.horse and race_data(String(m.race)) and race_data(String(m.race)).name == j.race: continue
+		if j.get("on") and g and g.get("rides") and g.rides.get(job_key(j)) == j.get("hid"): g.rides.erase(job_key(j))
+		st.job = null
+		drop[o.id] = true
+	for from in MOVED.keys():
+		var to: String = MOVED[from]
+		var a = s.st.get(from); var b = s.st.get(to)
+		if not a or not b or HSU.truthy(b.get("known")) or not (HSU.truthy(a.get("known")) or float(HSU.or_(a.get("pts"), 0.0)) > 0): continue
+		var nb := _blank(); nb.merge(a, true); nb.job = null
+		s.st[to] = nb
+		s.st[from] = _blank()
+		for k in s.wear.keys():
+			if s.wear[k] == from: s.wear[k] = to
+	s.queue = s.queue.filter(func(q): return not (drop.has(q.get("oid")) and (q.get("kind") == "job" or MOVED.has(q.get("oid")))))
 static func state() -> Dictionary:
 	var g = HSWorld.G
 	if not g.get("owners"): g.owners = init()
@@ -613,10 +639,21 @@ static func mission_text(o: Variant, k: int) -> String:
 	if not m: return ""
 	if k >= JOBS or not m.get("horse"): return String(HSU.or_(m.get("text"), ""))
 	return "依頼の馬%sで、%sを勝つ" % [m.horse, race_label(String(m.race))]
+# 史実か、たらればか（data の fact）。印（label）と、たらればなら史実はどうだったか（real）。お手馬の段階は null（js/core/owners.js の O.missionFact）
+static func mission_fact(o: Variant, k: int) -> Variant:
+	var m = mission_of(o, k)
+	if not m or k >= JOBS or not m.get("horse") or not m.get("fact"): return null
+	var ifs: bool = m.fact == "ifs"
+	return { ifs = ifs, label = "たられば" if ifs else "史実", year = m.get("year"), real = String(HSU.or_(m.get("real"), "")) if ifs else "%s年に勝った" % HSU.num(m.get("year")) }
 static func _name_in(names: Array, race: Dictionary) -> bool:
 	return names.has(race.get("name")) or (race.get("short") != null and names.has(race.short))
 static func _won(h: Dictionary, name: String, y: Variant) -> bool:
 	return HSU.or_(h.get("gradedWins"), []).any(func(w): return (y == null or w.get("y") == y) and (w.get("race") == name or w.get("short") == name))
+# names のレースを、y の年まで n 年続けて勝っている（y の年は呼ぶ側で判定済みのことが多いが、ここでは前の n-1 年を見る）
+static func _won_years(h: Dictionary, name: String, y: float, n: int) -> bool:
+	for i in range(1, n):
+		if not _won(h, name, y - float(i)): return false
+	return true
 static func won_all(h: Dictionary, names: Array, y: Variant) -> bool:
 	return names.all(func(n): return _won(h, n, y))
 static func streak_of(h: Dictionary) -> int:
@@ -651,6 +688,7 @@ static func need_ok(n: Dictionary, race: Dictionary, me: Dictionary, _unused: Va
 	if n.get("set") and not won_all(h, n.set, _year_of(race)): return false
 	if n.get("all") and not won_all(h, n.all, null): return false
 	if n.get("twice") and not HSU.or_(n.get("names"), []).any(func(x): return _won(h, x, _year_of(race) - 1.0)): return false
+	if HSU.truthy(n.get("years")) and not HSU.or_(n.get("names"), []).any(func(x): return _won_years(h, x, _year_of(race), int(n.years))): return false
 	if n.get("wonRegion") and not HSU.or_(h.get("gradedWins"), []).any(func(w): return w.get("region") == n.wonRegion): return false
 	return true
 # ミッションをやり終えた：お礼・友好度・場面・次の段階（次のミッションの予定。最後ならアイテム）

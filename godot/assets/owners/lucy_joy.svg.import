@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://duff7nrbxwnx7"
-path="res://.godot/imported/dakota_joy.svg-7ed24e2cd799d653db489875edc103b5.ctex"
+uid="uid://d2vxhb1y7yhld"
+path="res://.godot/imported/lucy_joy.svg-5d018c11327dd5c7b964cd5201d06063.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/dakota_joy.svg"
-dest_files=["res://.godot/imported/dakota_joy.svg-7ed24e2cd799d653db489875edc103b5.ctex"]
+source_file="res://assets/owners/lucy_joy.svg"
+dest_files=["res://.godot/imported/lucy_joy.svg-5d018c11327dd5c7b964cd5201d06063.ctex"]
 
 [params]
 

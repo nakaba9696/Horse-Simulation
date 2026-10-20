@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dpcbvb143ym73"
-path="res://.godot/imported/dakota_smile.svg-fe1ad6be0f2f7af2037eef759a101075.ctex"
+uid="uid://cdgl1uk1dppwy"
+path="res://.godot/imported/lucy_smile.svg-d86bcd4071e43ab6920dcca525cf5752.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/owners/dakota_smile.svg"
-dest_files=["res://.godot/imported/dakota_smile.svg-fe1ad6be0f2f7af2037eef759a101075.ctex"]
+source_file="res://assets/owners/lucy_smile.svg"
+dest_files=["res://.godot/imported/lucy_smile.svg-d86bcd4071e43ab6920dcca525cf5752.ctex"]
 
 [params]
 
