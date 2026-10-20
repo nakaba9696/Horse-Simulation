@@ -51,6 +51,7 @@
     // トロフィーで能力が上がる（上がった分は potUp に残す）
     h.potUp = {};
     for (const k of H.STATS) { if (h.pot[k] == null) continue; const v = h.pot[k], up = Math.min(b.by[k] || 0, Math.max(0, O.POT_MAX - v)); h.potUp[k] = Math.round(up * 10) / 10; if (up > 0) h.pot[k] = Math.round((v + up) * 10) / 10; }
+    if (HS.Inbreed) HS.Inbreed.remember(h); // オリジナルホースのインブリードの因子をセーブに残す（牧場を去っても、子孫の血統表で効く）
     W.dirty();
     W.news(`${h.name}は引退し、牧場に残った。オリジナルホースの${h.sex === '牝' ? '母' : '父'}にできる${b.pts ? `（トロフィー${b.trophies}つで能力が上がった。最大 +${b.pts}）` : ''}。`, 'info');
     return { to: 'retired', hall };
@@ -89,6 +90,9 @@
     if (!s || !m || s.loc !== 'retired' || m.loc !== 'retired' || s.owner !== 'P' || m.owner !== 'P') return { err: '引退馬を選んでください' };
     if (s.sex === '牝' || m.sex !== '牝') return { err: '父は牡馬、母は牝馬' };
     if (m.foalY === G.year) return { err: `${m.name}は今年もう仔を産んだ（来年また作れる）` };
+    // インブリード（js/core/inbreed.js）：近すぎる組み合わせは作れない。クロスで因子の能力が上がり、濃いと健康が下がりやすい
+    const an = HS.Inbreed.analyze(s.name, m.name);
+    if (an.block) return { err: an.block };
     for (const p of [s, m]) if (!O.foalsLeft(p)) return { err: `${p.name}はもう仔を作れない（1頭から${O.foalsMax()}頭まで）` };
     if (HS.Season && !HS.Season.canBuy()) return { err: `お手馬は${HS.Season.MAX_OWN}頭まで` };
     const rng = new U.RNG(U.hash(`orig:${G.seed}:${G.year}:${s.id}:${m.id}`));
@@ -96,7 +100,8 @@
     const pot = {};
     for (const k of H.STATS) {
       const a = (s.pot[k] || 70), b = (m.pot[k] != null ? m.pot[k] : a);
-      pot[k] = Math.round(U.clamp(O.inherit((a + b) / 2) + rng.normal(0, 6) + bonus, 40, 118) * 10) / 10;
+      // インブリードの上がりは両親の平均に足してから受け継ぐ（トロフィーで上がった親と同じ。強い両親ほど上がりにくく、重ねても上がりの分より積み上がらない）
+      pot[k] = Math.round(U.clamp(O.inherit((a + b) / 2 + an.up[k]) + rng.normal(0, 6) + bonus, 40, 118) * 10) / 10;
     }
     const avg = (a, b) => (a + b) / 2;
     let dMin = Math.round(U.clamp(avg(s.distMin, m.distMin) + rng.normal(0, 150), 1000, 3600) / 100) * 100;
@@ -114,6 +119,9 @@
       skills: pick.filter(id => H.SKILLS[id]), health: Math.round(U.clamp(avg(s.health || 70, m.health || 70) + rng.normal(0, 8), 40, 100)),
       coat: rng.pick([s.coat || '鹿毛', m.coat || '鹿毛']),
     };
+    // 健康の下がり（濃いクロスほど下がりやすい）。仔の能力と同じ乱数の列を変えないよう、別の種で
+    const drop = HS.Inbreed.healthDrop(new U.RNG(U.hash(`inbr:${G.seed}:${G.year}:${s.id}:${m.id}`)), an);
+    if (drop) f.health = Math.max(HS.Inbreed.HEALTH_MIN, f.health - drop);
     const born = G.year - (G.month >= 10 ? 1 : 2); // 秋に作った仔は、年が明けて2歳
     const nm = (name || '').trim() || H.makeName(rng, W.usedNames());
     if (W.usedNames().has(nm) && W.all().some(h => h.name === nm)) return { err: 'その名前の馬がもういる' };
@@ -127,12 +135,14 @@
     if (HS.Ped && HS.Ped.register) HS.Ped.register(nm, s.name, m.name);
     m.foalY = G.year;
     W.dirty();
-    W.news(`オリジナルホース「${nm}」が生まれた！（父 ${s.name}・母 ${m.name}${bonus ? `・ボーナス +${bonus}` : ''}）`, 'g1');
+    const upT = HS.Inbreed.upText(an.up);
+    W.news(`オリジナルホース「${nm}」が生まれた！（父 ${s.name}・母 ${m.name}${bonus ? `・ボーナス +${bonus}` : ''}${upT ? `・インブリードで${upT}` : ''}）`, 'g1');
     // 作った数を数え、決まった数の仔を残した親は牧場を去る
     for (const p of [s, m]) {
       p.origN = (p.origN || 0) + 1;
+      HS.Inbreed.remember(p); // 牧場を去っても、因子は子孫の血統表で効く
       if (!O.foalsLeft(p)) { delete G.horses[p.id]; W.news(`${p.name}は仔を${p.origN}頭残して、牧場を去った。`, 'info'); }
     }
-    return { horse: h, bonus, skills: pick };
+    return { horse: h, bonus, skills: pick, inbreed: an, drop };
   };
 })();

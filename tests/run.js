@@ -1335,6 +1335,7 @@ require('./extra_records.js')(check, assert, HS); // お手馬のレースの記
 require('./extra_skills2.js')(check, assert, HS); // 逃げ・追込の能力・道悪○・外枠○・伝説級の固有の能力
 require('./extra_shop.js')(check, assert, HS); // 馬の店の年齢・値段（いまの総合力・晩成が安い）とレーティング
 require('./extra_growth.js')(check, assert, HS); // 成長型の8つ（ピークの順・持続・値段の掛け・史実馬の割り当て・オリジナルホースの引き継ぎ）
+require('./extra_inbreed.js')(check, assert, HS); // インブリード（選べない組み合わせ・因子の上がり・健康・上限・オリジナルホースが祖先・99に届かない）
 require('./extra_gf.js')(check, assert, HS); // グランドフェスティバル（6つ・GF の週・連戦・伝説級の担当・店と牧場・トロフィー・キンチェム）
 require('./extra_trophy.js')(check, assert, HS); // トロフィー（仕様書の表・お金・引退の能力）・足したレース・トロフィーの隠し馬（入れ替わり）
 require('./extra_oponly.js')(check, assert, HS); // レースは OP 以上だけ・G1 の獲得賞金の条件・海外の仮の条件・前のセーブの条件戦の予約

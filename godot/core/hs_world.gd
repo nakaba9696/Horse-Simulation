@@ -117,7 +117,7 @@ static func new_game(opts: Dictionary) -> Dictionary:
 		player = { name = HSU.or_(opts.get("name"), "プレイヤー"), farm = HSU.or_(opts.get("farm"), "新星牧場"), crown = HSU.or_(opts.get("crown"), ""),
 			silks = HSU.or_(opts.get("silks"), { base = "#1f4fbf", sub = "#ffd23f", pattern = "hoops" }), money = HSMath.round_js(float(HSU.or_(opts.get("money"), 30000.0)) * HSU.price_index(year0) / 10.0) * 10.0 },
 		difficulty = HSU.or_(opts.get("difficulty"), "normal"),
-		horses = {}, nextId = 1.0, erased = [], bornHist = [], pedExtra = {}, edits = edits, bond = {},
+		horses = {}, nextId = 1.0, erased = [], bornHist = [], pedExtra = {}, origFactor = {}, edits = edits, bond = {},
 		records = { g1 = {}, graded = {}, awards = {}, pts = {}, course = {}, hall = [], player = { starts = 0.0, wins = 0.0, earn = 0.0, g1 = [] } },
 		news = [], entries = {}, rides = {}, mode = "jockey" if opts.get("mode") == "jockey" else "owner", lastWeek = null, market = { gen = [], genMares = [], month = 0.0 },
 		farmLevel = 1.0, stats = {}, settings = { animSpeed = 1.0, showHistNote = true }, broke = 0.0, gameOver = null, reserve = [], dc = null }
@@ -1220,5 +1220,7 @@ static func migrate(g: Dictionary) -> void:
 		if HSRaces.is_old_key(k): g.rides.erase(k)
 	for rc in HSU.or_(g.records.get("course"), {}).values():
 		if rc.get("rode") == null: rc.rode = HSU.truthy(rc.get("mine")) and g.mode == "jockey"
+	# オリジナルホースのインブリードの因子（G.origFactor）と血統（G.pedExtra）：前のセーブは牧場にいる馬から足す（hs_inbreed.gd）
+	HSInbreed.migrate(g)
 	g.v = SAVE_VERSION
 	if g.mode == "jockey": g.owners = HSOwners.fill(g.get("owners"), g)   # owners.js の包み

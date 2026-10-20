@@ -78,7 +78,7 @@
         silks: opts.silks || { base: '#1f4fbf', sub: '#ffd23f', pattern: 'hoops' }, money: Math.round((opts.money || 30000) * U.priceIndex(year0) / 10) * 10,
       },
       difficulty: opts.difficulty || 'normal',
-      horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, edits, bond: {},
+      horses: {}, nextId: 1, erased: [], bornHist: [], pedExtra: {}, origFactor: {}, edits, bond: {},
       records: { g1: {}, graded: {}, awards: {}, pts: {}, course: {}, hall: [], player: { starts: 0, wins: 0, earn: 0, g1: [] } },
       news: [], entries: {}, rides: {}, mode: opts.mode === 'jockey' ? 'jockey' : 'owner', lastWeek: null, market: { gen: [], genMares: [], month: 0 },
       farmLevel: 1, stats: {}, settings: { animSpeed: 1, showHistNote: true }, broke: 0, gameOver: null, reserve: [], dc: null,
@@ -1175,6 +1175,8 @@
     }
     // コースレコードの「自分で乗って作ったか」（前の版のセーブには無い。騎手のゲームでは自分の馬＝自分が乗った馬）
     for (const rc of Object.values(g.records.course || {})) if (rc.rode == null) rc.rode = !!rc.mine && g.mode === 'jockey';
+    // オリジナルホースのインブリードの因子（G.origFactor）と血統（G.pedExtra）：前のセーブは牧場にいる馬から足す（js/core/inbreed.js）
+    if (HS.Inbreed) HS.Inbreed.migrate(g);
     // 前の版のエディット（瞬発力などの数値）は、遊ぶときに H.fromHistoric が読み替える
     g.v = SAVE_VERSION;
   };

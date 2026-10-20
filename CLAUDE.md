@@ -56,6 +56,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/core/racerec.js`・`godot/core/hs_racerec.gd` | お手馬のレースの記録：自分の馬の1走ごとに出走馬・ラップ・勝ち時計を数字の配列で残す（`h.results[i].rec`）。引退で消え、殿堂入りなら殿堂に残る（持ち主の決定 2026-10-20） | C |
 | `js/core/original.js` | オリジナルホース：引退させた牡馬・牝馬（それぞれ5頭まで牧場に残る）から仔を作る。1頭の馬から2頭まで（GF 全制覇でもらうイロナの花輪で3頭。持ち主の決定 2026-10-20。作り終えた親は牧場を去る）。能力は両親の値から、特殊能力は両親のもの（最大8つ）から4つまで、トロフィー・GF の勝ちでボーナス | C |
 | `js/core/pedigree.js` | 血統表・クロス・ニックス・系統・配合の評価・仔の誕生 | M |
+| `js/core/inbreed.js`・`godot/core/hs_inbreed.gd`・`data/factors.js` | インブリード（オリジナルホースの配合）：選べない組み合わせ（親子・2×2 より濃い・全きょうだい）・祖先の因子（オリジナルホースは引退したときの能力で `G.origFactor` に残す・名鑑のある名馬は手で決めた表）・クロスで因子の能力が上がる・濃いと健康が下がりやすい。数は `docs/BALANCE.md`「12. インブリード」（持ち主の決定 2026-10-20） | C |
 | `js/core/races.js` | 週ごとのレース（重賞とオープン。OP 以上だけ）・出走できるか（G1 は獲得賞金・海外は仮の条件を `R.abroadWhy` の1か所で）・優先順。数は `docs/BALANCE.md`「8. 出走の条件」 | M |
 | `js/core/racesim.js` | レースの模擬（0.1秒刻み。S.create・S.step・S.finish）・プレイヤーの騎乗の操作（S.ctl）・実況・描画用のコマ | M |
 | `js/core/world.js` | 世界の状態・週の進行（W.prepareWeek → W.cards → W.finishWeek）・AI の出走・賞金・市場・配合・表彰・セーブ | C |
