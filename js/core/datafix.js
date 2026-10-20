@@ -57,6 +57,15 @@
     const h = byName.get(n) || byNorm.get(HS.normName(n)); if (!h) continue;
     h.tier = 'legend'; h.gf = gf;
   }
+  // 能力の見直しで持ち主が採った値（data/horse_fix.js。tools/special_audit_apply.js が書く）。遊びの値だけを上書きする
+  HS.FIX_KEYS = ['rating', 'pot', 'turf', 'dirt', 'style', 'distMin', 'distMax', 'skills', 'kire'];
+  {
+    const extra = new Map((D.legendsExtra || []).map(d => [d.name, d]));
+    for (const [n, f] of Object.entries(D.horseFix || {})) {
+      const h = byName.get(n) || byNorm.get(HS.normName(n)) || extra.get(n); if (!h) continue;
+      for (const k of HS.FIX_KEYS) if (f[k] != null) h[k] = Array.isArray(f[k]) ? f[k].slice() : k === 'pot' ? Object.assign({}, h.pot || {}, f.pot) : f[k];
+    }
+  }
   // 名馬の解説・脚の切れ・特殊能力（data/famous_*.js）。種牡馬になった馬は、仔に切れと能力を伝える
   for (const f of D.famous || []) {
     const h = byName.get(f.name) || byNorm.get(HS.normName(f.name)); if (!h) continue;
