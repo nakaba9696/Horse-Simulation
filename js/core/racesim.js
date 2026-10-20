@@ -142,8 +142,28 @@
   S.PUSH = { base: 0.25 }; // 追い出したあと、しごかずに馬なりで行くときの伸び（段に置き換えた値）
   // 自分で乗る馬：しごいて巡航より速く走ると脚を大きく使う境目（直線の手前 m）。道中は手綱の段が隊列の位置の注文（段 1 で GEAR_GAP m 前・しごいている間の脚の使い方 GEAR_COST）。
   // 注文の位置へ寄せる強さ（差 1m あたりの速さの割合 POS_K と上限 POS_MAX）
-  // 横の移動（自分で乗る馬）：毎秒 v 進路・前後 dx m 以内で、進路の差が gap より近い馬がいる向きへは動けない・何もしないまま drift 秒で内へ戻り始める
-  S.LANE = { v: 3, dx: 2.0, gap: 0.8, drift: 10 };
+  // 当たり判定（持ち主の指摘 2026-10-20「馬と馬が重なって抜ける」「何もない所にぶつかる」）。数は docs/BALANCE.md「2-3d. 当たり判定」
+  // 1進路＝LANE_M m（3D の描画と同じ）。BODY：len＝前後の下限（鼻先どうし。1馬身）・wid＝横の下限（進路。馬と騎手の幅 0.7m＋間 0.1m＝0.8m）・
+  // look＝前の馬（横が wid より近い）を見る長さ（鼻先どうし len＋look m まで）。その馬との間が len＋d m なら、前の馬の速さ＋close×d より速く走らない（近づくほど前の馬の速さへ。急に止まらない）
+  // follow＝AI の馬が進路を選ぶときに見る前（len＋follow＋0.2 m）。side＝前の馬に詰まっている間の、AI の馬の進路の寄せ（0.2秒にこの割合）
+  S.LANE_M = 1.6;
+  S.BODY = { len: 2.4, wid: 0.5, look: 6, close: 0.8, follow: 1.0, side: 0.35 };
+  // 前の馬に詰まらない速さの上限（前に馬がいなければ Infinity）
+  S.followV = function (sim, s) {
+    const B = S.BODY;
+    let lim = Infinity;
+    for (const o of sim.st) {
+      if (o === s || o.done || o.x <= s.x) continue;
+      const d = o.x - s.x;
+      if (d >= B.len + B.look || Math.abs(o.lane - s.lane) >= B.wid) continue;
+      const v = o.v + Math.max(0, d - B.len) * B.close;
+      if (v < lim) lim = v;
+    }
+    return lim;
+  };
+  // 横の移動（自分で乗る馬）：毎秒 v 進路・前後 dx m 以内で、進路の差が gap より近い馬がいる向きへは動けない。
+  // 押さない限り横へは動かない（前は何もしないまま10秒で内へ戻り始めた。持ち主の指摘 2026-10-20「勝手に横へ移動することがある」）
+  S.LANE = { v: 3, dx: 2.4, gap: 0.65 };
   S.EARLY_PUSH = 500; S.GEAR_GAP = 18; S.GEAR_COST = 0.05; S.POS_K = 0.004; S.POS_MAX = 0.03;
   // ムチ（直線で打ったときの伸びの倍率・風車ムチ・脚の使い方、直線の前で打ったとき）。折り合っている（気分 35 未満）間の脚の使い方
   // 前は伸び 0.6・0.9、脚 0.9・0.95、折り合い 0.94 で、直線の手前から追ってムチを入れるだけで、おまかせの3倍以上勝てた（tools/balance_bench.js）
@@ -168,7 +188,7 @@
   S.SUNA = 1.08;
   // 追走○：直線の前、すぐ前（4m 以内・同じ進路）に馬がいる間の脚の使い方の倍率。外回し○：3〜4コーナーで追い出している間の脚の使い方の倍率（自分で乗る馬は外を回った遠回りも無くなる）。
   // 馬群さばき：自分で乗る馬の横の動きの速さの倍率・横の馬に止められる幅（進路の差 gap・前後 dx m）、AI の馬が前が壁になったときの長さの倍率
-  S.TSUISO = 0.95; S.SOTO = 0.96; S.SABAKI = { v: 1.6, gap: 0.55, dx: 1.4, block: 0.4 };
+  S.TSUISO = 0.95; S.SOTO = 0.96; S.SABAKI = { v: 1.6, gap: 0.5, dx: 2.4, block: 0.4 };
   // 道中の位置取り（出だしの速さの倍率・隊列での先頭からの差）。自由自在の馬は、スローならひとつ前の脚質（差し→先行）、ハイならひとつ後ろの脚質の位置へ
   // JIYU.k の割合だけ寄せて運ぶ（仕掛けの早さは本来の脚質のまま）。jiyu＝寄せた向き（-1 前・1 後ろ・0 そのまま）
   S.runPos = function (h, paceF) {
@@ -296,7 +316,7 @@
       sim.me = meIdx;
       const s = st[meIdx]; s.me = true;
       if (opts.ride) {
-        sim.ctl = { tension: U.clamp(30 + (75 - st[meIdx].mind) * 0.4 * S.bondF(opts.bond) + (st[meIdx].kakariDay ? 15 : 0), 10, 70), started: false, fumble: false, gear: 0, hand: 'R', swapUntil: -1, lastPush: -9, lastPull: -9, pushes: 0, whips: 0, whipUntil: -1, windmill: false, lane: Math.min(3, s.lane), blockedNow: false, wide: false, kakariNow: false, behind: false,
+        sim.ctl = { tension: U.clamp(30 + (75 - st[meIdx].mind) * 0.4 * S.bondF(opts.bond) + (st[meIdx].kakariDay ? 15 : 0), 10, 70), started: false, fumble: false, gear: 0, hand: 'R', swapUntil: -1, lastPush: -9, lastPull: -9, pushes: 0, whips: 0, whipUntil: -1, windmill: false, lane: s.lane, blockedNow: false, wide: false, kakariNow: false, behind: false,
           surge: 0, shrink: 0, pullT: 0, reinFight: false, bumpT: null, bumpSide: 0, bond: opts.bond, bondF: S.bondF(opts.bond), spurtTension: null, lastEv: null,
           steered: false, beats: 0, lastBeat: -9 };
         Object.defineProperty(sim.ctl, 'push', { get() { return Math.max(0, this.gear); }, enumerable: false });
@@ -488,12 +508,12 @@
     s.kakari = Math.round(head * 100) / 100; s.ears = Math.round(ears * 100) / 100;
   };
 
-  // 競り合いの気合（持ち主の指摘 2026-10-16「競り合ったときに根性が高い馬なら上げて欲しい」）。
+  // 競り合い（持ち主の指摘 2026-10-16「競り合ったときに根性が高い馬なら上げて欲しい」、2026-10-20「他の馬と競り合いになった時に影響する。
+  // 底力が高いと減速しにくい（粘れる）。逆に底力が低いと他の馬と競り合いになった時にスピードが落ちる」。底力＝根性）。
   // 3〜4コーナーから先（残り 直線＋from m）で、すぐ横（前後 dx m 以内・進路が l0〜l1 離れた隣・速さの差 dv m/s 以内）に馬がいる間、
-  // 根性が g0 より高いほど気合が上がり（根性100で毎秒 up）、低いとひるむ（下がる。下限 low）。
-  // 横に馬がいなくなると、毎秒 decay の割合で 0 へ戻る（競り合いが終わってもしばらく残る）。
-  // 効き目（気合100のとき）：追い出してから・バテたあとの速さ ×(1+spd)、脚の使い方 ×(1−cost)。気性の掛かり（騎乗の気分）とは別の、良い向きの上がり方
-  S.FIGHT = { from: 300, dx: 2.4, l0: 0.45, l1: 1.8, dv: 0.6, g0: 72, up: 10, low: -40, decay: 0.05, spd: 0.012, cost: 0.12 };
+  // 気合（s.fight）が根性で決まる値 (根性−g0)/span×per（−100〜100）へ毎秒 up ずつ寄る。横に馬がいなくなると、毎秒 decay の割合で 0 へ戻る。
+  // 効き目：追い出してから・バテたあとの速さ ×(1＋spd×気合/per)。根性 g0（70）でほぼ変わらず、高いほど粘り、低いほど落ちる。脚の使い方には効かない（前の「脚の使い方も軽く」は外した）
+  S.FIGHT = { from: 300, dx: 2.4, l0: 0.45, l1: 1.8, dv: 0.6, g0: 70, span: 20, per: 50, up: 20, decay: 0.05, spd: 0.008 };
   S.fightStep = function (sim, s, R, prog) {
     const F = S.FIGHT;
     let duel = null;
@@ -506,7 +526,8 @@
     }
     s.duel = duel;
     if (duel) {
-      s.fight = U.clamp(s.fight + (s.guts - F.g0) / (100 - F.g0) * F.up * DT, F.low, 100);
+      const aim = U.clamp((s.guts - F.g0) / F.span * F.per, -100, 100);
+      s.fight = aim > s.fight ? Math.min(aim, s.fight + F.up * DT) : Math.max(aim, s.fight - F.up * DT);
       if (s.fight > s.fightPeak) s.fightPeak = s.fight;
     } else if (s.fight) s.fight *= 1 - F.decay * DT;
   };
@@ -593,13 +614,11 @@
           else if (c.tension < 35 && !s.spurting) costMul *= S.CALM_SAVE;
           // 折り合いを欠くほど（気分が悪いほど）脚を使う
           else if (c.tension > 50 && !s.spurting) costMul *= 1 + (c.tension - 50) / 100 * S.TENSE_COST;
-          // 叩き合い：根性の効きは競り合いの気合（S.FIGHT）で。並ぶと強い馬は、並ぶとさらにひと伸び
+          // 叩き合い：根性の効きは競り合い（S.FIGHT）で
         }
-        // 進路を触らずにいると、空いていれば少しずつ内ラチへ寄る（馬はラチ沿いを走りたがる）
-        // （持ち主の指摘「十字キーで横移動できない」：前は手を離して3秒で戻り始め、押しても動かないように感じた。いまは何もしないまま S.LANE.drift 秒たってから）
-        if (c.lane > 0 && t - (c.laneT || 0) > S.LANE.drift && t - (c.driftT || 0) > 1.2 && !st.some(o => o !== s && !o.done && Math.abs(o.x - s.x) < 3.2 && o.lane < s.lane - 0.2 && o.lane > c.lane - 1.9)) { c.lane -= 1; c.driftT = t; }
-        // 前に馬がいて進路が無い
-        const ahead = st.find(o => o !== s && !o.done && o.x > s.x && o.x - s.x < 2.6 && Math.abs(o.lane - s.lane) < 0.85);
+        // 進路は押さない限り変わらない（前は何もしないまま10秒で内ラチへ寄った。持ち主の指摘 2026-10-20）
+        // 前に馬がいて進路が無い（すぐ前・横が馬の幅より近い。前は横 0.85 進路＝1.4m まで数えて、何もない所で詰まった）
+        const ahead = st.find(o => o !== s && !o.done && o.x > s.x && o.x - s.x < S.BODY.len + 0.2 && Math.abs(o.lane - s.lane) < S.BODY.wid);
         c.blockedNow = !!ahead;
         if (ahead) target = Math.min(target, ahead.v - 0.05);
         if (c.shrink > 0.05 && !s.spurting) target *= 1 - S.ORIAI.shrinkSpd * c.shrink; // 縮こまると、少し遅くなる
@@ -619,7 +638,7 @@
           target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * (sim.top + (s.topAdd || 0)));
           // 大逃げは道中で脚を使っているので、終いは粘るだけ
           if (s.oonige) target = s.vc * (1 + s.kickS * S.OONIGE.kick);
-          // 叩き合い：根性の効きは競り合いの気合（S.FIGHT）で。並ぶと強い馬は、並ぶとさらにひと伸び
+          // 叩き合い：根性の効きは競り合い（S.FIGHT）で
           // ソラを使う：抜け出すと気を抜く
           if (s.sora && R < 200 && order[0] === s && order[1] && s.x - order[1].x > 2) { target *= 0.985; S.fire(sim, s, 'sora'); }
         } else if (prog < 0.22) {
@@ -651,8 +670,7 @@
       if (s.sotoM && s.spurting && R > straight && (sim.track ? HS.Track.cornerAt(sim.track, R) !== 0 && R < straight + 700 : R < straight + 350) && (!(s.me && c) || s.lane > 1.5)) { costMul *= S.SOTO; S.fire(sim, s, 'sotomawashi'); }
       // 競り合いの気合：追い出してから（とバテたあと）の伸びと粘りに効く。ひるんだ馬は少し遅くなる
       S.fightStep(sim, s, R, prog);
-      const fk = s.fight / 100;
-      if (fk && (s.spurting || s.E <= 0)) { target *= 1 + S.FIGHT.spd * fk; if (fk > 0) costMul *= 1 - S.FIGHT.cost * fk; }
+      if (s.fight && (s.spurting || s.E <= 0)) target *= 1 + S.FIGHT.spd * s.fight / S.FIGHT.per;
       // 発動した特殊能力の、一時の速さ
       if (s.boost && t < s.boost.until) { target *= s.boost.mul; if (s.boost.free) costMul /= s.boost.mul * s.boost.mul * s.boost.mul; }
       // 坂：ゴール前の上りで脚を使う。坂が弱いほど大きく減る
@@ -672,6 +690,8 @@
         if (rng.chance(0.1 * (1 - s.mind / 160) * (1.2 - jk / 150))) { s.blocked = rng.float(1.0, 2.4) * (s.sotoM ? 0 : s.sabaki ? S.SABAKI.block : 1); if (s.blocked > 0) S.say(sim, t, `${s.h.name}、前が壁になった！`, 'trouble'); }
       }
       if (s.blocked > 0) { target *= 0.93; s.blocked -= DT; }
+      // 当たり判定：前の馬（横が馬の幅より近い）に近づくほど、その馬の速さへ落とす（AI の馬は進路を変えて抜く。自分の馬は自分で進路を変える）
+      { const lim = S.followV(sim, s); s.held = lim < target; if (s.held) target = lim; }
       // 加減速の上限
       // ゲートを出てすぐは強く加速し、2秒ほどで巡航の速さの9割に乗る（持ち主の指摘「動き出しが遅い」）
       // スタートの特殊能力（脚を使わない速さ）が出ている間は、出だしの加速も速い
@@ -739,7 +759,7 @@
           const hit = st.find(o => o !== me && !o.done && Math.abs(o.x - me.x) < (SB ? SB.dx : S.LANE.dx) && dir * (o.lane - me.lane) > 0 && Math.abs(o.lane - nl) < (SB ? SB.gap : S.LANE.gap));
           if (hit) {
             if (t - (c.bumpT == null ? -9 : c.bumpT) > 0.4) { c.bumpT = t; c.bumpSide = dir; }
-            c.lane = U.clamp(Math.round(me.lane - dir * 0.49), 0, 12); // 押した向きの注文は取り消す（ぶつかった所で止まる）
+            c.lane = me.lane; // 押した向きの注文は取り消す（ぶつかった所で止まる。戻りもしない）
           } else me.lane = nl;
         }
         me.laneT = c.lane;
@@ -753,9 +773,10 @@
         const inStraight = D - s.x < straight;
         if (inStraight && (s.h.style === '差し' || s.h.style === '追込')) want = s.trig && s.trig.includes('oosoto') ? 6 : 2 + (s.i % 4);
         want += s.driftLane; // ささり癖でよれた分
-        // すぐ前（2.6m 以内）にいて、もう進路が決まった馬の進路
+        // すぐ前（BODY.len＋BODY.follow＋0.2 m 以内。追いついて前の馬に速さを合わせる所まで見る。前は 2.6m で、詰まったまま進路を変えなかった）にいて、もう進路が決まった馬の進路
         near.length = 0;
-        for (let q = k - 1; q >= 0 && live[q].x - s.x < 2.6; q--) near.push(live[q] === me ? me.lane : live[q].laneT);
+        const look = S.BODY.len + (s.held ? S.BODY.look : S.BODY.follow + 0.2); // 詰まっている馬は、前の馬を見る長さまで見て進路を選ぶ
+        for (let q = k - 1; q >= 0 && live[q].x - s.x < look; q--) near.push(live[q] === me ? me.lane : live[q].laneT);
         if (me && me.x < s.x && s.x - me.x < 2.6) near.push(me.lane);
         let lane = want;
         for (let n = 0; n < 20; n++) {
@@ -765,10 +786,22 @@
           lane += 1;
         }
         s.laneT = lane;
-        const dl = (s.laneT - s.lane) * 0.16;
-        s.lane += s.x < S.FAN.x ? U.clamp(dl, -S.FAN.v, S.FAN.v) : dl;
+        const dl = (s.laneT - s.lane) * (s.held ? S.BODY.side : 0.16); // 前の馬に詰まっている間は、早く進路を変える
+        const mv = s.x < S.FAN.x ? U.clamp(dl, -S.FAN.v, S.FAN.v) : dl;
+        // 当たり判定：横に動く向きに馬がいれば（前後 BODY.len 以内）、その馬の BODY.wid 手前で止まる（重なってから押し返さない）
+        let nl = s.lane + mv;
+        if (mv !== 0) {
+          const dir = mv > 0 ? 1 : -1, B = S.BODY;
+          for (const o of st) {
+            if (o === s || o.done || Math.abs(o.x - s.x) >= B.len || dir * (o.lane - s.lane) <= 0) continue;
+            const lim = o.lane - dir * B.wid;
+            if (dir > 0 ? nl > lim : nl < lim) nl = dir > 0 ? Math.max(s.lane, lim) : Math.min(s.lane, lim);
+          }
+        }
+        s.lane = nl;
       }
     }
+    S.separate(sim);
     // 実況（映像を出すときだけ）
     if (opts.frames && sim.step % 5 === 0) S.commentary(sim);
     if (opts.frames && sim.step % REC_EVERY === 0) sim.frames.push({ t, p: st.map(s => [Math.round(s.x * 10) / 10, Math.round(s.lane * 100) / 100, Math.round(s.v * 100) / 100]) });
@@ -776,6 +809,52 @@
     // 操作して乗るときは、自分がゴールして少ししたら終える
     if (c && st[sim.me].done && t > st[sim.me].finishT + 4) sim.over = true;
     return sim.over;
+  };
+
+  // 当たり判定（毎刻みの終わり）：走っている馬（出た・まだゴールしていない）どうしが、前後 BODY.len より近く、横 BODY.wid より近ければ重なり。
+  // 1) 重なりの浅いほうの向きに分ける：横なら、後ろの馬（自分の馬が絡むときは AI の馬。自分の馬は押されない）が相手から離れる向きへ動く（内ラチより内へは行けない。行けなければ前後で分ける）。
+  //    前後なら、後ろの馬を前の馬の len 後ろへ下げ、速さを前の馬より上にしない。自分の馬に触れたら c.bumpT・bumpSide（騎乗の画面の揺れと振動）
+  // 2) 前から順に、まだ重なる後ろの馬を下げる（必ず重なりが無くなる）
+  S.separate = function (sim) {
+    const B = S.BODY, c = sim.ctl, me = c ? sim.st[sim.me] : null, t = sim.t, EPS = 1e-6;
+    const live = S.byX(sim).filter(s => !s.done && t >= s.delay);
+    const n = live.length;
+    for (let k = 1; k < n; k++) {
+      const s = live[k];
+      for (let q = 0; q < k; q++) {
+        const o = live[q];
+        const ax = Math.abs(o.x - s.x), al = Math.abs(o.lane - s.lane);
+        if (ax >= B.len - EPS || al >= B.wid - EPS) continue;
+        let done = false;
+        if ((B.wid - al) * S.LANE_M < 3 * (B.len - ax)) {
+          // 横に分ける：動くのは後ろの馬。ただし自分の馬は動かさない
+          const y = s === me ? o : s, f = y === s ? o : s;
+          const d = y.lane > f.lane ? 1 : y.lane < f.lane ? -1 : 1;
+          const nl = f.lane + d * B.wid;
+          if (nl >= 0) { y.lane = nl; done = true; }
+          else if (f !== me) { f.lane = y.lane + B.wid; done = true; } // 内ラチで行き場が無ければ、相手を外へ
+        }
+        if (!done) { s.x = o.x - B.len; if (s.v > o.v) s.v = o.v; }
+        if (me && (s === me || o === me) && t - (c.bumpT == null ? -9 : c.bumpT) > 0.4) {
+          const other = s === me ? o : s;
+          c.bumpT = t; c.bumpSide = other.lane > me.lane ? 1 : other.lane < me.lane ? -1 : 0;
+        }
+      }
+    }
+    const a = S.byX(sim);
+    for (let k = 1; k < a.length; k++) {
+      const s = a[k];
+      if (s.done || t < s.delay) continue;
+      for (let it = 0; it <= k; it++) {
+        let moved = false;
+        for (let q = 0; q < k; q++) {
+          const o = a[q];
+          if (o.done || t < o.delay) continue;
+          if (Math.abs(o.lane - s.lane) < B.wid - EPS && Math.abs(o.x - s.x) < B.len - EPS) { s.x = o.x - B.len; if (s.v > o.v) s.v = o.v; moved = true; }
+        }
+        if (!moved) break;
+      }
+    }
   };
 
   S.commentary = function (sim) {

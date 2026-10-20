@@ -74,6 +74,7 @@ func _case(t, cs: Dictionary, kind: String = "gd") -> void:
 	var hashes: Array = []
 	var first_bad := -1
 	var bumps := 0; var last_bump = null
+	var overlaps := 0
 	while true:
 		while ai < acts.size() and int(acts[ai][0]) == sim.step:
 			var a: Array = acts[ai]
@@ -87,6 +88,14 @@ func _case(t, cs: Dictionary, kind: String = "gd") -> void:
 			if ret != a[3]: bad_act += 1
 			ai += 1
 		var done := HSSim.step(sim)
+		# 当たり判定：走っている馬どうしが前後 BODY.len・横 BODY.wid より近づかない（docs/BALANCE.md「2-3d」）
+		for p in sim.st.size():
+			var a = sim.st[p]
+			if a.done or sim.t < a.delay: continue
+			for q in range(p + 1, sim.st.size()):
+				var b = sim.st[q]
+				if b.done or sim.t < b.delay: continue
+				if absf(a.x - b.x) < float(HSSim.BODY.len) - 1e-4 and absf(a.lane - b.lane) < float(HSSim.BODY.wid) - 1e-4: overlaps += 1
 		if sim.ctl and sim.ctl.bumpT != last_bump:
 			bumps += 1; last_bump = sim.ctl.bumpT
 		if sim.step % 10 == 0:
@@ -104,6 +113,7 @@ func _case(t, cs: Dictionary, kind: String = "gd") -> void:
 	t.eq(sim.step, int(cs.steps), "race %s: 刻みの数" % name)
 	t.eq(float(bumps), float(cs.bumps), "race %s: 横に馬がいて止まった回数" % name)
 	t.eq(first_bad, -1, "race %s: 毎刻みの位置・速さ・スタミナ" % name)
+	t.eq(overlaps, 0, "race %s: 馬どうしが重ならない（全部の刻み）" % name)
 	t.eq(_sha(_state(sim)), cs.final, "race %s: 最後の状態" % name)
 	var res := HSSim.finish(sim)
 	var rs: Array = []
