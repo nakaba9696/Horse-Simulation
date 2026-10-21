@@ -21,7 +21,7 @@ func hint() -> String:
 
 func keys() -> Array:
 	if tab == 1:
-		return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "生産"], ["X", "X", "放す"], ["Q/E", "LB/RB", "お手馬・牧場"], ["Esc", "B", "もどる"]]
+		return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "仔を作る"], ["X", "X", "放す"], ["Q/E", "LB/RB", "お手馬・牧場"], ["Esc", "B", "もどる"]]
 	return [["↑↓", "十字", "選ぶ"], ["Enter", "A", "詳しく"], ["Y", "Y", "番組表"], ["X", "X", "引退"], ["Q/E", "LB/RB", "お手馬・牧場"], ["Esc", "B", "もどる"]]
 
 func on_back() -> void:
@@ -164,6 +164,7 @@ func _fill() -> void:
 func _main(i: int) -> void:
 	if i < 0 or i >= horses.size(): return
 	UiFlow.program_id = horses[i].id
+	if tab != 0: UiFlow.farm_back = "stable"
 	go("horse" if tab == 0 else "breed")
 
 func _program(i: int) -> void:
@@ -267,10 +268,10 @@ func _preview(i: int) -> void:
 		br.set_meta("pad", "X")
 		br.pressed.connect(func(): confirm("%sを牧場から放しますか？（親にできなくなります）" % h.name, "放す", func(): _release(id)))
 		bh.add_child(br)
-		var bb := UiScreen.button("生産へ", true, 170, 50, 20)
+		var bb := UiScreen.button("仔を作る", true, 170, 50, 20)
 		bb.focus_mode = Control.FOCUS_NONE
-		bb.set_meta("pad", "A")   # 牧場のタブは行で A が生産
-		bb.pressed.connect(func(): go("breed"))
+		bb.set_meta("pad", "A")   # 牧場のタブは行で A が牧場（仔を作る）
+		bb.pressed.connect(func(): UiFlow.farm_back = "stable"; go("breed"))
 		bh.add_child(bb)
 	else:
 		var keep: bool = HSOriginal.on() and not h.get("gelding")
