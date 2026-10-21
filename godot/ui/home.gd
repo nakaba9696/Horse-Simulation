@@ -94,7 +94,7 @@ func _build_hero() -> void:
 	var ch := HBoxContainer.new()
 	ch.add_theme_constant_override("separation", 12)
 	v.add_child(ch)
-	for c in [["番組表", "program"], ["厩舎", "stable"], ["馬の店", "shop"], ["生産", "breed"], ["データ", "data"], ["オーナー", "owners"], ["セーブ", "save"], ["タイトルへ", "title"]]:
+	for c in [["番組表", "program"], ["厩舎", "stable"], ["馬の店", "shop"], ["生産", "breed"], ["データ", "data"], ["オーナー", "owners"], ["セーブ", "save"], ["設定", "settings"], ["タイトルへ", "title"]]:
 		var b := UiScreen.button(c[0], false, 0, 52, 17)
 		UiScreen.compact(b)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -127,6 +127,9 @@ func _cmd(key: String) -> void:
 			go("program")
 		"shop", "stable", "breed", "data", "owners":
 			go(key)
+		"settings":
+			UiFlow.settings_back = "home"
+			go("settings")
 		"save":
 			UiFlow.save()
 			toast("セーブした（%s）" % UiFlow.date_label(), "good")

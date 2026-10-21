@@ -91,6 +91,7 @@ var _whip_eff := 1.0       # ムチへの応え（使うほど鈍る。HSSim の
 
 func _ready() -> void:
 	ViewRideInput.ensure_actions()
+	UiSettings.boot()   # 設定の割り当て・振動（騎乗の場面を直に開いたときも）
 	font = UiTheme.font()
 	live = not OS.get_cmdline_user_args().has("--replay") and ResourceLoader.exists("res://core/hs_sim.gd")
 	if live and UiFlow.current() == null and UiFlow.demo_arg() >= 0:

@@ -21,7 +21,11 @@ var next_t := 0.0
 var sx := 0.0
 var sy := 0.0
 
+static var _ensured := false
 static func ensure_actions() -> void:
+	# 1回だけ（設定の画面で A・B の割り当てを替えたあとに、画面を開くたびに A・B を足し直さない。ui/settings_store.gd）
+	if _ensured: return
+	_ensured = true
 	for p in [["ui_accept", JOY_BUTTON_A], ["ui_cancel", JOY_BUTTON_B]]:
 		var have := false
 		for e in InputMap.action_get_events(p[0]):

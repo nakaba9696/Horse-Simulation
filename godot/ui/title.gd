@@ -1,4 +1,4 @@
-# タイトル：はじめから・つづきから（セーブの要点つき）・1レースだけ走る（出走表の見本）・終わる
+# タイトル：はじめから・つづきから（セーブの要点つき）・1レースだけ走る（出走表の見本）・設定・終わる
 # はじめから：騎手の名前と所属（美浦・栗東）を決める小窓。セーブがあるときは「消して始める」の確かめ（「やめる」から）
 extends UiScreen
 
@@ -53,11 +53,14 @@ func build() -> void:
 	menu.add_child(b_new)
 	var b_one := UiScreen.button("1レースだけ走る", false, 460, 48, 18)
 	menu.add_child(b_one)
+	var b_set := UiScreen.button("設定", false, 460, 48, 18)
+	menu.add_child(b_set)
 	var b_quit := UiScreen.button("終わる", false, 460, 48, 18)
 	menu.add_child(b_quit)
 	b_cont.pressed.connect(_continue)
 	b_new.pressed.connect(_open_new)
 	b_one.pressed.connect(func(): UiFlow._reset_week(); go("card"))
+	b_set.pressed.connect(func(): UiFlow.settings_back = "title"; go("settings"))
 	b_quit.pressed.connect(func(): get_tree().quit())
 	var ver := UiTheme.label("背景：Grasslands Sunset（Poly Haven・CC0）", 11, UiTheme.FAINT)
 	ver.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)

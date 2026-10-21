@@ -29,6 +29,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	theme = UiTheme.get_theme()
 	pad = Input.get_connected_joypads().size() > 0
+	UiSettings.boot()        # 設定（画面の大きさ・音量・振動・割り当て。user://settings.cfg）を1回だけ読んで効かせる
 	add_child(UiPad.new())   # パッドの A・B・十字キーの押しっぱなし・左スティック（ui/pad.gd）
 	_parse_args()
 	if needs_world() and not UiFlow.active():

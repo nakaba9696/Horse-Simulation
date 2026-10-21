@@ -21,6 +21,7 @@ const SCENES := {
 	"data": "res://scenes/data.tscn",
 	"owners": "res://scenes/owners.tscn",
 	"gf": "res://scenes/gf.tscn",
+	"settings": "res://scenes/settings.tscn",
 }
 
 static var rides: Array = []        # 今週自分が乗るレース [{card, runner}]
@@ -30,6 +31,7 @@ static var ridden := {}             # { raceKey: "ride" }（自分で乗った�
 static var report = null            # 最後に締めた週（HSWorld.finish_week の戻り値）
 static var money0 := 0.0            # 週の初めの資金（週の結果で増減を出す）
 static var in_week := false         # 騎乗の列を回している間
+static var settings_back := "title"  # 設定の画面からもどる画面（タイトルかホーム）
 static var program_back := "home"   # 番組表からもどる画面（厩舎・お手馬の画面から開くとそこへ）
 static var replay_back := "data"    # リプレイを見終えてもどる画面（お手馬の戦績から開くと horse）
 static var focus := {}              # 画面ごとのカーソルの記憶 { 画面: 札の名前 }
@@ -78,6 +80,7 @@ static func load_game() -> bool:
 	HSHall.set_dir(hall_dir())
 	HSWorld.load_save(s)
 	_reset_week()
+	HSAchieve.sync_from_world()   # セーブにあるトロフィーの実績を呼び直す（docs/STEAM.md）
 	return active()
 
 static func save_info() -> Dictionary:

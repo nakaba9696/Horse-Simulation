@@ -25,7 +25,7 @@ func run_async(t) -> void:
 	# 週の結果を作ってから、ほかの画面
 	UiFlow.demo_week(1)
 	UiFlow.program_id = HSWorld.mine()[0].id if HSWorld.mine().size() else ""
-	for n in ["title", "home", "program", "shop", "stable", "horse", "breed", "data", "owners", "gf", "week_result"]:
+	for n in ["title", "home", "program", "shop", "stable", "horse", "breed", "data", "owners", "gf", "week_result", "settings"]:
 		await _screen(t, n)
 	HSU.ERA = era0
 	HSWorld.G = null
@@ -50,8 +50,8 @@ func _screen(t, n: String) -> void:
 	_check(t, sc, n, "")
 	# タブのある画面：LB・RB で替えたタブごと
 	var tabs := 0
-	if n in ["program", "shop", "stable", "horse", "data", "gf"] and sc.has_method("on_tab"):
-		tabs = {"data": 12, "horse": 5}.get(n, 3)
+	if n in ["program", "shop", "stable", "horse", "data", "gf", "settings"] and sc.has_method("on_tab"):
+		tabs = {"data": 12, "horse": 5, "settings": 1}.get(n, 3)
 	for k in tabs:
 		sc.on_tab(1)
 		await _frames(t, 2)
