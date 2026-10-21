@@ -44,6 +44,15 @@
   T.fhBoth = (h, wIdx) => ({ turf: T.fh(h, wIdx, '芝'), dirt: T.fh(h, wIdx, 'ダ') });
   // 伸びきったとき（完成）の総合力
   T.fhPeak = h => ({ turf: T.fhOf(h.pot, '芝', h), dirt: T.fhOf(h.pot, 'ダ', h) });
+  // 画面に出す総合力（0.5 刻み。持ち主の決定 2026-10-21「名馬級は 65.0〜80.0・キンチェム 80.0」）。計算は上の fh のまま。godot/core/hs_season.gd の fh_show と同じ
+  T.FH_SHOW_KNOTS = [[76, 53], [94, 69], [106.3, 80], [118, 99]];
+  T.fhShowOf = function (c0, surface, d) {
+    const a = T.fhRaw(c0, surface, d), K = T.FH_SHOW_KNOTS;
+    let i = 0; while (i < K.length - 2 && a > K[i + 1][0]) i++;
+    const [x0, y0] = K[i], [x1, y1] = K[i + 1];
+    return U.clamp(Math.round((y0 + (a - x0) * (y1 - y0) / (x1 - x0)) * 2) / 2, 1, 99);
+  };
+  T.fhShowPeak = h => ({ turf: T.fhShowOf(h.pot, '芝', h), dirt: T.fhShowOf(h.pot, 'ダ', h) });
   // 入厩している現役の馬の中での順位（芝・ダートの高いほう）
   T.rank = function (h, wIdx) {
     const W = HS.World;

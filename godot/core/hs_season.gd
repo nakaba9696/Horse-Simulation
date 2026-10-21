@@ -32,6 +32,21 @@ static func fh_of(c0: Dictionary, surface: String, d: Variant = null) -> float:
 	return HSU.clamp(HSMath.round_js(y0 + (a - x0) * (y1 - y0) / (x1 - x0)), 1.0, 99.0)
 static func fh_both(h: Dictionary, wIdx: Variant) -> Dictionary: return { turf = fh(h, wIdx, "芝"), dirt = fh(h, wIdx, "ダ") }
 static func fh_peak(h: Dictionary) -> Dictionary: return { turf = fh_of(h.pot, "芝", h), dirt = fh_of(h.pot, "ダ", h) }
+# 画面に出す総合力（0.5 刻み。持ち主の決定 2026-10-21「名馬級は 65.0〜80.0・キンチェム 80.0」）。
+# 計算（レーティングの初期値・依頼の馬選び・店）は上の fh のまま。並び順は同じで、上のほうだけ縮める
+const FH_SHOW_KNOTS := [[76.0, 53.0], [94.0, 69.0], [106.3, 80.0], [118.0, 99.0]]
+static func fh_show_of(c0: Dictionary, surface: String, d: Variant = null) -> float:
+	var a := fh_raw(c0, surface, d)
+	var K := FH_SHOW_KNOTS
+	var i := 0
+	while i < K.size() - 2 and a > K[i + 1][0]: i += 1
+	var x0: float = K[i][0]; var y0: float = K[i][1]; var x1: float = K[i + 1][0]; var y1: float = K[i + 1][1]
+	return HSU.clamp(HSMath.round_js((y0 + (a - x0) * (y1 - y0) / (x1 - x0)) * 2.0) / 2.0, 1.0, 99.0)
+static func fh_show(h: Dictionary, wIdx: Variant, surface: String) -> float: return fh_show_of(HSHorse.cur(h, wIdx), surface, h)
+static func fh_show_both(h: Dictionary, wIdx: Variant) -> Dictionary: return { turf = fh_show(h, wIdx, "芝"), dirt = fh_show(h, wIdx, "ダ") }
+static func fh_show_peak(h: Dictionary) -> Dictionary: return { turf = fh_show_of(h.pot, "芝", h), dirt = fh_show_of(h.pot, "ダ", h) }
+# 画面の書き方（66.5・80.0）
+static func fh_text(v: float) -> String: return "%.1f" % v
 # 入厩している現役の馬の中での順位
 static func rank(h: Dictionary, wIdx: float) -> Dictionary:
 	var c := HSWorld.wc()
