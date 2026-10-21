@@ -729,7 +729,7 @@ static func _ped_cell(head: String, name: Variant, span: int, male: bool) -> Pan
 	p.add_child(hb)
 	return p
 
-# 名鑑（史実馬：年代・戦績・主な勝鞍・解説）。無ければひと言
+# 名鑑（史実馬：年代・戦績・主な成績・解説）。無ければひと言
 static func profile_box(d: Dictionary, width: float, lines: int) -> Control:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
@@ -749,7 +749,7 @@ static func profile_box(d: Dictionary, width: float, lines: int) -> Control:
 	if years != "" or rec != "":
 		v.add_child(UiTheme.label("　".join(PackedStringArray([years, rec].filter(func(x): return x != ""))), 14, UiTheme.GOLD_BRIGHT))
 	if mw.size():
-		var ml := UiTheme.label("主な勝鞍：" + "、".join(PackedStringArray(mw.slice(0, 6))), 13, UiTheme.MUTED)
+		var ml := UiTheme.label("主な成績：" + "、".join(PackedStringArray(mw.slice(0, 6))), 13, UiTheme.MUTED)
 		ml.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		ml.custom_minimum_size.x = width
 		v.add_child(ml)
