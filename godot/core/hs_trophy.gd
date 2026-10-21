@@ -99,6 +99,7 @@ static func give(h: Dictionary, t: Dictionary, y: float) -> bool:
 		G.trophies[t.id].more.append(rec)
 	G.player.money += bonus
 	HSWorld.news("トロフィー「%s」を手にした！（%s）ボーナス賞金 %s" % [t.label, h.name, HSU.money(bonus)], "g1")
+	HSAchieve.on_trophy(t, h)   # 実績の入れ口（あとで Steam につなぐ。docs/STEAM.md）
 	return true
 
 # 自分の馬が重賞を勝ったとき（HSSeason.on_win から。勝ち鞍はもう足してある）
