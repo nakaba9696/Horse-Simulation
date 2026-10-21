@@ -11,7 +11,7 @@ module.exports.OWNER = [
   { name: 'タイムチャーター', adopt: true, target: 69, from: 'adopt' },
   { name: 'マンノウォー', adopt: true, target: 83, from: 'adopt' },
   { name: 'テューダーミンストレル', adopt: null, target: 77, from: 'target' },
-  { name: 'ドクターフェイガー', adopt: null, target: 77, from: 'target' },
+  { name: 'ドクターフェイガー', adopt: null, target: 78, from: 'target' }, // 1回目は 77。持ち主の決定 2026-10-20「隠し馬とスペシャルホースの強さ・出方」で 78
   { name: 'タロック', adopt: false, target: 72, from: 'target' },
   { name: 'ファーラップ', adopt: true, target: 81, from: 'adopt' },
   { name: 'アジャックス', adopt: null, target: 75, from: 'target' },

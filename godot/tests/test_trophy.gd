@@ -41,4 +41,21 @@ func run(t) -> void:
 	var jh = HSSpecial.data("ジョンヘンリー")
 	t.ok(HSSpecial.when_ok(bc, al, lost, { surface = "ダ" }) and not HSSpecial.when_ok(bc, al, lost, { surface = "芝" }), "アリシーバはダートのときだけ")
 	t.ok(HSSpecial.when_ok(bc, jh, lost, { surface = "芝" }) and not HSSpecial.when_ok(bc, jh, lost, { surface = "ダ" }), "ジョンヘンリーは芝のときだけ")
+	# 今の G1 を勝っていない名鑑のある6頭は G2・G3 の「歴代の○○馬」、歴代の BCターフ馬は空でない（持ち主の決定 2026-10-20「推しで」。JS の tests/run.js と同じ）
+	var want := { "ホワイトフォンテン": "日経賞", "シービークロス": "毎日王冠", "メジロモンスニー": "シンザン記念", "ニシノライデン": "阪神大賞典", "ビゼンニシキ": "スプリングS", "スダホーク": "弥生賞" }
+	for n in want:
+		var gid: String = "r:" + want[n]
+		t.ok(HSSpecial.by_id().has(gid) and HSSpecial.members(HSSpecial.by_id()[gid]).any(func(d): return d.name == n), "%s は歴代の%s馬" % [n, want[n]])
+	t.ok(HSSpecial.members(HSSpecial.by_id()["r:BCターフ"]).size() > 0, "歴代の BCターフ馬は空でない")
+	for d in HSSpecial.pool():
+		t.ok(HSSpecial.list().any(func(e): return e.name == d.name), "%s はどれかのグループに入る" % d.name)
+	# 隠し馬とスペシャルホースの強さ・出方（持ち主の決定 2026-10-20。JS の tests/run.js と同じ）：馬・馬場・総合力・出る組
+	var want2 := [["テツノカチドキ", "dirt", 64, "local"], ["オールアロング", "turf", 72, "r:凱旋門賞"], ["スペクタキュラービッド", "dirt", 78, "t:immortal"],
+		["パーソナルエンスン", "dirt", 78, "t:usf3"], ["ロッキータイガー", "dirt", 64, "t:gs_jd"], ["タマモクロス", "turf", 74, "t:gs_jp"],
+		["ミエスク", "turf", 76, "t:gs_mile"], ["ドクターフェイガー", "dirt", 78, "t:gs_sprint"], ["ヴェイグリーノーブル", "turf", 74, "t:legend"]]
+	for w in want2:
+		var f: Dictionary = HSSeason.fh_peak(HSHorse.from_historic(HSSpecial.data(w[0]), "x"))
+		t.eq(int(f[w[1]]), w[2], "%s の総合力" % w[0])
+		var e = HSSpecial.list().filter(func(x): return x.name == w[0])
+		t.ok(e.size() == 1 and e[0].groups == [w[3]], "%s は %s" % [w[0], w[3]])
 	HSU.ERA = era0
