@@ -205,7 +205,7 @@ check('special: 隠し馬とスペシャルホースの強さ・出方（持ち�
   const want = [
     ['テツノカチドキ', 'dirt', 65, 'local'], ['オールアロング', 'turf', 72, 'r:凱旋門賞'], ['スペクタキュラービッド', 'dirt', 76, 't:immortal'],
     ['パーソナルエンスン', 'dirt', 76, 't:usf3'], ['ロッキータイガー', 'dirt', 64, 't:gs_jd'], ['タマモクロス', 'turf', 74, 't:gs_jp'],
-    ['ミエスク', 'turf', 75, 't:gs_mile'], ['ドクターフェイガー', 'dirt', 78, 't:gs_sprint'], ['ヴェイグリーノーブル', 'turf', 74, 't:legend'],
+    ['ミエスク', 'turf', 76, 't:gs_mile'], ['ドクターフェイガー', 'dirt', 78, 't:gs_sprint'], ['ヴェイグリーノーブル', 'turf', 74, 't:legend'],
   ];
   for (const [n, s, v, g] of want) {
     const f = S.fhPeak(H.fromHistoric(SP.data(n), 'x'));

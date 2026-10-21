@@ -52,7 +52,7 @@ func run(t) -> void:
 	# 隠し馬とスペシャルホースの強さ・出方（持ち主の決定 2026-10-20。JS の tests/run.js と同じ）：馬・馬場・総合力・出る組
 	var want2 := [["テツノカチドキ", "dirt", 65, "local"], ["オールアロング", "turf", 72, "r:凱旋門賞"], ["スペクタキュラービッド", "dirt", 76, "t:immortal"],
 		["パーソナルエンスン", "dirt", 76, "t:usf3"], ["ロッキータイガー", "dirt", 64, "t:gs_jd"], ["タマモクロス", "turf", 74, "t:gs_jp"],
-		["ミエスク", "turf", 75, "t:gs_mile"], ["ドクターフェイガー", "dirt", 78, "t:gs_sprint"], ["ヴェイグリーノーブル", "turf", 74, "t:legend"]]
+		["ミエスク", "turf", 76, "t:gs_mile"], ["ドクターフェイガー", "dirt", 78, "t:gs_sprint"], ["ヴェイグリーノーブル", "turf", 74, "t:legend"]]
 	for w in want2:
 		var f: Dictionary = HSSeason.fh_peak(HSHorse.from_historic(HSSpecial.data(w[0]), "x"))
 		t.eq(int(f[w[1]]), w[2], "%s の総合力" % w[0])
