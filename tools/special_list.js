@@ -41,6 +41,7 @@ for (const g of combos) {
   if (g.id === 'gf') lines.push('担当：' + HS.Season.GF_CATS.map(c => `${c.label}（${c.course}${c.surface}${c.dist}m）${HS.Season.gfLegends(c.id).map(d => d.name).join('・') || 'なし'}`).join('・'), '');
 }
 lines.push('## 大レースのグループ（歴代の勝ち馬）', '', '条件：G1を勝った馬でそのレースに出る（2歳のG1は、重賞を勝った馬で）。出てくるのは、まだ倒していない勝ち馬のうち強い順に2頭。', '');
+lines.push('G2・G3 のグループは、今の G1 を勝っていない名鑑のある名馬のために、データの勝ち鞍から1つ選んだレース（`data/trophy_horses.js` の specialRaceHand。持ち主の決定 2026-10-20）。条件は軽く、重賞を勝った馬でまだ勝っていないそのレースに出るとき。', '');
 for (const g of races) {
   const ms = SP.members(g);
   lines.push(`### ${g.label}（${ms.length}頭）`, '', ms.map(row).join('、'), '');

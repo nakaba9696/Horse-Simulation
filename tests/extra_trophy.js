@@ -238,7 +238,7 @@ module.exports = function (check, assert, HS) {
     assert(gfs.length === 6 && gfs.every(t => t.tier === 4), `GF の難しさ ${gfs.map(t => t.tier)}`);
     // 無敗のときだけの馬・いつでもの馬
     const UNB = { triple: ['シンボリルドルフ', 'シンザン'], uk3: ['バーラム'], us3: ['ウォーアドミラル', 'シアトルスルー'], eu3: ['シーバード'], ftriple: ['テスコガビー'],
-      ukf3: ['プリティーポリー'], arc2: ['リボー'], immortal: ['オーモンド', 'パーソナルエンスン'] }; // パーソナルエンスンは芝のティアラからダートの側へ（持ち主の決定 2026-10-20）
+      ukf3: ['プリティーポリー'], arc2: ['リボー'], immortal: ['オーモンド'] }; // パーソナルエンスンはインモータルロードの無敗のときから米国牝馬三冠（いつでも）へ（持ち主の決定 2026-10-20）
     const whenOf = {}; for (const [id, xs] of Object.entries(D.trophyHorses)) for (const x of xs) whenOf[x.name] = x.when || 'any';
     for (const [id, ns] of Object.entries(UNB)) for (const n of ns) assert((D.trophyHorses[id] || []).some(x => x.name === n && x.when === 'unbeaten'), `${n}（${id}）が無敗のときの馬でない`);
     const unbN = Object.values(UNB).reduce((a, b) => a.concat(b), []);
@@ -316,7 +316,7 @@ module.exports = function (check, assert, HS) {
       if (mixed.includes(id)) assert(xs.every(x => x.surf === '芝' || x.surf === 'ダ') && xs.some(x => x.surf === '芝') && xs.some(x => x.surf === 'ダ' && !x.when), `${id} の芝・ダートの分け ${xs.map(x => x.name + (x.surf || '?'))}`);
       else assert(xs.every(x => !x.surf), `${id} に馬場の分けがある`);
     }
-    for (const [n, id] of [['オールアロング', 'legend'], ['スペクタキュラービッド', 'immortal']]) assert(SP.byName(n).groups.join() === 't:' + id, `${n}のグループ ${SP.byName(n).groups}`);
+    for (const [n, id] of [['ヴェイグリーノーブル', 'legend'], ['スペクタキュラービッド', 'immortal']]) assert(SP.byName(n).groups.join() === 't:' + id, `${n}のグループ ${SP.byName(n).groups}`);
     // データのまま：その場限りの馬の能力は、史実馬のデータから作った馬と同じ。データ（史実馬の値）も変えない
     let n = 0;
     for (const t of TR.LIST) {

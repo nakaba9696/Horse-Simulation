@@ -168,6 +168,61 @@ check('special: 暦に無い勝ち鞍の名馬（フォルリなど）もどこ�
   return `フォルリ ${SP.byName('フォルリ').groups.join('・')}・ティアラ ${tiara.join('・')}`;
 });
 
+check('special: 名鑑のある名馬はどれかのグループに入る（今の G1 を勝っていない6頭は G2・G3 の「歴代の○○馬」）・歴代の BCターフ馬は空でない', () => {
+  HS.U.ERA = HS.Eraless.ERA;
+  const SP = HS.Special, D = HS.DATA, bad = [];
+  // 持ち主の決定 2026-10-20「推しで」：どのグループにも入っていなかった6頭を、データの勝ち鞍のレースのグループへ
+  const want = { 'ホワイトフォンテン': '日経賞', 'シービークロス': '毎日王冠', 'メジロモンスニー': 'シンザン記念', 'ニシノライデン': '阪神大賞典', 'ビゼンニシキ': 'スプリングS', 'スダホーク': '弥生賞' };
+  for (const [n, r] of Object.entries(want)) {
+    const x = SP.byName(n);
+    if (!x || !x.groups.includes('r:' + r)) bad.push(n + ':歴代の' + r + '馬に入らない');
+    const g = SP.BY['r:' + r];
+    if (g && !['G2', 'G3'].includes(g.grade)) bad.push(r + ':G2・G3 でない');
+  }
+  // 手で入れたレースは、その馬のデータの勝ち鞍にある（年代で名前が違うレースは暦の短い名で比べる）
+  const RENAMED = { '日本経済賞': '日経賞' }; // 名前が変わったレース（暦の短い名も違う）
+  const shortOf = w => { const y = +w.slice(0, 4), r = D.races.find(x => x.name === w.slice(4) && x.from <= y && y <= (x.to || 9999)); const s = r ? (r.short || r.name) : null; return RENAMED[s] || s; };
+  for (const [n, s] of Object.entries(D.specialRaceHand || {})) {
+    const d = SP.data(n);
+    if (!d) { bad.push(n + ':スペシャルホースの元に無い'); continue; }
+    if (n !== 'テディ' && !(d.wins || []).some(w => shortOf(w) === s)) bad.push(n + ':' + s + 'を勝っていない');
+  }
+  // 名鑑のある名馬（スペシャルホースの元）は、どれかのグループに入る
+  for (const d of SP.pool()) if (!SP.byName(d.name)) bad.push(d.name + ':どのグループにも入らない');
+  // ペブルスをワールドティアラ GS へ移して空になった歴代の BCターフ馬を、ほかの BCターフ馬で埋めた（トロフィーの隠し馬と重ならない）
+  const bc = SP.members(SP.BY['r:BCターフ']).map(d => d.name);
+  if (!bc.length) bad.push('歴代のBCターフ馬が空');
+  const th = new Set(Object.values(D.trophyHorses).flat().map(x => x.name));
+  for (const n of bc) if (th.has(n) || !HS.Eraless.isLegend(SP.data(n))) bad.push(n + ':トロフィーの隠し馬か1989年からの馬');
+  assert(!bad.length, bad.join(', '));
+  return `歴代のBCターフ馬 ${bc.join('・')}`;
+});
+
+check('special: 隠し馬とスペシャルホースの強さ・出方（持ち主の決定 2026-10-20）：総合力の値と出る組', () => {
+  HS.U.ERA = HS.Eraless.ERA;
+  const SP = HS.Special, D = HS.DATA, H = HS.Horse, S = HS.Season, bad = [];
+  // 馬・馬場・総合力・出る組（グループの id）
+  const want = [
+    ['テツノカチドキ', 'dirt', 64, 'local'], ['オールアロング', 'turf', 72, 'r:凱旋門賞'], ['スペクタキュラービッド', 'dirt', 78, 't:immortal'],
+    ['パーソナルエンスン', 'dirt', 78, 't:usf3'], ['ロッキータイガー', 'dirt', 64, 't:gs_jd'], ['タマモクロス', 'turf', 74, 't:gs_jp'],
+    ['ミエスク', 'turf', 76, 't:gs_mile'], ['ドクターフェイガー', 'dirt', 78, 't:gs_sprint'], ['ヴェイグリーノーブル', 'turf', 74, 't:legend'],
+  ];
+  for (const [n, s, v, g] of want) {
+    const f = S.fhPeak(H.fromHistoric(SP.data(n), 'x'));
+    if (f[s] !== v) bad.push(`${n} ${s} ${f[s]}（${v}）`);
+    const x = SP.byName(n);
+    if (!x || x.groups.join() !== g) bad.push(`${n} の組 ${x && x.groups}（${g}）`);
+  }
+  // 外した組・出方：テツノカチドキはジャパンダート GS、オールアロングはホールオブフェイムに出ない。パーソナルエンスンは無敗のときだけでない
+  const inT = (id, n) => (D.trophyHorses[id] || []).some(x => x.name === n);
+  if (inT('gs_jd', 'テツノカチドキ') || inT('legend', 'オールアロング') || inT('immortal', 'パーソナルエンスン')) bad.push('外した隠し馬が残る');
+  if ((D.trophyHorses.usf3.find(x => x.name === 'パーソナルエンスン') || {}).when) bad.push('パーソナルエンスンが無敗のときだけ');
+  // ホールオブフェイムの芝の側は空でない
+  if (!(D.trophyHorses.legend || []).some(x => x.surf === '芝')) bad.push('ホールオブフェイムの芝の側が空');
+  assert(!bad.length, bad.join(', '));
+  return want.map(([n, s, v]) => `${n}${v}`).join('・');
+});
+
 check('data: 史実馬の距離の幅に、勝った G1（2歳を除く）の距離が入る', () => {
   // 持ち主の決定 2026-10-20：決まりで広げる（js/core/datafix.js）
   const rb = new Map(); for (const r of D.races) { if (!rb.has(r.name)) rb.set(r.name, []); rb.get(r.name).push(r); }

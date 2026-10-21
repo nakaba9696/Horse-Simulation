@@ -38,7 +38,9 @@ module.exports = function (check, assert, HS) {
   check('audit: 地方の名馬は芝だけの馬にならない・スペシャルホースの米国の古い名馬は芝だけの馬にならない', () => {
     const local = D.historic.filter(d => d.local && (d.surface || '芝') === '芝' && d.dirt == null);
     assert(!local.length, `地方の馬なのに芝だけ：${local.map(d => d.name).join('・')}`);
-    const us = SP.list().map(x => x.d).filter(d => ['米', '加'].includes(d.country) && (d.surface || '芝') === '芝');
+    // ただし勝ち鞍が全部芝の大レースの馬（BCターフのマニラ・シアトリカル。米国の最優秀芝牡馬）は芝の馬でよい
+    const turfOnly = d => { const ws = H.winRaces(d); return ws.length > 0 && ws.every(r => r.surface === '芝'); };
+    const us = SP.list().map(x => x.d).filter(d => ['米', '加'].includes(d.country) && (d.surface || '芝') === '芝' && !turfOnly(d));
     assert(!us.length, `米国の古い名馬なのに芝だけ：${us.map(d => d.name).join('・')}`);
     // 当てた直し：南関東の三冠馬サンオーイはダートが芝より上
     const f = T.fhPeak(H.fromHistoric(SP.data('サンオーイ'), 'x'));

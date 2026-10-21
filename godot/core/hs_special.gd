@@ -115,6 +115,16 @@ static func _groups() -> Array:
 		if seen.has(m.short): continue
 		seen[m.short] = true
 		gs.append({ id = "r:" + m.short, label = "歴代の%s馬" % m.short, finals = [m.short], race = true, at = m.at, prize = m.prize, two = m.age == "2", short = m.short })
+	# G1 でない重賞の「歴代の○○馬」（js/core/special.js の SP.HAND_RACES と同じ）：手で入れた名馬（specialRaceHand）の行き先が G1 でないときだけ。
+	# 出方は2歳の G1 と同じ軽い条件（重賞を勝った馬で、まだ勝っていないそのレースへ）。名馬は手で入れた馬だけ（hand）
+	var ey := HSEraless.ERA
+	for s in HSData.d().get("specialRaceHand", {}).values():
+		if seen.has(s): continue
+		for r in HSData.d().get("races", []):
+			if r.get("short") == s and r.from <= ey and ey <= float(HSU.or_(r.get("to"), 9999.0)):
+				seen[s] = true
+				gs.append({ id = "r:" + s, label = "歴代の%s馬" % s, finals = [s], race = true, at = r.month * 10.0 + r.week, prize = HSU.or_(r.get("prize"), 0.0), two = true, short = s, hand = true, grade = r.get("grade") })
+				break
 	return gs
 static var _BY: Variant = null
 static func by_id() -> Dictionary:
@@ -176,6 +186,7 @@ static func member(g: Dictionary, d: Dictionary) -> bool:
 	if g.get("race"):
 		# 手で入れた名馬（data/trophy_horses.js の specialRaceHand。js/core/special.js と同じ）
 		if HSData.d().get("specialRaceHand", {}).get(d.name) == g.short: return true
+		if g.get("hand"): return false
 		return HSU.or_(d.get("wins"), []).any(func(x):
 			var k = map_win(x)
 			return k != null and k.short == g.short)

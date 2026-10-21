@@ -120,6 +120,24 @@
       legs: (h, race) => !won(h, race.short) && (two ? (h.gradedWins || []).length > 0 : (h.gradedWins || []).some(g => g.grade === 'G1')),
       member: d => (HS.DATA.specialRaceHand || {})[d.name] === m.short || (d.wins || []).some(x => { const k = SP.mapWin(x); return k && k.short === m.short; }) });
   }
+  // G1 でない重賞の「歴代の○○馬」：手で入れた名馬（data/trophy_horses.js の specialRaceHand）の行き先が G1 でないときだけ作る。
+  // 今の G1 を勝っていない名鑑のある名馬の行き先（持ち主の決定 2026-10-20「強い馬はトロフィーとか重い条件、あとは適当でいい」）。
+  // 出方は2歳の G1 と同じ軽い条件：重賞を勝った馬で、まだ勝っていないそのレースへ
+  SP.HAND_RACES = [];
+  {
+    const ey = HS.Eraless ? HS.Eraless.ERA : 2025;
+    for (const s of Object.values(HS.DATA.specialRaceHand || {})) {
+      if (seenShort.has(s) || SP.HAND_RACES.some(r => r.short === s)) continue;
+      const r = (HS.DATA.races || []).find(x => x.short === s && x.from <= ey && ey <= (x.to || 9999));
+      if (r) SP.HAND_RACES.push({ short: s, prize: r.prize || 0, at: r.month * 10 + r.week, grade: r.grade });
+    }
+  }
+  for (const m of SP.HAND_RACES) {
+    seenShort.add(m.short);
+    SP.GROUPS.push({ id: 'r:' + m.short, label: `歴代の${m.short}馬`, note: `重賞を勝って${m.short}へ`, finals: [m.short], race: true, at: m.at, prize: m.prize, grade: m.grade,
+      legs: (h, race) => !won(h, race.short) && (h.gradedWins || []).length > 0,
+      member: d => (HS.DATA.specialRaceHand || {})[d.name] === m.short });
+  }
   SP.BY = {}; SP.GROUPS.forEach(g => { SP.BY[g.id] = g; });
 
   // スペシャルホースの元：1989年より前に走り終えた史実馬のうち、名馬の名鑑（data/profiles*.js）がある馬と、data/legends.js。
@@ -136,8 +154,7 @@
     const prof = new Set((HS.DATA.profiles || []).map(f => HS.normName(f.name))); // 名鑑と史実馬は小さいカナをそろえて比べる（ホスピタリテイ＝ホスピタリティ）
     pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d) && (prof.has(HS.normName(d.name)) || (SP.WITH_BIG && SP.bigWins(d).length))).concat(HS.DATA.legendsExtra || []);
     // 香港の三冠の隠し馬は1989年からの馬でもよい（data/trophy_horses.js の modern。持ち主の決定 2026-10-20）
-    for (const n of SP.MODERN) { const d = (HS.DATA.historic || []).find(x => x.name === n); if (d && !pool.includes(d)) pool.push(d); }
-    return pool;
+    for (const n of SP.MODERN) { const d = (HS.DATA.historic || []).find(x => x.name === n); if (d && !pool.includes(d)) pool.push(d); }    return pool;
   };
   SP.data = name => SP.pool().find(d => d.name === name) || null;
   SP.isTop = d => d.tier === 'legend'; // 伝説級：グランドフェスティバルのグループ（gf・gfall）だけに入る（担当の GF はデータの gf）。固有の能力は伝説級かどうかで決めない（data/uniques.js に名前があるか。js/core/skills.js の K.hasUnique。持ち主の決定 2026-10-17）
