@@ -123,6 +123,53 @@
   for (const [n, f] of Object.entries(D.styleFix || {})) {
     const h = byName.get(n) || byNorm.get(HS.normName(n)); if (h && f.style) h.style = f.style;
   }
+  // ---- 英語の名前（持ち主の決定 2026-10-21「言語は日本語と英語にしたい」。決まりは docs/I18N_DATA.md） ----
+  // 馬：データの nameEn（海外の馬の元の名前）→ data/names_en.js（出典で確かめた登録の英語名）→ カナをヘボン式のローマ字に。
+  // カナの外来語も綴りを推さずにローマ字にする（スペシャルウィーク＝Supesharuwiku）。確かめた名前は names_en.js に足す
+  {
+    const K1 = { 'ア': 'a', 'イ': 'i', 'ウ': 'u', 'エ': 'e', 'オ': 'o', 'カ': 'ka', 'キ': 'ki', 'ク': 'ku', 'ケ': 'ke', 'コ': 'ko', 'サ': 'sa', 'シ': 'shi', 'ス': 'su', 'セ': 'se', 'ソ': 'so',
+      'タ': 'ta', 'チ': 'chi', 'ツ': 'tsu', 'テ': 'te', 'ト': 'to', 'ナ': 'na', 'ニ': 'ni', 'ヌ': 'nu', 'ネ': 'ne', 'ノ': 'no', 'ハ': 'ha', 'ヒ': 'hi', 'フ': 'fu', 'ヘ': 'he', 'ホ': 'ho',
+      'マ': 'ma', 'ミ': 'mi', 'ム': 'mu', 'メ': 'me', 'モ': 'mo', 'ヤ': 'ya', 'ユ': 'yu', 'ヨ': 'yo', 'ラ': 'ra', 'リ': 'ri', 'ル': 'ru', 'レ': 're', 'ロ': 'ro', 'ワ': 'wa', 'ヰ': 'i', 'ヱ': 'e', 'ヲ': 'o', 'ン': 'n',
+      'ガ': 'ga', 'ギ': 'gi', 'グ': 'gu', 'ゲ': 'ge', 'ゴ': 'go', 'ザ': 'za', 'ジ': 'ji', 'ズ': 'zu', 'ゼ': 'ze', 'ゾ': 'zo', 'ダ': 'da', 'ヂ': 'ji', 'ヅ': 'zu', 'デ': 'de', 'ド': 'do',
+      'バ': 'ba', 'ビ': 'bi', 'ブ': 'bu', 'ベ': 'be', 'ボ': 'bo', 'パ': 'pa', 'ピ': 'pi', 'プ': 'pu', 'ペ': 'pe', 'ポ': 'po', 'ヴ': 'vu',
+      'ァ': 'a', 'ィ': 'i', 'ゥ': 'u', 'ェ': 'e', 'ォ': 'o', 'ャ': 'ya', 'ュ': 'yu', 'ョ': 'yo', 'ヮ': 'wa' };
+    const K2 = { 'キャ': 'kya', 'キュ': 'kyu', 'キョ': 'kyo', 'シャ': 'sha', 'シュ': 'shu', 'ショ': 'sho', 'チャ': 'cha', 'チュ': 'chu', 'チョ': 'cho', 'ニャ': 'nya', 'ニュ': 'nyu', 'ニョ': 'nyo',
+      'ヒャ': 'hya', 'ヒュ': 'hyu', 'ヒョ': 'hyo', 'ミャ': 'mya', 'ミュ': 'myu', 'ミョ': 'myo', 'リャ': 'rya', 'リュ': 'ryu', 'リョ': 'ryo', 'ギャ': 'gya', 'ギュ': 'gyu', 'ギョ': 'gyo',
+      'ジャ': 'ja', 'ジュ': 'ju', 'ジョ': 'jo', 'ヂャ': 'ja', 'ヂュ': 'ju', 'ヂョ': 'jo', 'ビャ': 'bya', 'ビュ': 'byu', 'ビョ': 'byo', 'ピャ': 'pya', 'ピュ': 'pyu', 'ピョ': 'pyo',
+      'シェ': 'she', 'ジェ': 'je', 'チェ': 'che', 'ティ': 'ti', 'ディ': 'di', 'トゥ': 'tu', 'ドゥ': 'du', 'テュ': 'tyu', 'デュ': 'dyu', 'ファ': 'fa', 'フィ': 'fi', 'フェ': 'fe', 'フォ': 'fo', 'フュ': 'fyu',
+      'ウィ': 'wi', 'ウェ': 'we', 'ウォ': 'wo', 'ヴァ': 'va', 'ヴィ': 'vi', 'ヴェ': 've', 'ヴォ': 'vo', 'ヴュ': 'vyu', 'ツァ': 'tsa', 'ツィ': 'tsi', 'ツェ': 'tse', 'ツォ': 'tso', 'イェ': 'ye',
+      'クァ': 'kwa', 'クィ': 'kwi', 'クェ': 'kwe', 'クォ': 'kwo', 'グァ': 'gwa', 'スィ': 'si', 'ズィ': 'zi' };
+    // カナ → ヘボン式（長音の「ー」と、オウ・ウウ・オオの伸ばす音は書かない。ンは b・m・p の前で m。ッは次の子音を重ねる）
+    HS.romaji = function (kana) {
+      const s = String(kana || '').replace(/（\d{4}）$/, '').replace(/[ぁ-ゖ]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60));
+      const words = [];
+      for (const part of s.split(/[・＝\s]+/)) {
+        let out = '', sokuon = false;
+        for (let i = 0; i < part.length; i++) {
+          const two = part.slice(i, i + 2);
+          let r = K2[two] ? (i++, K2[two]) : K1[part[i]];
+          if (part[i] === 'ッ') { sokuon = true; continue; }
+          if (part[i] === 'ー') continue;
+          if (r == null) r = /[A-Za-z0-9]/.test(part[i]) ? part[i] : '';
+          if (sokuon && r) { r = (r.startsWith('ch') ? 't' : r[0]) + r; sokuon = false; }
+          out += r;
+        }
+        out = out.replace(/n(?=[bmp])/g, 'm').replace(/ou/g, 'o').replace(/oo/g, 'o').replace(/uu/g, 'u');
+        if (out) words.push(out[0].toUpperCase() + out.slice(1));
+      }
+      return words.join(' ');
+    };
+    const EN = D.namesEn || {};
+    const enOf = h => EN[h.name] || EN[h.name.replace(/（\d{4}）$/, '')] || null;
+    for (const h of out.concat(D.legendsExtra || [])) {
+      if (h.nameEn && !h.nameEnRule) continue;
+      const e = enOf(h);
+      if (e) { h.nameEn = e; delete h.nameEnRule; } else { h.nameEn = HS.romaji(h.name); h.nameEnRule = true; }
+    }
+    // レース：data/races_en.js の表から（暦・史実の勝ち鞍のためのレース・オーナーの依頼のオープン）
+    const RE = D.raceNamesEn || {};
+    for (const r of (D.races || []).concat(D.histRaces || [], D.ownerRaces || [])) if (!r.nameEn && RE[r.name]) r.nameEn = RE[r.name];
+  }
   // 外国で調教された馬かどうか
   D.isForeign = h => !!(h.country && h.country !== '日');
 })();

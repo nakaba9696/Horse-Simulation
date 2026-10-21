@@ -1546,6 +1546,7 @@ require('./extra_oponly.js')(check, assert, HS); // レースは OP 以上だけ
 require('./extra_oneride.js')(check, assert, HS); // おまかせ騎乗は無い・1つのレースに自分が乗るのは1頭（自分の馬・依頼）
 require('./extra_ground.js')(check, assert, HS); // 馬場の状態（スタミナの減り・切れは全馬共通・スピードの下がりは道悪の適性で変わる・走破タイム）
 require('./extra_style.js')(check, assert, HS); // 記録から作った史実馬の脚質の決め直し・史実の勝ち鞍の記録のためのレース
+require('./extra_i18n.js')(check, assert, HS); // データの英語の名前（馬・レース・競馬場・特殊能力・騎手）
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
 require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
 require('./extra_gdgame.js')(check, assert); // Godot 版の週の流れを本物の画面で自動で遊ぶ

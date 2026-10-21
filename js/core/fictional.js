@@ -21,6 +21,23 @@
     'アイヴス', 'ジョスラン', 'カヴァナー', 'ルグラン', 'モロー', 'ネヴィル', 'オハラ', 'パスカル', 'リヴィエール', 'シモン', 'ターナー', 'ヴォス', 'ウィンストン', 'アシュビー', 'ボードワン',
     'クレマン', 'ダルトン', 'エルナンデス', 'ファレル', 'ギャロウェイ', 'ヘイスティング', 'ラフォン', 'メルシエ', 'ノースロップ', 'ペンローズ', 'レイノルズ', 'ストラウド', 'トレヴァー', 'ヴェルヌ', 'ワイルダー'];
   const INI = 'ABCDEFGHJKLMNPRSTW';
+  // 英語の名前（持ち主の決定 2026-10-21「言語は日本語と英語にしたい」）。上の名前と同じ並びの読み（ヘボン式・長音は書かない）。
+  // 同じ読みにならないように、名前の読みは一つに決めた（木暮＝Kigure・小暮＝Kogure、渉＝Wataru・亘＝Ko・航＝Kakeru など）。並びは「名 姓」（JRA の英語の表記と同じ）
+  const SUR_EN = ['Aoyagi', 'Asakura', 'Amano', 'Arimura', 'Iizuka', 'Ishikura', 'Izumida', 'Ichihara', 'Inagaki', 'Iwaki', 'Uekusa', 'Utsumi', 'Urano', 'Okochi', 'Oshiro', 'Otsuki', 'Okayasu', 'Ogura', 'Ozaki', 'Onodera',
+    'Kashiwagi', 'Katagiri', 'Katsuragi', 'Kaneshiro', 'Kamata', 'Kono', 'Kanzaki', 'Kigure', 'Hojo', 'Koga', 'Kusunoki', 'Kuramochi', 'Kuroiwa', 'Kogure', 'Koyanagi', 'Sakuraba', 'Sasakawa', 'Saeki', 'Sawatari', 'Shiomi',
+    'Shinohara', 'Shibasaki', 'Shimabukuro', 'Shiraishi', 'Sugiura', 'Suga', 'Sekine', 'Segawa', 'Takanashi', 'Takamine', 'Takizawa', 'Tachibana', 'Tatsumi', 'Tamaki', 'Chihaya', 'Tsugawa', 'Tsutsui', 'Tsurumi', 'Teraoka', 'Tono',
+    'Tokunaga', 'Togawa', 'Togashi', 'Nakama', 'Nagamine', 'Naruse', 'Niimi', 'Saijo', 'Nonomura', 'Haga', 'Hashizume', 'Hatanaka', 'Hayase', 'Hyuga', 'Himuro', 'Hiraga', 'Hirose', 'Fukamachi', 'Todo', 'Furukawa',
+    'Hoshino', 'Horikoshi', 'Makabe', 'Maki', 'Mashiba', 'Mizuki', 'Mitsuya', 'Minegishi', 'Miyasaka', 'Mukai', 'Murasame', 'Mochizuki', 'Morioka', 'Yagami', 'Yanase', 'Yamabuki', 'Yuki', 'Yuasa', 'Kira', 'Wakabayashi'];
+  const GIV_EN = ['Akira', 'Asahi', 'Atsushi', 'Akito', 'Ayumu', 'Wataru', 'Kazuki', 'Kaito', 'Kei', 'Kazuma', 'Kaname', 'Sota', 'Ko', 'Kyohei', 'Kengo', 'Tsuyoshi', 'Koichi', 'Kakeru', 'Noboru', 'Hayate',
+    'Shingo', 'Shun', 'Shogo', 'Arata', 'Susumu', 'Seiji', 'Hijiri', 'Soichi', 'Daichi', 'Gaku', 'Takuma', 'Takumi', 'Tatsuya', 'Itsuki', 'Tsubasa', 'Teppei', 'Toru', 'Naoki', 'Hisashi', 'Nagi',
+    'Hayato', 'Yosuke', 'Hibiki', 'Hitoshi', 'Hiroshi', 'Futa', 'Makoto', 'Masato', 'Masaru', 'Minato', 'Minoru', 'Jin', 'Yudai', 'Yu', 'Yohei', 'Yoshinobu', 'Ryu', 'Ryo', 'Rin', 'Ren',
+    'Saku', 'Shiro', 'Osamu', 'Hirokazu', 'Teru', 'Yutaka', 'Satoru', 'Iori', 'Takato', 'Gen'];
+  const KANA_EN = ['Arnaud', 'Bertrand', 'Calvin', 'Durand', 'Evans', 'Forte', 'Garnier', 'Harlan', 'Ingram', 'Jarrett', 'Kessler', 'Lambert', 'McRae', 'Nolan', 'Olsen',
+    'Pelletier', 'Quinlan', 'Roche', 'Sanchez', 'Tallis', 'Valenti', 'Walsh', 'Janssen', 'Zeller', 'Brennan', 'Colby', 'Doran', 'Finch', 'Grayson', 'Holloway',
+    'Ives', 'Josselin', 'Kavanagh', 'Legrand', 'Moreau', 'Neville', "O'Hara", 'Pascal', 'Riviere', 'Simon', 'Turner', 'Voss', 'Winston', 'Ashby', 'Baudouin',
+    'Clement', 'Dalton', 'Hernandez', 'Farrell', 'Galloway', 'Hasting', 'Lafont', 'Mercier', 'Northrop', 'Penrose', 'Reynolds', 'Stroud', 'Trevor', 'Verne', 'Wilder'];
+  F.en = new Map(); // 架空の名前 → 英語の名前
+  F.nameEnOf = name => F.en.get(name) || null;
 
   F.map = new Map();
   const used = new Set();
@@ -29,12 +46,13 @@
   // 実名から架空の名前を決める（同じ実名なら同じ名前。ほかの実在の騎手の名前とは重ならない）
   F.nameOf = function (real) {
     if (typeof real !== 'string' || !real || F.map.has(real) || real === '騎手未定') return F.map.get(real) || real;
-    let h = U.hash('fict:' + real), name;
+    let h = U.hash('fict:' + real), name, en;
     for (let k = 0; k < 400; k++, h = U.hash(h + ':' + k)) {
       name = isForeign(real) ? `${INI[h % INI.length]}.${KANA[Math.floor(h / 17) % KANA.length]}` : `${SUR[h % SUR.length]}${GIV[Math.floor(h / 101) % GIV.length]}`;
+      en = isForeign(real) ? `${INI[h % INI.length]}. ${KANA_EN[Math.floor(h / 17) % KANA.length]}` : `${GIV_EN[Math.floor(h / 101) % GIV.length]} ${SUR_EN[h % SUR.length]}`;
       if (!used.has(name) && !realNames.has(name)) break;
     }
-    used.add(name); F.map.set(real, name);
+    used.add(name); F.map.set(real, name); F.en.set(name, en);
     return name;
   };
   // 文の中の騎手名（実名）を置き換える。長い名前から先に
@@ -55,7 +73,8 @@
     for (const key of ['historicJockeys', 'historicJockeysAuto']) for (const v of Object.values(D[key] || {})) vals(v).forEach(n => realNames.add(n));
     for (const d of (D.historic || []).concat(D.legendsExtra || [])) vals(d.jockey).forEach(n => realNames.add(n));
     for (const n of realNames) F.nameOf(n);
-    for (const j of D.jockeys || []) j.name = F.nameOf(j.name);
+    for (const j of D.jockeys || []) { j.name = F.nameOf(j.name); if (F.en.has(j.name)) j.nameEn = F.en.get(j.name); }
+    D.jockeyNamesEn = Object.fromEntries(F.en); // 架空の名前 → 英語の名前（主戦騎手の表の名前にも使う。Godot へ書き出す）
     const mapJ = v => typeof v === 'string' ? F.nameOf(v) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, typeof x === 'string' ? F.nameOf(x) : x])) : v;
     for (const key of ['historicJockeys', 'historicJockeysAuto']) if (D[key]) for (const n of Object.keys(D[key])) D[key][n] = mapJ(D[key][n]);
     // 文の中の名前は、名前を全部決めてから

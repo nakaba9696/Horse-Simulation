@@ -84,6 +84,19 @@
     'オークローンパーク': C('海外', '左', null, { lap: 1609, straight: 350, slope: '平', speed: 0.02 }, { country: '米' }),
     'パークスレーシング': C('海外', '左', null, { lap: 1609, straight: 297, slope: '平', speed: 0.02 }, { country: '米' }),
   };
+  // 英語の名前（持ち主の決定 2026-10-21「言語は日本語と英語にしたい」）。JRA・地方は公式の英語表記、海外は元の名前
+  const EN = {
+    '東京': 'Tokyo', '中山': 'Nakayama', '京都': 'Kyoto', '阪神': 'Hanshin', '中京': 'Chukyo', '新潟': 'Niigata', '福島': 'Fukushima', '小倉': 'Kokura', '札幌': 'Sapporo', '函館': 'Hakodate',
+    '大井': 'Oi', '川崎': 'Kawasaki', '船橋': 'Funabashi', '盛岡': 'Morioka', '園田': 'Sonoda', '名古屋': 'Nagoya', '門別': 'Mombetsu', '金沢': 'Kanazawa', '佐賀': 'Saga', '浦和': 'Urawa', '笠松': 'Kasamatsu', '高知': 'Kochi', '水沢': 'Mizusawa',
+    'ロンシャン': 'ParisLongchamp', 'シャンティイ': 'Chantilly', 'ドーヴィル': 'Deauville', 'サンクルー': 'Saint-Cloud', 'アスコット': 'Ascot', 'エプソム': 'Epsom Downs', 'ニューマーケット': 'Newmarket', 'ヨーク': 'York', 'グッドウッド': 'Goodwood',
+    'メイダン': 'Meydan', 'ナドアルシバ': 'Nad Al Sheba', 'シャティン': 'Sha Tin', 'サンタアニタ': 'Santa Anita Park', 'チャーチルダウンズ': 'Churchill Downs', 'ベルモント': 'Belmont Park', 'デルマー': 'Del Mar', 'キーンランド': 'Keeneland',
+    'ガルフストリームパーク': 'Gulfstream Park', 'ローンスター': 'Lone Star Park', 'モンマスパーク': 'Monmouth Park', 'アーリントン': 'Arlington Park', 'キングアブドゥルアジーズ': 'King Abdulaziz', 'ムーニーバレー': 'Moonee Valley', 'フレミントン': 'Flemington',
+    'ランドウィック': 'Randwick', 'コーフィールド': 'Caulfield', 'ウッドバイン': 'Woodbine', 'ニューベリー': 'Newbury', 'ハリウッドパーク': 'Hollywood Park', 'アーリントンパーク': 'Arlington Park', 'ローンスターパーク': 'Lone Star Park', 'ドンカスター': 'Doncaster',
+    'サンダウン': 'Sandown Park', 'ケンプトン': 'Kempton Park', 'エア': 'Ayr', 'カラ': 'The Curragh', 'フェニックスパーク': 'Phoenix Park', 'バーデンバーデン': 'Baden-Baden', 'ハンブルク': 'Hamburg', 'ホッペガルテン': 'Hoppegarten', 'デュッセルドルフ': 'Düsseldorf',
+    'ピムリコ': 'Pimlico', 'ローレルパーク': 'Laurel Park', 'サラトガ': 'Saratoga', 'アケダクト': 'Aqueduct', 'コロニアルダウンズ': 'Colonial Downs', 'ハッピーバレー': 'Happy Valley', 'ローズヒル': 'Rosehill', 'クランジ': 'Kranji', 'レパーズタウン': 'Leopardstown',
+    'ヘイドック': 'Haydock Park', 'オークローンパーク': 'Oaklawn Park', 'パークスレーシング': 'Parx Racing',
+  };
+  for (const [k, v] of Object.entries(EN)) if (HS.DATA.courses[k]) HS.DATA.courses[k].nameEn = v;
   // その月にオープン（OP・リステッド）を開く競馬場（おおよその開催）
   HS.DATA.meets = {
     1: ['中山', '京都', '中京'], 2: ['東京', '京都', '小倉'], 3: ['中山', '阪神', '中京'], 4: ['中山', '阪神', '福島'],
