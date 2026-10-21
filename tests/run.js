@@ -1481,6 +1481,7 @@ require('./extra_audit.js')(check, assert, HS); // スペシャルホースの�
 require('./extra_gate.js')(check, assert, HS); // スタートの目押し（数えを出さない・待つ秒は種から・GOOD の幅）と、騎手のゲームに放牧が無い
 require('./extra_records.js')(check, assert, HS); // お手馬のレースの記録（出走馬・ラップ）と殿堂入りの案内
 require('./extra_skills2.js')(check, assert, HS); // 逃げ・追込の能力・道悪○・外枠○・伝説級の固有の能力
+require('./extra_uniques.js')(check, assert, HS); // 固有の技の動きの直し（代表の一戦・キャリアの形で出る・斤量を使わない）
 require('./extra_shop.js')(check, assert, HS); // 馬の店の年齢・値段（いまの総合力・晩成が安い）とレーティング
 require('./extra_growth.js')(check, assert, HS); // 成長型の8つ（ピークの順・持続・値段の掛け・史実馬の割り当て・オリジナルホースの引き継ぎ）
 require('./extra_inbreed.js')(check, assert, HS); // インブリード（選べない組み合わせ・因子の上がり・健康・上限・オリジナルホースが祖先・99に届かない）

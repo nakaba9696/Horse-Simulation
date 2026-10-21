@@ -45,8 +45,9 @@ module.exports = function (check, assert, HS) {
   });
 
   check('review: 固有の技の速さが、ふつうの技に上書きされない（強いほうが残る）', () => {
-    const U = K.UNIQUE_OF['ディープインパクト'], C = K.BY.chokusen;
-    assert(U && C, '衝撃の飛翔か直線一気が無い');
+    // 直線一気（一気系。倍率は最大で 0.05×1.6＝0.08）より強いか同じ固有の技で確かめる（ディープインパクトは 2026-10-20 に直線の前の 4% に替えたので、大外一気の名馬で）
+    const U = K.UNIQUE_OF['ダンシングブレーヴ'], C = K.BY.chokusen;
+    assert(U && C, '勇敢なる踊り手か直線一気が無い');
     const run = (first, second, E) => {
       const sim = { t: 30, st: [] }, s = { E, boost: null, topAdd: 0 };
       sim.st.push(s);
@@ -56,10 +57,10 @@ module.exports = function (check, assert, HS) {
     for (const E of [0.2, 0.5, 1]) {
       // 固有 → ふつう：固有が残る
       let b = run(U, C, E);
-      assert(b.id === U.id, `E=${E}：衝撃の飛翔が直線一気に上書きされる（${b.id}）`);
+      assert(b.id === U.id, `E=${E}：勇敢なる踊り手が直線一気に上書きされる（${b.id}）`);
       // ふつう → 固有：固有に替わる
       b = run(C, U, E);
-      assert(b.id === U.id, `E=${E}：直線一気のあとの衝撃の飛翔が効かない（${b.id}）`);
+      assert(b.id === U.id, `E=${E}：直線一気のあとの勇敢なる踊り手が効かない（${b.id}）`);
     }
     // 切れたあとなら、弱い技でも効く
     const sim = { t: 30, st: [] }, s = { E: 0.5, boost: null, topAdd: 0 };

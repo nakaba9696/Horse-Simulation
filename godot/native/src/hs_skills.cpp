@@ -155,7 +155,6 @@ static const UWhen UWHEN[] = {
 	{ "duelEnd", [](const X &x) { return x.R < 300 && x.close; } },
 	{ "neck", [](const X &x) { return x.R < 100 && x.close; } },
 	{ "longStraight", [](const X &x) { return x.D >= 2400 && x.inStraight && x.straight - x.R < 30; } },
-	{ "heavyOrLate", [](const X &x) { return !x.inStraight && x.R <= x.straight + 400 && (x.s->late || x.s->weightV >= 57); } },
 	{ "front3", [](const X &x) { return x.R <= 400 && x.rank <= 3; } },
 	{ "holdLead", [](const X &x) { return x.R < 300 && x.rank == 1 && x.second != nullptr && x.s->x - x.second->x < LEN; } },
 	{ "posBreak", [](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.rank >= 2 && x.rank <= 4; } },
@@ -174,6 +173,19 @@ static const UWhen UWHEN[] = {
 	{ "top2", [](const X &x) { return x.R <= 200 && x.rank >= 2 && x.rank <= 3; } },
 	{ "breakAway", [](const X &x) { return x.inStraight && x.R > 100 && x.R < 400 && x.close; } },
 	{ "backRecover", [](const X &x) { return !x.inStraight && x.R <= x.straight + 400 && x.rank > x.n / 2.0; } },
+	// 2026-10-20 に足した型（代表の一戦・キャリアの勝ち方の再現。docs/review/UNIQUE_PLAN.md。斤量は使わない：持ち主の決定 2026-10-20）
+	{ "lateOrStayer", [](const X &x) { return !x.inStraight && x.R <= x.straight + 400 && (x.s->late || x.D >= 3000); } },
+	{ "longHaul", [](const X &x) { return !x.inStraight && x.R <= x.straight + 400 && x.D >= 2400; } },
+	{ "fromBackKick", [](const X &x) { return x.inStraight && x.R <= 400 && x.R > 100 && x.sk->rankMid >= 0 && x.sk->rankMid > x.n / 2.0; } },
+	{ "comeback", [](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.sk->rankMid >= 0 && x.sk->rankMid > x.n / 2.0 && x.sk->rankMid - x.rank >= 3; } },
+	{ "chase5", [](const X &x) { return x.inStraight && x.R <= 400 && x.R > 100 && x.rank >= 2 && x.leader->x - x.s->x < 5 * LEN; } },
+	{ "longMakuri", [](const X &x) { return !x.inStraight && x.R <= x.straight + 600 && x.sk->rankMid >= 0 && x.sk->rankMid > x.n / 2.0; } },
+	{ "earlyFromBack", [](const X &x) { return x.R <= 600 && x.R > 200 && x.rank <= 3 && x.sk->rankMid >= 0 && x.sk->rankMid > x.n / 2.0; } },
+	{ "moveUp", [](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.rank <= 2 && x.sk->rankMid >= 0 && x.sk->rankMid - x.rank >= 2; } },
+	{ "nearOrLead", [](const X &x) { return x.R <= 400 && (x.rank == 1 || x.leader->x - x.s->x < LEN); } },
+	{ "front2Late", [](const X &x) { return !x.inStraight && x.R <= x.straight + 400 && x.rank <= 2; } },
+	{ "entryFront3", [](const X &x) { return x.inStraight && x.straight - x.R < 30 && x.rank <= 3; } },
+	{ "chaseOrLead", [](const X &x) { return x.inStraight && x.R <= 400 && x.R > 100 && (x.rank == 1 || x.leader->x - x.s->x < 3 * LEN); } },
 };
 struct UDef { Def d; std::string id, label, horse; };
 static std::vector<UDef> *g_udefs = nullptr;

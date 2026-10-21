@@ -40,7 +40,6 @@ struct Runner {
 	double acc = 0, zubu = 0, spurtCost = 0;
 	bool oonige = false, sora = false, sunaB = false, jiyu = false;
 	bool tsuiso = false, sotoM = false, sabaki = false; // 追走○・外回し○・馬群さばき（skills_flags）
-	double weightV = 0; // 斤量（無ければ 0）
 	double gapAdj = 0, driftLane = 0;
 	bool me = false;
 	IdSet fired;

@@ -108,7 +108,6 @@ static var UWHEN := {
 	duelEnd = func(x): return x.R < 300 and x.close,
 	neck = func(x): return x.R < 100 and x.close,
 	longStraight = func(x): return x.D >= 2400 and x.inStraight and x.straight - x.R < 30,
-	heavyOrLate = func(x): return not x.inStraight and x.R <= x.straight + 400 and (x.s.late or float(HSU.or_(x.s.r.get("weight"), 0.0)) >= 57),
 	front3 = func(x): return x.R <= 400 and x.rank <= 3,
 	holdLead = func(x): return x.R < 300 and x.rank == 1 and x.second != null and x.s.x - x.second.x < LEN,
 	posBreak = func(x): return x.inStraight and x.straight - x.R < 30 and x.rank >= 2 and x.rank <= 4,
@@ -127,6 +126,19 @@ static var UWHEN := {
 	top2 = func(x): return x.R <= 200 and x.rank >= 2 and x.rank <= 3,
 	breakAway = func(x): return x.inStraight and x.R > 100 and x.R < 400 and x.close,
 	backRecover = func(x): return not x.inStraight and x.R <= x.straight + 400 and x.rank > x.n / 2.0,
+	# 2026-10-20 に足した型（代表の一戦・キャリアの勝ち方の再現。docs/review/UNIQUE_PLAN.md。斤量は使わない：持ち主の決定 2026-10-20）
+	lateOrStayer = func(x): return not x.inStraight and x.R <= x.straight + 400 and (x.s.late or x.D >= 3000),
+	longHaul = func(x): return not x.inStraight and x.R <= x.straight + 400 and x.D >= 2400,
+	fromBackKick = func(x): return x.inStraight and x.R <= 400 and x.R > 100 and x.sk.rankMid != null and x.sk.rankMid > x.n / 2.0,
+	comeback = func(x): return x.inStraight and x.straight - x.R < 30 and x.sk.rankMid != null and x.sk.rankMid > x.n / 2.0 and x.sk.rankMid - x.rank >= 3,
+	chase5 = func(x): return x.inStraight and x.R <= 400 and x.R > 100 and x.rank >= 2 and x.leader.x - x.s.x < 5 * LEN,
+	longMakuri = func(x): return not x.inStraight and x.R <= x.straight + 600 and x.sk.rankMid != null and x.sk.rankMid > x.n / 2.0,
+	earlyFromBack = func(x): return x.R <= 600 and x.R > 200 and x.rank <= 3 and x.sk.rankMid != null and x.sk.rankMid > x.n / 2.0,
+	moveUp = func(x): return x.inStraight and x.straight - x.R < 30 and x.rank <= 2 and x.sk.rankMid != null and x.sk.rankMid - x.rank >= 2,
+	nearOrLead = func(x): return x.R <= 400 and (x.rank == 1 or x.leader.x - x.s.x < LEN),
+	front2Late = func(x): return not x.inStraight and x.R <= x.straight + 400 and x.rank <= 2,
+	entryFront3 = func(x): return x.inStraight and x.straight - x.R < 30 and x.rank <= 3,
+	chaseOrLead = func(x): return x.inStraight and x.R <= 400 and x.R > 100 and (x.rank == 1 or x.leader.x - x.s.x < 3 * LEN),
 }
 static var _uniqueOf = null # 馬名 → 固有の能力（データを読んでから作る）
 static func _uniques() -> Dictionary:

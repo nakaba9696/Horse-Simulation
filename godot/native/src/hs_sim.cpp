@@ -180,7 +180,6 @@ Sim *sim_create(const Dictionary &race, const Array &runners, const Variant &w_i
 		s.hist = truthy(h.get("hist", Variant()));
 		Variant jk = r.get("jockey", Variant());
 		s.jockSkill = jk.booleanize() ? (double)((Dictionary)jk)["skill"] : 70.0;
-		s.weightV = num_or(r.get("weight", Variant()), 0.0);
 	}
 	std::vector<double> vcs;
 	for (auto &s : sim.st) vcs.push_back(s.vc);

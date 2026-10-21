@@ -110,7 +110,6 @@
     duelEnd: x => x.R < 300 && x.close,
     neck: x => x.R < 100 && x.close,
     longStraight: x => x.D >= 2400 && x.inStraight && x.straight - x.R < 30,
-    heavyOrLate: x => !x.inStraight && x.R <= x.straight + 400 && (x.s.late || (x.s.r.weight || 0) >= 57),
     front3: x => x.R <= 400 && x.rank <= 3,
     holdLead: x => x.R < 300 && x.rank === 1 && x.second && x.s.x - x.second.x < LEN,
     posBreak: x => x.inStraight && x.straight - x.R < 30 && x.rank >= 2 && x.rank <= 4,
@@ -129,6 +128,20 @@
     top2: x => x.R <= 200 && x.rank >= 2 && x.rank <= 3,
     breakAway: x => x.inStraight && x.R > 100 && x.R < 400 && x.close,
     backRecover: x => !x.inStraight && x.R <= x.straight + 400 && x.rank > x.n / 2,
+    // 2026-10-20 に足した型（代表の一戦・キャリアの勝ち方の再現。docs/review/UNIQUE_PLAN.md。斤量は使わない：持ち主の決定 2026-10-20「斤量条件は難しいので他のに変えてほしい」）
+    // midBack＝中間点で後ろ半分だった（x.sk.rankMid は中間点を過ぎた最初の順位）
+    lateOrStayer: x => !x.inStraight && x.R <= x.straight + 400 && (x.s.late || x.D >= 3000),
+    longHaul: x => !x.inStraight && x.R <= x.straight + 400 && x.D >= 2400,
+    fromBackKick: x => x.inStraight && x.R <= 400 && x.R > 100 && x.sk.rankMid != null && x.sk.rankMid > x.n / 2,
+    comeback: x => x.inStraight && x.straight - x.R < 30 && x.sk.rankMid != null && x.sk.rankMid > x.n / 2 && x.sk.rankMid - x.rank >= 3,
+    chase5: x => x.inStraight && x.R <= 400 && x.R > 100 && x.rank >= 2 && x.leader.x - x.s.x < 5 * LEN,
+    longMakuri: x => !x.inStraight && x.R <= x.straight + 600 && x.sk.rankMid != null && x.sk.rankMid > x.n / 2,
+    earlyFromBack: x => x.R <= 600 && x.R > 200 && x.rank <= 3 && x.sk.rankMid != null && x.sk.rankMid > x.n / 2,
+    moveUp: x => x.inStraight && x.straight - x.R < 30 && x.rank <= 2 && x.sk.rankMid != null && x.sk.rankMid - x.rank >= 2,
+    nearOrLead: x => x.R <= 400 && (x.rank === 1 || x.leader.x - x.s.x < LEN),
+    front2Late: x => !x.inStraight && x.R <= x.straight + 400 && x.rank <= 2,
+    entryFront3: x => x.inStraight && x.straight - x.R < 30 && x.rank <= 3,
+    chaseOrLead: x => x.inStraight && x.R <= 400 && x.R > 100 && (x.rank === 1 || x.leader.x - x.s.x < 3 * LEN),
   };
   K.UNIQUES = (HS.DATA && HS.DATA.uniques || []).filter(u => K.UWHEN[u.when]).map(u => Object.assign({}, u, { unique: true, group: '固有', when: K.UWHEN[u.when], whenId: u.when }));
   K.UNIQUE_OF = {}; // 馬名 → 固有の能力
