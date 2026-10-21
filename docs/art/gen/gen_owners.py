@@ -96,6 +96,9 @@ for k in range(10):
 for k in range(10):
     P[f"ilona{41 + k:02d}"] = ("f", "1girl, adult, young woman, 25 years old, (dark copper red long hair:1.4), (chestnut highlights:1.2), (pale gold eyes:1.4), (unfocused gaze:1.3), (distant eyes:1.2), (flower wreath on head:1.4), white pink and yellow flowers, (19th century traveling clothes:1.3), (black coat:1.5), (deep green waistcoat:1.3), (finely tailored:1.3), high collar, (old cat brooch:1.3), (constant faint smile:1.3), (unreadable expression:1.2), (otherworldly:1.2), calm, elegant, " + HS[k],
                                ", (child:1.5), (loli:1.5), (cleavage:1.5), (animal ears:1.6), (tail:1.5), (horse:1.4), (black hair:1.2), (ghost:1.4), (witch hat:1.4), (scary:1.4), (horror:1.4), (glowing eyes:1.3), (beige coat:1.6), (trench coat:1.5), (white coat:1.4), (khaki:1.5)" + NEGI)
+for k in range(10):
+    P[f"ilona{51 + k:02d}"] = ("f", "1girl, adult, young woman, 25 years old, (upper body:1.3), (portrait:1.2), (dark chestnut brown hair:1.4), (reddish brown hair:1.2), long hair, (pale amber eyes:1.4), (white blouse:1.3), (dark green long dress:1.5), (black cape over shoulders:1.4), small cat brooch on collar, no other accessories, calm gentle smile, elegant, " + HS[k],
+                               ", (child:1.5), (loli:1.5), (cleavage:1.5), (animal ears:1.6), (tail:1.5), (horse:1.4), (black hair:1.2), (flower wreath:1.5), (flowers:1.4), (hat:1.3), (necklace:1.2), (earrings:1.2), (green hair:1.6), (black hair:1.4), (cat on shoulder:1.8), (kitten:1.7), (animal:1.5), (mask:1.7), (cat ears:1.7), (headgear:1.5), (gem:1.3), (olive:1.5), (khaki:1.4), (tiara:1.4), (multiple views:1.6), (full body:1.4), (wind:1.3)" + NEGI)
 who_list, seeds = sys.argv[1].split(","), [int(s) for s in sys.argv[2].split(",")]
 out = sys.argv[3] if len(sys.argv) > 3 else "."
 os.makedirs(out, exist_ok=True)
