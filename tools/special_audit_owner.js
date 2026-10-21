@@ -19,7 +19,7 @@ module.exports.OWNER = [
   { name: 'トウショウボーイ', adopt: true, target: 73, from: 'adopt' },
   { name: 'サイテーション', adopt: null, target: 78, from: 'target' },
   { name: 'ラウンドテーブル', adopt: null, target: 74, from: 'target' },
-  { name: 'パーソナルエンスン', adopt: null, target: 78, from: 'target', note: '健康は低めでいい', extra: { health: 60 } },
+  { name: 'パーソナルエンスン', adopt: null, target: 75, from: 'target', note: '健康は低めでいい', extra: { health: 60 } },
   { name: 'リボー', adopt: null, target: 80, from: 'target' },
   { name: 'ファラリス', adopt: null, target: 74, from: 'target' },
   { name: 'オーモンド', adopt: true, target: 79, from: 'adopt' },
