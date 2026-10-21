@@ -36,7 +36,7 @@ module.exports = function (check, assert, HS) {
   });
 
   check('i18n: data/names_en.js の馬はデータにいて、英語の名前に日本語の字が無い', () => {
-    const names = new Set((D.historic || []).concat(D.legendsExtra || []).map(h => h.name));
+    const names = new Set((D.historic || []).concat(D.legendsExtra || []).map(h => h.name).concat(D.dropHorses || []));
     const E = D.namesEn || {};
     const miss = Object.keys(E).filter(n => !names.has(n));
     assert(!miss.length, 'データにいない馬: ' + miss.slice(0, 10).join(', '));

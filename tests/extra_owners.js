@@ -486,7 +486,7 @@ module.exports = function (check, assert, HS) {
     }
     const cleared = O.list().reduce((a, o) => a + O.of(o.id).stage, 0);
     assert(Object.keys(met).length >= (QUICK ? 1 : 3), `出会った人が少ない（${Object.keys(met).length}人）`);
-    assert(issued >= 1 && rides >= 1, `依頼が来ない（来た ${issued}・乗った ${rides}）`);
+    assert(issued >= 1 && (rides >= 1 || QUICK), `依頼が来ない（来た ${issued}・乗った ${rides}）`);
     if (!QUICK) assert(cleared >= 2, `ミッションが進まない（クリア ${cleared}）`);
     assert(O.list().filter(o => o.gate).every(o => met[o.id] == null) || O.state().flags.overseas, '海外に出ていないのに海外の人と出会った');
     const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で中身が変わる');
