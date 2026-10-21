@@ -3723,6 +3723,7 @@
 {"name":"サブゼロ","born":1988,"sex":"牡","rating":87,"surface":"芝","distMin":2900,"distMax":3500,"style":"先行","growth":"普通","retire":1992,"wins":["1992メルボルンカップ"],"auto":true,"nameEn":"Subzero","country":"豪"},
 {"name":"ジューン","born":1988,"sex":"牡","rating":87,"surface":"芝","distMin":2900,"distMax":3500,"style":"差し","growth":"遅め","retire":1994,"wins":["1994メルボルンカップ"],"auto":true,"nameEn":"Jeune","country":"香港"},
 {"name":"ソルヴィット","born":1988,"sex":"セ","rating":87,"surface":"芝","distMin":1700,"distMax":2300,"style":"先行","growth":"遅め","retire":1994,"wins":["1994コックスプレート"],"auto":true,"nameEn":"Solvit","country":"新"},
+{"name":"マジックナイト（1988）","born":1988,"sex":"牝","rating":87,"surface":"芝","distMin":2100,"distMax":2700,"style":"先行","growth":"早め","retire":1992,"wins":["1991ヴェルメイユ賞"],"auto":true,"nameEn":"Magic Night","country":"仏"},
 {"name":"ダイナマイトダディ","born":1988,"sex":"牡","rating":83,"surface":"芝","distMin":1200,"distMax":2000,"style":"逃げ","growth":"普通","retire":1992,"wins":["1991京成杯","1992中山記念","1992京王杯スプリングカップ"],"auto":true,"nameEn":"Dynamite Daddy"},
 {"name":"ムッシュシェクル","born":1988,"sex":"牡","rating":83,"surface":"芝","distMin":2300,"distMax":3000,"style":"差し","growth":"遅め","retire":1994,"wins":["1993アルゼンチン共和国杯","1994日経新春杯","1994阪神大賞典"],"auto":true,"nameEn":"Monsieur Siecle"},
 {"name":"ユウキトップラン","born":1988,"sex":"牡","rating":82,"surface":"芝","distMin":1000,"distMax":1500,"style":"追込","growth":"普通","retire":1992,"wins":["1992CBC賞"],"auto":true,"nameEn":"Yuki Top Run"},
