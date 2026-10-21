@@ -480,7 +480,7 @@ func _feel(_H: Array) -> void:
 		_fx_seen += 1
 		var bad := HSSkills.is_bad(String(f.id))
 		if int(f.i) == me:
-			hud.skill(HSSkills.label(String(f.id)), bad)
+			hud.skill(HSText.skill_label(String(f.id)), bad)
 			input.fx("bad" if bad else "skill")
 		elif absf(float(sim.st[int(f.i)].x) - float(sim.st[me].x)) < 60.0:
 			hud.ping(int(f.i), Color("ff9a7a") if bad else Color("7fe6ff"))
@@ -806,8 +806,8 @@ func update_hud(H: Array) -> void:
 		var lead := 0.0
 		for v in H:
 			lead = maxf(lead, float(v[0]))
-		(bl[0] as Label3D).text = "%s  %s" % [race.race.name, race.race.grade]
-		(bl[1] as Label3D).text = ("残り %dm" % int(maxf(0.0, ceil(D - lead)))) if T > 0.0 and lead < D else ("ゴール" if T > 0.0 else "まもなく発走")
+		(bl[0] as Label3D).text = "%s  %s" % [HSText.race_name(race.race), race.race.grade]
+		(bl[1] as Label3D).text = (HSText.t("残り %dm") % int(maxf(0.0, ceil(D - lead)))) if T > 0.0 and lead < D else HSText.t("ゴール" if T > 0.0 else "まもなく発走")
 		(bl[2] as Label3D).text = UiRaceHud.fmt_time(minf(maxf(T, 0.0), src.win_t if src.win_t > 0.0 else maxf(T, 0.0)))
 
 func _process(delta: float) -> void:

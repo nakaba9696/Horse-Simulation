@@ -953,8 +953,9 @@ func _radar(M: Dictionary) -> void:
 	var info: Dictionary = race.horses[target]
 	var label := "#%d" % int(info.num) if rv.fin != null else "#%d  %s" % [int(info.num), ordinal(kk)]
 	_txt(label, bx + w / 2.0, by + h + 12, 11, Color("d9a8ff") if target == me else Color.WHITE, "center", f_bold, "middle")
-	var nm := String(info.name)
-	_txt(nm.substr(0, 5) + "…" if nm.length() > 5 else nm, bx + w / 2.0, by + h + 24, 10, LABEL, "center", f_jp, "middle")
+	var nm := HSText.horse_name(String(info.name))
+	var lim := 9 if HSText.is_en() else 5
+	_txt(nm.substr(0, lim) + "…" if nm.length() > lim else nm, bx + w / 2.0, by + h + 24, 10, LABEL, "center", f_jp, "middle")
 
 # ---- 確定の表（着順・馬番・馬名・タイム・着差）。模擬のときは終わってから結果が決まるので、出す時に作る ----
 func _build_board() -> void:
@@ -1004,10 +1005,10 @@ func _fill_board() -> void:
 		pl.custom_minimum_size.x = 36
 		hb.add_child(pl)
 		hb.add_child(UiTheme.frame_box(int(info.get("frame", 1)), int(r.num), 34, 20))
-		var nm := UiTheme.label(String(r.name), 26, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY)
+		var nm := UiTheme.label(HSText.horse_name(String(r.name)), 26, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hb.add_child(nm)
-		var tm := UiTheme.num_label(UiRaceHud.fmt_time(float(r.time)) if k == 0 else String(r.margin), 24, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_RIGHT)
+		var tm := UiTheme.num_label(UiRaceHud.fmt_time(float(r.time)) if k == 0 else HSText.t(String(r.margin)), 24, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_RIGHT)
 		tm.custom_minimum_size.x = 120
 		hb.add_child(tm)
 		board_rows.add_child(row)

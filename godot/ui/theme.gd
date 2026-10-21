@@ -202,7 +202,7 @@ static func gold_button(b: Button) -> void:
 
 static func label(text: String, size := 15, col := IVORY, align := HORIZONTAL_ALIGNMENT_LEFT) -> Label:
 	var l := Label.new()
-	l.text = text
+	l.text = HSText.auto(text)   # 画面の言語（キーと同じ文なら英語。i18n/hs_text.gd）
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", col)
 	l.horizontal_alignment = align
@@ -255,7 +255,7 @@ static func stat_chip(v: float, kind := "fh", big := false, txt := "") -> PanelC
 		l.add_theme_constant_override("outline_size", 2)
 	p.add_child(l)
 	p.custom_minimum_size.x = 48.0 if big else 34.0
-	p.tooltip_text = TIER_NAMES[t]
+	p.tooltip_text = HSText.t(TIER_NAMES[t])
 	return p
 
 # 枠の色の札（馬番）
@@ -276,7 +276,7 @@ static func grade_chip(grade: String, size := 15) -> PanelContainer:
 
 # 芝・ダの札
 static func surface_chip(surface: String, dist: int, size := 16) -> PanelContainer:
-	return chip("%s %dm" % [surface, dist], TURF if surface == "芝" else DIRT, Color.WHITE, size)
+	return chip("%s %dm" % [HSText.surface(surface), dist], TURF if surface == "芝" else DIRT, Color.WHITE, size)
 
 # 表の行の地：板の色・上に髪の毛の線。選ぶと金を 16% 混ぜ、上下と左に金の線。自分の物は左の金の線が常に光る
 static func row_box(_i: int, selected := false, mine := false) -> StyleBoxFlat:
@@ -334,7 +334,7 @@ static func tabs(items: Array, cur: int, pad := false, on_pick = null, art := fa
 	h.add_child(UiGlyph.make("Q", "LB", 11))
 	for i in items.size():
 		var b := Button.new()
-		b.text = String(items[i])
+		b.text = HSText.auto(String(items[i]))
 		b.focus_mode = Control.FOCUS_NONE
 		b.set_meta("pad", "LB/RB")   # パッドは LB・RB で替える（tests/test_focus.gd）
 		b.custom_minimum_size = Vector2(120, 38)

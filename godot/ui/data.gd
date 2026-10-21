@@ -29,7 +29,7 @@ func build() -> void:
 	backdrop("bg_home", 0.86)
 	var j = HSJockey.me()
 	var rank = HSJockey.my_rank(HSWorld.G.year)
-	make_band("録", "データ", "%sの記録" % j.name, [["通算", "%d勝" % int(j.total.wins)], ["今年の順位", "%d位" % int(rank) if rank != null else "－"], ["暦", UiFlow.date_label()]])
+	make_band("録", "データ", HSText.t("%sの記録") % HSText.jockey_name(j), [["通算", HSText.t("%d勝") % int(j.total.wins)], ["今年の順位", HSText.t("%d位") % int(rank) if rank != null else "－"], ["暦", UiFlow.date_label()]])
 	tab_box = VBoxContainer.new()
 	tab_box.position = Vector2(PAD_X, TOP + 4)
 	add_child(tab_box)
@@ -52,7 +52,7 @@ func build() -> void:
 
 func yl(y) -> String:
 	var G = HSWorld.G
-	return "%d年目" % (int(float(y) - float(HSU.or_(G.get("startYear"), G.year))) + 1)
+	return HSText.year_n(int(float(y) - float(HSU.or_(G.get("startYear"), G.year))) + 1)
 
 func _fill() -> void:
 	for c in tab_box.get_children(): c.queue_free()
@@ -72,7 +72,7 @@ func _fill() -> void:
 		"mounts": _mounts()
 		"replay": _replay()
 		"hist": _hist()
-	if kb_hint: kb_hint.text = _note()
+	if kb_hint: kb_hint.text = HSText.auto(_note())
 	focus_first()
 
 func _note() -> String:
@@ -139,17 +139,17 @@ func _me() -> void:
 		var r: Dictionary = j.years[y]
 		var rk = HSJockey.my_rank(float(y))
 		_row([[yl(y), 0], [str(int(r.rides)), 110, UiTheme.IVORY, R], [str(int(r.wins)), 110, UiTheme.GOLD_BRIGHT, R], [str(int(r.w2)), 110, UiTheme.IVORY, R], [str(int(r.w3)), 110, UiTheme.IVORY, R],
-			[_pct(r.wins, r.rides), 120, UiTheme.IVORY, R], [HSU.money(float(HSU.or_(r.get("prize"), 0.0))), 180, UiTheme.MUTED, R], ["%d位" % int(rk) if rk != null else "－", 100, UiTheme.IVORY, R]])
+			[_pct(r.wins, r.rides), 120, UiTheme.IVORY, R], [HSText.money(float(HSU.or_(r.get("prize"), 0.0))), 180, UiTheme.MUTED, R], [HSText.t("%d位") % int(rk) if rk != null else "－", 100, UiTheme.IVORY, R]])
 	var t: Dictionary = j.total
 	_row([["通算", 0, UiTheme.GOLD_BRIGHT], [str(int(t.rides)), 110, UiTheme.IVORY, R], [str(int(t.wins)), 110, UiTheme.GOLD_BRIGHT, R], [str(int(t.w2)), 110, UiTheme.IVORY, R], [str(int(t.w3)), 110, UiTheme.IVORY, R],
-		[_pct(t.wins, t.rides), 120, UiTheme.IVORY, R], [HSU.money(float(HSU.or_(t.get("prize"), 0.0))), 180, UiTheme.MUTED, R], ["", 100]], true)
-	list.add_child(UiScreen.section("重賞の勝ち鞍", "%d勝" % j.big.size()))
+		[_pct(t.wins, t.rides), 120, UiTheme.IVORY, R], [HSText.money(float(HSU.or_(t.get("prize"), 0.0))), 180, UiTheme.MUTED, R], ["", 100]], true)
+	list.add_child(UiScreen.section("重賞の勝ち鞍", HSText.t("%d勝") % j.big.size()))
 	if j.big.is_empty():
 		_empty("まだ重賞を勝っていません")
 	var big: Array = j.big.duplicate()
 	big.reverse()
 	for b in big.slice(0, 40):
-		_row([[yl(b.y), 90, UiTheme.MUTED], [String(HSU.or_(b.get("grade"), "")), 50, UiTheme.GOLD_BRIGHT, C], [String(b.race), 0], [String(b.horse), 260, UiTheme.GOLD_BRIGHT]])
+		_row([[yl(b.y), 90, UiTheme.MUTED], [String(HSU.or_(b.get("grade"), "")), 50, UiTheme.GOLD_BRIGHT, C], [HSText.race_name(String(b.race)), 0], [HSText.horse_name(String(b.horse)), 260, UiTheme.GOLD_BRIGHT]])
 
 func _special() -> void:
 	var G = HSWorld.G
@@ -158,19 +158,19 @@ func _special() -> void:
 	for h in HSWorld.mine("stable") + HSWorld.mine("farm"):
 		for r in HSSpecial.reach_info(h):
 			if not reach.has(r.group.id): reach[r.group.id] = []
-			reach[r.group.id].append("%s（%s）" % [h.name, r.need])
-	list.add_child(UiScreen.section("条件のグループ", "店に並んだ馬 %d / %d" % [un.size(), HSSpecial.list().size()]))
+			reach[r.group.id].append(HSText.t("%s（%s）") % [HSText.horse_name(h), HSText.tx(String(r.need))])
+	list.add_child(UiScreen.section("条件のグループ", HSText.t("店に並んだ馬 %d / %d") % [un.size(), HSSpecial.list().size()]))
 	# リーチのかかったグループを先に、あとは並びのまま。G1 ごとのグループは後ろにまとめる
 	var gs: Array = HSSpecial.groups().filter(func(g): return HSSpecial.members(g).size() > 0)
 	gs = HSU.stable_sort(gs, func(a, b): return (1 if reach.has(a.id) else 0) > (1 if reach.has(b.id) else 0))
 	for g in gs:
 		var ms: Array = HSSpecial.members(g)
 		var got := ms.filter(func(d): return un.has(d.name)).size()
-		var names := ms.slice(0, 8).map(func(d): return ("★" if un.has(d.name) else "") + String(d.name))
-		var b := _row([[String(g.label), 260, UiTheme.GOLD_BRIGHT if reach.has(g.id) else UiTheme.IVORY], ["・".join(names) + ("…" if ms.size() > 8 else ""), 0, UiTheme.MUTED], ["%d / %d頭" % [got, ms.size()], 110, UiTheme.IVORY, R]], reach.has(g.id), 40)
+		var names := ms.slice(0, 8).map(func(d): return ("★" if un.has(d.name) else "") + HSText.horse_name(d))
+		var b := _row([[HSText.tx(String(g.label)), 260, UiTheme.GOLD_BRIGHT if reach.has(g.id) else UiTheme.IVORY], [HSText.t("・").join(names) + ("…" if ms.size() > 8 else ""), 0, UiTheme.MUTED], [HSText.t("%d / %d頭") % [got, ms.size()], 110, UiTheme.IVORY, R]], reach.has(g.id), 40)
 		if reach.has(g.id):
 			var hb := b.get_child(0) as HBoxContainer
-			var rl := UiTheme.label("リーチ：" + "・".join(reach[g.id]), 13, UiTheme.WARN)
+			var rl := UiTheme.label(HSText.t("リーチ：%s") % HSText.t("・").join(reach[g.id]), 13, UiTheme.WARN)
 			rl.custom_minimum_size.x = 300
 			rl.clip_text = true
 			rl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -183,13 +183,13 @@ func _trophy() -> void:
 	for c in HSTrophy.CATS:
 		var ts: Array = HSTrophy.list().filter(func(t): return t.cat == c.id)
 		if not ts.size(): continue
-		list.add_child(UiScreen.section(String(c.label), "%d" % ts.size()))
+		list.add_child(UiScreen.section(HSText.t(String(c.label)), "%d" % ts.size()))
 		for t in ts:
 			var hs := HSTrophy.holders(t.id)
 			var got := hs.size() > 0
-			var who := "まだ"
-			if got: who = "・".join(hs.map(func(x): return "%s %s" % [yl(x.y), x.horse]))
-			_row([["🏆" if got else "🔒", 40, UiTheme.GOLD_BRIGHT, C], [String(t.label), 240, UiTheme.GOLD_BRIGHT if got else UiTheme.IVORY], [HSTrophy.note_of(t), 0, UiTheme.MUTED],
+			var who := HSText.t("まだ")
+			if got: who = HSText.t("・").join(hs.map(func(x): return "%s %s" % [yl(x.y), HSText.horse_name(String(x.horse))]))
+			_row([["🏆" if got else "🔒", 40, UiTheme.GOLD_BRIGHT, C], [HSText.tx(String(t.label)), 240, UiTheme.GOLD_BRIGHT if got else UiTheme.IVORY], [HSText.tx(HSTrophy.note_of(t)), 0, UiTheme.MUTED],
 				[who, 300, UiTheme.IVORY if got else UiTheme.FAINT, R]], got, 44)
 
 func _lead() -> void:
@@ -198,7 +198,7 @@ func _lead() -> void:
 	years.sort_custom(func(a, b): return a > b)
 	if lead_y < 0: lead_y = years[0] if years.size() else float(G.year)
 	var yi := years.find(lead_y)
-	list.add_child(UiScreen.section("リーディング　%s" % yl(lead_y), "←→ で年（%d年分）" % years.size()))
+	list.add_child(UiScreen.section(HSText.t("リーディング　%s") % yl(lead_y), HSText.t("←→ で年（%d年分）") % years.size()))
 	var l := HSJockey.leading(lead_y)
 	if l.is_empty():
 		_empty("まだレースがありません")
@@ -211,7 +211,7 @@ func _lead() -> void:
 	if me_i >= 30: top.append(l[me_i])
 	for x in top:
 		var i := l.find(x)
-		var b := _row([[str(i + 1), 70, UiTheme.GOLD_BRIGHT if i < 3 else UiTheme.IVORY, R], [String(x.name) + ("（あなた）" if x.me else ""), 0, UiTheme.GOLD_BRIGHT if x.me else UiTheme.IVORY],
+		var b := _row([[str(i + 1), 70, UiTheme.GOLD_BRIGHT if i < 3 else UiTheme.IVORY, R], [HSText.jockey_name(String(x.name)) + HSText.t("（あなた）" if x.me else ""), 0, UiTheme.GOLD_BRIGHT if x.me else UiTheme.IVORY],
 			[str(int(x.wins)), 100, UiTheme.IVORY, R], [str(int(x.w2)), 100, UiTheme.IVORY, R], [str(int(x.w3)), 100, UiTheme.IVORY, R], [str(int(x.rides)), 100, UiTheme.MUTED, R], [_pct(x.wins, x.rides), 110, UiTheme.MUTED, R]], x.me)
 		b.gui_input.connect(func(ev): _lead_key(ev, years, yi))
 
@@ -236,28 +236,28 @@ func _awards() -> void:
 		list.add_child(UiScreen.section(yl(y)))
 		for k in aw[y]:
 			var v := String(aw[y][k])
-			_row([[String(k), 260, UiTheme.MUTED], [("★ %s（あなた）" % v) if v == me_name else v, 0, UiTheme.GOLD_BRIGHT if v == me_name else UiTheme.IVORY]], v == me_name)
+			_row([[HSText.t(String(k)), 260, UiTheme.MUTED], [(HSText.t("★ %s（あなた）") % HSText.jockey_name(v)) if v == me_name else HSText.jockey_name(v), 0, UiTheme.GOLD_BRIGHT if v == me_name else UiTheme.IVORY]], v == me_name)
 
 func _hall() -> void:
 	var own := HSHall.list()
-	list.add_child(UiScreen.section("殿堂（お手馬）", "%d頭" % own.size()))
+	list.add_child(UiScreen.section("殿堂（お手馬）", HSText.t("%d頭") % own.size()))
 	if own.is_empty():
-		_empty("まだいません。トロフィーを%dつ以上手にした馬は、引退すると殿堂入りします" % HSHall.NEED)
+		_empty(HSText.t("まだいません。トロフィーを%dつ以上手にした馬は、引退すると殿堂入りします") % HSHall.NEED)
 	for x in own:
-		var tl: Array = x.trophies.map(func(t): return String(t.label) if t is Dictionary else String(t))
-		var b := _row([[String(x.name), 260, UiTheme.GOLD_BRIGHT], ["・".join(tl), 0, UiTheme.IVORY], ["%d戦%d勝・G1 %d勝" % [int(HSU.or_(x.get("starts"), 0.0)), int(HSU.or_(x.get("wins"), 0.0)), int(HSU.or_(x.get("g1"), 0.0))], 220, UiTheme.MUTED, R],
-			["%s引退" % yl(x.retiredY), 120, UiTheme.MUTED, R]], true, 44)
+		var tl: Array = x.trophies.map(func(t): return HSText.tx(String(t.label) if t is Dictionary else String(t)))
+		var b := _row([[HSText.horse_name(x), 260, UiTheme.GOLD_BRIGHT], [HSText.t("・").join(tl), 0, UiTheme.IVORY], [HSText.t("%d戦%d勝・G1 %d勝") % [int(HSU.or_(x.get("starts"), 0.0)), int(HSU.or_(x.get("wins"), 0.0)), int(HSU.or_(x.get("g1"), 0.0))], 220, UiTheme.MUTED, R],
+			[HSText.t("%s引退") % yl(x.retiredY), 120, UiTheme.MUTED, R]], true, 44)
 		var hid := String(x.id)
 		# 行を押すと、その馬の戦績と1走ごとの記録（馬の画面を殿堂の写しで開く）
 		b.pressed.connect(func():
 			UiFlow.hall_id = hid
 			go("horse"))
 	var hall: Array = HSU.or_(HSWorld.G.records.get("hall"), [])
-	list.add_child(UiScreen.section("冠を手にした馬", "%d頭" % hall.size()))
+	list.add_child(UiScreen.section("冠を手にした馬", HSText.t("%d頭") % hall.size()))
 	if hall.is_empty():
 		_empty("まだ冠を手にした馬はいません")
 	for x in hall:
-		_row([[String(x.name), 260, UiTheme.GOLD_BRIGHT], ["・".join(HSU.or_(x.get("titles"), [])), 0], ["%s に冠" % yl(x.since), 140, UiTheme.MUTED, R]])
+		_row([[HSText.horse_name(x), 260, UiTheme.GOLD_BRIGHT], [HSText.t("・").join(HSU.or_(x.get("titles"), []).map(func(z): return HSText.tx(String(z)))), 0], [HSText.t("%s に冠") % yl(x.since), 140, UiTheme.MUTED, R]])
 
 func _course() -> void:
 	var rec: Dictionary = HSU.or_(HSWorld.G.records.get("course"), {})
@@ -272,20 +272,20 @@ func _course() -> void:
 		var r: Dictionary = rec[k]
 		var p := String(k).split("|")
 		var mine: bool = r.get("rode") == true or r.get("mine") == true
-		_row([["%s %s%sm" % [p[0], "ダート" if p[1] == "ダ" else "芝", p[2]], 260], [HSU.time(float(r.t)), 110, UiTheme.GOLD_BRIGHT, R], [String(r.name), 0, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY],
-			[String(HSU.or_(r.get("jockey"), "")), 180, UiTheme.MUTED], [String(HSU.or_(r.get("race"), "")), 260, UiTheme.MUTED], [yl(r.year), 100, UiTheme.MUTED, R]], mine)
+		_row([[HSText.course_dist({"course": p[0], "surface": "ダート" if p[1] == "ダ" else "芝", "dist": float(p[2])}), 260], [HSU.time(float(r.t)), 110, UiTheme.GOLD_BRIGHT, R], [HSText.horse_name(String(r.name)), 0, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY],
+			[HSText.jockey_name(String(HSU.or_(r.get("jockey"), ""))), 180, UiTheme.MUTED], [HSText.race_name(String(HSU.or_(r.get("race"), ""))), 260, UiTheme.MUTED], [yl(r.year), 100, UiTheme.MUTED, R]], mine)
 
 # リプレイ（自分で乗ったレース。新しい順）
 func _replay() -> void:
 	var items := UiFlow.replay_list()
-	list.add_child(UiScreen.section("リプレイ", "%d本" % items.size()))
+	list.add_child(UiScreen.section("リプレイ", HSText.t("%d本") % items.size()))
 	if items.is_empty():
 		_empty("まだありません。自分で乗ったレースが残ります")
 		return
 	for x in items:
 		var pos := int(x.get("pos", 0))
-		var b := _row([["★" if x.get("fav") else "", 30, UiTheme.GOLD_BRIGHT, C], [String(x.date), 170, UiTheme.MUTED], [String(x.get("grade", "")), 50, UiTheme.GOLD_BRIGHT, C], [String(x.race), 0],
-			[String(x.course), 200, UiTheme.MUTED], [String(x.horse), 240], ["%d着" % pos if pos > 0 else "", 80, UiTheme.GOLD_BRIGHT if pos > 0 and pos <= 3 else UiTheme.IVORY, R]], pos == 1, 40)
+		var b := _row([["★" if x.get("fav") else "", 30, UiTheme.GOLD_BRIGHT, C], [HSText.tx(String(x.date)), 170, UiTheme.MUTED], [String(x.get("grade", "")), 50, UiTheme.GOLD_BRIGHT, C], [HSText.race_name(String(x.race)), 0],
+			[_course_text(String(x.course)), 200, UiTheme.MUTED], [HSText.horse_name(String(x.horse)), 240], [HSText.ord(pos) if pos > 0 else "", 80, UiTheme.GOLD_BRIGHT if pos > 0 and pos <= 3 else UiTheme.IVORY, R]], pos == 1, 40)
 		var id := String(x.id)
 		b.pressed.connect(func():
 			UiFlow.replay_path = UiFlow.replay_dir.path_join(id + ".json")
@@ -294,14 +294,14 @@ func _replay() -> void:
 		b.gui_input.connect(func(ev):
 			if (ev is InputEventKey and ev.pressed and not ev.echo and ev.keycode == KEY_X) or (ev is InputEventJoypadButton and ev.pressed and ev.button_index == JOY_BUTTON_X):
 				var on := UiFlow.replay_fav(id)
-				toast("お気に入りに%s" % ("入れた" if on else "しない"), "good")
+				toast(HSText.t("お気に入りに入れた" if on else "お気に入りにしない"), "good")
 				accept_event()
 				_fill())
 
 # これまでに乗った馬（勝ち数・最高の着順・騎乗数の順）
 func _mounts() -> void:
 	var ms: Dictionary = HSU.or_(HSJockey.me().get("mounts"), {})
-	list.add_child(UiScreen.section("乗った馬", "%d頭" % ms.size()))
+	list.add_child(UiScreen.section("乗った馬", HSText.t("%d頭") % ms.size()))
 	if ms.is_empty():
 		_empty("まだ乗っていません")
 		return
@@ -315,35 +315,44 @@ func _mounts() -> void:
 	_head([["馬", 0], ["騎乗", 110, UiTheme.MUTED, R], ["1着", 110, UiTheme.MUTED, R], ["最高", 110, UiTheme.MUTED, R]])
 	for n in names.slice(0, 60):
 		var m: Dictionary = ms[n]
-		_row([[String(n), 0, UiTheme.GOLD_BRIGHT if m.best <= 3 else UiTheme.IVORY], [str(int(m.rides)), 110, UiTheme.IVORY, R], [str(int(m.wins)), 110, UiTheme.IVORY, R], ["%d着" % int(m.best), 110, UiTheme.MUTED, R]])
+		_row([[HSText.horse_name(String(n)), 0, UiTheme.GOLD_BRIGHT if m.best <= 3 else UiTheme.IVORY], [str(int(m.rides)), 110, UiTheme.IVORY, R], [str(int(m.wins)), 110, UiTheme.IVORY, R], [HSText.ord(int(m.best)), 110, UiTheme.MUTED, R]])
 
 # 騎乗の記録（新しい順）
 func _hist() -> void:
 	var hs: Array = HSJockey.me().history
-	list.add_child(UiScreen.section("騎乗の記録", "%d鞍" % hs.size()))
+	list.add_child(UiScreen.section("騎乗の記録", HSText.t("%d鞍") % hs.size()))
 	if hs.is_empty():
 		_empty("まだ騎乗していません")
 		return
 	_head([["日付", 170], ["格", 60, UiTheme.MUTED, C], ["レース", 0], ["馬", 260], ["人気", 90, UiTheme.MUTED, R], ["着順", 90, UiTheme.MUTED, R]])
 	for r in hs.slice(0, 80):
 		var p := int(r.pos)
-		_row([["%s %s" % [yl(r.y), HSWorld.week_label(r.m, r.w)], 170, UiTheme.MUTED], [String(HSU.or_(r.get("grade"), "")), 60, UiTheme.GOLD_BRIGHT, C], [String(r.race), 0], [String(r.horse), 260],
-			[str(int(HSU.or_(r.get("pop"), 0))), 90, UiTheme.MUTED, R], ["%d着" % p, 90, UiTheme.GOLD_BRIGHT if p <= 3 else UiTheme.IVORY, R]], p == 1)
+		_row([["%s %s" % [yl(r.y), HSText.week_label(r.m, r.w)], 170, UiTheme.MUTED], [String(HSU.or_(r.get("grade"), "")), 60, UiTheme.GOLD_BRIGHT, C], [HSText.race_name(String(r.race)), 0], [HSText.horse_name(String(r.horse)), 260],
+			[str(int(HSU.or_(r.get("pop"), 0))), 90, UiTheme.MUTED, R], [HSText.ord(p), 90, UiTheme.GOLD_BRIGHT if p <= 3 else UiTheme.IVORY, R]], p == 1)
 
 # グランドフェスティバル：区分ごとに、いまの1位と自分の馬のいちばん上の順位
 func _gf() -> void:
-	list.add_child(UiScreen.section(HSSeason.DC_NAME, "上位%d頭が出られる" % HSSeason.DC_FIELD))
+	list.add_child(UiScreen.section(HSText.t(HSSeason.DC_NAME), HSText.t("上位%d頭が出られる") % HSSeason.DC_FIELD))
 	for id in HSSeason.gf_order():
 		var C: Dictionary = HSSeason.gf_by()[id]
 		var st := HSSeason.dc_standing(id, HSWorld.G.year)
-		var top := String(st[0].h.name) if st.size() else "－"
+		var top := HSText.horse_name(st[0].h) if st.size() else "－"
 		var mine := "－"
 		for x in st:
 			if x.h.get("owner") == "P":
-				mine = "%s %d位" % [x.h.name, int(x.rank)]
+				mine = HSText.t("%s %d位") % [HSText.horse_name(x.h), int(x.rank)]
 				break
-		var b := _row([[String(C.label), 140, UiTheme.GOLD_BRIGHT], ["%s %s%sm" % [C.course, C.surface, HSU.num(C.dist)], 260, UiTheme.MUTED], ["伝説の名馬 %s" % ("・".join(HSSeason.gf_legends(id).map(func(d): return d.name)) if HSSeason.gf_legends(id).size() else "－"), 260, UiTheme.MUTED], ["1位 %s" % top, 0], ["自分の馬：%s" % mine, 360, UiTheme.GOLD_BRIGHT if mine != "－" else UiTheme.FAINT]], mine != "－", 42)
+		var b := _row([[HSText.t(String(C.label)), 140, UiTheme.GOLD_BRIGHT], [HSText.course_dist(C), 260, UiTheme.MUTED], [HSText.t("伝説の名馬 %s") % (HSText.t("・").join(HSSeason.gf_legends(id).map(func(d): return HSText.horse_name(d))) if HSSeason.gf_legends(id).size() else "－"), 260, UiTheme.MUTED], [HSText.t("1位 %s") % top, 0], [HSText.t("自分の馬：%s") % mine, 360, UiTheme.GOLD_BRIGHT if mine != "－" else UiTheme.FAINT]], mine != "－", 42)
 		b.pressed.connect(func(): go("gf"))
+
+# リプレイの一覧に残したコース（「東京 芝2400m」）を言語に合わせる
+static func _course_text(s: String) -> String:
+	if not HSText.is_en(): return s
+	var rx := RegEx.new()
+	rx.compile("^(.+?) (芝|ダ|障)([0-9]+)m$")  # i18n:skip
+	var m := rx.search(s)
+	if m == null: return s
+	return HSText.course_dist({"course": m.get_string(1), "surface": m.get_string(2), "dist": float(m.get_string(3))})
 
 func focus_first() -> void:
 	if rows.size():

@@ -26,7 +26,7 @@ func on_tab(d: int) -> void:
 
 func build() -> void:
 	backdrop("bg_result", 0.8)
-	make_band("終", HSSeason.DC_NAME, "12月4週のあと・海外の競馬場で%dつ" % HSSeason.gf_cats().size(), [["暦", UiFlow.date_label()], ["資金", UiFlow.money_label(), "money"]])
+	make_band("終", HSText.t(HSSeason.DC_NAME), HSText.t("12月4週のあと・海外の競馬場で%dつ") % HSSeason.gf_cats().size(), [["暦", UiFlow.date_label()], ["資金", UiFlow.money_label(), "money"]])
 	var pend := HSSeason.dc_pending_list()
 	if pend.size(): cat = maxi(0, HSSeason.gf_order().find(pend[0]))
 	tab_box = VBoxContainer.new()
@@ -59,18 +59,18 @@ func _fill() -> void:
 	var G = HSWorld.G
 	var id: String = HSSeason.gf_order()[cat]
 	var C: Dictionary = HSSeason.gf_by()[id]
-	tab_box.add_child(UiTheme.tabs(HSSeason.gf_order().map(func(k): return HSSeason.gf_by()[k].label), cat, pad, func(k): cat = k; _fill()))
+	tab_box.add_child(UiTheme.tabs(HSSeason.gf_order().map(func(k): return HSText.t(String(HSSeason.gf_by()[k].label))), cat, pad, func(k): cat = k; _fill()))
 	# 招待
 	var pb := UiScreen.panel_box(true, 8)
 	inv_box.add_child(pb[0])
 	var v: VBoxContainer = pb[1]
 	var hh := HBoxContainer.new()
 	hh.add_theme_constant_override("separation", 14)
-	hh.add_child(UiTheme.title(HSSeason.gf_name(id), 24, UiTheme.GOLD_BRIGHT))
-	hh.add_child(UiTheme.label("%s %s%sm" % [C.course, C.surface, HSU.num(C.dist)], 15, UiTheme.MUTED))
-	var lgs: Array = HSSeason.gf_legends(id).map(func(d): return d.name)
-	hh.add_child(UiTheme.label("伝説の名馬：%s" % ("・".join(lgs) if lgs.size() else "まだいない"), 15, UiTheme.GOLD if lgs.size() else UiTheme.FAINT))
-	hh.add_child(UiTheme.label("トロフィー：%s" % C.trophy, 15, UiTheme.MUTED))
+	hh.add_child(UiTheme.title(HSText.tx(HSSeason.gf_name(id)), 24, UiTheme.GOLD_BRIGHT))
+	hh.add_child(UiTheme.label(HSText.course_dist(C), 15, UiTheme.MUTED))
+	var lgs: Array = HSSeason.gf_legends(id).map(func(d): return HSText.horse_name(d))
+	hh.add_child(UiTheme.label(HSText.t("伝説の名馬：%s") % (HSText.t("・").join(lgs) if lgs.size() else HSText.t("まだいない")), 15, UiTheme.GOLD if lgs.size() else UiTheme.FAINT))
+	hh.add_child(UiTheme.label(HSText.t("トロフィー：%s") % HSText.t(String(C.trophy)), 15, UiTheme.MUTED))
 	v.add_child(hh)
 	var inv = HSSeason._inv(id)
 	var bh := HBoxContainer.new()
@@ -81,7 +81,7 @@ func _fill() -> void:
 		v.add_child(UiTheme.label("招待は12月4週のあとに届く。いまのファンの票の順位は下のとおり", 15, UiTheme.MUTED))
 	elif inv.ans == "yes" and inv.pick:
 		var h = HSWorld.horse(inv.pick)
-		v.add_child(UiTheme.label("出る：%s" % (h.name if h else ""), 18, UiTheme.GOLD_BRIGHT))
+		v.add_child(UiTheme.label(HSText.t("出る：%s") % (HSText.horse_name(h) if h else ""), 18, UiTheme.GOLD_BRIGHT))
 	elif inv.ans == "no":
 		v.add_child(UiTheme.label("辞退した", 16, UiTheme.MUTED))
 	else:
@@ -93,12 +93,12 @@ func _fill() -> void:
 			var sf := "ダ" if C.surface == "ダ" else "芝"
 			for e in el:
 				var hid: String = e.h.id
-				var b := UiScreen.button("出す：%s（%s・総合力 %d）" % [e.h.name, e.why, int(HSSeason.fh(e.h, HSWorld.w_idx(), sf))], acts.is_empty(), 0, 48, 16)
+				var b := UiScreen.button(HSText.t("出す：%s（%s・総合力 %d）") % [HSText.horse_name(e.h), HSText.tx(String(e.why)), int(HSSeason.fh(e.h, HSWorld.w_idx(), sf))], acts.is_empty(), 0, 48, 16)
 				b.pressed.connect(func():
 					var err = HSSeason.dc_choose(id, hid)
-					if err: toast(String(err), "bad"); return
+					if err: toast(HSText.tx(String(err)), "bad"); return
 					UiFlow.save()
-					toast("%sを出す" % HSWorld.horse(hid).name, "good")
+					toast(HSText.t("%sを出す") % HSText.horse_name(HSWorld.horse(hid)), "good")
 					_fill())
 				bh.add_child(b)
 				acts.append(b)
@@ -108,7 +108,7 @@ func _fill() -> void:
 			acts.append(bd)
 	v.add_child(bh)
 	# ファンの票の順位
-	list.add_child(UiScreen.section("%sの順位（%d年目）" % [C.label, UiFlow.year_n()], "上位%d頭が出られる" % HSSeason.DC_FIELD))
+	list.add_child(UiScreen.section(HSText.t("%sの順位（%d年目）") % [HSText.t(String(C.label)), UiFlow.year_n()], HSText.t("上位%d頭が出られる") % HSSeason.DC_FIELD))
 	var st := HSSeason.dc_standing(id, G.year)
 	if st.is_empty():
 		var p := PanelContainer.new()
@@ -120,8 +120,8 @@ func _fill() -> void:
 		var rb := UiScreen.row_button(38, mine)
 		var b: Button = rb[0]
 		var hb: HBoxContainer = rb[1]
-		var cells := [[str(int(x.rank)), 50, UiTheme.GOLD_BRIGHT if x.in else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_RIGHT], [String(x.h.name), 0, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY],
-			[String(x.why), 300, UiTheme.MUTED], ["%s票" % HSU.num(x.votes) if x.votes > 0 else "－", 100, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_RIGHT], ["出られる" if x.in else "", 100, UiTheme.GOOD, HORIZONTAL_ALIGNMENT_CENTER]]
+		var cells := [[str(int(x.rank)), 50, UiTheme.GOLD_BRIGHT if x.in else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_RIGHT], [HSText.horse_name(x.h), 0, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY],
+			[HSText.tx(String(x.why)), 300, UiTheme.MUTED], [HSText.t("%s票") % HSU.num(x.votes) if x.votes > 0 else "－", 100, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_RIGHT], ["出られる" if x.in else "", 100, UiTheme.GOOD, HORIZONTAL_ALIGNMENT_CENTER]]
 		for c in cells:
 			var l := UiTheme.label(String(c[0]), 15, c[2], c[3] if c.size() > 3 else HORIZONTAL_ALIGNMENT_LEFT)
 			if c[1] > 0: l.custom_minimum_size.x = c[1]
@@ -156,8 +156,8 @@ func _host() -> void:
 	v.add_theme_constant_override("separation", 0)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hb.add_child(v)
-	v.add_child(UiTheme.label("%s（%s）" % [d.name, d.title], 12, UiTheme.GOLD_BRIGHT))
-	var l := UiTheme.label("「%s」" % HSGFHost.line(sc, String(HSSeason.gf_order()[cat])), 13, UiTheme.IVORY)
+	v.add_child(UiTheme.label(HSText.t("%s（%s）") % [HSText.owner_line(String(d.name)), HSText.owner_line(String(d.title))], 12, UiTheme.GOLD_BRIGHT))
+	var l := UiTheme.label(HSText.t("「%s」") % HSGFHost.line(sc, String(HSSeason.gf_order()[cat])), 13, UiTheme.IVORY)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size.x = 510
 	v.add_child(l)

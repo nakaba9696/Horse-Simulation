@@ -89,7 +89,7 @@ func build() -> void:
 	UiFlow.program_id = String(h.id)
 	var G = HSWorld.G
 	var rt = HSRating.of(h)
-	make_band("馬", String(h.name), "%s%d・%s%s" % ["セ" if h.get("gelding") else String(h.sex), int(G.year - float(h.born)), HSU.or_(h.get("coat"), ""), "・史実" if h.get("hist") else ("・オリジナル" if h.get("original") else "")],
+	make_band("馬", HSText.horse_name(h), HSText.t("%s・%s%s") % [HSText.sex_age(h, int(G.year - float(h.born))), HSText.t(String(HSU.or_(h.get("coat"), ""))), HSText.t("・史実" if h.get("hist") else ("・オリジナル" if h.get("original") else ""))],
 		[["戦績", record_text(h)], ["レーティング", "%d" % int(rt.v) if rt != null else "－"], ["資金", UiFlow.money_label(), "money"]])
 	_build_left()
 	tab_box = VBoxContainer.new()
@@ -162,7 +162,7 @@ func _build_hall(args: PackedStringArray) -> void:
 	tabs_ = HALL_TABS
 	h = HSHall.open(UiFlow.hall_id)   # 1走ごとの記録は別ファイルから（読めなければ記録なし）
 	var rt = HSRating.of(h)
-	make_band("殿", String(h.name), "%s・%s・殿堂入り（%s引退）" % [String(h.sex), String(HSU.or_(h.get("coat"), "")), _yl(h.retiredY)],
+	make_band("殿", HSText.horse_name(h), HSText.t("%s・%s・殿堂入り（%s引退）") % [HSText.t(String(h.sex)), HSText.t(String(HSU.or_(h.get("coat"), ""))), _yl(h.retiredY)],
 		[["戦績", record_text(h)], ["トロフィー", "%d" % (h.trophies as Array).size()], ["レーティング", "%d" % int(rt.v) if rt != null else "－"]])
 	var pb := UiScreen.panel_box(true, 8)
 	var p: PanelContainer = pb[0]
@@ -186,11 +186,11 @@ func _build_hall(args: PackedStringArray) -> void:
 		fr.add_child(UiTheme.label("ダ", 13, UiTheme.MUTED))
 		fr.add_child(UiTheme.stat_chip(float(fh.dirt), "fh", true))
 		v.add_child(fr)
-	v.add_child(_kv("戦績", "%s（%d-%d）" % [record_text(h), int(HSU.or_(h.get("w2"), 0.0)), int(HSU.or_(h.get("w3"), 0.0))]))
-	v.add_child(_kv("G1", "%d勝" % int(HSU.or_(h.get("g1"), 0.0))))
-	v.add_child(_kv("獲得賞金", HSU.money(float(HSU.or_(h.get("prize"), 0.0)))))
+	v.add_child(_kv("戦績", HSText.t("%s（%d-%d）") % [record_text(h), int(HSU.or_(h.get("w2"), 0.0)), int(HSU.or_(h.get("w3"), 0.0))]))
+	v.add_child(_kv("G1", HSText.t("%d勝") % int(HSU.or_(h.get("g1"), 0.0))))
+	v.add_child(_kv("獲得賞金", HSText.money(float(HSU.or_(h.get("prize"), 0.0)))))
 	v.add_child(_kv("走った年", "%s〜%s" % [_yl(h.first), _yl(h.retiredY)]))
-	v.add_child(_kv("父・母", "%s・%s" % [String(HSU.or_(h.get("sire"), "－")), String(HSU.or_(h.get("dam"), "－"))]))
+	v.add_child(_kv("父・母", HSText.t("%s・%s") % [HSText.horse_name(String(HSU.or_(h.get("sire"), "－"))), HSText.horse_name(String(HSU.or_(h.get("dam"), "－")))]))
 	tab_box = VBoxContainer.new()
 	tab_box.position = Vector2(PAD_X + LEFT_W + 20, TOP + 4)
 	tab_box.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, 0)
@@ -222,22 +222,22 @@ func _build_hall(args: PackedStringArray) -> void:
 func _hall_info() -> void:
 	var tro: Array = HSU.or_(h.get("trophies"), [])
 	var tit: Array = HSU.or_(h.get("titles"), [])
-	list.add_child(UiScreen.section("トロフィー・冠", "%d個" % (tro.size() + tit.size())))
+	list.add_child(UiScreen.section("トロフィー・冠", HSText.t("%d個") % (tro.size() + tit.size())))
 	var tl := HFlowContainer.new()
 	tl.add_theme_constant_override("h_separation", 6)
 	tl.add_theme_constant_override("v_separation", 6)
-	for x in tro: tl.add_child(UiTheme.chip("🏆 %s　%s" % [String(x.label) if x is Dictionary else String(x), _yl(x.y) if x is Dictionary else ""], UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
-	for x in tit: tl.add_child(UiTheme.chip("冠 " + String(x), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 13))
+	for x in tro: tl.add_child(UiTheme.chip("🏆 %s　%s" % [HSText.tx(String(x.label) if x is Dictionary else String(x)), _yl(x.y) if x is Dictionary else ""], UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
+	for x in tit: tl.add_child(UiTheme.chip(HSText.t("冠 %s") % HSText.tx(String(x)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 13))
 	list.add_child(tl)
 	var sk: Array = HSU.or_(h.get("skills"), [])
 	if sk.size():
 		list.add_child(UiScreen.section("特殊能力"))
 		var fl := HFlowContainer.new()
 		fl.add_theme_constant_override("h_separation", 6)
-		for id in sk: fl.add_child(UiTheme.chip(HSSkills.label(String(id)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY, 13))
+		for id in sk: fl.add_child(UiTheme.chip(HSText.skill_label(String(id)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY, 13))
 		list.add_child(fl)
 	var gw: Array = HSU.or_(h.get("gradedWins"), [])
-	list.add_child(UiScreen.section("重賞の勝ち鞍", "%d勝" % gw.size()))
+	list.add_child(UiScreen.section("重賞の勝ち鞍", HSText.t("%d勝") % gw.size()))
 	if gw.is_empty(): list.add_child(UiTheme.label("なし", 14, UiTheme.FAINT))
 	var gl := HFlowContainer.new()
 	gl.add_theme_constant_override("h_separation", 10)
@@ -246,7 +246,7 @@ func _hall_info() -> void:
 		var hb := HBoxContainer.new()
 		hb.add_theme_constant_override("separation", 4)
 		hb.add_child(UiTheme.grade_chip(String(HSU.or_(g.get("grade"), "")), 12))
-		hb.add_child(UiTheme.label("%s %s" % [_yl(g.y), HSU.or_(g.get("short"), g.race)], 13))
+		hb.add_child(UiTheme.label("%s %s" % [_yl(g.y), HSText.race_name(String(HSU.or_(g.get("short"), g.race)))], 13))
 		gl.add_child(hb)
 	list.add_child(gl)
 
@@ -283,7 +283,7 @@ func _build_left() -> void:
 		fh.add_child(fatigue_label(h, 15))
 		v.add_child(fh)
 	v.add_child(_kv("次走", next_text(h), UiTheme.GOLD_BRIGHT if HSProgram.next(h) != null else UiTheme.FAINT))
-	v.add_child(_kv("戦績", "%s・獲得 %s" % [record_text(h), HSU.money(float(HSU.or_(h.get("earn"), 0.0)))]))
+	v.add_child(_kv("戦績", HSText.t("%s・獲得 %s") % [record_text(h), HSText.money(float(HSU.or_(h.get("earn"), 0.0)))]))
 	v.add_child(_kv("近走", recent_text(h, 5)))
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -295,7 +295,6 @@ func _build_left() -> void:
 	var keep: bool = HSOriginal.on() and not h.get("gelding")
 	var br := UiScreen.danger_button("引退させる", 0, 44, 16)
 	var id := String(h.id)
-	var nm := String(h.name)
 	br.pressed.connect(func(): retire_flow(id, _retired))
 	v.add_child(br)
 
@@ -305,7 +304,7 @@ func _program() -> void:
 
 func _retired(r: Dictionary) -> void:
 	if r.has("err"):
-		toast(String(r.err), "bad")
+		toast(HSText.tx(String(r.err)), "bad")
 		return
 	UiFlow.save()
 	go("stable")
@@ -361,8 +360,8 @@ func _stat() -> void:
 	kv.add_theme_constant_override("separation", 30)
 	# 成長型は型の色で、ピークのめやすを添える（8つの型。HSHorse.GROWTH_INFO）
 	var gr: Variant = h.get("growth")
-	var gtxt := String(HSU.or_(gr, "")) + ("（%s）" % HSHorse.growth_note(gr) if HSHorse.growth_note(gr) != "" else "")
-	for x in [["距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]], ["脚質", HSHorse.style_text(h)], ["成長型", gtxt, HSHorse.growth_color(gr)], ["健康", "%d" % int(HSU.or_(h.get("health"), 70.0))]]:
+	var gtxt := HSText.t(String(HSU.or_(gr, ""))) + (HSText.t("（%s）") % HSText.t(HSHorse.growth_note(gr)) if HSHorse.growth_note(gr) != "" else "")
+	for x in [["距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]], ["脚質", HSText.style_text(h)], ["成長型", gtxt, HSHorse.growth_color(gr)], ["健康", "%d" % int(HSU.or_(h.get("health"), 70.0))]]:
 		var pr := HBoxContainer.new()
 		pr.add_theme_constant_override("separation", 8)
 		pr.add_child(UiTheme.label(String(x[0]), 14, UiTheme.MUTED))
@@ -376,22 +375,22 @@ func _stat() -> void:
 		fl.add_theme_constant_override("h_separation", 6)
 		fl.add_theme_constant_override("v_separation", 6)
 		for id in sk:
-			fl.add_child(UiTheme.chip(HSSkills.label(String(id)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY, 13))
+			fl.add_child(UiTheme.chip(HSText.skill_label(String(id)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY, 13))
 		list.add_child(fl)
 	var tro := HSHall.trophies_of(h)
 	var tit: Array = HSU.or_(h.get("titles"), [])
-	list.add_child(UiScreen.section("トロフィー・冠", "%d個" % (tro.size() + tit.size())))
+	list.add_child(UiScreen.section("トロフィー・冠", HSText.t("%d個") % (tro.size() + tit.size())))
 	if tro.size() or tit.size():
 		var tl := HFlowContainer.new()
 		tl.add_theme_constant_override("h_separation", 6)
 		tl.add_theme_constant_override("v_separation", 6)
-		for x in tro: tl.add_child(UiTheme.chip("🏆 " + String(x.label), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
-		for x in tit: tl.add_child(UiTheme.chip("冠 " + String(x), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 13))
+		for x in tro: tl.add_child(UiTheme.chip("🏆 " + HSText.tx(String(x.label)), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
+		for x in tit: tl.add_child(UiTheme.chip(HSText.t("冠 %s") % HSText.tx(String(x)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 13))
 		list.add_child(tl)
 	else:
 		list.add_child(UiTheme.label("まだありません", 14, UiTheme.FAINT))
 	var gw: Array = HSU.or_(h.get("gradedWins"), [])
-	list.add_child(UiScreen.section("重賞の勝ち鞍", "%d勝" % gw.size()))
+	list.add_child(UiScreen.section("重賞の勝ち鞍", HSText.t("%d勝") % gw.size()))
 	if gw.is_empty():
 		list.add_child(UiTheme.label("まだありません", 14, UiTheme.FAINT))
 	var gl := HFlowContainer.new()
@@ -401,7 +400,7 @@ func _stat() -> void:
 		var hb := HBoxContainer.new()
 		hb.add_theme_constant_override("separation", 4)
 		hb.add_child(UiTheme.grade_chip(String(HSU.or_(g.get("grade"), "")), 12))
-		hb.add_child(UiTheme.label("%s %s" % [_yl(g.y), HSU.or_(g.get("short"), g.race)], 13))
+		hb.add_child(UiTheme.label("%s %s" % [_yl(g.y), HSText.race_name(String(HSU.or_(g.get("short"), g.race)))], 13))
 		gl.add_child(hb)
 	list.add_child(gl)
 
@@ -430,9 +429,9 @@ func _rec() -> void:
 		var b: Button = rb[0]
 		var hb: HBoxContainer = rb[1]
 		var pos := int(r.pos)
-		var cells := [[_date(r), UiTheme.MUTED], ["", null], [String(r.race), UiTheme.IVORY], ["%s %s%s" % [r.course, r.surface, HSU.num(r.dist)], UiTheme.MUTED], [String(HSU.or_(r.get("ground"), "")), UiTheme.MUTED],
+		var cells := [[_date(r), UiTheme.MUTED], ["", null], [HSText.race_name(String(r.race)), UiTheme.IVORY], [HSText.course_dist(r), UiTheme.MUTED], [HSText.t(String(HSU.or_(r.get("ground"), ""))), UiTheme.MUTED],
 			["%d/%d" % [pos, int(r.n)], UiTheme.GOLD_BRIGHT if pos <= 3 else UiTheme.IVORY], ["%d" % int(r.pop) if r.get("pop") != null else "－", UiTheme.MUTED],
-			[HSU.time(float(r.time)) if r.get("time") != null else "", UiTheme.IVORY], [String(HSU.or_(r.get("margin"), "")) if pos > 1 else "", UiTheme.MUTED],
+			[HSU.time(float(r.time)) if r.get("time") != null else "", UiTheme.IVORY], [HSText.t(String(HSU.or_(r.get("margin"), ""))) if pos > 1 else "", UiTheme.MUTED],
 			["%.1f" % float(r.last3f) if r.get("last3f") != null else "", UiTheme.MUTED], ["%d" % int(r.rt) if r.get("rt") != null else "－", UiTheme.GOLD_BRIGHT]]
 		for k in REC_COLS.size():
 			var w: float = REC_COLS[k][1]
@@ -462,7 +461,7 @@ func _head(cols: Array) -> Control:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
 	for c in cols:
-		var l := UiTheme.label(String(c[0]), 11, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_LEFT if c[0] in ["日付", "レース", "コース", "部門", "馬名", "騎手"] else HORIZONTAL_ALIGNMENT_CENTER)
+		var l := UiTheme.label(HSText.t(String(c[0])), 11, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_LEFT if c[0] in ["日付", "レース", "コース", "部門", "馬名", "騎手"] else HORIZONTAL_ALIGNMENT_CENTER)
 		if c[1] > 0: l.custom_minimum_size.x = c[1]
 		else: l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(l)
@@ -482,7 +481,7 @@ func _rating() -> void:
 	var ov = tb.all
 	top.add_child(UiTheme.label("総合", 15, UiTheme.MUTED))
 	top.add_child(rating_chip(float(ov.v) if ov != null else -1.0, true))
-	top.add_child(UiTheme.label("%d走から" % int(ov.n) if ov != null else "まだ走っていない", 13, UiTheme.FAINT))
+	top.add_child(UiTheme.label(HSText.t("%d走から") % int(ov.n) if ov != null else "まだ走っていない", 13, UiTheme.FAINT))
 	list.add_child(top)
 	list.add_child(_head([["部門", 0], ["レーティング", 120], ["数えた走り", 120], ["いちばん良い走り", 160]]))
 	for d in HSRating.DIVS:
@@ -494,14 +493,14 @@ func _rating() -> void:
 		var nv := HBoxContainer.new()
 		nv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nv.add_theme_constant_override("separation", 10)
-		nv.add_child(UiTheme.label(String(d.label), 15))
-		nv.add_child(UiTheme.label(String(d.note), 12, UiTheme.FAINT))
+		nv.add_child(UiTheme.label(HSText.t(String(d.label)), 15))
+		nv.add_child(UiTheme.label(HSText.t(String(d.note)), 12, UiTheme.FAINT))
 		hb.add_child(nv)
 		var cc := CenterContainer.new()
 		cc.custom_minimum_size.x = 120
 		cc.add_child(rating_chip(float(r.v) if r != null else -1.0))
 		hb.add_child(cc)
-		var nl := UiTheme.num_label("%d走" % int(r.n) if r != null else "－", 14, UiTheme.MUTED)
+		var nl := UiTheme.num_label(HSText.t("%d走") % int(r.n) if r != null else "－", 14, UiTheme.MUTED)
 		nl.custom_minimum_size.x = 120
 		hb.add_child(nl)
 		var bl := UiTheme.num_label("%d" % int(r.best) if r != null else "－", 14, UiTheme.MUTED)
@@ -521,7 +520,7 @@ func _rating() -> void:
 		hb.add_child(rating_chip(float(r.rt)))
 		var g := String(HSU.or_(r.get("grade"), ""))
 		if g != "": hb.add_child(UiTheme.grade_chip(g, 11))
-		hb.add_child(UiTheme.label("%s %s　%d着／%d頭%s" % [_date(r), r.race, int(r.pos), int(r.n), "（%s）" % r.margin if int(r.pos) > 1 and String(HSU.or_(r.get("margin"), "")) != "" else ""], 14))
+		hb.add_child(UiTheme.label(HSText.t("%s %s　%s／%d頭%s") % [_date(r), HSText.race_name(String(r.race)), HSText.ord(int(r.pos)), int(r.n), HSText.t("（%s）") % HSText.t(String(r.margin)) if int(r.pos) > 1 and String(HSU.or_(r.get("margin"), "")) != "" else ""], 14))
 		list.add_child(hb)
 
 # ---- 血統・名鑑 ----
@@ -560,9 +559,9 @@ func race_detail(r: Dictionary) -> void:
 	th.add_theme_constant_override("separation", 12)
 	var g := String(HSU.or_(r.get("grade"), ""))
 	if g != "": th.add_child(UiTheme.grade_chip(g, 15))
-	th.add_child(UiTheme.title(String(r.race), 28))
+	th.add_child(UiTheme.title(HSText.race_name(String(r.race)), 28))
 	th.add_child(UiScreen.spacer())
-	th.add_child(UiTheme.label("%s　%s %s%sm　%s" % [_date(r), r.course, "ダート" if r.surface == "ダ" else "芝", HSU.num(r.dist), HSU.or_(r.get("ground"), "")], 15, UiTheme.MUTED))
+	th.add_child(UiTheme.label("%s　%s %s %sm　%s" % [_date(r), HSText.course_name(String(r.course)), HSText.t("ダート" if r.surface == "ダ" else "芝"), HSU.num(r.dist), HSText.t(String(HSU.or_(r.get("ground"), "")))], 15, UiTheme.MUTED))
 	root.add_child(th)
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 26)
@@ -572,14 +571,14 @@ func race_detail(r: Dictionary) -> void:
 	lv.custom_minimum_size.x = 360
 	lv.add_theme_constant_override("separation", 6)
 	cols.add_child(lv)
-	lv.add_child(UiScreen.section(String(h.name)))
+	lv.add_child(UiScreen.section(HSText.horse_name(h)))
 	var pos := int(r.pos)
 	var ph := HBoxContainer.new()
-	ph.add_child(UiTheme.title("%d着" % pos, 40, UiTheme.GOLD_BRIGHT if pos <= 3 else UiTheme.IVORY))
-	ph.add_child(UiTheme.label("／%d頭" % int(r.n), 16, UiTheme.MUTED))
+	ph.add_child(UiTheme.title(HSText.ord(pos), 40, UiTheme.GOLD_BRIGHT if pos <= 3 else UiTheme.IVORY))
+	ph.add_child(UiTheme.label(HSText.t("／%d頭") % int(r.n), 16, UiTheme.MUTED))
 	lv.add_child(ph)
-	for x in [["人気", "%d番人気" % int(r.pop) if r.get("pop") != null else "－"], ["タイム", HSU.time(float(r.time)) if r.get("time") != null else "－"], ["着差", String(HSU.or_(r.get("margin"), "")) if pos > 1 else "－"],
-			["上がり3F", "%.1f" % float(r.last3f) if r.get("last3f") != null else "－"], ["騎手", String(HSU.or_(r.get("jockey"), "－"))], ["レーティング", "%d" % int(r.rt) if r.get("rt") != null else "－"]]:
+	for x in [["人気", HSText.t("%d番人気") % int(r.pop) if r.get("pop") != null else "－"], ["タイム", HSU.time(float(r.time)) if r.get("time") != null else "－"], ["着差", HSText.t(String(HSU.or_(r.get("margin"), ""))) if pos > 1 else "－"],
+			["上がり3F", "%.1f" % float(r.last3f) if r.get("last3f") != null else "－"], ["騎手", HSText.jockey_name(String(HSU.or_(r.get("jockey"), "－")))], ["レーティング", "%d" % int(r.rt) if r.get("rt") != null else "－"]]:
 		lv.add_child(_kv(String(x[0]), String(x[1])))
 	var has := HSRaceRec.has(r)
 	if has:
@@ -603,7 +602,7 @@ func race_detail(r: Dictionary) -> void:
 		if not replay_matches(rep, String(h.name), r): detail_replay = ""
 	if has:
 		var rs := HSRaceRec.rows(r)
-		rv.add_child(UiScreen.section("出走馬", "%d頭" % rs.size()))
+		rv.add_child(UiScreen.section("出走馬", HSText.t("%d頭") % rs.size()))
 		rv.add_child(_head(DETAIL_COLS))
 		var me_name := String(h.name)
 		for x in rs:
@@ -613,8 +612,8 @@ func race_detail(r: Dictionary) -> void:
 			b.focus_mode = Control.FOCUS_NONE
 			var hb: HBoxContainer = rb[1]
 			var xp := int(x.pos)
-			var cells := [["%d" % xp, UiTheme.GOLD_BRIGHT if xp <= 3 else UiTheme.MUTED], ["", null], [String(x.name), UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY],
-				[HSU.time(float(x.time)), UiTheme.IVORY], [String(x.margin) if xp > 1 else "", UiTheme.MUTED], ["%d" % int(x.pop) if float(x.pop) > 0 else "－", UiTheme.MUTED], [String(x.jockey), UiTheme.MUTED]]
+			var cells := [["%d" % xp, UiTheme.GOLD_BRIGHT if xp <= 3 else UiTheme.MUTED], ["", null], [HSText.horse_name(String(x.name)), UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY],
+				[HSU.time(float(x.time)), UiTheme.IVORY], [HSText.t(String(x.margin)) if xp > 1 else "", UiTheme.MUTED], ["%d" % int(x.pop) if float(x.pop) > 0 else "－", UiTheme.MUTED], [HSText.jockey_name(String(x.jockey)), UiTheme.MUTED]]
 			for k in DETAIL_COLS.size():
 				var w: float = DETAIL_COLS[k][1]
 				if k == 1:
@@ -658,7 +657,7 @@ func race_detail(r: Dictionary) -> void:
 
 # ---------- 共通の小物（厩舎・店も使う） ----------
 static func record_text(x: Dictionary) -> String:
-	return "%d戦%d勝" % [int(HSU.or_(x.get("starts"), 0.0)), int(HSU.or_(x.get("wins"), 0.0))]
+	return HSText.t("%d戦%d勝") % [int(HSU.or_(x.get("starts"), 0.0)), int(HSU.or_(x.get("wins"), 0.0))]
 
 # 近走の着順（新しいものから n 走。「1・3・2」）
 static func recent_text(x: Dictionary, n: int) -> String:
@@ -666,17 +665,17 @@ static func recent_text(x: Dictionary, n: int) -> String:
 	var out: Array = []
 	for i in range(rs.size() - 1, maxi(-1, rs.size() - 1 - n), -1):
 		out.append(str(int(rs[i].pos)))
-	return "・".join(PackedStringArray(out)) if out.size() else "－"
+	return HSText.t("・").join(PackedStringArray(out)) if out.size() else "－"
 
 static func next_text(x: Dictionary) -> String:
 	var nx = HSProgram.next(x)
-	if nx == null: return "おまかせ" if x.get("auto") else "未定"
-	return "今週 %s" % HSRaces.label(nx.race) if nx.get("entered") else "%s %s" % [nx.label, nx.name]
+	if nx == null: return HSText.t("おまかせ" if x.get("auto") else "未定")
+	return HSText.t("今週 %s") % HSText.race_label(nx.race) if nx.get("entered") else "%s %s" % [HSText.tx(String(nx.label)), HSText.race_name(String(nx.name))]
 
 # 疲労の段階（HSFatigue：万全・軽い疲れ・疲れ・疲れが濃い・使いすぎ）と値
 static func fatigue_label(x: Dictionary, size := 14) -> Label:
 	var v := HSFatigue.view(x)
-	return UiTheme.label("%s %d" % [String(v.label), int(v.value)], size, Color(String(v.color)))
+	return UiTheme.label("%s %d" % [HSText.t(String(v.label)), int(v.value)], size, Color(String(v.color)))
 
 # レーティングの札（総合力に直した段の色で塗る：レーティング 110＝総合力 63）
 static func rating_chip(v: float, big := false) -> PanelContainer:
@@ -721,7 +720,7 @@ static func _ped_cell(head: String, name: Variant, span: int, male: bool) -> Pan
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 8)
 	hb.add_child(UiTheme.label(head, 11, UiTheme.MUTED))
-	var s := String(name) if _known(name) else "－"
+	var s := HSText.horse_name(String(name)) if _known(name) else "－"
 	var l := UiTheme.label(s, 14)
 	l.clip_text = true
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -735,21 +734,23 @@ static func profile_box(d: Dictionary, width: float, lines: int) -> Control:
 	v.add_theme_constant_override("separation", 4)
 	var years := String(HSU.or_(d.get("years"), ""))
 	var rec := String(HSU.or_(d.get("record"), ""))
-	var mw: Array = HSU.or_(d.get("mainWins"), [])
+	var mw: Array = HSText.main_wins(d).duplicate() if d.has("mainWins") else []
 	if mw.is_empty():
 		# 名鑑の無い馬は、史実の勝ち鞍（データの wins「2016札幌2歳ステークス」）から（js/ui/screens.js の UI.histMainWins と同じ考え）
 		for w in HSU.or_(d.get("wins"), []).slice(0, 6):
 			mw.append("%s %s" % [String(w).substr(0, 4), String(w).substr(4)])
+	if years != "": years = HSText.tx(years)
+	if rec != "": rec = HSText.tx(rec)
 	if years == "" and d.get("born") != null and d.get("retire") != null:
-		years = "%d〜%d年に走った" % [int(d.born) + 2, int(d.retire)]
-	var text := String(HSU.or_(d.get("text"), HSU.or_(d.get("note"), "")))
+		years = HSText.t("%d〜%d年に走った") % [int(d.born) + 2, int(d.retire)]
+	var text := HSText.profile_text(d) if HSU.truthy(d.get("text")) else String(HSU.or_(d.get("note"), ""))
 	if years == "" and rec == "" and mw.is_empty() and text == "":
 		v.add_child(UiTheme.label("名鑑はありません", 14, UiTheme.FAINT))
 		return v
 	if years != "" or rec != "":
 		v.add_child(UiTheme.label("　".join(PackedStringArray([years, rec].filter(func(x): return x != ""))), 14, UiTheme.GOLD_BRIGHT))
 	if mw.size():
-		var ml := UiTheme.label("主な成績：" + "、".join(PackedStringArray(mw.slice(0, 6))), 13, UiTheme.MUTED)
+		var ml := UiTheme.label(HSText.t("主な成績：%s") % HSText.t("、").join(PackedStringArray(mw.slice(0, 6))), 13, UiTheme.MUTED)
 		ml.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		ml.custom_minimum_size.x = width
 		v.add_child(ml)
@@ -765,7 +766,7 @@ static func profile_box(d: Dictionary, width: float, lines: int) -> Control:
 # 戦績の1走に当たるリプレイ（自分で乗ったレースの記録。日付と馬名で探す）。無ければ ""
 static func find_replay(name: String, r: Dictionary) -> String:
 	var G = HSWorld.G
-	var date := "%d年目 %s" % [int(float(r.y) - float(HSU.or_(G.get("startYear"), G.year))) + 1, HSWorld.week_label(float(r.m), float(r.w))]
+	var date := "%d年目 %s" % [int(float(r.y) - float(HSU.or_(G.get("startYear"), G.year))) + 1, HSWorld.week_label(float(r.m), float(r.w))]  # i18n:skip（記録の鍵。UiFlow.date_key と同じ形）
 	for x in UiFlow.replay_list():
 		if String(x.get("horse", "")) == name and String(x.get("date", "")) == date:
 			return String(x.id)
@@ -831,8 +832,8 @@ func _kv(k: String, v: String, col := UiTheme.IVORY) -> HBoxContainer:
 	return hb
 
 func _date(r: Dictionary) -> String:
-	return "%s %s" % [_yl(r.y), HSWorld.week_label(float(r.m), float(r.w))]
+	return "%s %s" % [_yl(r.y), HSText.week_label(float(r.m), float(r.w))]
 
 func _yl(y: Variant) -> String:
 	var G = HSWorld.G
-	return "%d年目" % (int(float(y) - float(HSU.or_(G.get("startYear"), G.year))) + 1)
+	return HSText.year_n(int(float(y) - float(HSU.or_(G.get("startYear"), G.year))) + 1)

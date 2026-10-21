@@ -12,14 +12,14 @@ var pv: VBoxContainer
 var sel := 0
 
 func hint() -> String:
-	return "ジャンルのレースで勝つと出会いの点（OP 1・G3 2・G2 3・G1 4。4点で出会い）。ミッションはレースの%d週前に届き、勝てば次の段階。負けたら次の年にもう一度" % int(HSOwners.LEAD)
+	return HSText.t("ジャンルのレースで勝つと出会いの点（OP 1・G3 2・G2 3・G1 4。4点で出会い）。ミッションはレースの%d週前に届き、勝てば次の段階。負けたら次の年にもう一度") % int(HSOwners.LEAD)
 
 func on_back() -> void:
 	go("home")
 
 func build() -> void:
 	backdrop("bg_home", 0.84)
-	make_band("主", "オーナー", "騎乗依頼をくれる人たち", [["縁のあるオーナー", "%d/%d人" % [HSOwners.known_list().size(), HSOwners.LIST().size()]], ["暦", UiFlow.date_label()]])
+	make_band("主", "オーナー", "騎乗依頼をくれる人たち", [["縁のあるオーナー", HSText.t("%d/%d人") % [HSOwners.known_list().size(), HSOwners.LIST().size()]], ["暦", UiFlow.date_label()]])
 	var v := VBoxContainer.new()
 	v.position = Vector2(PAD_X, TOP + 4)
 	v.custom_minimum_size = Vector2(760, 0)
@@ -41,21 +41,21 @@ func build() -> void:
 			hb.add_child(UiScreen.owner_q_face(72, 88))
 			who.add_child(UiTheme.label("まだ会っていないオーナー", 17, UiTheme.MUTED))
 			who.add_child(UiScreen.owner_sign_chip(o, 12))
-			who.add_child(UiTheme.label("出会いの点 %s" % _pips(String(o.id)), 13, UiTheme.GOLD))
+			who.add_child(UiTheme.label(HSText.t("出会いの点 %s") % _pips(String(o.id)), 13, UiTheme.GOLD))
 			cv.add_child(who)
-			var hl := UiTheme.label(HSOwners.hint(String(o.id)), 14, UiTheme.GOLD_BRIGHT)
+			var hl := UiTheme.label(HSText.owner_line(HSOwners.hint(String(o.id))), 14, UiTheme.GOLD_BRIGHT)
 			hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			hl.custom_minimum_size.x = 100
 			cv.add_child(hl)
 		else:
 			hb.add_child(_face(String(o.id), "smile" if st.stage >= 2 else "base", 72, 88))
-			who.add_child(UiTheme.label(String(o.name), 17))
+			who.add_child(UiTheme.label(HSText.owner_line(String(o.name)), 17))
 			who.add_child(UiScreen.owner_sign_chip(o, 12))
-			who.add_child(UiTheme.chip(HSOwners.stage_label(String(o.id)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
-			who.add_child(UiTheme.label("%s・%d歳" % [o.title, int(o.age)], 12, UiTheme.MUTED))
+			who.add_child(UiTheme.chip(HSText.t(HSOwners.stage_label(String(o.id))), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
+			who.add_child(UiTheme.label(HSText.t("%s・%d歳") % [HSText.owner_line(String(o.title)), int(o.age)], 12, UiTheme.MUTED))
 			cv.add_child(who)
 			cv.add_child(_gauge(String(o.id), 420))
-			cv.add_child(UiTheme.label("一緒に %d戦%d勝" % [int(st.rides), int(st.wins)], 12, UiTheme.MUTED))
+			cv.add_child(UiTheme.label(HSText.t("一緒に %d戦%d勝") % [int(st.rides), int(st.wins)], 12, UiTheme.MUTED))
 		hb.add_child(cv)
 		UiScreen.pass_mouse(hb)
 		var k := ids.size()
@@ -81,12 +81,12 @@ static func _pips(oid: String) -> String:
 # いまのミッションと予定の一言（js/ui/ownersui.js の jobNote と同じ）
 static func job_note(oid: String) -> String:
 	var st := HSOwners.of(oid)
-	if HSOwners.done(oid): return "いちばんの間柄（依頼はすべてやり終えた）"
+	if HSOwners.done(oid): return HSText.t("いちばんの間柄（依頼はすべてやり終えた）")
 	var o = HSOwners.by(oid)
-	var t := "ミッション：%s" % HSOwners.mission_text(o, int(st.stage))
+	var t := HSText.t("ミッション：%s") % HSText.mission(o, int(st.stage))
 	var j = st.get("job")
 	if st.stage >= HSOwners.JOBS or not j or j.k != st.stage: return t
-	return "%s（%s。%s%s）" % [t, HSOwners.job_date(j), "依頼が来ている" if j.on else "%d週前に依頼が来る" % int(HSOwners.LEAD), "・%d度目" % (int(j.tries) + 1) if j.tries else ""]
+	return HSText.t("%s（%s。%s%s）") % [t, HSText.date_label(float(j.y), float(j.m), float(j.w)), HSText.t("依頼が来ている") if j.on else HSText.t("%d週前に依頼が来る") % int(HSOwners.LEAD), HSText.t("・%d度目") % (int(j.tries) + 1) if j.tries else ""]
 
 # 友好度の目盛り：いまの段階の下限から次の段階の下限まで（やり終えたら、いっぱい）と、いまのミッション
 func _gauge(oid: String, w: float) -> VBoxContainer:
@@ -130,52 +130,52 @@ func _preview(i: int) -> void:
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tv.add_theme_constant_override("separation", 4)
 	top.add_child(tv)
-	tv.add_child(UiTheme.label("%s・%d歳" % [o.kana, int(o.age)], 12, UiTheme.MUTED))
+	tv.add_child(UiTheme.label(HSText.t("%s・%d歳") % [HSText.owner_line(String(o.kana)), int(o.age)], 12, UiTheme.MUTED))
 	var nh := HBoxContainer.new()
 	nh.add_theme_constant_override("separation", 10)
-	nh.add_child(UiTheme.title(String(o.name), 26 if String(o.name).length() < 12 else 20))
-	nh.add_child(UiTheme.chip(HSOwners.stage_label(oid), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
+	nh.add_child(UiTheme.title(HSText.owner_line(String(o.name)), 26 if String(o.name).length() < 12 else 20))
+	nh.add_child(UiTheme.chip(HSText.t(HSOwners.stage_label(oid)), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 13))
 	tv.add_child(nh)
-	tv.add_child(UiTheme.label(String(o.title), 15, UiTheme.GOLD_BRIGHT))
+	tv.add_child(UiTheme.label(HSText.owner_line(String(o.title)), 15, UiTheme.GOLD_BRIGHT))
 	var sh := HBoxContainer.new()
 	sh.add_theme_constant_override("separation", 8)
 	sh.add_child(UiScreen.owner_sign_chip(o, 14))
 	var subs := HSOwners.sub_labels(o)
 	if subs.size():
-		sh.add_child(UiTheme.label("ほかに %s" % "・".join(subs), 12, UiTheme.MUTED))
+		sh.add_child(UiTheme.label(HSText.t("ほかに %s") % HSText.t("・").join(subs.map(func(x): return HSText.t(String(x)))), 12, UiTheme.MUTED))
 	tv.add_child(sh)
-	var note := UiTheme.label(String(o.get("note", "")), 13, UiTheme.MUTED)
+	var note := UiTheme.label(HSText.owner_line(String(o.get("note", ""))), 13, UiTheme.MUTED)
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size.x = 100
 	tv.add_child(note)
 	var m = HSOwners.mission(oid)
-	var say := UiTheme.label("「%s」" % HSOwners.fill_(String(m.say if m else o.get("intro", "")), {"horse": String(m.get("horse", "")) if m else "", "race": HSOwners.race_label(String(m.race)) if m and m.get("race") else ""}), 15)
+	var say := UiTheme.label(HSText.t("「%s」") % HSOwners.fill_(String(m.say if m else o.get("intro", "")), {"horse": String(m.get("horse", "")) if m else "", "race": HSOwners.race_label(String(m.race)) if m and m.get("race") else ""}), 15)
 	say.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	say.custom_minimum_size.x = 100
 	tv.add_child(say)
 	tv.add_child(_gauge(oid, 380))
 	# 段階ごとのミッション（OP〜G1 は依頼の馬とレース）
-	pv.add_child(UiScreen.section("段階とミッション", "一緒に %d戦%d勝・G1 %d勝" % [int(st.rides), int(st.wins), int(st.big)]))
+	pv.add_child(UiScreen.section("段階とミッション", HSText.t("一緒に %d戦%d勝・G1 %d勝") % [int(st.rides), int(st.wins), int(st.big)]))
 	for k in HSOwners.STAGES.size():
 		var mi: Dictionary = o.missions[k]
-		var extra := "・勝負服" if k + 1 == HSOwners.WEAR_STAGE else ("・%s" % o.item.name if k == 4 else "")
-		var txt := HSOwners.mission_text(o, k)
+		var extra := HSText.t("・勝負服") if k + 1 == HSOwners.WEAR_STAGE else (HSText.t("・%s") % HSText.owner_line(String(o.item.name)) if k == 4 else "")
+		var txt := HSText.mission(o, k)
 		if k < HSOwners.JOBS and mi.get("horse"):
 			var d = HSOwners.race_data(String(mi.race))
-			txt = "%s（%d歳）で%s" % [mi.horse, int(mi.age), HSOwners.race_label(String(mi.race))]
-			if d: txt += "　%s %s%sm・%d月%d週" % [d.course, "ダート" if d.surface == "ダ" else "芝", HSU.num(d.dist), int(d.month), int(d.week)]
+			txt = HSText.t("%s（%d歳）で%s") % [HSText.horse_name(String(mi.horse)), int(mi.age), HSText.race_name(HSOwners.race_label(String(mi.race)))]
+			if d: txt += "　%s・%s" % [HSText.course_dist({"course": d.course, "surface": "ダート" if d.surface == "ダ" else "芝", "dist": d.dist}), HSText.week_label(float(d.month), float(d.week))]
 			var fa = HSOwners.mission_fact(o, k)
-			if fa: txt += "　【%s】%s" % [fa.label, ("史実：" + String(fa.real)) if fa.ifs else ""]
-		var rw := ("✓ " if st.stage > k else ("▶ " if st.stage == k else "")) + "お礼 %s%s" % [HSU.money(HSOwners.yen(HSOwners.STAGES[k].money)), extra]
-		pv.add_child(_ladder(String(HSOwners.STAGES[k].label), txt, rw, st.stage >= k))
-	var il := UiTheme.label(("🎁 %s：%s（受け取った）" if HSOwners.done(oid) else "最後のアイテム：%s（%s）") % [o.item.name, o.item.text], 13, UiTheme.GOLD_BRIGHT if HSOwners.done(oid) else UiTheme.MUTED)
+			if fa: txt += "　【%s】%s" % [HSText.t(fa.label), HSText.t("史実：%s") % HSText.tx(String(fa.real)) if fa.ifs else ""]
+		var rw := ("✓ " if st.stage > k else ("▶ " if st.stage == k else "")) + HSText.t("お礼 %s%s") % [HSText.money(HSOwners.yen(HSOwners.STAGES[k].money)), extra]
+		pv.add_child(_ladder(HSText.t(String(HSOwners.STAGES[k].label)), txt, rw, st.stage >= k))
+	var il := UiTheme.label(HSText.t("🎁 %s：%s（受け取った）" if HSOwners.done(oid) else "最後のアイテム：%s（%s）") % [HSText.owner_line(String(o.item.name)), HSText.owner_line(String(o.item.text))], 13, UiTheme.GOLD_BRIGHT if HSOwners.done(oid) else UiTheme.MUTED)
 	pv.add_child(il)
 	var gb = st.got.get("bond")
 	if gb and gb.get("pending"):
 		var bc := UiScreen.button("思い出の名馬を受け取る（前の版の約束）", true, 420, 44, 16)
 		bc.pressed.connect(func():
 			var err = HSOwners.claim(oid)
-			if err: toast(String(err), "bad"); return
+			if err: toast(HSText.tx(String(err)), "bad"); return
 			UiFlow.save()
 			_after_press())
 		pv.add_child(bc)
@@ -183,12 +183,12 @@ func _preview(i: int) -> void:
 	if HSOwners.can_ask(oid):
 		var a = HSOwners.state().get("ask")
 		var asked: bool = a != null and a.oid == oid
-		var ba := UiScreen.button(("%d月の店に頼んだ" % int(a.m)) if asked else "来月の店に、好みの馬を頼む", not asked, 420, 40, 15)
+		var ba := UiScreen.button((HSText.t("%d月の店に頼んだ") % int(a.m)) if asked else "来月の店に、好みの馬を頼む", not asked, 420, 40, 15)
 		ba.disabled = asked
 		ba.pressed.connect(func():
 			var err = HSOwners.ask(oid)
-			if err: toast(String(err), "bad"); return
-			toast("%s「%s」" % [o.name, HSOwners.fill_(String(HSU.or_(o.scenes.get("ask"), [""])[0]), {})], "good")
+			if err: toast(HSText.tx(String(err)), "bad"); return
+			toast(HSText.t("%s「%s」") % [HSText.owner_line(String(o.name)), HSText.owner_line(HSOwners.fill_(String(HSU.or_(o.scenes.get("ask"), [""])[0]), {}))], "good")
 			UiFlow.save()
 			_after_press())
 		pv.add_child(ba)
@@ -199,11 +199,11 @@ func _preview(i: int) -> void:
 		var wear: Dictionary = HSOwners.state().wear
 		for h in mine.slice(0, 3):
 			var on: bool = wear.get(h.id) == oid
-			var bw := UiScreen.button("%s：%s" % [h.name, "%sさんの勝負服" % o.name if on else "自分の勝負服"], false, 0, 34, 14)
+			var bw := UiScreen.button(HSText.t("%s：%s") % [HSText.horse_name(h), HSText.t("%sさんの勝負服") % HSText.owner_line(String(o.name)) if on else HSText.t("自分の勝負服")], false, 0, 34, 14)
 			var hid: String = h.id
 			bw.pressed.connect(func():
 				var err = HSOwners.wear(hid, null if on else oid)
-				if err: toast(String(err), "bad"); return
+				if err: toast(HSText.tx(String(err)), "bad"); return
 				UiFlow.save()
 				_after_press())
 			pv.add_child(bw)
@@ -217,20 +217,20 @@ func _preview_locked(o: Dictionary, top: HBoxContainer) -> void:
 	top.add_child(tv)
 	tv.add_child(UiTheme.title("まだ会っていないオーナー", 28, UiTheme.MUTED))
 	tv.add_child(UiScreen.owner_sign_chip(o, 14))
-	var hl := UiTheme.label(HSOwners.hint(String(o.id)), 17, UiTheme.GOLD_BRIGHT)
+	var hl := UiTheme.label(HSText.owner_line(HSOwners.hint(String(o.id))), 17, UiTheme.GOLD_BRIGHT)
 	hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hl.custom_minimum_size.x = 100
 	tv.add_child(hl)
 	var gate := ""
-	if o.get("gate"): gate = "（%s）" % HSOwners.GATE_LABEL.get(o.gate, "")
-	tv.add_child(UiTheme.label("出会いの点 %s" % _pips(String(o.id)), 17, UiTheme.GOLD))
-	var nl := UiTheme.label("このオーナーの好きなジャンルのレースで勝つと点がたまる（%s）%s。会うと、騎乗依頼（ミッション）が始まる。" % [HSOwners.POINT_TEXT, gate], 13, UiTheme.MUTED)
+	if o.get("gate"): gate = HSText.t("（%s）") % HSText.t(String(HSOwners.GATE_LABEL.get(o.gate, "")))
+	tv.add_child(UiTheme.label(HSText.t("出会いの点 %s") % _pips(String(o.id)), 17, UiTheme.GOLD))
+	var nl := UiTheme.label(HSText.t("このオーナーの好きなジャンルのレースで勝つと点がたまる（%s）%s。会うと、騎乗依頼（ミッション）が始まる。") % [HSOwners.POINT_TEXT, gate], 13, UiTheme.MUTED)
 	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nl.custom_minimum_size.x = 100
 	tv.add_child(nl)
 	pv.add_child(UiScreen.section("段階とミッション"))
 	for k in HSOwners.STAGES.size():
-		pv.add_child(_ladder(String(HSOwners.STAGES[k].label), "？", "", false))
+		pv.add_child(_ladder(HSText.t(String(HSOwners.STAGES[k].label)), "？", "", false))
 
 func _ladder(name: String, job: String, reward: String, on: bool) -> PanelContainer:
 	var p := PanelContainer.new()

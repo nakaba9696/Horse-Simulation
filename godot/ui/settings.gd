@@ -1,5 +1,5 @@
 # 設定の画面（タイトルとホームのメニューから開く）。中身の読み書きと効かせ方は UiSettings（ui/settings_store.gd）
-# タブ（Q/E・LB/RB）：画面と音（表示・解像度・全体・BGM・効果音の音量・振動）／操作の割り当て（騎乗の操作と、決める・もどる。キーとパッド）
+# タブ（Q/E・LB/RB）：画面と音（言語・表示・解像度・全体・BGM・効果音の音量・振動）／操作の割り当て（騎乗の操作と、決める・もどる。キーとパッド）
 # 画面と音：行を上下で選び、左右（十字←→）で値を替える。決定でも次の値へ。替えるとすぐ効き、すぐ書く（user://settings.cfg。セーブとは別）
 # 割り当て：キーかパッドの札で決定 → 押したキー（パッドのボタン・LT/RT）にする。ほかの操作と同じなら入れ替える。5 秒で待つのをやめる
 # 下：初めの設定に戻す（確かめは「やめる」から）・もどる（金）
@@ -9,6 +9,7 @@ const LIST_W := 1060.0
 const WAIT := 5.0
 # 画面と音の行 [設定の名前, 種類, 見出し, ひと言]
 const ITEMS := [
+	["lang", "choice", "言語", "画面の文の言語（Language）。替えるとすぐ切り替わる。初めての起動は PC の言語に合わせる"],
 	["mode", "choice", "画面の表示", "フルスクリーンは画面いっぱい。ウィンドウは解像度の大きさ"],
 	["res", "choice", "解像度", "ウィンドウの大きさ。フルスクリーンでは 3D を描く細かさをこの高さに合わせる（低いほど軽い）"],
 	["vol_master", "volume", "全体の音量", "すべての音の大きさ"],
@@ -16,7 +17,7 @@ const ITEMS := [
 	["vol_se", "volume", "効果音", "蹄・ムチ・ゲート・歓声などの音の大きさ"],
 	["vibration", "choice", "振動", "パッドの振動（ゲート・ムチ・蹄の拍子・ゴール）"],
 ]
-const SECTIONS := {"mode": "画面", "vol_master": "音", "vibration": "パッド"}
+const SECTIONS := {"lang": "画面", "vol_master": "音", "vibration": "パッド"}
 # 決める・もどるに使えない手（選ぶ・タブに使う）
 const UI_KEYS_TAKEN := [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_Q, KEY_E, KEY_PAGEUP, KEY_PAGEDOWN]
 const UI_PADS_TAKEN := ["b:11", "b:12", "b:13", "b:14", "b:9", "b:10"]
@@ -179,9 +180,10 @@ func _bar(v: float) -> Control:
 func _value_text(k: String) -> String:
 	var c := _cur()
 	match k:
-		"mode": return "フルスクリーン" if c.mode == "full" else "ウィンドウ"
+		"lang": return String(HSText.LANG_NAME.get(HSText.lang, "日本語"))  # i18n:skip（言語の名前はその言語のまま）
+		"mode": return HSText.t("フルスクリーン" if c.mode == "full" else "ウィンドウ")
 		"res": return UiSettings.res_label(c.res)
-		"vibration": return "入" if c.vibration else "切"
+		"vibration": return HSText.t("入" if c.vibration else "切")
 	return str(int(c[k]))
 
 func _row_input(ev: InputEvent, b: Button, idx: int) -> void:
@@ -197,6 +199,14 @@ func _change(idx: int, d: int, wrap := false) -> void:
 	var k: String = ITEMS[idx][0]
 	var c := _cur()
 	match k:
+		"lang":
+			var ls: Array = HSText.LANGS
+			var li := ls.find(HSText.lang) + d
+			UiSettings.set_value("lang", ls[posmod(li, ls.size())])
+			sel = idx
+			# 言語を替えたら画面ごと組み直す（帯・下の札・操作の案内も替える）
+			if shots.is_empty(): UiFlow.go(get_tree(), "settings")
+			return
 		"mode": UiSettings.set_value("mode", "window" if c.mode == "full" else "full")
 		"vibration":
 			UiSettings.set_value("vibration", not c.vibration)
@@ -220,7 +230,7 @@ func _refresh_band() -> void:
 	if fade: move_child(band, fade.get_index())
 
 func _make_band() -> void:
-	make_band("設", "設定", "画面・音・振動・操作の割り当て（この PC に保存。セーブとは別）", [["画面", "フルスクリーン" if _cur().mode == "full" else "ウィンドウ"], ["全体の音量", str(int(_cur().vol_master))], ["振動", "入" if _cur().vibration else "切"]])
+	make_band("設", "設定", "言語・画面・音・振動・操作の割り当て（この PC に保存。セーブとは別）", [["言語", _value_text("lang")], ["画面", _value_text("mode")], ["全体の音量", str(int(_cur().vol_master))], ["振動", _value_text("vibration")]])
 
 # ---- 割り当て ----
 func _fill_binds() -> void:
@@ -252,7 +262,7 @@ func _fill_binds() -> void:
 		var hb := HBoxContainer.new()
 		hb.add_theme_constant_override("separation", 12)
 		row.add_child(hb)
-		var nl := UiTheme.label(String(p[1]), 16)
+		var nl := UiTheme.label(HSText.t(String(p[1])), 16)
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hb.add_child(nl)
 		for kind in ["key", "pad"]:
@@ -269,12 +279,12 @@ func _fill_binds() -> void:
 func _listen(b: Button, a: String, kind: String) -> void:
 	if not listen.is_empty(): return
 	listen = {"a": a, "kind": kind, "btn": b, "until": _now() + WAIT, "from": _now() + 0.15}
-	b.text = "押してください…"
+	b.text = HSText.t("押してください…")
 	UiTheme.gold_button(b)
 	if _pad_node:
 		_pad_node.set_process(false)
 		_pad_node.set_process_input(false)
-	if kb_hint: kb_hint.text = hint()
+	if kb_hint: kb_hint.text = HSText.auto(hint())
 
 func _end_listen(msg := "", kind := "") -> void:
 	listen = {}
@@ -306,7 +316,7 @@ func _input(ev: InputEvent) -> void:
 		_end_listen("その手は選ぶ・タブに使うので、決める・もどるには使えない", "bad")
 		return
 	UiSettings.bind(a, String(got[0]), got[1])
-	_end_listen("「%s」を %s にした" % [_action_label(a), UiSettings.key_name(int(got[1])) if got[0] == "key" else UiSettings.pad_name(String(got[1]))], "good")
+	_end_listen(HSText.t("「%s」を %s にした") % [HSText.t(_action_label(a)), UiSettings.key_name(int(got[1])) if got[0] == "key" else UiSettings.pad_name(String(got[1]))], "good")
 
 func _process(delta: float) -> void:
 	super._process(delta)
@@ -315,7 +325,7 @@ func _process(delta: float) -> void:
 		if left <= 0.0:
 			_end_listen("割り当てをやめた")
 		elif is_instance_valid(listen.btn):
-			(listen.btn as Button).text = "押してください %d" % int(ceil(left))
+			(listen.btn as Button).text = HSText.t("押してください %d") % int(ceil(left))
 
 static func _action_label(a: String) -> String:
 	for p in UiSettings.ACTIONS:
@@ -389,7 +399,7 @@ func _preview(i: int) -> void:
 		if b == null: return
 		var m: Array = b.get_meta("bind")
 		var a: String = m[0]
-		pv.add_child(UiScreen.section(_action_label(a), "騎乗" if UiSettings._group(a) == "ride" else "画面"))
+		pv.add_child(UiScreen.section(HSText.t(_action_label(a)), "騎乗" if UiSettings._group(a) == "ride" else "画面"))
 		var gh := HBoxContainer.new()
 		gh.add_theme_constant_override("separation", 16)
 		for kind in ["key", "pad"]:
@@ -412,7 +422,7 @@ func _preview(i: int) -> void:
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pv.add_child(sp)
-	pv.add_child(UiTheme.label("保存先：%s" % UiSettings.path, 12, UiTheme.FAINT))
+	pv.add_child(UiTheme.label(HSText.t("保存先：%s") % UiSettings.path, 12, UiTheme.FAINT))
 	var pane := pv.get_parent() as Control
 	pane.size = pane.custom_minimum_size
 

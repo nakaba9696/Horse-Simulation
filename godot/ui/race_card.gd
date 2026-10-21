@@ -48,6 +48,7 @@ var pad := false
 var flow := false        # 週の流れの中（その週の本当の出走表。UiFlow）
 
 func _ready() -> void:
+	UiSettings.boot()   # 設定（言語・割り当て）。出走表を直に開いたときも
 	if UiFlow.current() == null and OS.get_cmdline_user_args().has("--setup=gf"):
 		UiFlow.demo_gf_ride()   # 撮影の見本：グランドフェスティバルの出走表
 	elif UiFlow.current() == null and UiFlow.demo_arg() >= 0:
@@ -214,8 +215,8 @@ func _build_band() -> void:
 	var tv := VBoxContainer.new()
 	tv.add_theme_constant_override("separation", -6)
 	tv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	tv.add_child(UiTheme.title(String(r.name), 30, UiTheme.IVORY))
-	tv.add_child(UiTheme.label("%s競馬場  %s" % [r.course, "右回り" if String(r.get("dir", "左")) == "右" else "左回り"], 13, UiTheme.MUTED))
+	tv.add_child(UiTheme.title(HSText.race_name(r), 30, UiTheme.IVORY))
+	tv.add_child(UiTheme.label(HSText.t("%s競馬場  %s") % [HSText.course_name(String(r.course)), HSText.t("右回り" if String(r.get("dir", "左")) == "右" else "左回り")], 13, UiTheme.MUTED))
 	h.add_child(tv)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -225,11 +226,11 @@ func _build_band() -> void:
 	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(chips)
 	chips.add_child(UiTheme.surface_chip(String(r.surface), int(r.dist), 18))
-	chips.add_child(_stat("天気", String(r.get("weather", "晴"))))
-	chips.add_child(_stat("馬場", String(r.ground)))
-	chips.add_child(_stat("頭数", "%d頭" % race.horses.size()))
+	chips.add_child(_stat("天気", HSText.t(String(r.get("weather", "晴")))))
+	chips.add_child(_stat("馬場", HSText.t(String(r.ground))))
+	chips.add_child(_stat("頭数", HSText.t("%d頭") % race.horses.size()))
 	if flow:
-		chips.add_child(_stat("騎乗", "%d/%d鞍" % [UiFlow.ride_i + 1, UiFlow.rides.size()]))
+		chips.add_child(_stat("騎乗", HSText.t("%d/%d鞍") % [UiFlow.ride_i + 1, UiFlow.rides.size()]))
 
 # 帯の数（docs/UI.md「帯の数」）：黒 28% の札、上に見出し、下に値
 func _stat(head: String, val: String) -> PanelContainer:
@@ -311,7 +312,7 @@ func _build_table() -> void:
 		nh.add_theme_constant_override("separation", 6)
 		nh.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nh.clip_contents = true   # 長い名前は列の端で切る（名前の札に clip_text を付けると幅が 0 になって名前が消えていた）
-		var nl := UiTheme.label(String(hinfo.name), 17, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY)
+		var nl := UiTheme.label(HSText.horse_name(String(hinfo.name)), 17, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY)
 		nh.add_child(nl)
 		# 史実・スペシャルの小さな印（docs/UI.md「出走表」2）
 		if hinfo.get("legend"):
@@ -319,7 +320,7 @@ func _build_table() -> void:
 		elif hinfo.get("hist"):
 			nh.add_child(UiTheme.chip("史実", UiTheme.SURFACE_3, UiTheme.MUTED, 11))
 		h.add_child(nh)
-		var sa := UiTheme.num_label("%s%d" % [hinfo.sex, int(hinfo.get("age", 4))], 15)
+		var sa := UiTheme.num_label(HSText.sex_age(hinfo, int(hinfo.get("age", 4))), 15)
 		sa.custom_minimum_size.x = COLS[2][1]
 		h.add_child(sa)
 		var wl := UiTheme.num_label("%.1f" % float(hinfo.weight), 15)
@@ -329,7 +330,7 @@ func _build_table() -> void:
 		ar.custom_minimum_size = Vector2(COLS[4][1], 24)
 		ar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(ar)
-		var jl := UiTheme.label(String(info[i].jockey), 14, UiTheme.MUTED)
+		var jl := UiTheme.label(HSText.jockey_name(String(info[i].jockey)), 14, UiTheme.MUTED)
 		jl.custom_minimum_size.x = COLS[5][1]
 		jl.clip_text = true
 		h.add_child(jl)
@@ -413,11 +414,11 @@ func _build_right() -> void:
 	bh.alignment = BoxContainer.ALIGNMENT_END
 	right.add_child(bh)
 	btn_paddock = Button.new()
-	btn_paddock.text = "パドック"
+	btn_paddock.text = HSText.t("パドック")
 	btn_paddock.custom_minimum_size = Vector2(170, 56)
 	bh.add_child(btn_paddock)
 	btn_gate = Button.new()
-	btn_gate.text = "ゲートイン"
+	btn_gate.text = HSText.t("ゲートイン")
 	btn_gate.custom_minimum_size = Vector2(230, 56)
 	btn_gate.add_theme_font_size_override("font_size", 22)
 	btn_gate.add_theme_font_override("font", UiTheme.mincho())
@@ -490,11 +491,11 @@ func _select(i: int, animate: bool) -> void:
 	sel = i
 	paddock.focus = i
 	var h: Dictionary = race.horses[i]
-	card_name.text = String(h.name)
+	card_name.text = HSText.horse_name(String(h.name))
 	card_name.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT if bool(h.get("mine", false)) else UiTheme.IVORY)
 	card_arrows.style = String(h.style)
 	card_arrows.queue_redraw()
-	card_sub.text = "%d番  %s%d  %s  %s  斤量%.1f  %s" % [int(h.num), h.sex, int(h.get("age", 4)), h.coat, h.style, float(h.weight), info[i].jockey]
+	card_sub.text = HSText.t("%d番  %s  %s  %s  斤量%.1f  %s") % [int(h.num), HSText.sex_age(h, int(h.get("age", 4))), HSText.t(String(h.coat)), HSText.tparts(String(h.style)), float(h.weight), HSText.jockey_name(String(info[i].jockey))]
 	for c in card_marks.get_children():
 		card_marks.remove_child(c)   # すぐ外す（同じコマの並べ直しで札の高さが残らないように）
 		c.queue_free()
@@ -532,7 +533,7 @@ func _fill_stats(i: int) -> void:
 	var fr := HBoxContainer.new()
 	fr.add_theme_constant_override("separation", 8)
 	for s in ["芝", "ダ"]:
-		fr.add_child(UiTheme.label("総合力 %s" % s, 13, UiTheme.IVORY if s == sf else UiTheme.MUTED))
+		fr.add_child(UiTheme.label(HSText.t("総合力 %s") % HSText.t(s), 13, UiTheme.IVORY if s == sf else UiTheme.MUTED))
 		fr.add_child(UiTheme.stat_chip(HSSeason.fh(hh, wi, s), "fh", s == sf))
 	card_stats.add_child(fr)
 	# 能力（今日の馬場）
@@ -542,7 +543,7 @@ func _fill_stats(i: int) -> void:
 	grid.add_theme_constant_override("v_separation", 4)
 	var ks := ["dspd", "dsta"] if sf == "ダ" else ["spd", "sta"]
 	for k in ks + ["guts", "mind", "slope"]:
-		_cell(grid, String(HSHorse.STAT_SHORT[k]), UiTheme.stat_chip(float(c[k]), "stat"))
+		_cell(grid, HSText.short(String(HSHorse.STAT_SHORT[k])), UiTheme.stat_chip(float(c[k]), "stat"))
 	_cell(grid, "切れ", UiTheme.stat_chip(float(HSU.or_(hh.get("kire"), 4.0)), "kire"))
 	# 道悪もほかの能力と同じ並び・同じ札（持ち主「道悪だけ下にあるの気持ち悪い」）。得手不得手の一言を隣に
 	var heavy := float(HSU.or_(hh.apt.get("heavy") if hh.get("apt") is Dictionary else null, 50.0))
@@ -562,7 +563,7 @@ func _fill_stats(i: int) -> void:
 	kv.add_child(UiTheme.label("距離", 13, UiTheme.MUTED))
 	kv.add_child(UiTheme.label("%s〜%sm" % [HSU.num(dmin), HSU.num(dmax)], 14, UiTheme.GOOD if fit else UiTheme.WARN))
 	kv.add_child(UiTheme.label("　脚質", 13, UiTheme.MUTED))
-	kv.add_child(UiTheme.label(HSHorse.style_text(hh), 14, UiTheme.IVORY))
+	kv.add_child(UiTheme.label(HSText.style_text(hh), 14, UiTheme.IVORY))
 	card_stats.add_child(kv)
 	# 特殊能力（持ち主「性質　発動ってなに　スキルのことなら意味不明なので改善して」）：
 	# パッシブ＝いつも効く馬の性質（弱みは赤）／スキル＝レース中の場面で発動する。名前の札の横に効き目を1行（小さい字）
@@ -582,17 +583,17 @@ func _fill_stats(i: int) -> void:
 			ln.add_theme_constant_override("separation", 8)
 			var bad := HSSkills.is_bad(String(id))
 			var fg := UiTheme.BAD if bad else (UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY)
-			var ch := UiTheme.chip(HSSkills.label(String(id)), UiTheme.SURFACE_3, fg, 12)
+			var ch := UiTheme.chip(HSText.skill_label(String(id)), UiTheme.SURFACE_3, fg, 12)
 			ch.custom_minimum_size.x = 112
 			ln.add_child(ch)
-			var nt := UiTheme.label(HSSkills.note(String(id)), 11, UiTheme.MUTED)
+			var nt := UiTheme.label(HSText.skill_note(String(id)), 11, UiTheme.MUTED)
 			nt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			nt.clip_text = true
 			nt.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 			ln.add_child(nt)
 			card_stats.add_child(ln)
 		if list.size() > 4:
-			card_stats.add_child(UiTheme.label("ほか%d" % (list.size() - 4), 11, UiTheme.FAINT))
+			card_stats.add_child(UiTheme.label(HSText.t("ほか%d") % (list.size() - 4), 11, UiTheme.FAINT))
 
 func _cell(grid: GridContainer, name: String, chip: Control) -> void:
 	var l := UiTheme.label(name, 12, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_RIGHT)

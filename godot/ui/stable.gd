@@ -36,7 +36,7 @@ func on_tab(d: int) -> void:
 
 func build() -> void:
 	backdrop("bg_home", 0.84)
-	make_band("厩", "厩舎", "お手馬と牧場の馬", [["お手馬", "%d/%d" % [HSSeason.own_count(), int(HSSeason.MAX_OWN)], "" if HSSeason.can_buy() else "warn"], ["毎月の費用", HSU.money(HSWorld.monthly_cost())], ["資金", UiFlow.money_label(), "money"]])
+	make_band("厩", "厩舎", "お手馬と牧場の馬", [["お手馬", "%d/%d" % [HSSeason.own_count(), int(HSSeason.MAX_OWN)], "" if HSSeason.can_buy() else "warn"], ["毎月の費用", HSText.money(HSWorld.monthly_cost())], ["資金", UiFlow.money_label(), "money"]])
 	top_box = VBoxContainer.new()
 	top_box.position = Vector2(PAD_X, TOP + 4)
 	top_box.custom_minimum_size = Vector2(1060, 0)
@@ -73,7 +73,7 @@ func _fill() -> void:
 	rows.clear()
 	horses = _horses()
 	var n0 := (HSWorld.mine("stable") + HSWorld.mine("farm")).size()
-	top_box.add_child(UiTheme.tabs(["お手馬 %d" % n0, "牧場 %d" % HSWorld.mine("retired").size()], tab, pad, func(k): tab = k; sel = 0; _fill()))
+	top_box.add_child(UiTheme.tabs([HSText.t("お手馬 %d") % n0, HSText.t("牧場 %d") % HSWorld.mine("retired").size()], tab, pad, func(k): tab = k; sel = 0; _fill()))
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
 	var cols: Array = COLS if tab == 0 else [["馬名", 0], ["性", 40], ["戦績", 120], ["芝", 50], ["ダ", 50], ["親のボーナス", 130]]
@@ -97,7 +97,7 @@ func _fill() -> void:
 		var nm := HBoxContainer.new()
 		nm.add_theme_constant_override("separation", 8)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var nl := UiTheme.label(String(h.name), 16)
+		var nl := UiTheme.label(HSText.horse_name(h), 16)
 		nl.clip_text = true
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nm.add_child(nl)
@@ -106,7 +106,7 @@ func _fill() -> void:
 		hb.add_child(nm)
 		var fh := HSSeason.fh_both(h, wi) if tab == 0 else HSSeason.fh_peak(h)
 		if tab == 0:
-			var sa := UiTheme.num_label("%s%d" % ["セ" if h.get("gelding") else h.sex, int(G.year - float(h.born))], 15)
+			var sa := UiTheme.num_label(HSText.sex_age(h, int(G.year - float(h.born))), 15)
 			sa.custom_minimum_size.x = 52
 			hb.add_child(sa)
 			var rv := VBoxContainer.new()
@@ -118,14 +118,14 @@ func _fill() -> void:
 			hb.add_child(rv)
 			# 疲労の段階（HSFatigue。万全・軽い疲れ・疲れ・疲れが濃い・使いすぎ）。入厩前の馬は「入厩前」
 			var fv := HSFatigue.view(h)
-			var fl := UiTheme.label(String(fv.label) if h.loc == "stable" else "入厩前", 13, Color(String(fv.color)) if h.loc == "stable" else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
+			var fl := UiTheme.label(HSText.t(String(fv.label) if h.loc == "stable" else "入厩前"), 13, Color(String(fv.color)) if h.loc == "stable" else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_CENTER)
 			fl.custom_minimum_size.x = 112
 			hb.add_child(fl)
 		else:
-			var sx := UiTheme.label(String(h.sex), 15, UiTheme.IVORY, HORIZONTAL_ALIGNMENT_CENTER)
+			var sx := UiTheme.label(HSText.t(String(h.sex)) if not HSText.is_en() else HSText.sex_short({"sex": h.sex}), 15, UiTheme.IVORY, HORIZONTAL_ALIGNMENT_CENTER)
 			sx.custom_minimum_size.x = 40
 			hb.add_child(sx)
-			var rc := UiTheme.num_label("%d戦%d勝" % [int(HSU.or_(h.get("starts"), 0.0)), int(HSU.or_(h.get("wins"), 0.0))], 14, UiTheme.MUTED)
+			var rc := UiTheme.num_label(HSText.t("%d戦%d勝") % [int(HSU.or_(h.get("starts"), 0.0)), int(HSU.or_(h.get("wins"), 0.0))], 14, UiTheme.MUTED)
 			rc.custom_minimum_size.x = 120
 			hb.add_child(rc)
 		for k in ["turf", "dirt"]:
@@ -192,12 +192,12 @@ func _preview(i: int) -> void:
 		pv.add_child(portrait)
 	portrait.visible = true
 	portrait.set_horse(String(h.name), String(HSU.or_(h.get("coat"), "鹿毛")), G.year - float(h.born))
-	var t := UiTheme.title(String(h.name), 22)
+	var t := UiTheme.title(HSText.horse_name(h), 22)
 	t.clip_text = true
 	pv.add_child(t)
-	var sub := "%s%d・%s" % ["セ" if h.get("gelding") else h.sex, int(G.year - float(h.born)), HSU.or_(h.get("coat"), "")]
-	if h.get("sire") and h.sire != "?": sub += "・父 %s" % h.sire
-	if h.get("dam") and h.dam != "?": sub += "・母 %s" % h.dam
+	var sub := HSText.t("%s・%s") % [HSText.sex_age(h, int(G.year - float(h.born))), HSText.t(String(HSU.or_(h.get("coat"), "")))]
+	if h.get("sire") and h.sire != "?": sub += HSText.t("・父 %s") % HSText.horse_name(String(h.sire))
+	if h.get("dam") and h.dam != "?": sub += HSText.t("・母 %s") % HSText.horse_name(String(h.dam))
 	var sl := UiTheme.label(sub, 13, UiTheme.MUTED)
 	sl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sl.custom_minimum_size.x = 100
@@ -221,12 +221,16 @@ func _preview(i: int) -> void:
 	grid.add_theme_constant_override("v_separation", 6)
 	var c := HSHorse.cur(h, wi)
 	for k in ["spd", "sta", "dspd", "dsta", "guts", "mind", "slope"]:
-		grid.add_child(_cell(HSHorse.STAT_SHORT[k], float(c[k])))
+		grid.add_child(_cell(HSText.short(HSHorse.STAT_SHORT[k]), float(c[k])))
 	grid.add_child(_cell("切れ", float(HSU.or_(h.get("kire"), 4.0)), "kire"))
 	pv.add_child(grid)
 	pv.add_child(_kv("距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]))
-	pv.add_child(_kv("脚質・成長", "%s・%s" % [HSHorse.style_text(h), HSU.or_(h.get("growth"), "")]))
-	pv.add_child(_kv("戦績", "%s・獲得 %s" % [UiHorseScreen.record_text(h), HSU.money(float(HSU.or_(h.get("earn"), 0.0)))]))
+	if HSText.is_en():   # 英語は長いので2行に分ける
+		pv.add_child(_kv("脚質", HSText.style_text(h)))
+		pv.add_child(_kv("成長型", HSText.t(String(HSU.or_(h.get("growth"), "")))))
+	else:
+		pv.add_child(_kv("脚質・成長", "%s・%s" % [HSHorse.style_text(h), String(HSU.or_(h.get("growth"), ""))]))
+	pv.add_child(_kv("戦績", HSText.t("%s・獲得 %s") % [UiHorseScreen.record_text(h), HSText.money(float(HSU.or_(h.get("earn"), 0.0)))]))
 	var rt = HSRating.of(h)
 	var rh := HBoxContainer.new()
 	rh.add_child(UiTheme.label("レーティング", 13, UiTheme.MUTED))
@@ -242,19 +246,19 @@ func _preview(i: int) -> void:
 		fl.add_theme_constant_override("h_separation", 6)
 		fl.add_theme_constant_override("v_separation", 6)
 		for id in sk.slice(0, 8):
-			fl.add_child(UiTheme.chip(HSSkills.label(String(id)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY, 12))
+			fl.add_child(UiTheme.chip(HSText.skill_label(String(id)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY, 12))
 		pv.add_child(fl)
 	var tro := HSHall.trophies_of(h)
 	var tit: Array = HSU.or_(h.get("titles"), [])
 	if tro.size() or tit.size():
 		var tl := HFlowContainer.new()
 		tl.add_theme_constant_override("h_separation", 6)
-		for x in tro: tl.add_child(UiTheme.chip("🏆 " + String(x.label), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 12))
-		for x in tit: tl.add_child(UiTheme.chip("冠 " + String(x), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 12))
+		for x in tro: tl.add_child(UiTheme.chip("🏆 " + HSText.tx(String(x.label)), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 12))
+		for x in tit: tl.add_child(UiTheme.chip(HSText.t("冠 %s") % HSText.tx(String(x)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 12))
 		pv.add_child(tl)
 	var gw: Array = HSU.or_(h.get("gradedWins"), [])
 	for g in gw.slice(maxi(0, gw.size() - 3)):
-		pv.add_child(UiTheme.label("%s %s" % [String(HSU.or_(g.get("grade"), "")), HSU.or_(g.get("short"), g.race)], 13, UiTheme.MUTED))
+		pv.add_child(UiTheme.label("%s %s" % [String(HSU.or_(g.get("grade"), "")), HSText.race_name(String(HSU.or_(g.get("short"), g.race)))], 13, UiTheme.MUTED))
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pv.add_child(sp)
@@ -266,7 +270,7 @@ func _preview(i: int) -> void:
 		var br := UiScreen.danger_button("放す", 110, 46, 16)
 		br.focus_mode = Control.FOCUS_NONE
 		br.set_meta("pad", "X")
-		br.pressed.connect(func(): confirm("%sを牧場から放しますか？（親にできなくなります）" % h.name, "放す", func(): _release(id)))
+		br.pressed.connect(func(): confirm(HSText.t("%sを牧場から放しますか？（親にできなくなります）") % HSText.horse_name(h), "放す", func(): _release(id)))
 		bh.add_child(br)
 		var bb := UiScreen.button("仔を作る", true, 170, 50, 20)
 		bb.focus_mode = Control.FOCUS_NONE
@@ -280,7 +284,7 @@ func _preview(i: int) -> void:
 		br.set_meta("pad", "X")
 		br.pressed.connect(func(): retire_flow(id, _retired))
 		bh.add_child(br)
-		var bp := UiScreen.button("番組表", false, 120, 46, 16)
+		var bp := UiScreen.button(HSText.short("番組表"), false, 120, 46, 16)
 		bp.focus_mode = Control.FOCUS_NONE
 		bp.set_meta("pad", "Y")
 		bp.pressed.connect(func(): _program(i))
@@ -301,7 +305,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 		var h: Dictionary = horses[clampi(sel, 0, horses.size() - 1)]
 		var id: String = h.id
 		if h.loc == "retired":
-			confirm("%sを牧場から放しますか？（親にできなくなります）" % h.name, "放す", func(): _release(id))
+			confirm(HSText.t("%sを牧場から放しますか？（親にできなくなります）") % HSText.horse_name(h), "放す", func(): _release(id))
 		else:
 			retire_flow(id, _retired)
 		get_viewport().set_input_as_handled()
@@ -310,16 +314,16 @@ func _unhandled_input(ev: InputEvent) -> void:
 
 func _retired(r: Dictionary) -> void:
 	if r.has("err"):
-		toast(String(r.err), "bad")
+		toast(HSText.tx(String(r.err)), "bad")
 		return
 	UiFlow.save()
-	toast("引退させた（%s%s）" % ["牧場に残った" if r.get("to") == "retired" else "おつかれさま", "・殿堂入り" if r.get("hall") else ""], "good")
+	toast(HSText.t("引退させた（%s%s）") % [HSText.t("牧場に残った" if r.get("to") == "retired" else "おつかれさま"), HSText.t("・殿堂入り" if r.get("hall") else "")], "good")
 	_fill()
 
 func _release(id: String) -> void:
 	var err = HSOriginal.release(id)
 	if err:
-		toast(String(err), "bad")
+		toast(HSText.tx(String(err)), "bad")
 		return
 	UiFlow.save()
 	toast("牧場から放した", "good")
@@ -336,7 +340,10 @@ func _kv(k: String, v: String) -> HBoxContainer:
 	var hb := HBoxContainer.new()
 	hb.add_child(UiTheme.label(k, 13, UiTheme.MUTED))
 	hb.add_child(UiScreen.spacer())
-	var l := UiTheme.label(v, 14)
+	var l := UiTheme.label(v, 14, UiTheme.IVORY, HORIZONTAL_ALIGNMENT_RIGHT)
+	l.clip_text = true   # 英語で長い値でも札を広げない
+	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hb.add_child(l)
 	return hb
 

@@ -34,7 +34,7 @@ func panel_style(bg: Color, border: Color, radius := 10, bw := 2) -> StyleBoxFla
 
 func mk_label(text: String, size: int, col: Color, outline := 0) -> Label:
 	var l := Label.new()
-	l.text = text
+	l.text = HSText.auto(text)
 	l.add_theme_font_override("font", font)
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", col)
@@ -55,9 +55,9 @@ func setup(f: Font, r: Dictionary, horses: Array) -> void:
 	var v := VBoxContainer.new()
 	tl.add_child(v)
 	var grade := String(r.race.grade)
-	title = mk_label("%s  %s" % [r.race.name, grade], 34, Color(1.0, 0.83, 0.3))
+	title = mk_label("%s  %s" % [HSText.race_name(r.race), grade], 34, Color(1.0, 0.83, 0.3))
 	v.add_child(title)
-	var sub := mk_label("%s %s%dm  %s" % [r.race.course, r.race.surface, int(r.race.dist), r.race.ground], 20, Color(0.8, 0.85, 0.92))
+	var sub := mk_label("%s  %s" % [HSText.course_dist(r.race), HSText.t(String(r.race.ground))], 20, Color(0.8, 0.85, 0.92))
 	v.add_child(sub)
 	var h := HBoxContainer.new()
 	v.add_child(h)
@@ -162,7 +162,7 @@ func update(T: float, P: Array, horses: Array, telop_text: String, telop_t: floa
 		return a[0] > b[0])
 	var lead: float = order[0][0]
 	var rem := maxi(0, int(ceil(D - lead)))
-	remain.text = "発走前" if T <= 0.0 else ("残り %dm" % rem if rem > 0 else "ゴール")
+	remain.text = HSText.t("発走前") if T <= 0.0 else (HSText.t("残り %dm") % rem if rem > 0 else HSText.t("ゴール"))
 	clock.text = fmt_time(minf(T, winT)) if T > 0.0 else ""
 	for k in 8:
 		var info: Dictionary = horses[order[k][1]].info
@@ -170,12 +170,12 @@ func update(T: float, P: Array, horses: Array, telop_text: String, telop_t: floa
 		(row[3] as StyleBoxFlat).bg_color = Color.html(String(info.cap))
 		(row[1] as Label).text = str(int(info.num))
 		(row[1] as Label).add_theme_color_override("font_color", Color.html(String(info.capText)))
-		var nm := String(info.name)
-		(row[2] as Label).text = nm if nm.length() <= 9 else nm.substr(0, 9) + "…"
+		var nm := HSText.horse_name(String(info.name))
+		(row[2] as Label).text = nm if nm.length() <= (16 if HSText.is_en() else 9) else nm.substr(0, 16 if HSText.is_en() else 9) + "…"
 		(row[2] as Label).add_theme_color_override("font_color", Color(1.0, 0.85, 0.35) if horses[order[k][1]].mine else Color.WHITE)
 	telop_panel.visible = telop_text != "" and T - telop_t < 7.0
-	telop.text = telop_text
+	telop.text = HSText.tx(telop_text)
 	board.visible = T > winT + 0.4
 	board.modulate.a = clampf((T - winT - 0.4) / 0.5, 0.0, 1.0)
-	board_head.text = "確 定" if T > winT + 2.5 else "審 議 中"
-	cam_label.text = cam_name
+	board_head.text = HSText.t("確 定") if T > winT + 2.5 else HSText.t("審 議 中")
+	cam_label.text = HSText.auto(cam_name)
