@@ -36,7 +36,7 @@ module.exports = function (check, assert, HS) {
     // 数の列の往復
     const q = [0, 5, -3, 1000, 40000, 39990, -7, 0, 0, 123456];
     for (const o of [1, 2]) assert(JSON.stringify(RP.unpack(RP.pack(q, o), o)) === JSON.stringify(q), `数の列が戻らない（${o}）`);
-    W.newGame({ seed: 92, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+    W.newGame({ seed: 93, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
     let r = null;
     for (let i = 0; i < 60 && !r; i++) { const rep = W.finishWeek({}); r = rep.races.find(x => x.sim.frames && x.race.dist >= 2000); }
     assert(r, 'コマのあるレースが無い');

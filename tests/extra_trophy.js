@@ -177,7 +177,7 @@ module.exports = function (check, assert, HS) {
       }
     }
     assert(SP.members(SP.BY['t:uk3']).some(d => d.name === 'バーラム'), '英国三冠にバーラムがいない');
-    const G = newGame(64);
+    const G = newGame(65);
     G.player.money = 1e9;
     const kk = R.gradedYear(G.year).find(r => r.short === '菊花賞');
     const h = W.all().find(x => x.hist && x.sex !== '牝' && !x.gelding && G.year - x.born === 3 && x.loc === 'stable' && !x.injury);
@@ -409,7 +409,7 @@ module.exports = function (check, assert, HS) {
     assert(SP.members(SP.BY['t:hk3']).some(d => d.name === 'ロマンチックウォリアー') && SP.members(SP.BY['t:hksp']).some(d => d.name === 'サイレントウィットネス'), '香港の名馬がいない');
     // ほかのトロフィー・グループに1989年からの馬は入らない
     assert(SP.list().every(x => !E.isPool(x.d) || (x.groups.length === 1 && ['t:hk3', 't:hksp'].includes(x.groups[0]))), '1989年からの馬が香港の三冠のほかにいる');
-    const G = newGame(67);
+    const G = newGame(68);
     G.player.money = 1e9;
     const m = cal();
     const h = myHorse(G, '牡');
