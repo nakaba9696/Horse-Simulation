@@ -99,6 +99,34 @@ for k in range(10):
 for k in range(10):
     P[f"ilona{51 + k:02d}"] = ("f", "1girl, adult, young woman, 25 years old, (upper body:1.3), (portrait:1.2), (dark chestnut brown hair:1.4), (reddish brown hair:1.2), long hair, (pale amber eyes:1.4), (white blouse:1.3), (dark green long dress:1.5), (black cape over shoulders:1.4), small cat brooch on collar, no other accessories, calm gentle smile, elegant, " + HS[k],
                                ", (child:1.5), (loli:1.5), (cleavage:1.5), (animal ears:1.6), (tail:1.5), (horse:1.4), (black hair:1.2), (flower wreath:1.5), (flowers:1.4), (hat:1.3), (necklace:1.2), (earrings:1.2), (green hair:1.6), (black hair:1.4), (cat on shoulder:1.8), (kitten:1.7), (animal:1.5), (mask:1.7), (cat ears:1.7), (headgear:1.5), (gem:1.3), (olive:1.5), (khaki:1.4), (tiara:1.4), (multiple views:1.6), (full body:1.4), (wind:1.3)" + NEGI)
+# 2026-10-22 4 回目：千石はスマホなし。イロナは 37 を軸に 20 案（61〜80。花輪なし）
+P["sengoku"] = (P["sengoku"][0], P["sengoku"][1].replace("holding a smartphone, ", "hands in pockets, "), P["sengoku"][2] + ", (phone:1.7), (smartphone:1.7), (cellphone:1.6), (holding phone:1.7)")
+I37 = "1girl, adult, young woman, 25 years old, (elegant hungarian noble lady:1.3), (dark chestnut brown long hair:1.5), (reddish brown hair:1.2), (thin braids:1.2), (gold laurel hair ornament:1.3), amber eyes, (relaxed slightly sleepy expression:1.3), half-closed eyes, refined, graceful"
+V37 = [
+ "(white blouse with deep green jabot:1.4), (gold brooch with amber stone:1.3), deep green dress with gold embroidery",
+ "(white riding jacket:1.3), deep green cravat, gold laurel brooch, white gloves",
+ "(deep green velvet cape:1.3), white high-collar blouse, gold chain clasp",
+ "(black and deep green victorian dress:1.3), white lace collar, gold laurel pin",
+ "(cream and gold hussar-style jacket:1.3), deep green sash, gold braid",
+ "(white dress with green hungarian embroidery on sleeves:1.4), gold belt, amber pendant",
+ "(dark green tailcoat:1.3), white ruffled shirt, gold buttons, pocket watch",
+ "(white and green racing silks inspired jacket:1.3), gold laurel badge, riding gloves",
+ "(burgundy and gold gown:1.2), white jabot, gold laurel brooch",
+ "(navy and gold travel coat:1.3), white blouse, green scarf, small leather bag strap",
+ "(green and white striped vest:1.2), white puffy sleeves, gold buttons, embroidered collar",
+ "(off-white lace dress:1.3), deep green ribbon, gold laurel tiara-like hair ornament",
+ "(dark green corset vest:1.3), white blouse, gold chain necklace with horseshoe",
+ "(white military dress uniform:1.3), green epaulettes, gold aiguillette, laurel insignia",
+ "(deep green hooded cloak open at front:1.3), white blouse, amber brooch",
+ "(gold and white embroidered bolero:1.3), green long dress, amber earrings",
+ "(chestnut brown riding habit:1.3), white cravat, gold laurel brooch",
+ "(white and green hungarian folk dress, simple and elegant:1.3), gold hair pins",
+ "(black velvet jacket with gold laurel embroidery:1.3), white jabot, green gem brooch",
+ "(sleepy noble at tea:1.2), white blouse, deep green shawl, holding a teacup",
+]
+for k, v in enumerate(V37):
+    P[f"ilona{61 + k:02d}"] = ("f", I37 + ", " + v + ", " + HS[k % len(HS)],
+                               ", (child:1.5), (loli:1.5), (cleavage:1.5), (animal ears:1.6), (tail:1.5), (horse:1.4), (black hair:1.3), (flower wreath:1.6), (flowers in hair:1.5), (cat:1.4), (orange hair:1.7), (green hair:1.7), (blonde hair:1.5)" + NEGI)
 who_list, seeds = sys.argv[1].split(","), [int(s) for s in sys.argv[2].split(",")]
 out = sys.argv[3] if len(sys.argv) > 3 else "."
 os.makedirs(out, exist_ok=True)
