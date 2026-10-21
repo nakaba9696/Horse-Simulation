@@ -22,6 +22,24 @@ P = {
  "ilona": ("f", "1girl, adult, young woman, 25 years old, fair skin, (auburn hair:1.3), reddish chestnut hair, (very long wavy hair:1.3), (flower wreath on head:1.3), white pink and yellow flowers, deep green eyes, soft eyes, (black hooded traveling cloak:1.3), open cloak, (cream stand-up collar blouse:1.2), thin gold necklace, holding an old envelope, crimson and pale pink accents, mysterious, gentle smile",
            ", (child:1.5), (loli:1.5), (cleavage:1.5), (hood up:1.3)"),
 }
+P2 = {
+ # 2026-10-21 持ち主の選び（1 回目）を受けて作り直す。男も style.json だけで作る（g = "f2"＝女の設定、1boy を明記）
+ "hinata": ("f", "1girl, adult, mature female, 26 years old, (large breasts:1.3), curvy, fair skin, (chestnut brown hair:1.4), (brown hair:1.3), long hair, (single braid over shoulder:1.3), (wheat ear hair ornament:1.3), hazel eyes, gentle eyes, (green apron:1.3), white collared long-sleeved dress, buttoned up, modest farm work clothes, holding a wicker basket, yellow ribbon, warm big-sister smile, countryside",
+            ", (child:1.5), (loli:1.5), (animal ears:1.5), (cleavage:1.6), (bare shoulders:1.4), (open clothes:1.4), (unbuttoned:1.4), (revealing clothes:1.5), (black hair:1.5), (dark hair:1.4), (animal ears:1.6), (horse ears:1.6), (cow ears:1.6), (wheat field:1.5), outdoors, landscape"),
+ "sengoku": ("f2", "1boy, male focus, (mature male:1.4), (adult man:1.3), 30 years old, (sharp jawline:1.3), adam's apple, short sideburns, handsome, slim, tall, black hair, short messy hair, sharp eyes, amber eyes, (smug:1.2), (businessman:1.2), white shirt, rolled-up sleeves, open collar, no necktie, (dark grey vest:1.3), holding a smartphone, sky blue accents, (confident smirk:1.3), slightly arrogant",
+             ", (child:1.6), (shota:1.6), (1girl:1.5), (female:1.4), (breasts:1.4), (glasses:1.3), (beard:1.3), (muscular:1.3), (androgynous:1.5), (feminine:1.4), (boy:1.4), (young:1.3), (long eyelashes:1.3)"),
+ "takenouchi": ("f2", "1boy, male focus, (old man:1.4), (elderly:1.3), 68 years old, (wrinkles:1.3), grey hair, neatly combed back hair, (grey mustache:1.2), (narrowed eyes:1.2), gentle eyes, dignified old gentleman, (dark green three-piece suit:1.3), white shirt, dark tie, (pocket watch chain:1.2), holding a walking cane, quiet, calm determined smile",
+                ", (child:1.6), (young:1.4), (1girl:1.5), (female:1.4), (breasts:1.4), (kimono:1.3), (glasses:1.2)"),
+ "marie": ("f", "1girl, (mature female:1.6), (beautiful older woman:1.4), 33 years old, (mature face:1.4), (eyeshadow:1.2), (mole under eye:1.1), tall, (long face:1.1), (cheerful:1.3), energetic, glamorous, fair skin, (wavy golden blonde hair:1.2), medium hair, purple eyes, (sunglasses on head:1.3), (red lipstick:1.3), (white jacket over purple blouse:1.3), (gold necklace:1.2), gold bracelets, (amethyst ring:1.2), driving gloves, scarf, big laugh, wink",
+           ", (child:1.5), (loli:1.5), (cleavage:1.5), (large breasts:1.4), car, vehicle, (young:1.4), (teenage:1.4), (petite:1.3)"),
+ "ilona_a": ("f", "1girl, adult, young woman, 25 years old, (chestnut hair:1.3), long straight hair, (flower wreath on head:1.3), white pink and yellow flowers, amber eyes, (hungarian folk embroidery dress:1.3), red and green embroidery, white puffy sleeves, red vest, (horseshoe pendant:1.2), gentle smile",
+             ", (child:1.5), (loli:1.5), (cleavage:1.5)"),
+ "ilona_b": ("f", "1girl, adult, young woman, 25 years old, (reddish chestnut hair:1.5), (long ponytail:1.3), (flower wreath on head:1.3), white pink and yellow flowers, brown eyes, (equestrian outfit:1.3), (plain brown tailcoat riding jacket:1.4), (no logo:1.3), white cravat, white breeches, riding gloves, holding a riding crop, proud smile",
+             ", (child:1.5), (loli:1.5), (cleavage:1.5), (animal ears:1.7), (horse ears:1.7), (tail:1.6), (horse tail:1.6), (cap:1.4), (helmet:1.4), track jacket, (jockey silks:1.4), (logo:1.5), (text:1.6), pink, (green hair:1.6), (black hair:1.4)"),
+ "ilona_c": ("f", "1girl, adult, young woman, 25 years old, (reddish chestnut hair:1.3), very long wavy hair, (flower wreath on head:1.3), white pink and yellow flowers, deep green eyes, (19th century victorian dress:1.3), dark crimson dress, high collar, lace, (cameo brooch with a horse:1.2), (gold laurel ornament:1.1), elegant, mysterious gentle smile",
+             ", (child:1.5), (loli:1.5), (cleavage:1.5)"),
+}
+P.update(P2)
 who_list, seeds = sys.argv[1].split(","), [int(s) for s in sys.argv[2].split(",")]
 out = sys.argv[3] if len(sys.argv) > 3 else "."
 os.makedirs(out, exist_ok=True)
@@ -29,6 +47,7 @@ for who in who_list:
     g, body, negx = P[who]
     S = SM if g == "m" else SF
     neg = S["negative"] + negx + ", (text:1.5), (japanese text:1.5), (calligraphy:1.4), (sign:1.3), (multiple people:1.5), (2girls:1.4), (bubble tea:1.5), (drink:1.3), building, scenery"
+    if who == "hinata" or g == "f2": neg = neg.replace(", breasts,", ",")
     if who == "lucy": neg = neg.replace("child,", "").replace("loli,", "")
     pos = ", ".join([S["prefix"], body, POST])
     for sd in seeds:
