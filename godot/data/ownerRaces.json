@@ -1,10 +1,10 @@
 [
-{"name":"ヒヤシンスステークス","cls":"OP","listed":true,"region":"JRA","course":"東京","surface":"ダ","dist":1600,"month":2,"week":3,"age":"3","weight":"別定"},
-{"name":"京洛ステークス","cls":"OP","listed":false,"region":"JRA","course":"京都","surface":"芝","dist":1200,"month":11,"week":1,"age":"3+","weight":"ハンデ"},
-{"name":"若駒ステークス","cls":"OP","listed":true,"region":"JRA","course":"京都","surface":"芝","dist":2000,"month":1,"week":4,"age":"3","weight":"馬齢"},
-{"name":"万葉ステークス","cls":"OP","listed":false,"region":"JRA","course":"京都","surface":"芝","dist":3000,"month":1,"week":1,"age":"4+","weight":"ハンデ"},
-{"name":"エルフィンステークス","cls":"OP","listed":true,"region":"JRA","course":"京都","surface":"芝","dist":1600,"month":2,"week":2,"age":"3","sex":"牝","weight":"馬齢"},
-{"name":"アイビーステークス","cls":"OP","listed":true,"region":"JRA","course":"東京","surface":"芝","dist":1800,"month":10,"week":4,"age":"2","weight":"馬齢"},
-{"name":"カトレアステークス","cls":"OP","listed":false,"region":"JRA","course":"東京","surface":"ダ","dist":1600,"month":11,"week":4,"age":"2","weight":"馬齢"},
-{"name":"リゲルステークス","cls":"OP","listed":true,"region":"JRA","course":"阪神","surface":"芝","dist":1600,"month":12,"week":3,"age":"3+","weight":"別定"}
+{"name":"ヒヤシンスステークス","cls":"OP","listed":true,"region":"JRA","course":"東京","surface":"ダ","dist":1600,"month":2,"week":3,"age":"3","weight":"別定","nameEn":"Hyacinth Stakes"},
+{"name":"京洛ステークス","cls":"OP","listed":false,"region":"JRA","course":"京都","surface":"芝","dist":1200,"month":11,"week":1,"age":"3+","weight":"ハンデ","nameEn":"Keiraku Stakes"},
+{"name":"若駒ステークス","cls":"OP","listed":true,"region":"JRA","course":"京都","surface":"芝","dist":2000,"month":1,"week":4,"age":"3","weight":"馬齢","nameEn":"Wakakoma Stakes"},
+{"name":"万葉ステークス","cls":"OP","listed":false,"region":"JRA","course":"京都","surface":"芝","dist":3000,"month":1,"week":1,"age":"4+","weight":"ハンデ","nameEn":"Manyo Stakes"},
+{"name":"エルフィンステークス","cls":"OP","listed":true,"region":"JRA","course":"京都","surface":"芝","dist":1600,"month":2,"week":2,"age":"3","sex":"牝","weight":"馬齢","nameEn":"Elfin Stakes"},
+{"name":"アイビーステークス","cls":"OP","listed":true,"region":"JRA","course":"東京","surface":"芝","dist":1800,"month":10,"week":4,"age":"2","weight":"馬齢","nameEn":"Ivy Stakes"},
+{"name":"カトレアステークス","cls":"OP","listed":false,"region":"JRA","course":"東京","surface":"ダ","dist":1600,"month":11,"week":4,"age":"2","weight":"馬齢","nameEn":"Cattleya Stakes"},
+{"name":"リゲルステークス","cls":"OP","listed":true,"region":"JRA","course":"阪神","surface":"芝","dist":1600,"month":12,"week":3,"age":"3+","weight":"別定","nameEn":"Rigel Stakes"}
 ]

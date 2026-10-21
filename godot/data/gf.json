@@ -1,8 +1,8 @@
 [
-{"id":"sprint","label":"短距離","course":"カラ","surface":"芝","dist":1200,"trophy":"GF スプリント覇者","votes":{"surface":"芝","min":0,"max":1400}},
-{"id":"mile","label":"マイル","course":"ニューマーケット","surface":"芝","dist":1600,"trophy":"GF マイル覇者","votes":{"surface":"芝","min":1401,"max":1800}},
-{"id":"distance","label":"中距離","course":"エプソム","surface":"芝","dist":2000,"trophy":"GF ディスタンス覇者","votes":{"surface":"芝","min":1801,"max":2200}},
-{"id":"classic","label":"クラシック","course":"ロンシャン","surface":"芝","dist":2400,"trophy":"GF クラシック覇者","votes":{"surface":"芝","min":2201,"max":2800}},
-{"id":"long","label":"長距離","course":"フレミントン","surface":"芝","dist":3200,"trophy":"GF ステイヤー覇者","votes":{"surface":"芝","min":2801,"max":9999}},
-{"id":"dirt","label":"ダート","course":"ベルモント","surface":"ダ","dist":2000,"trophy":"GF ダート覇者","votes":{"surface":"ダ"}}
+{"id":"sprint","nameEn":"Grand Festival Sprint","trophyEn":"GF Sprint Champion","label":"短距離","course":"カラ","surface":"芝","dist":1200,"trophy":"GF スプリント覇者","votes":{"surface":"芝","min":0,"max":1400}},
+{"id":"mile","nameEn":"Grand Festival Mile","trophyEn":"GF Mile Champion","label":"マイル","course":"ニューマーケット","surface":"芝","dist":1600,"trophy":"GF マイル覇者","votes":{"surface":"芝","min":1401,"max":1800}},
+{"id":"distance","nameEn":"Grand Festival Distance","trophyEn":"GF Distance Champion","label":"中距離","course":"エプソム","surface":"芝","dist":2000,"trophy":"GF ディスタンス覇者","votes":{"surface":"芝","min":1801,"max":2200}},
+{"id":"classic","nameEn":"Grand Festival Classic","trophyEn":"GF Classic Champion","label":"クラシック","course":"ロンシャン","surface":"芝","dist":2400,"trophy":"GF クラシック覇者","votes":{"surface":"芝","min":2201,"max":2800}},
+{"id":"long","nameEn":"Grand Festival Stayers","trophyEn":"GF Stayers Champion","label":"長距離","course":"フレミントン","surface":"芝","dist":3200,"trophy":"GF ステイヤー覇者","votes":{"surface":"芝","min":2801,"max":9999}},
+{"id":"dirt","nameEn":"Grand Festival Dirt","trophyEn":"GF Dirt Champion","label":"ダート","course":"ベルモント","surface":"ダ","dist":2000,"trophy":"GF ダート覇者","votes":{"surface":"ダ"}}
 ]

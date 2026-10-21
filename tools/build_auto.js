@@ -130,8 +130,9 @@ for (const { name, rows: rs } of byKey.values()) {
     name, born, sex, rating, surface, distMin: dMin, distMax: dMax, style, growth,
     retire: Math.min(born + 9, lastYear + (maxA <= 3 ? 1 : 0)), wins, auto: true,
   };
-  const en = rs.map(r => r.horseEn).find(Boolean);
-  if (en) e.nameEn = en;
+  // 英語の名前：記録の英語名 → 出典で確かめた表（data/names_en.js）→ カナのヘボン式（js/core/datafix.js の HS.romaji。決まりは docs/I18N_DATA.md）
+  const en = rs.map(r => r.horseEn).find(Boolean) || (D.namesEn || {})[name] || (D.namesEn || {})[name.replace(/（\d{4}）$/, '')];
+  if (en) e.nameEn = en; else { e.nameEn = HS.romaji(name); e.nameEnRule = true; }
   if (country && country !== '日') e.country = country;
   // 主戦騎手：一番多く勝たせた騎手。年ごとに違えばその年だけ
   const jm = mode(rs.map(r => r.jockey));
