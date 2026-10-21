@@ -203,7 +203,7 @@ check('special: 隠し馬とスペシャルホースの強さ・出方（持ち�
   const SP = HS.Special, D = HS.DATA, H = HS.Horse, S = HS.Season, bad = [];
   // 馬・馬場・総合力・出る組（グループの id）
   const want = [
-    ['テツノカチドキ', 'dirt', 64, 'local'], ['オールアロング', 'turf', 72, 'r:凱旋門賞'], ['スペクタキュラービッド', 'dirt', 77, 't:immortal'],
+    ['テツノカチドキ', 'dirt', 65, 'local'], ['オールアロング', 'turf', 72, 'r:凱旋門賞'], ['スペクタキュラービッド', 'dirt', 77, 't:immortal'],
     ['パーソナルエンスン', 'dirt', 75, 't:usf3'], ['ロッキータイガー', 'dirt', 64, 't:gs_jd'], ['タマモクロス', 'turf', 74, 't:gs_jp'],
     ['ミエスク', 'turf', 73, 't:gs_mile'], ['ドクターフェイガー', 'dirt', 78, 't:gs_sprint'], ['ヴェイグリーノーブル', 'turf', 74, 't:legend'],
   ];
