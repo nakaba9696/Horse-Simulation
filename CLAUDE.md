@@ -78,6 +78,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/core/listsort.js`・`js/core/program.js`・`js/ui/program.js` | 一覧の並べ替えと絞り込み（`HS.List`）／番組表（今週から1年先の重賞とオープン・出られるか・適性・出走と予約）と厩舎の一覧 | U |
 | `tests/` | 検証 | T |
 | `godot/core/`・`godot/data/`・`godot/tests/`・`tools/export_godot.js`・`tools/golden_race.js` | Godot 版の中身：データの書き出し・模擬（JS と同じ種で同じ結果）・一致テスト。[docs/GODOT.md](docs/GODOT.md) | C |
+| `godot/i18n/`・`data/names_en.js`・`data/races_en.js`・`docs/I18N.md`・`docs/I18N_DATA.md` | 日本語と英語（持ち主の決定 2026-10-21）。画面の文の表（キーは日本語の文。`HSText`・`HSTextEn`）・言語の設定・データの英語の名前（`nameEn`・`labelEn` など。出典で確かめた馬名は `data/names_en.js`、無い馬はヘボン式で作り `nameEnRule`）。表の抜けは `node tools/i18n_keys.js` | C |
 
 ## 決まり（どのゲームでも）
 - **設定・世界観・人物の性格をねじ曲げない。**
