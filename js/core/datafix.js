@@ -106,6 +106,11 @@
     if (p.record) h.record = p.record;
     if (p.mainWins) h.mainWins = p.mainWins.slice();
   }
+  // 名鑑の無い海外の馬の史実の主な勝鞍（data/main_wins_world.js。名鑑があればそちらが正）
+  for (const [n, w] of Object.entries(D.mainWinsWorld || {})) {
+    const h = byName.get(n); if (!h || h.mainWins) continue;
+    h.mainWins = w.ja.slice(); h.mainWinsEn = w.en.slice();
+  }
   for (const s of D.stallions || []) {
     const h = byName.get(s.name); if (!h) continue;
     if (s.kire == null && h.kire != null) s.kire = h.kire;
