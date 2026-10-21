@@ -92,7 +92,7 @@ static func save_info() -> Dictionary:
 	if not (g is Dictionary) or not g.get("jockey"):
 		return {}
 	var y := float(g.year) - float(HSU.or_(g.get("startYear"), g.year)) + 1.0
-	return {"name": String(g.jockey.name), "label": "%s年目 %s" % [HSU.num(y), HSWorld.week_label(g.month, g.week)], "money": float(g.player.money)}
+	return {"name": String(g.jockey.name), "label": HSText.t("%s年目 %s") % [HSU.num(y), HSText.week_label(g.month, g.week)], "money": float(g.player.money)}
 
 static func new_game(name: String, region: String, seed := -1.0) -> void:
 	if seed < 0.0:
@@ -118,7 +118,7 @@ static func demo(weeks := 0, seed := 7.0) -> void:
 	no_save = true
 	replay_dir = "user://demo_replays"   # 見本のリプレイは遊ぶときのものと混ぜない
 	HSHall.set_dir("")   # 見本の殿堂の記録は手元だけ（セーブの枠のファイルに触らない）
-	HSWorld.new_game({"mode": "jockey", "seed": seed, "jockeyName": "新人騎手", "region": "美浦"})
+	HSWorld.new_game({"mode": "jockey", "seed": seed, "jockeyName": HSText.t("新人騎手"), "region": "美浦"})
 	_reset_week()
 	# 見本は、はじめから全員と縁がある形にする（依頼の札・出走表・騎乗の場面を撮れるように。ふだんの遊びでは出会いの点がたまると縁ができる）。
 	# 最初の依頼は今週に届いたことにする（ふだんはミッションのレースの4週前に届く）
@@ -214,7 +214,7 @@ static func demo_fatigue() -> void:
 			x.horse.fatigue = vals[k % vals.size()]; k += 1
 	var mine := HSWorld.mine("stable")
 	if mine.size():
-		mine[0].at = "仏"; mine[0].lastRaceW = HSWorld.w_idx() - 1.0
+		mine[0].at = "仏"; mine[0].lastRaceW = HSWorld.w_idx() - 1.0  # i18n:skip
 
 static func demo_arg() -> int:
 	for a in OS.get_cmdline_user_args():
@@ -240,10 +240,15 @@ static func year_n() -> int:
 
 static func date_label() -> String:
 	var G = HSWorld.G
-	return "%d年目 %s" % [year_n(), HSWorld.week_label(G.month, G.week)]
+	return HSText.t("%d年目 %s") % [year_n(), HSText.week_label(G.month, G.week)]
+
+# 記録（リプレイの一覧）に残す日付：言語によらず日本語の形（「2年目 5月4週」）。画面には HSText.tx で出す
+static func date_key() -> String:
+	var G = HSWorld.G
+	return "%d年目 %s" % [year_n(), HSWorld.week_label(G.month, G.week)]  # i18n:skip（記録の鍵）
 
 static func money_label(v = null) -> String:
-	return HSU.money(float(HSWorld.G.player.money if v == null else v))
+	return HSText.money(float(HSWorld.G.player.money if v == null else v))
 
 # ---------- 週の流れ ----------
 # 「レースへ」：今週の騎乗の列を作る。乗るレースが無ければそのまま週を締める
@@ -414,7 +419,7 @@ static func save_replay(d: Dictionary, res: Dictionary) -> void:
 	while FileAccess.file_exists(replay_dir.path_join(id + ".json")):
 		id = "%s_%d" % [base_id, dup]
 		dup += 1
-	var rep := {"about": "ターフの系譜：リプレイ", "race": d.race, "track": d.track, "horses": horses, "me": d.me, "dt": REPLAY_DT,
+	var rep := {"about": "ターフの系譜：リプレイ", "race": d.race, "track": d.track, "horses": horses, "me": d.me, "dt": REPLAY_DT,  # i18n:skip
 		"frames": frames, "results": results, "winnerTime": float(res.winnerTime), "events": events, "whips": res.get("whips", []), "record": d.get("record")}
 	DirAccess.make_dir_recursive_absolute(replay_dir)
 	var f := FileAccess.open(replay_dir.path_join(id + ".json"), FileAccess.WRITE)
@@ -423,7 +428,7 @@ static func save_replay(d: Dictionary, res: Dictionary) -> void:
 	f.store_string(JSON.stringify(rep))
 	f.close()
 	var list := replay_list()
-	list.push_front({"id": id, "date": date_label(), "race": String(d.race.name), "grade": String(d.race.grade), "course": "%s %s%dm" % [d.race.course, d.race.surface, int(d.race.dist)],
+	list.push_front({"id": id, "date": date_key(), "race": String(d.race.name), "grade": String(d.race.grade), "course": "%s %s%dm" % [d.race.course, d.race.surface, int(d.race.dist)],
 		"horse": String(d.horses[d.me].name), "pos": me_pos, "fav": false})
 	while list.size() > REPLAY_MAX:
 		var drop := -1

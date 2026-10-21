@@ -248,7 +248,7 @@ func build_rails() -> void:
 # ---- ハロン棒・ゴール板 ----
 func label(text: String, size: int, col: Color, pos: Vector3, yaw: float, px := 0.01, outline := 0) -> Label3D:
 	var l := Label3D.new()
-	l.text = text
+	l.text = HSText.auto(text)
 	l.font = font
 	l.font_size = size
 	l.pixel_size = px

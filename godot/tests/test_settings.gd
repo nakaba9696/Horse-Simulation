@@ -78,15 +78,15 @@ func _screen(t) -> void:
 	await t.process_frame
 	var vp: Viewport = sc.get_viewport()
 	var cur: Control = vp.gui_get_focus_owner()
-	t.ok(cur != null and cur == sc.rows[0], "settings: 開くとカーソルが最初の行（画面の表示）")
-	# 十字↓で全体の音量の行へ、十字←で 80 → 70
-	for k in 2: _press(vp, "ui_down")
+	t.ok(cur != null and cur == sc.rows[0], "settings: 開くとカーソルが最初の行（言語）")
+	# 十字↓で全体の音量の行へ（言語・画面の表示・解像度の次）、十字←で 80 → 70
+	for k in 3: _press(vp, "ui_down")
 	await t.process_frame
-	t.ok(vp.gui_get_focus_owner() == sc.rows[2], "settings: 十字↓で行を選ぶ")
+	t.ok(vp.gui_get_focus_owner() == sc.rows[3], "settings: 十字↓で行を選ぶ")
 	_press(vp, "ui_left")
 	await t.process_frame
 	t.eq(int(UiSettings.cur.vol_master), 70, "settings: 十字←で音量が下がる")
-	t.eq(vp.gui_get_focus_owner(), sc.rows[2], "settings: 左右で値を替えてもカーソルは同じ行")
+	t.eq(vp.gui_get_focus_owner(), sc.rows[3], "settings: 左右で値を替えてもカーソルは同じ行")
 	# RB で割り当てのタブ → 最初の札（しごくのキー）から右へ（パッド）→ 決定で待つ → Y を押す
 	var rb := InputEventJoypadButton.new()
 	rb.button_index = JOY_BUTTON_RIGHT_SHOULDER; rb.pressed = true

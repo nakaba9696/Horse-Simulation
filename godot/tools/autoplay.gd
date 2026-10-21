@@ -1,5 +1,5 @@
 # 画面の流れを自動で遊ぶ（画面なしで動く）：新しいゲームから、週ごとにホーム → 出走表 → 決まった乗り方で乗る（UiFlow.bot_ride） → 週の結果 → 次の週、を本物の画面で進める
-#   godot --headless --path godot -s res://tools/autoplay.gd -- [--weeks=52] [--seed=1]
+#   godot --headless --path godot -s res://tools/autoplay.gd -- [--weeks=52] [--seed=1] [--lang=en]（英語で遊び、表に無い文を「i18n missing」で書き出す）
 # 初めに馬の店でいちばん安い馬を3頭買い、オーナーの依頼の馬には自分が乗る。12月の GF の招待は GF の画面で最初の馬を出す。
 # 見せ場・ご褒美の場面（小窓）は、遊ぶ人と同じくカーソルのあるボタンを押して閉じる。
 # 1つの画面に 20 秒（実時間）いても先へ進まなければ「止まった」とする。実行時の誤り（SCRIPT ERROR）の数も数える
@@ -173,6 +173,10 @@ func _tick() -> void:
 func _finish(ok: bool) -> void:
 	process_frame.disconnect(_tick)
 	var sec := (Time.get_ticks_msec() - t0) / 1000.0
+	if HSText.is_en():
+		# -- --lang=en：英語で遊んで、表に無かった文を書き出す（画面の文＝missing・決まりの組む文＝missing_tx。docs/I18N.md）
+		for k in HSText.missing: _say("i18n missing: " + JSON.stringify(k))
+		for k in HSText.missing_tx: _say("i18n missing_tx: " + JSON.stringify(k))
 	_say("autoplay: %s %d週（%.0f秒）・画面の数 %s" % ["ok" if ok else "NG", done_weeks, sec, JSON.stringify(counts)])
 	UiFlow.delete_save()   # セーブと、その枠の殿堂の記録
 	quit(0 if ok else 1)

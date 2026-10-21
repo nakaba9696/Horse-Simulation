@@ -46,7 +46,7 @@ func build() -> void:
 		b_cont.focus_mode = Control.FOCUS_NONE
 	menu.add_child(b_cont)
 	if not info.is_empty():
-		var il := UiTheme.label("%s　%s　資金 %s" % [info.name, info.label, HSU.money(info.money)], 17, UiTheme.GOLD_BRIGHT)
+		var il := UiTheme.label(HSText.t("%s　%s　資金 %s") % [info.name, info.label, HSText.money(info.money)], 17, UiTheme.GOLD_BRIGHT)
 		il.custom_minimum_size.x = 460
 		menu.add_child(il)
 	b_new = UiScreen.button("はじめから", info.is_empty(), 460, 64, 24)
@@ -95,8 +95,8 @@ func _build_new() -> void:
 	v.add_child(UiScreen.section("新しい騎手"))
 	v.add_child(UiTheme.label("名前", 13, UiTheme.MUTED))
 	name_edit = LineEdit.new()
-	name_edit.text = "新人騎手"
-	name_edit.max_length = 10
+	name_edit.text = HSText.t("新人騎手")
+	name_edit.max_length = 16 if HSText.is_en() else 10
 	name_edit.custom_minimum_size = Vector2(0, 44)
 	name_edit.add_theme_font_size_override("font_size", 20)
 	name_edit.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.SUNK, UiTheme.LINE_STRONG, 1, UiTheme.R_BUTTON, Vector4(14, 6, 14, 6)))
@@ -114,7 +114,8 @@ func _build_new() -> void:
 	seg.add_child(sg)
 	for r in ["美浦", "栗東"]:
 		var b := Button.new()
-		b.text = r
+		b.text = HSText.t(r)
+		b.set_meta("region", r)
 		b.custom_minimum_size = Vector2(110, 34)
 		b.add_theme_font_size_override("font_size", 16)
 		b.pressed.connect(func(): region = r; _seg_paint())
@@ -156,7 +157,7 @@ func _build_new() -> void:
 
 func _seg_paint() -> void:
 	for b in seg_btns:
-		if b.text == region:
+		if b.get_meta("region", "") == region:
 			UiTheme.gold_button(b)
 		else:
 			for k in ["normal", "hover", "focus", "pressed", "hover_pressed"]:
@@ -185,7 +186,7 @@ func _start() -> void:
 
 func _really_start() -> void:
 	var nm := name_edit.text.strip_edges()
-	UiFlow.new_game(nm if nm != "" else "新人騎手", region)
+	UiFlow.new_game(nm if nm != "" else HSText.t("新人騎手"), region)
 	go("home")
 
 func on_back() -> void:

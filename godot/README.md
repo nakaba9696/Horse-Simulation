@@ -87,8 +87,11 @@ sh godot/tools/run_scene.sh res://scenes/race.tscn -- --out=DIR --shot=秒:behin
 sh godot/tools/run_scene.sh res://scenes/race_card.tscn -- --out=DIR --shot=秒:名前[:選ぶ馬[:paddock]] --video=始め:終わり:fps:名前
 sh godot/tools/run_scene.sh res://scenes/horse_lab.tscn -- --out=DIR --cam=side|close|front|back|head --seq=枚数
 sh godot/tools/run_scene.sh res://scenes/home.tscn -- --demo=1 --out=DIR --shot=0.8:名前   # title・home・program・shop・week_result も同じ。race_card・race も --demo=1 で週のレース
+sh godot/tools/run_scene.sh res://scenes/home.tscn -- --demo=1 --lang=en --out=DIR --shot=0.8:名前   # 英語の画面で撮る（--lang=en|ja。docs/I18N.md）
 godot --headless --path godot -s res://tools/check_scripts.gd   # 画面のスクリプトがすべて読めるか
 godot --headless --path godot -s res://tools/autoplay.gd -- --weeks=52 --seed=1   # 本物の画面で1年を自動で遊ぶ（止まる所・実行時の誤りを探す。node tests/run.js は10週）
+godot --headless --path godot -s res://tools/autoplay.gd -- --weeks=60 --lang=en  # 英語で遊び、表に無い文を「i18n missing」で書き出す
+node tools/i18n_keys.js                                         # 画面の日本語の文で、英語の表（godot/i18n/text_en.gd）に無いもの
 node godot/tools/export_ui_assets.js                          # 画面の背景と馬主の顔をブラウザ版の素材から取り出す
 ```
 - 撮影の見本の追加：`--setup=retire`（牡馬と牝馬を1頭ずつ引退させてから開く）・`--setup=celebrate`（見せ場）・`--setup=scene`（馬主のご褒美の場面）・`--setup=replay`（騎乗の画面で、見本の週に残したリプレイを開く）

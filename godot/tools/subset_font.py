@@ -5,7 +5,7 @@
 import glob, os, subprocess, sys
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 chars = set()
-for pat in ['data/*.js', 'js/**/*.js', 'godot/ui/*.gd', 'godot/view/*.gd', 'docs/VISION.md', 'docs/UI.md']:
+for pat in ['data/*.js', 'js/**/*.js', 'godot/ui/*.gd', 'godot/view/*.gd', 'godot/i18n/*.gd', 'docs/VISION.md', 'docs/UI.md']:
     for f in glob.glob(os.path.join(ROOT, pat), recursive=True):
         with open(f, encoding='utf8') as fh:
             chars.update(fh.read())

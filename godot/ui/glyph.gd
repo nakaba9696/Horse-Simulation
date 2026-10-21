@@ -13,8 +13,8 @@ var _shown := -1   # 描いたときの入力（0 キーボード・1 パッド�
 
 static func make(k: String, p: String, font_size := 12) -> UiGlyph:
 	var g := UiGlyph.new()
-	g.key = k
-	g.padk = p
+	g.key = HSText.auto(k)
+	g.padk = HSText.auto(p)
 	g.fs = font_size
 	g.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	g.size_flags_vertical = Control.SIZE_SHRINK_CENTER

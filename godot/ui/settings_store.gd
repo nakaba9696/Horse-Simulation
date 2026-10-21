@@ -2,6 +2,8 @@
 # - 画面：ウィンドウかフルスクリーン・解像度（1280×720〜2560×1440）。ウィンドウではその大きさ、フルスクリーンでは 3D を描く細かさをその高さに合わせる
 # - 音量：全体（Master）・BGM・効果音（SE）を 0〜100。BGM と SE のバスが無ければ作る（音を鳴らす係はこのバスに流す）
 # - 振動：入り切り（ViewRideInput.level）
+# - 言語：日本語か英語（HSText.lang。docs/I18N.md）。ファイルに無ければ（初めての起動）OS の言語で決める（日本語なら日本語、ほかは英語）。
+#   撮影（--out=）と headless で言語の欄が無いときは日本語。-- --lang=en|ja で替えられる（英語の画面を撮るとき）
 # - 割り当て：騎乗の操作（しごく・引く・進路・ムチ・持ち替え・左右を見る・視点・一時停止）と、決める・もどる。1つの操作にキー1つとパッド1つ。
 #   既定の割り当て（view/ride_input.gd・ui/pad.gd・Godot の ui_*）のほかの手（スペースでしごく・P で一時停止・左スティックなど）は残し、
 #   同じ組（騎乗・画面）のほかの操作に割り当てた手とぶつかるものだけ外す
@@ -37,6 +39,7 @@ static func defaults() -> Dictionary:
 		"mode": "window", "res": Vector2i(1600, 1000),
 		"vol_master": 80, "vol_bgm": 80, "vol_se": 80,
 		"vibration": true,
+		"lang": first_lang(),
 		"keys": default_keys(), "pads": default_pads(),
 	}
 
@@ -71,6 +74,8 @@ static func load_file() -> void:
 	for k in ["vol_master", "vol_bgm", "vol_se"]:
 		cur[k] = clampi(int(cf.get_value("audio", k, cur[k])), 0, 100)
 	cur.vibration = bool(cf.get_value("input", "vibration", true))
+	var lg := String(cf.get_value("general", "lang", ""))
+	if lg in HSText.LANGS: cur.lang = lg
 	for a in default_keys():
 		var kk = cf.get_value("keys", a, 0) if cf.has_section_key("keys", a) else 0
 		if kk is int and kk > 0: cur.keys[a] = kk
@@ -85,13 +90,16 @@ static func save_file() -> bool:
 	for k in ["vol_master", "vol_bgm", "vol_se"]:
 		cf.set_value("audio", k, int(cur[k]))
 	cf.set_value("input", "vibration", bool(cur.vibration))
+	cf.set_value("general", "lang", String(cur.lang))
 	for a in cur.keys: cf.set_value("keys", a, int(cur.keys[a]))
 	for a in cur.pads: cf.set_value("pads", a, String(cur.pads[a]))
 	return cf.save(path) == OK
 
 # 初めの設定に戻す（ファイルも書き直す）
 static func reset() -> void:
+	var lg = cur.get("lang") if not cur.is_empty() else null
 	cur = defaults()
+	if lg != null: cur.lang = lg   # 言語は残す（初めの設定に戻しても、読めない言語にしない）
 	apply()
 	save_file()
 
@@ -107,6 +115,7 @@ static func apply() -> void:
 	if cur.is_empty(): cur = defaults()
 	apply_audio()
 	ViewRideInput.level = VIB_LEVEL if cur.vibration else 0.0
+	HSText.set_lang(arg_lang() if arg_lang() != "" else String(cur.get("lang", "ja")))
 	apply_bindings()
 	apply_display()
 
@@ -125,6 +134,19 @@ static func apply_audio() -> void:
 		var v := float(cur[p[1]]) / 100.0
 		AudioServer.set_bus_mute(i, v <= 0.0)
 		AudioServer.set_bus_volume_db(i, linear_to_db(maxf(v, 0.0001)))
+
+# 初めての起動の言語：OS の言語（日本語なら日本語、ほかは英語）。撮影・headless・テストでは日本語
+static func first_lang() -> String:
+	if not can_touch_window(): return "ja"
+	return HSText.lang_for_locale(OS.get_locale())
+
+# -- --lang=en|ja（撮影で言語を決める）。無ければ ""
+static func arg_lang() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--lang="):
+			var l := a.substr(7)
+			if l in HSText.LANGS: return l
+	return ""
 
 # 撮影（--out=）・headless・テストでは画面の大きさに触らない
 static func can_touch_window() -> bool:
@@ -250,8 +272,8 @@ static func key_name(code: int) -> String:
 static func pad_name(code: String) -> String:
 	var p := code.split(":")
 	if p[0] == "a":
-		return "LT" if int(p[1]) == JOY_AXIS_TRIGGER_LEFT else ("RT" if int(p[1]) == JOY_AXIS_TRIGGER_RIGHT else "軸%s%s" % [p[1], p[2]])
-	return PAD_NAME.get(int(p[1]), "ボタン%s" % p[1])
+		return "LT" if int(p[1]) == JOY_AXIS_TRIGGER_LEFT else ("RT" if int(p[1]) == JOY_AXIS_TRIGGER_RIGHT else HSText.t("軸%s%s") % [p[1], p[2]])
+	return PAD_NAME.get(int(p[1]), HSText.t("ボタン%s") % p[1])
 
 static func res_label(r: Vector2i) -> String:
 	return "%d×%d" % [r.x, r.y]

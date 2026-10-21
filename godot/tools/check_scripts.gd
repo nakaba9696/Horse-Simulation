@@ -4,7 +4,7 @@ extends SceneTree
 
 func _initialize() -> void:
 	var bad := 0
-	for dir in ["res://ui", "res://view"]:
+	for dir in ["res://ui", "res://view", "res://i18n"]:
 		for f in DirAccess.get_files_at(dir):
 			if f.ends_with(".gd"):
 				var s = load(dir.path_join(f))

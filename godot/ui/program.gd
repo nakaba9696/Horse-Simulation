@@ -75,7 +75,7 @@ func _fill(refocus: bool) -> void:
 	var row0 := HBoxContainer.new()
 	row0.add_theme_constant_override("separation", 16)
 	top_box.add_child(row0)
-	var tb := UiTheme.tabs(horses.map(func(x): return x.name), cur, pad, func(k): cur = k; UiFlow.program_id = horses[k].id; _fill(true))
+	var tb := UiTheme.tabs(horses.map(func(x): return HSText.horse_name(x)), cur, pad, func(k): cur = k; UiFlow.program_id = horses[k].id; _fill(true))
 	tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row0.add_child(tb)
 	# 馬の要点と次走の札
@@ -89,16 +89,16 @@ func _fill(refocus: bool) -> void:
 	var l1 := HBoxContainer.new()
 	l1.add_theme_constant_override("separation", 14)
 	(pb[1] as VBoxContainer).add_child(l1)
-	l1.add_child(UiTheme.title(String(h.name), 22))
-	l1.add_child(UiTheme.label("%s%d・%s" % ["セ" if h.get("gelding") else h.sex, int(HSWorld.G.year - float(h.born)), h.style], 15, UiTheme.MUTED))
-	l1.add_child(UiTheme.label("距離 %s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)], 15))
+	l1.add_child(UiTheme.title(HSText.horse_name(h), 22))
+	l1.add_child(UiTheme.label(HSText.t("%s・%s") % [HSText.sex_age(h, int(HSWorld.G.year - float(h.born))), HSText.tparts(String(h.style))], 15, UiTheme.MUTED))
+	l1.add_child(UiTheme.label(HSText.t("距離 %s〜%sm") % [HSU.num(h.distMin), HSU.num(h.distMax)], 15))
 	l1.add_child(UiTheme.label("芝", 14, UiTheme.MUTED))
 	l1.add_child(UiTheme.mark(HSProgram.fit_surf(h, "芝")))
 	l1.add_child(UiTheme.label("ダ", 14, UiTheme.MUTED))
 	l1.add_child(UiTheme.mark(HSProgram.fit_surf(h, "ダ")))
 	# 馬の状態は疲労の段階（調子は無い：持ち主の決定 2026-10-20）
 	var fv := HSFatigue.view(h)
-	l1.add_child(UiTheme.label("入厩前" if h.loc == "farm" else "疲労 %s" % String(fv.label), 15, Color(String(fv.color)) if h.loc == "stable" else UiTheme.FAINT))
+	l1.add_child(UiTheme.label("入厩前" if h.loc == "farm" else HSText.t("疲労 %s") % HSText.t(String(fv.label)), 15, Color(String(fv.color)) if h.loc == "stable" else UiTheme.FAINT))
 	l1.add_child(UiScreen.spacer())
 	var fh := HSSeason.fh_both(h, wi)
 	l1.add_child(UiTheme.label("総合力", 12, UiTheme.MUTED))
@@ -107,7 +107,7 @@ func _fill(refocus: bool) -> void:
 	l1.add_child(UiTheme.label("ダ", 13, UiTheme.MUTED))
 	l1.add_child(UiTheme.stat_chip(float(fh.dirt)))
 	# おまかせ（入っていると、出るレースを自動で選ぶ。js/ui/app.js の act.auto と同じ）
-	var ba := UiScreen.button("おまかせ：%s" % ("入" if h.get("auto") else "切"), false, 150, 34, 14)
+	var ba := UiScreen.button(HSText.t("おまかせ：%s") % HSText.t("入" if h.get("auto") else "切"), false, 150, 34, 14)
 	ba.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT if h.get("auto") else UiTheme.MUTED)
 	var hid: String = h.id
 	ba.pressed.connect(func():
@@ -117,7 +117,7 @@ func _fill(refocus: bool) -> void:
 		HSWorld.dirty()
 		UiFlow.save()
 		_fill(false)
-		toast("おまかせを%sにした" % ("入" if hh.auto else "切"), "good"))
+		toast(HSText.t("おまかせを%sにした") % HSText.t("入" if hh.auto else "切"), "good"))
 	l1.add_child(ba)
 	var nb := UiScreen.panel_box(true, 0)
 	(nb[0] as PanelContainer).custom_minimum_size.x = 360
@@ -126,7 +126,7 @@ func _fill(refocus: bool) -> void:
 	(nb[1] as VBoxContainer).add_child(UiTheme.label("次走", 12, UiTheme.MUTED))
 	var nt := "未定"
 	if nx != null:
-		nt = "今週　%s" % HSRaces.label(nx.race) if nx.get("entered") else "%s　%s" % [nx.label, nx.name]
+		nt = HSText.t("今週　%s") % HSText.race_label(nx.race) if nx.get("entered") else "%s　%s" % [HSText.tx(String(nx.label)), HSText.race_name(String(nx.name))]
 	(nb[1] as VBoxContainer).add_child(UiTheme.title(nt, 19, UiTheme.GOLD_BRIGHT if nx != null else UiTheme.FAINT))
 	# 絞り込み（選び肢の札。押すと切り替わる）
 	var fl := HBoxContainer.new()
@@ -155,7 +155,7 @@ func _fill(refocus: bool) -> void:
 	for r in rs:
 		if r.wk.m != last_m:
 			last_m = r.wk.m
-			var ml := UiTheme.title("%s月" % HSU.num(r.wk.m), 15, UiTheme.GOLD)
+			var ml := UiTheme.title(HSText.month(r.wk.m), 15, UiTheme.GOLD)
 			var mc := MarginContainer.new()
 			mc.add_theme_constant_override("margin_left", 8)
 			mc.add_theme_constant_override("margin_top", 0)
@@ -178,7 +178,7 @@ func _seg(label: String, key: String, opts: Array) -> HBoxContainer:
 	p.add_child(g)
 	for o in opts:
 		var b := Button.new()
-		b.text = String(o[1])
+		b.text = HSText.t(String(o[1]))
 		b.custom_minimum_size = Vector2(0, 30)
 		b.add_theme_font_size_override("font_size", 13)
 		if String(opt[key]) == String(o[0]):
@@ -202,24 +202,24 @@ func _row(h: Dictionary, r: Dictionary) -> Button:
 	var b: Button = rb[0]
 	var hb: HBoxContainer = rb[1]
 	var faded: bool = r.why != null and not mine
-	var wl := UiTheme.label("今週" if r.wk.i == 0 else "%s週（%d週後）" % [HSU.num(r.wk.w), int(r.wk.i)], 13, UiTheme.GOLD_BRIGHT if r.wk.i == 0 else UiTheme.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	var wl := UiTheme.label("今週" if r.wk.i == 0 else HSText.t("%s週（%d週後）") % [HSU.num(r.wk.w), int(r.wk.i)], 13, UiTheme.GOLD_BRIGHT if r.wk.i == 0 else UiTheme.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
 	wl.custom_minimum_size.x = COLS[0][1]
 	hb.add_child(wl)
 	var nm := HBoxContainer.new()
 	nm.add_theme_constant_override("separation", 8)
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nm.add_child(UiTheme.class_chip(UiFlow.class_label(race), race.get("graded") == true))
-	var nl := UiTheme.label(HSRaces.label(race), 15)
+	var nl := UiTheme.label(HSText.race_label(race), 15)
 	nm.add_child(nl)
 	nm.add_child(UiTheme.label(_cond(race), 12, UiTheme.FAINT))
 	if r.others.size():
-		nm.add_child(UiTheme.label("%sも予約" % "・".join(r.others), 12, UiTheme.WARN))
+		nm.add_child(UiTheme.label(HSText.t("%sも予約") % HSText.t("・").join(r.others.map(func(x): return HSText.horse_name(String(x)))), 12, UiTheme.WARN))
 	hb.add_child(nm)
 	var cl := HBoxContainer.new()
 	cl.custom_minimum_size.x = COLS[2][1]
 	cl.add_theme_constant_override("separation", 6)
-	cl.add_child(UiTheme.label(String(race.course), 14))
-	var sc := UiTheme.chip("%s%sm" % [race.surface, HSU.num(race.dist)], UiTheme.TURF if race.surface == "芝" else UiTheme.DIRT, Color.WHITE, 12)
+	cl.add_child(UiTheme.label(HSText.course_name(String(race.course)), 14))
+	var sc := UiTheme.chip(HSText.surf_dist(String(race.surface), float(race.dist)), UiTheme.TURF if race.surface == "芝" else UiTheme.DIRT, Color.WHITE, 12)
 	sc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	cl.add_child(sc)
 	hb.add_child(cl)
@@ -229,7 +229,7 @@ func _row(h: Dictionary, r: Dictionary) -> Button:
 	var sm := UiTheme.mark(int(r.surf))
 	sm.custom_minimum_size.x = COLS[4][1]
 	hb.add_child(sm)
-	var pl := UiTheme.num_label(HSU.money(float(HSU.or_(race.get("prize"), 0.0))), 14, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_RIGHT)
+	var pl := UiTheme.num_label(HSText.money(float(HSU.or_(race.get("prize"), 0.0))), 14, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_RIGHT)
 	pl.custom_minimum_size.x = COLS[5][1]
 	hb.add_child(pl)
 	# 操作の列（押せる形の札。行を押すとこの操作）
@@ -247,7 +247,7 @@ func _row(h: Dictionary, r: Dictionary) -> Button:
 	elif r.busy:
 		act.add_child(UiTheme.label("この週は予約あり", 12, UiTheme.FAINT))
 	else:
-		act.add_child(UiTheme.label(String(HSU.or_(r.why, "")), 12, UiTheme.WARN))
+		act.add_child(UiTheme.label(HSText.tx(String(HSU.or_(r.why, ""))), 12, UiTheme.WARN))
 	hb.add_child(act)
 	UiScreen.pass_mouse(hb)
 	if faded:
@@ -263,10 +263,7 @@ func _row(h: Dictionary, r: Dictionary) -> Button:
 	return b
 
 static func _cond(race: Dictionary) -> String:
-	var a := String(HSU.or_(race.get("age"), ""))
-	var s: String = {"2": "2歳", "3": "3歳", "3+": "3歳以上", "4": "4歳", "4+": "4歳以上"}.get(a, "")
-	if race.get("sex") == "牝": s += "牝"
-	return s
+	return HSText.age_cond(race)
 
 func _act_chip(text: String, gold: bool, solid := false) -> PanelContainer:
 	var p := PanelContainer.new()
@@ -288,23 +285,23 @@ func _do(h: Dictionary, race: Dictionary, what: String) -> void:
 		"enter":
 			err = HSWorld.enter(h.id, race.key)
 			if err == null: h.auto = false
-			msg = "%sに出走登録した" % HSRaces.label(race)
+			msg = HSText.t("%sに出走登録した") % HSText.race_label(race)
 		"unenter":
 			HSWorld.unenter(h.id)
 			msg = "出走を取り消した"
 		"reserve":
 			err = HSProgram.reserve(h.id, race.key)
-			msg = "%s月%s週 %sを予約した" % [HSU.num(race.month), HSU.num(race.week), HSRaces.label(race)]
+			msg = HSText.t("%s %sを予約した") % [HSText.week_label(race.month, race.week), HSText.race_label(race)]
 		"unreserve":
 			HSSeason.unreserve(h.id, race.key)
 			msg = "予約を取り消した"
 		_:
 			for r in rows:
 				if r.has_focus():
-					toast("出られない：%s" % _why_of(h, race), "bad")
+					toast(HSText.t("出られない：%s") % HSText.tx(_why_of(h, race)), "bad")
 			return
 	if err:
-		toast(String(err), "bad")
+		toast(HSText.tx(String(err)), "bad")
 		return
 	HSWorld.dirty()
 	UiFlow.save()

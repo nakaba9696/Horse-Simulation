@@ -36,8 +36,8 @@ func setup(track: ViewTrack, r: Dictionary) -> void:
 # 見出しに添える一言（回り・直線・坂）
 func summary() -> String:
 	var dir := "直線" if tr.line else ("右回り" if String(race.race.get("dir", race.track.get("dir", "左"))) == "右" else "左回り")
-	var slope := "坂なし" if span < 0.6 else ("直線に上り %.1fm" % rise if rise >= 0.6 else "高低差 %.1fm" % span)
-	return "%s・最後の直線 %dm・%s" % [dir, int(round(straight)), slope]
+	var slope := "坂なし" if span < 0.6 else (HSText.t("直線に上り %.1fm") % rise if rise >= 0.6 else HSText.t("高低差 %.1fm") % span)
+	return HSText.t("%s・最後の直線 %dm・%s") % [HSText.t(dir), int(round(straight)), HSText.t(slope)]
 
 func _pt(s: float) -> Vector2:
 	var a := tr.at(s)
@@ -111,7 +111,7 @@ func _draw() -> void:
 	var mid: Vector2 = to.call(_pt(straight / 2.0))
 	var cen := box.position + box.size / 2.0
 	var inw := (cen - mid).normalized()
-	var st_txt := "直線 %dm" % int(round(straight))
+	var st_txt := HSText.t("直線 %dm") % int(round(straight))
 	var sw := jf.get_string_size(st_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
 	draw_string(jf, mid + inw * 22.0 - Vector2(sw / 2.0, -5.0), st_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UiTheme.GOLD_BRIGHT)
 	# スタートとゴール
@@ -158,11 +158,12 @@ func _draw() -> void:
 		var tw2 := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
 		draw_string(f, Vector2(clampf(x - tw2 / 2.0, 0.0, size.x - tw2), y0 + gh + 15), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UiTheme.FAINT)
 		rr += stepm
-	draw_string(jf, Vector2(x0, y0 + 12), "高低差 %.1fm" % span, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiTheme.MUTED)
-	var lg := "上り坂"
-	var lw := jf.get_string_size(lg + "　下り坂", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+	draw_string(jf, Vector2(x0, y0 + 12), HSText.t("高低差 %.1fm") % span, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiTheme.MUTED)
+	var lg := HSText.t("上り坂")
+	var ld := HSText.t("下り坂")
+	var lw := jf.get_string_size(lg + "　" + ld, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 	draw_string(jf, Vector2(x0 + gw - lw, y0 + 12), lg, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiTheme.WARN)
-	draw_string(jf, Vector2(x0 + gw - lw + jf.get_string_size(lg + "　", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x, y0 + 12), "下り坂", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiTheme.COOL)
+	draw_string(jf, Vector2(x0 + gw - lw + jf.get_string_size(lg + "　", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x, y0 + 12), ld, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UiTheme.COOL)
 
 # スタート・ゴールの丸い札
 func _badge(p: Vector2, t: String, bg: Color, fg: Color) -> void:

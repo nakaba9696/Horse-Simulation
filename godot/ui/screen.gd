@@ -49,7 +49,7 @@ func _ready() -> void:
 							break
 			if OS.get_cmdline_user_args().has("--setup=inbreed"):
 				# 撮影の見本：インブリードの見える牧場（史実の名馬を引退馬として置く。ディープインパクト × ジェンティルドンナは親子で選べない）
-				for nm in ["ディープインパクト", "ドゥラメンテ", "ゴールドシップ", "ジェンティルドンナ", "アーモンドアイ", "デアリングタクト"]:
+				for nm in ["ディープインパクト", "ドゥラメンテ", "ゴールドシップ", "ジェンティルドンナ", "アーモンドアイ", "デアリングタクト"]:  # i18n:skip（撮影の見本）
 					var d = HSWorld.histByName.get(nm)
 					if d == null: continue
 					var h := HSHorse.from_historic(d, HSWorld.new_id())
@@ -95,24 +95,24 @@ func _ready() -> void:
 	# 撮影の見本：見せ場とご褒美の場面
 	var args := OS.get_cmdline_user_args()
 	if args.has("--setup=celebrate"):
-		celebrate("トロフィーを手にした", "三冠", "サンプルホース・ボーナス賞金 5億円")
+		celebrate("トロフィーを手にした", "三冠", "サンプルホース・ボーナス賞金 5億円")  # i18n:skip（撮影の見本）
 	elif args.has("--setup=scene"):
-		owner_scene({"oid": "makino", "kind": "m1", "horse": "サンプルホース", "race": "3歳オープン", "reward": "お礼 300万円"})
+		owner_scene({"oid": "makino", "kind": "m1", "horse": "サンプルホース", "race": "3歳オープン", "reward": "お礼 300万円"})  # i18n:skip
 	elif args.has("--setup=meet"):
 		# 縁ができたときの場面（初めて声をかけてくる）
-		owner_scene({"oid": "sengoku", "kind": "meet", "horse": "サンプルホース", "race": "2歳オープン", "reward": ""})
+		owner_scene({"oid": "sengoku", "kind": "meet", "horse": "サンプルホース", "race": "2歳オープン", "reward": ""})  # i18n:skip
 	elif args.has("--setup=job"):
 		# ミッションの依頼が届いた場面（G1 の段階の依頼の馬とレース）
-		owner_scene({"oid": "makino", "kind": "job", "k": 3.0, "horse": "ハイセイコー", "race": "日本ダービー", "date": "2年目5月4週", "retry": false, "y": 2026.0})
+		owner_scene({"oid": "makino", "kind": "job", "k": 3.0, "horse": "ハイセイコー", "race": "日本ダービー", "date": "2年目5月4週", "retry": false, "y": 2026.0})  # i18n:skip
 	elif args.has("--setup=wreath"):
 		# GF を全制覇したときのイロナの花輪（アイテム）
-		owner_scene({"oid": "gfhost", "kind": "wreath", "horse": "", "race": "", "reward": "一族の花輪（1頭の馬からオリジナルホースを作れる数＋1）"})
+		owner_scene({"oid": "gfhost", "kind": "wreath", "horse": "", "race": "", "reward": "一族の花輪（1頭の馬からオリジナルホースを作れる数＋1）"})  # i18n:skip
 	elif args.has("--setup=meet_yuni"):
 		# 絵の無い人の出会い（顔は出さず色の帯だけ）
-		owner_scene({"oid": "yuni", "kind": "meet", "horse": "サンプルホース", "race": "2歳オープン", "reward": ""})
+		owner_scene({"oid": "yuni", "kind": "meet", "horse": "サンプルホース", "race": "2歳オープン", "reward": ""})  # i18n:skip
 	elif args.has("--setup=scene_violaine"):
 		# 課題をやり終えた場面（G2 の課題・勝負服）
-		owner_scene({"oid": "violaine", "kind": "m3", "horse": "サンプルホース", "race": "目黒記念", "reward": "お礼 1,000万円・ヴィオレーヌ・ド・サン＝クレールさんの勝負服を自分の馬に着せられる"})
+		owner_scene({"oid": "violaine", "kind": "m3", "horse": "サンプルホース", "race": "目黒記念", "reward": "お礼 1,000万円・ヴィオレーヌ・ド・サン＝クレールさんの勝負服を自分の馬に着せられる"})  # i18n:skip
 	if shots.size() > 0:
 		_capture()
 	else:
@@ -205,7 +205,7 @@ func make_band(mark: String, title: String, sub: String, stats: Array, icon := "
 		rn.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.GOLD_FACE[1], UiTheme.GOLD_FACE[0], 2, 999, Vector4(0, 0, 0, 0)))
 		rn.custom_minimum_size = Vector2(52, 52)
 		rn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var ml := UiTheme.title(mark, 24, UiTheme.ON_GOLD)
+		var ml := UiTheme.title((HSText.auto(mark) if HSText.auto(mark) != mark else HSText.auto(title)).left(1) if HSText.is_en() else mark, 24, UiTheme.ON_GOLD)
 		ml.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rn.add_child(ml)
 		h.add_child(rn)
@@ -317,7 +317,7 @@ static func pass_mouse(n: Node) -> void:
 # art＝部品の絵のボタン（金の面 btn_main・深緑に金の縁 btn_sub。4つの状態）。絵が無ければ前の形
 static func button(text: String, gold := false, w := 0.0, h := 44.0, fs := 18, art := false) -> Button:
 	var b := Button.new()
-	b.text = text
+	b.text = HSText.auto(text)   # 画面の言語（キーと同じ文なら英語）
 	b.custom_minimum_size = Vector2(w, h)
 	b.add_theme_font_size_override("font_size", fs)
 	var drawn := art and UiSkin.button(b, "main" if gold else "sub", h)
@@ -410,7 +410,7 @@ func retire_flow(id: String, done: Callable) -> void:
 	if h == null: return
 	var keep: bool = HSOriginal.on() and not h.get("gelding")
 	var hall := "トロフィーを手にしたので、殿堂入りします。" if HSHall.will(h) else ""
-	confirm("%sを引退させますか？\n%s%s" % [h.name, "牧場に残り、オリジナルホースの親にできます。" if keep else "手もとを離れます。", hall], "引退させる", func():
+	confirm(HSText.t("%sを引退させますか？\n%s%s") % [HSText.horse_name(h), HSText.t("牧場に残り、オリジナルホースの親にできます。" if keep else "手もとを離れます。"), HSText.t(hall)], "引退させる", func():
 		done.call(HSJockey.retire(id)))
 
 # 見せ場（重賞の優勝・トロフィー・スペシャルホース・オリジナルホースの誕生）：光の筋と紙吹雪・大きな明朝の題字。決定で閉じる
@@ -540,30 +540,30 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_theme_constant_override("separation", 10)
 	hb.add_child(v)
-	v.add_child(UiTheme.label(String(OWNER_KICK.get(q.kind, "")), 18, UiTheme.GOLD_BRIGHT))
+	v.add_child(UiTheme.label(HSText.t(String(OWNER_KICK.get(q.kind, ""))), 18, UiTheme.GOLD_BRIGHT))
 	var nh := HBoxContainer.new()
 	nh.add_theme_constant_override("separation", 12)
 	nh.add_child(UiTheme.title(String(o.name), 34))
-	nh.add_child(UiTheme.label(String(o.get("title", "")), 14, UiTheme.MUTED))
+	nh.add_child(UiTheme.label(HSText.owner_line(String(o.get("title", ""))), 14, UiTheme.MUTED))
 	if not host: nh.add_child(owner_sign_chip(o, 14))
 	v.add_child(nh)
 	var vars := {"horse": q.get("horse", ""), "race": q.get("race", "")}
 	var lines: Array = HSGFHost.scene_lines(vars) if host else ([HSOwners.job_line(String(q.oid), q)] if q.get("kind") == "job" else HSOwners.scene_lines(String(q.oid), String(q.kind), vars))
 	var labs: Array = []
 	for t in lines:
-		var l := UiTheme.label("「%s」" % t, 17)
+		var l := UiTheme.label(HSText.t("「%s」") % HSText.owner_line(String(t)), 17)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size.x = 520
 		l.modulate.a = 0.0
 		v.add_child(l)
 		labs.append(l)
 	if q.get("reward"):
-		var rl := UiTheme.label("ご褒美：%s" % q.reward, 18, UiTheme.GOLD_BRIGHT)
+		var rl := UiTheme.label(HSText.t("ご褒美：%s") % HSText.tx(String(q.reward)), 18, UiTheme.GOLD_BRIGHT)
 		rl.modulate.a = 0.0
 		v.add_child(rl)
 		labs.append(rl)
 	if meet:
-		var nl := UiTheme.label("%sのオーナー。%s" % [HSOwners.sign_label(o), o.get("note", "")], 13, UiTheme.MUTED)
+		var nl := UiTheme.label(HSText.t("%sのオーナー。%s") % [HSText.t(HSOwners.sign_label(o)), HSText.owner_line(String(o.get("note", "")))], 13, UiTheme.MUTED)
 		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		nl.custom_minimum_size.x = 520
 		nl.modulate.a = 0.0
@@ -572,15 +572,15 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 	# 届いた依頼の中身／次のミッション（出会いなら OP の段階、m1〜m4 なら次の段階）と、その予定
 	var note := ""
 	if not host and q.get("kind") == "job":
-		note = "依頼（%s）：%sで%sを勝つ（%s）" % [HSOwners.STAGES[int(q.k)].label, q.horse, q.race, q.get("date", "")]
+		note = HSText.t("依頼（%s）：%sで%sを勝つ（%s）") % [HSText.t(HSOwners.STAGES[int(q.k)].label), HSText.horse_name(String(q.horse)), HSText.race_name(String(q.race)), HSText.tx(String(q.get("date", "")))]
 		var fa = HSOwners.mission_fact(o, int(q.k))
-		if fa: note += "　【%s】%s" % [fa.label, ("\n史実：" + String(fa.real)) if fa.ifs else ""]
+		if fa: note += "　【%s】%s" % [HSText.t(fa.label), (HSText.t("\n史実：") + HSText.tx(String(fa.real))) if fa.ifs else ""]
 	elif not host:
 		var k := 0 if meet else (int(String(q.kind).substr(1)) if String(q.kind) in ["m1", "m2", "m3", "m4"] else -1)
 		if k >= 0 and HSOwners.mission_of(o, k):
 			var sj = HSOwners.of(String(q.oid)).get("job")
-			note = "次のミッション（%s）：%s" % [HSOwners.STAGES[k].label, HSOwners.mission_text(o, k)]
-			if sj and sj.k == k: note += "\n%sのレース。依頼はその%d週前に届く" % [HSOwners.job_date(sj), int(HSOwners.LEAD)]
+			note = HSText.t("次のミッション（%s）：%s") % [HSText.t(HSOwners.STAGES[k].label), HSText.mission(o, k)]
+			if sj and sj.k == k: note += HSText.t("\n%sのレース。依頼はその%d週前に届く") % [HSText.date_label(float(sj.y), float(sj.m), float(sj.w)), int(HSOwners.LEAD)]
 	if note != "":
 		var al := UiTheme.label(note, 15, UiTheme.IVORY)
 		al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -639,7 +639,10 @@ func _build_keybar() -> void:
 	kb_holder.alignment = BoxContainer.ALIGNMENT_END
 	kb_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(kb_holder)
-	kb_hint = UiTheme.label(hint(), 13, UiTheme.MUTED)
+	kb_hint = UiTheme.label(hint(), 13, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_RIGHT)
+	kb_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL   # 長いひと言（英語など）は左の端で切る
+	kb_hint.clip_text = true
+	kb_hint.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	kb_holder.add_child(kb_hint)
 	keybar = UiTheme.keybar(keys(), pad)
 	kb_holder.add_child(keybar)
@@ -650,7 +653,7 @@ func refresh_keybar() -> void:
 		keybar = UiTheme.keybar(keys(), pad)
 		kb_holder.add_child(keybar)
 	if kb_hint:
-		kb_hint.text = hint()
+		kb_hint.text = HSText.auto(hint())
 
 # ---- 入りの動き（中身が下から 0.24 秒・帯は 0.34 秒） ----
 func enter_anim() -> void:
