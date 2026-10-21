@@ -136,13 +136,19 @@ func go(name: String) -> void:
 	tw.tween_callback(func(): UiFlow.go(get_tree(), name))
 
 # ---- 背景の写真（覆うように置く）と、左ほど濃い深緑の幕 ----
+# img に ".png" を付けると部品の絵の背景（godot/assets/ui/bg_*.png。UiSkin）。読めなければ同じ名前の写真（.jpg）
 func backdrop(img: String, strength := 0.82) -> void:
 	var base := ColorRect.new()
 	base.color = UiTheme.BG
 	base.set_anchors_preset(Control.PRESET_FULL_RECT)
 	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(base)
-	var tex = load("res://assets/ui/%s.jpg" % img) if ResourceLoader.exists("res://assets/ui/%s.jpg" % img) else null
+	var tex = null
+	if img.ends_with(".png"):
+		img = img.get_basename()
+		tex = UiSkin.background(img)
+	if tex == null:
+		tex = load("res://assets/ui/%s.jpg" % img) if ResourceLoader.exists("res://assets/ui/%s.jpg" % img) else null
 	if tex:
 		var tr := TextureRect.new()
 		tr.texture = tex
@@ -170,8 +176,17 @@ void fragment() {
 	add_child(sh)
 
 # ---- 見出しの帯：金の丸の印・明朝の画面名・注記・右に帯の数 ----
-func make_band(mark: String, title: String, sub: String, stats: Array) -> UiBand:
+# icon（UiSkin のアイコンの名前）を渡すと、部品の絵の帯（band_title）と丸い札に金の線画のアイコン。絵が無ければ前の形（金の丸に mark の字）
+func make_band(mark: String, title: String, sub: String, stats: Array, icon := "") -> UiBand:
 	band = UiTheme.band(76)
+	if icon != "":
+		band.art = UiSkin.band(76)
+		if band.art != null:
+			# 中身の余白は絵の帯の余白（左右の金の飾りの内に置く）
+			var em := StyleBoxEmpty.new()
+			for sd in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+				em.set_content_margin(sd, band.art.get_content_margin(sd))
+			band.add_theme_stylebox_override("panel", em)
 	band.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	band.offset_left = PAD_X
 	band.offset_right = -PAD_X
@@ -181,14 +196,18 @@ func make_band(mark: String, title: String, sub: String, stats: Array) -> UiBand
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 14)
 	band.add_child(h)
-	var rn := PanelContainer.new()
-	rn.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.GOLD_FACE[1], UiTheme.GOLD_FACE[0], 2, 999, Vector4(0, 0, 0, 0)))
-	rn.custom_minimum_size = Vector2(52, 52)
-	rn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var ml := UiTheme.title(mark, 24, UiTheme.ON_GOLD)
-	ml.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	rn.add_child(ml)
-	h.add_child(rn)
+	var ri = UiSkin.round_icon(icon, 58) if icon != "" else null
+	if ri != null:
+		h.add_child(ri)
+	else:
+		var rn := PanelContainer.new()
+		rn.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.GOLD_FACE[1], UiTheme.GOLD_FACE[0], 2, 999, Vector4(0, 0, 0, 0)))
+		rn.custom_minimum_size = Vector2(52, 52)
+		rn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var ml := UiTheme.title(mark, 24, UiTheme.ON_GOLD)
+		ml.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rn.add_child(ml)
+		h.add_child(rn)
 	var tv := VBoxContainer.new()
 	tv.add_theme_constant_override("separation", -6)
 	tv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -221,7 +240,21 @@ static func stat(head: String, val: String, kind := "") -> PanelContainer:
 	return p
 
 # 節の見出し（明朝・左に金の縦線。右に小さな注記）
-static func section(text: String, note := "") -> HBoxContainer:
+# art＝部品の絵の節の帯（band_section。左に金の印）。絵が無ければ前の形
+static func section(text: String, note := "", art := false) -> Control:
+	var sb = UiSkin.section(36) if art else null
+	if sb != null:
+		var p := PanelContainer.new()
+		p.add_theme_stylebox_override("panel", sb)
+		p.custom_minimum_size.y = 36
+		var ah := HBoxContainer.new()
+		ah.add_theme_constant_override("separation", 8)
+		p.add_child(ah)
+		ah.add_child(UiTheme.title(text, 17, UiTheme.IVORY))
+		if note != "":
+			ah.add_child(UiScreen.spacer())
+			ah.add_child(UiTheme.label(note, 13, UiTheme.MUTED))
+		return p
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	var bar := ColorRect.new()
@@ -237,30 +270,36 @@ static func section(text: String, note := "") -> HBoxContainer:
 		h.add_child(UiTheme.label(note, 13, UiTheme.MUTED))
 	return h
 
-# 板（写真が透ける深緑）に縦の並びを入れて返す
-static func panel_box(gold := false, sep := 8) -> Array:
+# 板（写真が透ける深緑）に縦の並びを入れて返す。art＝部品の絵の札（panel_card。gold なら金の縁が光る札）
+static func panel_box(gold := false, sep := 8, art := false) -> Array:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", UiTheme.panel_gold(0.88) if gold else UiTheme.panel(0.84))
+	var sb = UiSkin.card(gold) if art else null
+	p.add_theme_stylebox_override("panel", sb if sb != null else (UiTheme.panel_gold(0.88) if gold else UiTheme.panel(0.84)))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", sep)
 	p.add_child(v)
 	return [p, v]
 
 # 押せる行（表の行の札。選ぶと金の線）。中身の HBox を返す
-static func row_button(h := 40.0, mine := false) -> Array:
+# art＝部品の絵の行（row_normal・row_focus。両端の金の飾りの内に中身を置く）。絵が無ければ前の形
+static func row_button(h := 40.0, mine := false, art := false) -> Array:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(0, h)
 	b.focus_mode = Control.FOCUS_ALL
-	b.add_theme_stylebox_override("normal", UiTheme.row_box(0, false, mine))
-	var hov := UiTheme.row_box(0, false, mine)
-	hov.bg_color = Color(UiTheme.SURFACE_3.r, UiTheme.SURFACE_3.g, UiTheme.SURFACE_3.b, 0.92)
-	b.add_theme_stylebox_override("hover", hov)
-	for st in ["focus", "pressed", "hover_pressed"]:
-		b.add_theme_stylebox_override(st, UiTheme.row_box(0, true, mine))
+	var inset := 12.0
+	if art and UiSkin.row_button(b, h, mine, Vector4(0, 0, 0, 0), 0.8):
+		inset = 40.0
+	else:
+		b.add_theme_stylebox_override("normal", UiTheme.row_box(0, false, mine))
+		var hov := UiTheme.row_box(0, false, mine)
+		hov.bg_color = Color(UiTheme.SURFACE_3.r, UiTheme.SURFACE_3.g, UiTheme.SURFACE_3.b, 0.92)
+		b.add_theme_stylebox_override("hover", hov)
+		for st in ["focus", "pressed", "hover_pressed"]:
+			b.add_theme_stylebox_override(st, UiTheme.row_box(0, true, mine))
 	var hb := HBoxContainer.new()
 	hb.set_anchors_preset(Control.PRESET_FULL_RECT)
-	hb.offset_left = 12
-	hb.offset_right = -12
+	hb.offset_left = inset
+	hb.offset_right = -inset
 	hb.add_theme_constant_override("separation", 10)
 	hb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(hb)
@@ -274,13 +313,15 @@ static func pass_mouse(n: Node) -> void:
 			(c as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pass_mouse(c)
 
-static func button(text: String, gold := false, w := 0.0, h := 44.0, fs := 18) -> Button:
+# art＝部品の絵のボタン（金の面 btn_main・深緑に金の縁 btn_sub。4つの状態）。絵が無ければ前の形
+static func button(text: String, gold := false, w := 0.0, h := 44.0, fs := 18, art := false) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(w, h)
 	b.add_theme_font_size_override("font_size", fs)
+	var drawn := art and UiSkin.button(b, "main" if gold else "sub", h)
 	if gold:
-		UiTheme.gold_button(b)
+		if not drawn: UiTheme.gold_button(b)
 		b.add_theme_font_override("font", UiTheme.mincho())
 	b.mouse_entered.connect(func(): if b.focus_mode != Control.FOCUS_NONE: b.grab_focus())
 	return b

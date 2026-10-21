@@ -1,5 +1,6 @@
 # 画面の共通の部品（docs/UI.md のテーマ「夕方の競馬場の貴賓席」：深い芝の緑の地・金の縁取り・明朝の題字）。どの画面もここの色・字・部品で作る
 # 値（色・px・角丸）は docs/UI.md（1600×1000 の画面が基準。project.godot の画面の大きさも 1600×1000）
+# 部品の絵（godot/assets/ui の九つ切りの絵。ボタン・札・行・タブ・帯・アイコン）は UiSkin（ui/skin.gd）。部品の art＝true で使い、絵が無ければここの色の形に戻る
 # 部品：見出しの帯（band）・数値の札（chip）・能力の数の札（stat_chip。段の色）・格の札（grade_chip）・枠の色の札（frame_box）・表の行（row_box）・ボタン（Theme の Button、主な操作は gold_button）・操作の案内（keybar）
 # 参考の作品の画面・配色・英語の飾り文字は写さない（GAM-74）
 class_name UiTheme
@@ -322,9 +323,11 @@ static func keybar(items: Array, pad := false, glyphs := true) -> PanelContainer
 	return p
 
 # タブ（docs/UI.md「タブ」）：沈みの溝に高さ 38px のタブ。選んだタブは金の面。両端に Q・E（パッドは LB・RB）。押すと on_pick(i)
-static func tabs(items: Array, cur: int, pad := false, on_pick = null) -> PanelContainer:
+# art＝部品の絵（tab_track の溝・tab_normal／tab_active のつまみ。UiSkin）。絵が無ければ前の形
+static func tabs(items: Array, cur: int, pad := false, on_pick = null, art := false) -> PanelContainer:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", box(SUNK, LINE, 1, 999, Vector4(6, 5, 6, 5)))
+	var tr = UiSkin.tab_track() if art else null
+	p.add_theme_stylebox_override("panel", tr if tr != null else box(SUNK, LINE, 1, 999, Vector4(6, 5, 6, 5)))
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 4)
 	p.add_child(h)
@@ -336,7 +339,14 @@ static func tabs(items: Array, cur: int, pad := false, on_pick = null) -> PanelC
 		b.set_meta("pad", "LB/RB")   # パッドは LB・RB で替える（tests/test_focus.gd）
 		b.custom_minimum_size = Vector2(120, 38)
 		b.add_theme_font_size_override("font_size", 15)
-		if i == cur:
+		var ta = UiSkin.tab(i == cur) if tr != null else null
+		if ta != null:
+			for st in ["normal", "hover", "pressed", "hover_pressed"]:
+				b.add_theme_stylebox_override(st, ta if i == cur else (UiSkin.tab(true) if st != "normal" else ta))
+			b.add_theme_color_override("font_color", ON_GOLD if i == cur else MUTED)
+			b.add_theme_color_override("font_hover_color", ON_GOLD)
+			b.add_theme_color_override("font_pressed_color", ON_GOLD)
+		elif i == cur:
 			gold_button(b)
 		else:
 			b.add_theme_stylebox_override("normal", box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 999, Vector4(16, 6, 16, 6)))

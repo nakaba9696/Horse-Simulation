@@ -31,6 +31,7 @@ static var report = null            # 最後に締めた週（HSWorld.finish_wee
 static var money0 := 0.0            # 週の初めの資金（週の結果で増減を出す）
 static var in_week := false         # 騎乗の列を回している間
 static var program_back := "home"   # 番組表からもどる画面（厩舎・お手馬の画面から開くとそこへ）
+static var farm_back := "home"      # 牧場（breed）からもどる画面（厩舎の牧場のタブから開くと厩舎）
 static var replay_back := "data"    # リプレイを見終えてもどる画面（お手馬の戦績から開くと horse）
 static var focus := {}              # 画面ごとのカーソルの記憶 { 画面: 札の名前 }
 static var program_id := ""         # 番組表で見ている馬

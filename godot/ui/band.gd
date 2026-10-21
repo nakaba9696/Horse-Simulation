@@ -3,6 +3,8 @@
 class_name UiBand
 extends PanelContainer
 
+var art: StyleBox = null   # 部品の絵の帯（UiSkin.band。band_title の九つ切り）。あればこれだけを描く
+
 func _init() -> void:
 	var sb := StyleBoxEmpty.new()
 	sb.content_margin_left = 22
@@ -13,6 +15,9 @@ func _init() -> void:
 
 func _draw() -> void:
 	var r := Rect2(Vector2.ZERO, size)
+	if art != null:
+		draw_style_box(art, r)
+		return
 	# 影
 	var sh := StyleBoxFlat.new()
 	sh.bg_color = Color(0, 0, 0, 0)
