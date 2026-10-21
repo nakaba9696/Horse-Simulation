@@ -25,7 +25,8 @@ module.exports = function (check, assert, HS) {
     // 持ち主の1回目の決定（tools/special_audit_owner.js）：得意な馬場の総合力がその値
     const OWNER = require('../tools/special_audit_owner.js').OWNER;
     const off = [];
-    for (const o of OWNER) { if (o.target == null) continue; const d = SP.data(o.name) || D.historic.find(x => x.name === o.name); const p = T.fhPeak(H.fromHistoric(d, 'x')); if (Math.max(p.turf, p.dirt) !== o.target) off.push(`${o.name} ${o.target}→${Math.max(p.turf, p.dirt)}`); }
+    const quiz = n => /比較クイズ/.test(((HS.DATA.horseFix || {})[n] || {}).why || ''); // 比較クイズ（持ち主 2026-10-21）で直した馬は、そちらが新しい決定
+    for (const o of OWNER) { if (o.target == null || quiz(o.name)) continue; const d = SP.data(o.name) || D.historic.find(x => x.name === o.name); const p = T.fhPeak(H.fromHistoric(d, 'x')); if (Math.max(p.turf, p.dirt) !== o.target) off.push(`${o.name} ${o.target}→${Math.max(p.turf, p.dirt)}`); }
     assert(!off.length, '持ち主の決めた総合力と違う：' + off.join('・'));
     const hk = H.fromHistoric(SP.data('キンチェム'), 'x'), ks = K.of(hk);
     assert(ks[0] === K.UNIQUE_OF['キンチェム'].id && ks.includes('dokonjo') && ks.includes('oriai'), `キンチェムの発動する特殊能力 ${ks.join()}`);

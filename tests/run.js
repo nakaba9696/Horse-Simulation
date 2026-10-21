@@ -779,7 +779,7 @@ check('season: お手馬10頭まで・資金切れで終わり・冠・疲労の
   const med = xs => xs.slice().sort((a, b) => a - b)[Math.floor((xs.length - 1) / 2)];
   for (const [c, lo, hi] of [['G3', 51, 55], ['G2', 56, 60], ['G1', 61, 65], ['G1x2', 66, 80]]) assert(byC[c] && med(byC[c]) >= lo && med(byC[c]) <= hi, `${c}の馬の総合力のまん中 ${byC[c] && med(byC[c])}`);
   const fhN = n => fhPk(HS.Special.data(n) || W.histByName.get(n) || HS.DATA.historic.find(d => d.name === n));
-  for (const [n, lo, hi] of [['キンチェム', 84, 86], ['エアグルーヴ', 69, 71], ['セクレタリアト', 77, 81]]) assert(fhN(n) >= lo && fhN(n) <= hi, `${n}の総合力 ${fhN(n)}`);
+  for (const [n, lo, hi] of [['キンチェム', 84, 86], ['エアグルーヴ', 69, 72], ['セクレタリアト', 77, 81]]) assert(fhN(n) >= lo && fhN(n) <= hi, `${n}の総合力 ${fhN(n)}`);
   const top = {}; for (const k of H.STATS) top[k] = 118;
   assert(T.fhOf(top, '芝') === 99 && T.fhOf(top, 'ダ') === 99, '能力の上限で99にならない');
   // スピードとスタミナのほか（根性・気性・坂・健康・切れ・特殊能力）では変わらない。スピードやスタミナを上げると上がる

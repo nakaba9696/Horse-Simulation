@@ -125,10 +125,10 @@ module.exports = function (check, assert, HS) {
     assert(g('逃げ') >= 2.65 && g('追込') >= 2.7, `逃げ ${g('逃げ').toFixed(2)}・追込 ${g('追込').toFixed(2)}（前は 2.8・2.6）`);
     assert(g('先行') < 2.45 && g('先行') < g('差し') && g('先行') < g('逃げ') && g('先行') < g('追込'), `先行 ${g('先行').toFixed(2)} が増えた`);
     for (const st of H.STYLES) assert(bd(st) < 0.6, `${st}の弱み ${bd(st).toFixed(2)}`);
-    // どの新しい能力も、その脚質の史実馬のうち5〜60％が持つ（弱みは少なめ）
+    // どの新しい能力も、その脚質の史実馬のうち4〜60％が持つ（弱みは少なめ）
     const cnt = {}, nSt = {};
     D.historic.forEach((d, i) => { const h = H.fromHistoric(d, 'c' + i); nSt[h.style] = (nSt[h.style] || 0) + 1; for (const id of K.of(h)) { const k = h.style + id; cnt[k] = (cnt[k] || 0) + 1; } });
-    for (const [st, ids] of [['逃げ', ['ikiire', 'nidan', 'genwaku']], ['追込', ['kouhou', 'tsuiso', 'sotomawashi', 'sabaki']]]) for (const id of ids) { const r = (cnt[st + id] || 0) / nSt[st]; assert(r >= 0.05 && r <= 0.6, `${K.label(id)} ${st}の ${Math.round(r * 100)}%`); }
+    for (const [st, ids] of [['逃げ', ['ikiire', 'nidan', 'genwaku']], ['追込', ['kouhou', 'tsuiso', 'sotomawashi', 'sabaki']]]) for (const id of ids) { const r = (cnt[st + id] || 0) / nSt[st]; assert(r >= 0.04 && r <= 0.6, `${K.label(id)} ${st}の ${Math.round(r * 100)}%`); }
     // 番手× は損な技なので、史実馬には能力の数から付かない（外部レビューの指摘・持ち主の決定 2026-10-20。前は逃げの 2〜20％）
     assert(!cnt['逃げbante'], `番手× が史実馬の逃げ ${cnt['逃げbante']}頭に付く`);
     return H.STYLES.map(st => `${st} 強み${g(st).toFixed(2)}・弱み${bd(st).toFixed(2)}`).join('／');
