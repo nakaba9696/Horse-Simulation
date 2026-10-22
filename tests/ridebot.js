@@ -1,8 +1,9 @@
 // 決まった乗り方をする打ち手（ボット）。tools/balance_bench.js と tests/run.js で、乗り方ごとの勝ち負けを比べる。
 // 乗り方：
 //   none   … スタートだけ切って、あとは何もしない
-//   push   … 位置は気にせず、直線の手前からしごいて直線でムチ（ただ追う）
-//   fit    … 噛み合った乗り方：その日のペースと脚質・気性・特殊能力に合わせて位置を取り、仕掛けどころを選ぶ
+//   push   … 位置は気にせず、直線の手前からしごいて（段をいちばん上＝全開に）直線でムチ（ただ追う）
+//   fit    … 噛み合った乗り方（慣れた人の乗り方）：その日のペースと脚質・気性・特殊能力に合わせて位置を取り、仕掛けどころを選ぶ。
+//            追い出してからは脚の残りを見て、全開でゴールまで持つと読めてから全開にする（それまでは段 S.DRIVE.from で脚を配る。2026-10-22）
 //   misfit … 噛み合わない乗り方：ペースと逆の位置（スローで後ろ・ハイで前）へ動かし、仕掛けも逆（スローで遅く・ハイで早く）
 //   beat   … 噛み合った乗り方で、追い出してからは馬の拍子（S.BEAT。首が下がって前へ伸びる所）に合わせてしごき続ける
 //   mash   … 噛み合った乗り方で、追い出してからは拍子を見ずに 0.1 秒ごとに連打する
@@ -19,6 +20,11 @@ module.exports = function (HS) {
     if (sim.check) return sim.check.verdict;
     const n = sim.st.filter(s => s.h.style === '逃げ').length;
     return n >= 2 ? 'ハイペース' : n === 0 ? 'スローペース' : '平均ペース';
+  };
+  // 全開でゴールまで走るのに要る脚（残り R m）。全開の速さ（伸びの上限の上 S.DRIVE.k）で、脚の使い方 ×(1＋S.DRIVE.c)。坂などは見ない
+  const driveNeed = (sim, s, R) => {
+    const full = 1 + s.kickS * (1 + (sim.top + (s.topAdd || 0) - 1)) * (1 + S.DRIVE.k);
+    return R * 0.9 / s.Ds * full * full * full * s.spurtCost * (1 + S.DRIVE.c);
   };
   // 気性が穏やか（または自由自在）で、位置の融通がきくか
   const flexible = s => H.has(s.h, 'jiyu') || S.temperF(s) <= 1.12;
@@ -65,10 +71,15 @@ module.exports = function (HS) {
       let go = v === 'スローペース' ? (fit ? early : late) : v === 'ハイペース' ? (fit ? late : early) : mid;
       if (fit && v === 'ハイペース' && !flexible(s) && (s.h.style === '逃げ' || s.h.style === '先行')) go = mid; // 荒い先行馬は抑えると掛かるので、ふつうに
             if (fit && H.has(s.h, 'longspurt')) go = Math.max(go, st + 320);
+      // 慣れた人は、ハイペースでなければ直線の手前 480m から追い出し、脚の残りを配って運ぶ（段 S.DRIVE.from まで。全開にはしない）
+      if (fit && v !== 'ハイペース') go = Math.max(go, st + 480);
       if (R <= go) {
-        if (policy === 'beat' && c.gear > 0.9) { let off = Math.abs(S.beatPhase(s) - S.BEAT.at); if (off > 0.5) off = 1 - off; if (off < S.BEAT.win * 0.6 && sim.t - c.lastPush > 0.3) S.ctl.up(sim); }
-        else if (policy === 'mash' && c.gear > 0.9) S.ctl.up(sim);
-        else tapTo(sim, 1);
+        // 全開にするのは、脚の残り（計器のスタミナ）が全開でゴールまで持つと読めてから（馬の持ちはスタミナ・距離適性から。1割の余裕を見る）。
+        // ただ追う・噛み合わない乗り方は、追い出したら段をいちばん上（全開）にする
+        const gearGo = fit && s.E < driveNeed(sim, s, R) * 1.1 ? S.DRIVE.from : 1;
+        if (policy === 'beat' && gearGo === 1 && c.gear > 0.9) { let off = Math.abs(S.beatPhase(s) - S.BEAT.at); if (off > 0.5) off = 1 - off; if (off < S.BEAT.win * 0.6 && sim.t - c.lastPush > 0.3) S.ctl.up(sim); }
+        else if (policy === 'mash' && gearGo === 1 && c.gear > 0.9) S.ctl.up(sim);
+        else tapTo(sim, gearGo);
         whipNow();
         if (fit && trig.includes('oosoto') && c.lane < 5 && R < st + 100) S.ctl.lane(sim, 1);
         return;

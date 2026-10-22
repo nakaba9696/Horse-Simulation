@@ -140,6 +140,12 @@
   // ゲートで待つ秒（レースの種から。種の乱数は進めないので、ほかの結果は変わらない）
   S.gateWaitOf = rng => S.GATE.wait + S.GATE.spread * new U.RNG((rng.s ^ 0x9E3779B9) >>> 0).next();
   S.PUSH = { base: 0.25 }; // 追い出したあと、しごかずに馬なりで行くときの伸び（段に置き換えた値）
+  // 全開（自分で乗る馬。持ち主の決定 2026-10-22「70が80にも勝てるゲームにしたい」「慣れた人間がのればだいたい勝てるくらい」、docs/BALANCE.md「20」）：
+  // 追い出したあと、手綱の段が from より上の分（drive 0〜1）だけ、脚の残りに合わせた伸び（馬なりの配り）から「全開」へ寄る。
+  // 全開は伸びの上限の上を k の割合だけ足して走り、脚の残りを見ない（脚の使い方も ×(1＋c×drive)）。脚が尽きるとバテる。
+  // 段 from までなら、前と同じく残りの脚を配って走る（伸びの上限は段のぶん）。脚の残りを見て、最後まで持つ所から全開にするのが腕の見せどころ。
+  // 前は段をいちばん上にしても脚の残りを配ってくれたので、直線の手前から追うだけで AI より早く脚を使い切れ、ただ追うだけで格上に6割近く先着した
+  S.DRIVE = { from: 0.85, k: 0.4, c: 0.5 };
   // 自分で乗る馬：しごいて巡航より速く走ると脚を大きく使う境目（直線の手前 m）。道中は手綱の段が隊列の位置の注文（段 1 で GEAR_GAP m 前・しごいている間の脚の使い方 GEAR_COST）。
   // 注文の位置へ寄せる強さ（差 1m あたりの速さの割合 POS_K と上限 POS_MAX）
   // 当たり判定（持ち主の指摘 2026-10-20「馬と馬が重なって抜ける」「何もない所にぶつかる」）。数は docs/BALANCE.md「2-3d. 当たり判定」
@@ -582,10 +588,15 @@
         if (s.E <= 0) target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu);
         else {
           if (s.spurting) {
-            // 馬なりでは伸びきらない。しごいて段を上げるほど、残っている脚を使って伸びる（段がいちばん上で、おまかせと同じ伸び）。
+            // 馬なりでは伸びきらない。しごいて段を上げるほど、残っている脚を使って伸びる（段 S.DRIVE.from で、おまかせとほぼ同じ伸び。その上は全開）。
             // いつ追い出すかが腕の見せどころ：スローなら早め、ハイなら遅め（脚が残っていれば伸び、無ければバテる）
             const ratioE = Math.cbrt(Math.max(0, s.E) * s.Ds / (0.9 * Math.max(R, 30) * s.spurtCost));
-            target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * (1 + (sim.top + (s.topAdd || 0) - 1) * U.clamp(g, S.PUSH.base, 1)));
+            const up = 1 + s.kickS * (1 + (sim.top + (s.topAdd || 0) - 1) * U.clamp(g, S.PUSH.base, 1));
+            const sus = U.clamp(ratioE, 1 + s.kickS, up);
+            // 全開：段が DRIVE.from より上の分だけ、脚の残りを見ずに上限の上まで（脚も余計に使う）
+            const drive = U.clamp((g - S.DRIVE.from) / (1 - S.DRIVE.from), 0, 1);
+            target = s.vc * (sus + (1 + (up - 1) * (1 + S.DRIVE.k) - sus) * drive);
+            costMul *= 1 + S.DRIVE.c * drive;
           } else if (prog < 0.22) {
             // 出だし：段の高さだけ速く（前へ）、深さだけ遅く（後ろへ）。出だしで押すと脚を使う
             target = pace * s.styleMult; if (s.easyStart) costMul *= S.EASY_START;
