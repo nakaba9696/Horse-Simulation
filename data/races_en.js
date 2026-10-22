@@ -124,5 +124,7 @@
     'チャールズウィッティンガムメモリアルハンデキャップ': 'Charles Whittingham Memorial Handicap', 'サンイシドロ大賞': 'Gran Premio San Isidro', 'ホアキンSデアンチョレナ大賞': 'Gran Premio Joaquín S. de Anchorena',
     'アメリカンハンデキャップ': 'American Handicap', 'サンタマルガリータ招待ハンデキャップ': 'Santa Margarita Invitational Handicap', 'アップルブロッサムハンデキャップ': 'Apple Blossom Handicap',
     'ミレイディハンデキャップ': 'Milady Handicap', 'ヴァニティハンデキャップ': 'Vanity Handicap', 'ラフィアンハンデキャップ': 'Ruffian Handicap',
+    'ハリウッドスターレットステークス': 'Hollywood Starlet Stakes', 'サンタアニタオークス': 'Santa Anita Oaks', 'マザーグースステークス': 'Mother Goose Stakes',
+    'ハスケル招待ハンデキャップ': 'Haskell Invitational Handicap', 'ガゼルハンデキャップ': 'Gazelle Handicap', 'ベルデイムステークス': 'Beldame Stakes',
   };
 })();

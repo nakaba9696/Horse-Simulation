@@ -17,5 +17,11 @@
 {"name":"ミレイディハンデキャップ","short":"ミレイディハンデキャップ","grade":"G1","region":"海外","country":"米","course":"","surface":"ダ","dist":1700,"month":5,"week":2,"from":1989,"to":1990,"uncertain":true,"nameEn":"Milady Handicap"},
 {"name":"ヴァニティハンデキャップ","short":"ヴァニティハンデキャップ","grade":"G1","region":"海外","country":"米","course":"ハリウッドパーク","surface":"ダ","dist":1800,"month":6,"week":2,"from":1989,"to":1989,"uncertain":true,"nameEn":"Vanity Handicap"},
 {"name":"ラフィアンハンデキャップ","short":"ラフィアンハンデキャップ","grade":"G1","region":"海外","country":"米","course":"ベルモント","surface":"ダ","dist":1800,"month":9,"week":2,"from":1989,"to":1989,"nameEn":"Ruffian Handicap"},
-{"name":"スピンスターステークス","short":"スピンスターステークス","grade":"G1","region":"海外","country":"米","course":"キーンランド","surface":"ダ","dist":1800,"month":10,"week":2,"from":1989,"to":1990,"uncertain":true,"nameEn":"Spinster Stakes"}
+{"name":"スピンスターステークス","short":"スピンスターステークス","grade":"G1","region":"海外","country":"米","course":"キーンランド","surface":"ダ","dist":1800,"month":10,"week":2,"from":1989,"to":1990,"uncertain":true,"nameEn":"Spinster Stakes"},
+{"name":"ハリウッドスターレットステークス","short":"ハリウッドスターレットステークス","grade":"G1","region":"海外","country":"米","course":"ハリウッドパーク","surface":"ダ","dist":1700,"month":12,"week":2,"from":1994,"to":1994,"nameEn":"Hollywood Starlet Stakes"},
+{"name":"サンタアニタオークス","short":"サンタアニタオークス","grade":"G1","region":"海外","country":"米","course":"サンタアニタ","surface":"ダ","dist":1700,"month":4,"week":2,"from":1995,"to":1995,"uncertain":true,"nameEn":"Santa Anita Oaks"},
+{"name":"マザーグースステークス","short":"マザーグースステークス","grade":"G1","region":"海外","country":"米","course":"ベルモント","surface":"ダ","dist":1800,"month":6,"week":2,"from":1995,"to":1995,"uncertain":true,"nameEn":"Mother Goose Stakes"},
+{"name":"ハスケル招待ハンデキャップ","short":"ハスケル招待ハンデキャップ","grade":"G1","region":"海外","country":"米","course":"モンマスパーク","surface":"ダ","dist":1800,"month":7,"week":2,"from":1995,"to":1995,"nameEn":"Haskell Invitational Handicap"},
+{"name":"ガゼルハンデキャップ","short":"ガゼルハンデキャップ","grade":"G1","region":"海外","country":"米","course":"ベルモント","surface":"ダ","dist":1800,"month":9,"week":2,"from":1995,"to":1995,"uncertain":true,"nameEn":"Gazelle Handicap"},
+{"name":"ベルデイムステークス","short":"ベルデイムステークス","grade":"G1","region":"海外","country":"米","course":"ベルモント","surface":"ダ","dist":1800,"month":10,"week":2,"from":1995,"to":1995,"nameEn":"Beldame Stakes"}
 ]
