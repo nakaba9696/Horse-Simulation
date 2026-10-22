@@ -95,6 +95,13 @@ module.exports = function (check, assert, HS) {
     return 'OK';
   });
 
+  check('mainwins: 一覧 docs/review/main_wins.csv が元データと同じ（tools/build_main_wins_csv.js）', () => {
+    const T = require('../tools/build_main_wins_csv.js');
+    const text = fs.readFileSync(T.OUT, 'utf8');
+    assert(text === T.build(HS), 'main_wins.csv が元データと合わない（node tools/build_main_wins_csv.js で作り直す）');
+    return 'OK';
+  });
+
   check('mainwins: 大きなレース（三冠・クラシック・メルボルンカップなど）の勝ちが、勝ち馬の記録にあるのに主な勝鞍から抜けていない', () => {
     const BIG = ['ケンタッキーダービー', 'プリークネスステークス', 'ベルモントステークス', '英2000ギニー', '英1000ギニー', '英ダービー', '英オークス', '仏ダービー', '仏オークス', '愛ダービー', 'ドイツダービー', '香港ダービー', 'メルボルンカップ', 'コックスプレート', '凱旋門賞', 'キングジョージ6世＆クイーンエリザベスステークス', 'ブリーダーズカップクラシック', 'ドバイワールドカップ', 'ジャパンカップ'];
     const bad = [];
