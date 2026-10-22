@@ -1,6 +1,6 @@
 # ホーム（管理画面。docs/UI.md「ホーム」）
 # 1. 今週することの札：「レースへ（n鞍に騎乗）」か「次の週へ」。金で大きく、最初のカーソル
-# 2. 帯：騎手名・所属と減量・評判／暦・リーディング・今年の勝ち・資金
+# 2. 帯：騎手名・所属・評判／暦・リーディング・今年の勝ち・資金
 # 3. コマンドの札：番組表・馬の店・セーブ・タイトルへ（よく使うものほど左）
 # 部品の絵（UiSkin）と背景 bg_home で描く（持ち主の指摘 2026-10-21「競馬のゲームなのでそれっぽいUIにしたい　ボタンとか色々」）。並びは前のまま
 # 4. 右：騎乗依頼（オーナーの顔・ひと言・レースと時期・依頼の馬・見送る）→ 12月のグランドフェスティバルの招待 → 今週の騎乗 → ニュース。左下：お手馬
@@ -26,8 +26,7 @@ func build() -> void:
 	var rank = HSJockey.my_rank(G.year)
 	var yr: Dictionary = HSU.or_(j.years.get(HSU.num(G.year)), {})
 	var wins := int(HSU.or_(yr.get("wins"), 0.0))
-	var alw := HSJockey.allowance({"region": "JRA", "graded": false})
-	var sub := HSText.t("%s所属・%s%s・騎乗技術 %d") % [HSText.t(j.region), HSText.t(HSJockey.rep_label(float(j.rep))), HSText.t("・減量 %s%dkg") % [HSJockey.allowance_mark(alw), int(alw)] if alw > 0 else "", int(round(float(j.skill)))]
+	var sub := HSText.t("%s所属・%s・騎乗技術 %d") % [HSText.t(j.region), HSText.t(HSJockey.rep_label(float(j.rep))), int(round(float(j.skill)))]
 	make_band("厩", HSText.jockey_name(j), sub, [["暦", UiFlow.date_label()], ["リーディング", HSText.t("%d位") % int(rank) if rank != null else "－"], ["今年", HSText.t("%d勝") % wins], ["資金", UiFlow.money_label(), "money"]], "saddle")
 	lcol = VBoxContainer.new()
 	lcol.position = Vector2(PAD_X, TOP + 2)

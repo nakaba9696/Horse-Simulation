@@ -778,7 +778,7 @@ static func cards() -> Array:
 			for x in runners:
 				if x.get("mine"): me = x; break
 		if me:
-			me.jockey = HSJockey.player_jockey(); me.rider = "P"; me.allowance = HSJockey.allowance(c.race); me.weight = me.weight - me.allowance
+			me.jockey = HSJockey.player_jockey(); me.rider = "P"   # 見習いの減量は無い（持ち主の決定 2026-10-21）
 		set_odds(runners, c.race, wk.wIdx, HSRng.new(float(int(c.seed) ^ 0x2545f491)))
 		var cc: Dictionary = c.duplicate(); cc.runners = runners; cc.ride = me != null
 		out.append(cc)

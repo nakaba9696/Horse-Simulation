@@ -27,14 +27,7 @@
   J.isMode = () => !!(G() && G().mode === 'jockey' && G().jockey);
   J.playerJockey = () => { const j = J.me(); return { name: j.name, region: j.region, skill: Math.round(j.skill), player: true }; };
 
-  // 見習いの減量（デビュー5年以内、勝ち数で ▲3・△2・☆1）。重賞では付かない
-  J.allowance = function (race) {
-    const j = J.me(); if (!j || race.graded || race.region !== 'JRA') return 0;
-    if (G().year - j.debut >= 5) return 0;
-    const w = j.total.wins;
-    return w < 30 ? 3 : w < 50 ? 2 : w < 100 ? 1 : 0;
-  };
-  J.allowanceMark = a => ({ 3: '▲', 2: '△', 1: '☆' })[a] || '';
+  // 見習いの減量は無い（斤量の仕組みは無し。持ち主の決定 2026-10-21）
 
   // 評判の言葉
   J.repLabel = rep => rep >= 85 ? 'トップジョッキー' : rep >= 65 ? '一流' : rep >= 45 ? '中堅' : rep >= 25 ? '若手の有望株' : '駆け出し';

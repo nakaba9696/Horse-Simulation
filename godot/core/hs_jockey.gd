@@ -1,4 +1,4 @@
-# 騎手のゲーム（js/core/jockey.js の HS.Jockey と同じ）：プレイヤーは騎手。乗ったレースの成績・評判・腕前・お手馬・見習いの減量・リーディング・騎手の表彰
+# 騎手のゲーム（js/core/jockey.js の HS.Jockey と同じ）：プレイヤーは騎手。乗ったレースの成績・評判・腕前・お手馬・リーディング・騎手の表彰
 # owners.js が包んでいた所（record のあとの馬主の好感度・year_end のあとの名コンビ賞）は、ここで同じ順に呼ぶ
 class_name HSJockey
 
@@ -18,14 +18,7 @@ static func is_mode() -> bool: return HSWorld.G != null and HSWorld.G.get("mode"
 static func player_jockey() -> Dictionary:
 	var j = me(); return { name = j.name, region = j.region, skill = HSMath.round_js(j.skill), player = true }
 
-# 見習いの減量（デビュー5年以内、勝ち数で ▲3・△2・☆1）。重賞では付かない
-static func allowance(race: Dictionary) -> float:
-	var j = me()
-	if not j or race.get("graded") or race.get("region") != "JRA": return 0.0
-	if HSWorld.G.year - j.debut >= 5: return 0.0
-	var w: float = j.total.wins
-	return 3.0 if w < 30 else (2.0 if w < 50 else (1.0 if w < 100 else 0.0))
-static func allowance_mark(a: float) -> String: return { 3: "▲", 2: "△", 1: "☆" }.get(int(a), "")
+# 見習いの減量は無い（斤量の仕組みは無し。持ち主の決定 2026-10-21）
 static func rep_label(rep: float) -> String:
 	return "トップジョッキー" if rep >= 85 else ("一流" if rep >= 65 else ("中堅" if rep >= 45 else ("若手の有望株" if rep >= 25 else "駆け出し")))
 

@@ -184,10 +184,9 @@ Dictionary power(const Dictionary &horse, const Dictionary &race, const Variant 
 	double condAdj = -fatigue_pen(num_or(horse.get("fatigue", Variant()), 0.0) + trav, a) - layoff;
 	double jockAdj = 0.0;
 	if (ctxOk && ctx.get("jockey", Variant()).booleanize()) jockAdj = ((double)((Dictionary)ctx["jockey"])["skill"] - 75.0) * 0.06;
-	double wtAdj = 0.0;
-	if (ctxOk && ctx.get("weight", Variant()).booleanize()) wtAdj = -((double)ctx["weight"] - 56.0) * 1.4;
+	// 斤量は強さに効かない（斤量の仕組みは無し。持ち主の決定 2026-10-21）
 	double skillAdj = skill_adj(horse, race, w_idx, ctx, nullptr);
-	double total = a - distPen - surfPen + groundAdj + condAdj + jockAdj + wtAdj + skillAdj;
+	double total = a - distPen - surfPen + groundAdj + condAdj + jockAdj + skillAdj;
 	Dictionary cur;
 	cur["spd"] = spd; cur["sta"] = sta; cur["dspd"] = c0.dspd; cur["dsta"] = c0.dsta; cur["guts"] = c0.guts; cur["mind"] = c0.mind; cur["slope"] = c0.slope;
 	Dictionary out;

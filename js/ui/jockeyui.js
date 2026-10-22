@@ -158,7 +158,6 @@
     const rides = J.myRides();
     const wk = W.prepareWeek();
     const up = W.upcomingGraded(12).filter(r => r.grade === 'G1' && r.inWeeks > 0 && r.region !== '海外').slice(0, 5);
-    const allowance = J.allowance({ graded: false, region: 'JRA' });
     // 今週のおもなレース（乗るレースがあればその競馬場）の天気と馬場
     const main = rides.length ? rides[0].card.race : (W.cards().map(c => c.race).find(r => r.region === 'JRA' && r.graded) || (W.cards()[0] || {}).race);
     const wx = main ? T.weather(G.seed, G.year, G.month, G.week, main.course, main.ground) : null;
@@ -168,7 +167,7 @@
       ${over ? `<div class="panel over mt"><div class="big">シーズン終了</div><div>${W.yLabel(over.y)}${over.m}月、資金が尽きた（${U.money(over.money)}）。</div><div class="small muted">記録はここまでの分が残っています。</div><div class="btns mt"><button class="btn gold" data-act="newgame-form">はじめから</button><button class="btn" data-act="tab" data-tab="jrecord">成績を見る</button></div></div>` : ''}
       <div class="mgr mt">
         <div class="mgr-top">
-          <div><div class="small">騎手</div><b class="nm">${e(j.name)}</b><span class="small">　${e(j.region)}${allowance ? `・${J.allowanceMark(allowance)}${allowance}kg 減` : ''}</span></div>
+          <div><div class="small">騎手</div><b class="nm">${e(j.name)}</b><span class="small">　${e(j.region)}</span></div>
           <div class="c"><div class="small">リーディング</div><b>${rank ? rank + '位' : '－'}</b></div>
           <div class="r"><div class="small">資金</div><b class="${G.player.money < 0 ? 'neg' : ''}">${U.money(G.player.money)}</b></div>
         </div>
@@ -204,7 +203,7 @@
       <div class="grow">
         <div class="small">${UI.gradeTag(race)} <b>${e(R.label(race))}</b>　${race.course} ${UI.surf(race.surface)} ${race.dist}m</div>
         <div class="row"><span class="nm">${e(h.name)}</span>${UI.histMark(h)}${(J.me().mounts || {})[h.name] && !h.filler ? `<span class="chip mine">お手馬</span>` : ''}<span class="small muted">${h.gelding ? 'セ' : h.sex}${W.get().year - h.born}・${e(H.styleText(h))}・切れ${h.kire || 4}</span></div>
-        <div class="small muted">${e(trainer)}厩舎・${x.pop ? `${x.pop}番人気（${x.odds}倍）` : ''}・斤量 ${(() => { const al = x.allowance || (accepted ? 0 : J.allowance(race)); const w = x.allowance ? x.weight : x.weight - al; return al ? `${w}kg（${J.allowanceMark(al)}${al}kg減）` : `${w}kg`; })()}</div>
+        <div class="small muted">${e(trainer)}厩舎・${x.pop ? `${x.pop}番人気（${x.odds}倍）` : ''}</div>
         ${UI.numStats(h, wIdx, { surface: race.surface })}
         ${UI.hasSkills(h) ? `<div class="skills">${UI.skillChips(h)}</div>` : ''}
         <div class="small muted">近走：${e(UI.recentRuns(h))}</div>
@@ -620,7 +619,7 @@
         <td class="nm">${e(x.horse.name)}${x.horse.legend ? ' <span class="chip legend">スペシャル</span>' : x.horse.hist ? ' <span class="chip hist">史</span>' : ''}</td>
         <td>${UI.kyakuArrows(x.horse.style, x.horse)}<div class="small muted">${e(H.styleText(x.horse))}</div></td>
         <td class="small hide-sm">${x.horse.gelding ? 'セ' : x.horse.sex}${G.year - x.horse.born}</td><td class="num small hide-sm">${x.weight}</td>
-        <td class="small">${x.allowance ? J.allowanceMark(x.allowance) : ''}${e(x.jockey ? x.jockey.name : '')}</td>
+        <td class="small">${e(x.jockey ? x.jockey.name : '')}</td>
         <td class="num">${x.pop}<div class="small muted">${x.odds}</div></td>${wet ? `<td>${UI.mudMark(x.horse)}</td>` : ''}<td class="hide-sm">${x.horse.filler ? '<span class="muted">－</span>' : UI.fatigueMark(x.horse, x.travel)}</td><td class="recent">${recent(x.horse)}</td></tr>`; }).join('')}
       </table></div></div>`;
   };

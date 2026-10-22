@@ -1,6 +1,7 @@
 # 出走表（docs/UI.md「出走表（レースの前・パドック）」）：18頭が 1600×1000 の 1画面に収まる（持ち主「レース時の馬一覧もスクロールなしで全頭見れるようにしてね」）
 # 上の帯（1行）：レース番号・格・レース名（明朝）・競馬場・芝ダと距離・回り・天気・馬場・頭数
-# 表（1行 36px）：馬番（枠の色）・馬名・性齢・斤量・脚質の矢印（右ほど前。その馬の脚質が赤く光る）・騎手・印の4列（スピード・スタミナ・サブパラ・実績の1〜4位に ◎○▲△。UiMarks）・人気（単勝）。自分の馬の行は左に金の線
+# 表（1行 36px）：馬番（枠の色）・馬名・性齢・脚質の矢印（右ほど前。その馬の脚質が赤く光る）・騎手・印の4列（スピード・スタミナ・サブパラ・実績の1〜4位に ◎○▲△。UiMarks）・人気（単勝）。自分の馬の行は左に金の線
+# 斤量は出さない（斤量の仕組みは無し。持ち主の決定 2026-10-21「書いてあると誤解を生みそう」）
 # 疲労の列は出さない（持ち主の指摘 2026-10-20「疲労の列は要らない」）。印の凡例は出さない（持ち主「印の意味書かないでいい　競馬新聞風にしたいだけだから」）
 # 馬場が良でないときは、印の前に道悪の得手不得手（得意・ふつう・苦手。HSSim.mud_label。持ち主の決定 2026-10-20「馬場の状態」）の列を足す（馬名の列が縮む）
 # 右：コース図（UiCourseMap：回り・走る道・スタートとゴール・距離の目盛り・最後の直線の長さ・坂。展開予想は出さない。持ち主の指摘 2026-10-17「プレイヤーに判断させたい」）・
@@ -129,7 +130,7 @@ func _card_info() -> void:
 		var hh := HSHorse.from_historic(d, "c")
 		hh.born = 2021.0
 		hd.append(hh)
-		var p: Dictionary = HSSim.power(hh, r, w_idx, {"weight": float(h.weight), "jockey": {"skill": 80.0}})
+		var p: Dictionary = HSSim.power(hh, r, w_idx, {"jockey": {"skill": 80.0}})
 		est.append(float(p.total) + rng.normal(0.0, 1.8) + (1.5 if hh.get("hist") and hh.get("gradedWins", []).size() > 0 else 0.0))
 	var mx := -1e9
 	for e in est:
@@ -244,7 +245,7 @@ func _stat(head: String, val: String) -> PanelContainer:
 	v.add_child(UiTheme.num_label(val, 17, UiTheme.IVORY))
 	return p
 
-const COLS := [["馬番", 44], ["馬名", 0], ["性齢", 52], ["斤量", 52], ["脚質", 118], ["騎手", 128], ["SP", 34], ["ST", 34], ["サブ", 34], ["実績", 34], ["人気", 76]]
+const COLS := [["馬番", 44], ["馬名", 0], ["性齢", 52], ["脚質", 118], ["騎手", 128], ["SP", 34], ["ST", 34], ["サブ", 34], ["実績", 34], ["人気", 76]]
 const MUD_W := 56
 const MARK_COL := {"◎": UiTheme.GOLD_BRIGHT, "○": UiTheme.IVORY, "▲": UiTheme.GOOD, "△": UiTheme.COOL}
 
@@ -272,7 +273,7 @@ func _build_table() -> void:
 	head.add_theme_constant_override("separation", 10)
 	head.custom_minimum_size.y = 22
 	var cols: Array = COLS.duplicate()
-	if _wet(): cols.insert(6, ["道悪", MUD_W])
+	if _wet(): cols.insert(5, ["道悪", MUD_W])
 	for col in cols:
 		var l := UiTheme.label(col[0], 11, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_CENTER if col[1] > 0 else HORIZONTAL_ALIGNMENT_LEFT)
 		if col[1] > 0:
@@ -323,15 +324,12 @@ func _build_table() -> void:
 		var sa := UiTheme.num_label(HSText.sex_age(hinfo, int(hinfo.get("age", 4))), 15)
 		sa.custom_minimum_size.x = COLS[2][1]
 		h.add_child(sa)
-		var wl := UiTheme.num_label("%.1f" % float(hinfo.weight), 15)
-		wl.custom_minimum_size.x = COLS[3][1]
-		h.add_child(wl)
 		var ar := UiStyleArrows.new(String(hinfo.style))
-		ar.custom_minimum_size = Vector2(COLS[4][1], 24)
+		ar.custom_minimum_size = Vector2(COLS[3][1], 24)
 		ar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(ar)
 		var jl := UiTheme.label(HSText.jockey_name(String(info[i].jockey)), 14, UiTheme.MUTED)
-		jl.custom_minimum_size.x = COLS[5][1]
+		jl.custom_minimum_size.x = COLS[4][1]
 		jl.clip_text = true
 		h.add_child(jl)
 		if _wet():
@@ -342,10 +340,10 @@ func _build_table() -> void:
 		for k in UiMarks.COLS.size():
 			var sym := String(marks[i][UiMarks.COLS[k]]) if i < marks.size() else ""
 			var mk := UiTheme.label(sym, 18, MARK_COL.get(sym, UiTheme.FAINT), HORIZONTAL_ALIGNMENT_CENTER)
-			mk.custom_minimum_size.x = COLS[6 + k][1]
+			mk.custom_minimum_size.x = COLS[5 + k][1]
 			h.add_child(mk)
 		var pv := HBoxContainer.new()
-		pv.custom_minimum_size.x = COLS[10][1]
+		pv.custom_minimum_size.x = COLS[9][1]
 		pv.add_theme_constant_override("separation", 4)
 		var pl := UiTheme.num_label(str(int(info[i].pop)), 17, UiTheme.GOLD_BRIGHT if int(info[i].pop) <= 3 else UiTheme.IVORY, HORIZONTAL_ALIGNMENT_RIGHT)
 		pl.custom_minimum_size.x = 24
@@ -495,7 +493,7 @@ func _select(i: int, animate: bool) -> void:
 	card_name.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT if bool(h.get("mine", false)) else UiTheme.IVORY)
 	card_arrows.style = String(h.style)
 	card_arrows.queue_redraw()
-	card_sub.text = HSText.t("%d番  %s  %s  %s  斤量%.1f  %s") % [int(h.num), HSText.sex_age(h, int(h.get("age", 4))), HSText.t(String(h.coat)), HSText.tparts(String(h.style)), float(h.weight), HSText.jockey_name(String(info[i].jockey))]
+	card_sub.text = HSText.t("%d番  %s  %s  %s  %s") % [int(h.num), HSText.sex_age(h, int(h.get("age", 4))), HSText.t(String(h.coat)), HSText.tparts(String(h.style)), HSText.jockey_name(String(info[i].jockey))]
 	for c in card_marks.get_children():
 		card_marks.remove_child(c)   # すぐ外す（同じコマの並べ直しで札の高さが残らないように）
 		c.queue_free()
