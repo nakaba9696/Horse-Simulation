@@ -71,3 +71,9 @@ CC-BY-4.0 なので、ゲームの中のクレジット（タイトルの「ク�
 | `assets/horse_rigged.js` | 骨入りの馬（GLB。2,914 面、骨 42 本） | Sketchfab「Horse Rigged(Game Ready)」 | abhayexe（https://sketchfab.com/abhayexe） | CC-BY-4.0（商用可・作者の表記が要る） | https://sketchfab.com/3d-models/horse-riggedgame-ready-bc64f4ff7966474ca9bacd42fa73a754 | 1つの GLB にまとめ、絵を 1024 の陰影の絵に変えた。読み込んだときにサラブレッドの比へ形を写し直す（脚を長く細く・脚の下の長い毛を消す・胴を浅く・首を細長く・頭を小さく）。毛色は材質の中で塗る |
 
 表記：This work is based on "Horse Rigged(Game Ready)" (https://sketchfab.com/3d-models/horse-riggedgame-ready-bc64f4ff7966474ca9bacd42fa73a754) by abhayexe (https://sketchfab.com/abhayexe) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+
+## 馬モデルの試作 v2（Godot。`godot/proto/tripo_horse/`。ゲームでは使っていない試作）
+
+| ファイル | 中身 | 元の素材 | 作者 | ライセンス | 出典 | 手を加えたこと |
+|---|---|---|---|---|---|---|
+| `godot/proto/tripo_horse/horse-gallop.glb`（と取り込みで出る法線の絵 `horse-gallop_tripo_node_…_Normal_Bake.jpg`） | 骨入りの馬（17,437 頂点・骨 54 本・襲歩のその場走行 1 本 Gallop_Loop） | 持ち主が Tripo（AI の 3D モデル生成）で作った馬のモデル（同梱の source-rigged.glb） | 形：持ち主（Tripo で生成）。骨入れ・重みの直し・襲歩のアニメ：Codex が付けた試作 v2 | 持ち主の提供。Tripo の利用規約のもとで作られた素材。商用で売るゲームに入れてよいか（Tripo のプランと規約の条件）は持ち主に確かめる | 枝 `codex/tripo-horse-handoff` の `artifacts/tripo-horse-v2/horse-claude-handoff-v2.zip`（SHA-256 `04e17a2d…270e`。2026-10-22） | GLB はそのまま（骨の向きも変えない）。試作の場面で Y に +90° 回して 2.6 倍に置き、毛色の代わりに材質の色を単色の鹿毛に寄せる |
