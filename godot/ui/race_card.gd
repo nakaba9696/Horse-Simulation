@@ -532,7 +532,7 @@ func _fill_stats(i: int) -> void:
 	fr.add_theme_constant_override("separation", 8)
 	for s in ["芝", "ダ"]:
 		fr.add_child(UiTheme.label(HSText.t("総合力 %s") % HSText.t(s), 13, UiTheme.IVORY if s == sf else UiTheme.MUTED))
-		fr.add_child(UiTheme.stat_chip(HSSeason.fh(hh, wi, s), "fh", s == sf))
+		fr.add_child(UiTheme.stat_chip(HSSeason.fh_show(hh, wi, s), "fh", s == sf))
 	card_stats.add_child(fr)
 	# 能力（今日の馬場）
 	var grid := GridContainer.new()

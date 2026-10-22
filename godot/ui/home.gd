@@ -210,7 +210,7 @@ func _build_stable() -> void:
 		cl.add_child(dot)
 		cl.add_child(UiTheme.label(cond_txt, 13, UiTheme.MUTED))
 		hb.add_child(cl)
-		var fh := HSSeason.fh_both(h, wi)
+		var fh := HSSeason.fh_show_both(h, wi)
 		for k in ["turf", "dirt"]:
 			var cw := CenterContainer.new()
 			cw.custom_minimum_size.x = 44

@@ -191,7 +191,7 @@ func _shop(t) -> void:
 	var wi := HSWorld.w_idx()
 	var cur_ok := true
 	for x in sc.items:
-		var f := HSEraless.shop_fh(x.it.horse, wi)
+		var f := HSSeason.fh_show_both(x.it.horse, wi)   # 画面に出す総合力（0.5 刻み）
 		if float(x.fh.turf) != float(f.turf) or float(x.fh.dirt) != float(f.dirt): cur_ok = false
 	t.ok(cur_ok and sc.items.size() > 0, "shop: 一覧の総合力はいまの値")
 	var n0 := HSWorld.mine().size()

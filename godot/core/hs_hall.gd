@@ -49,7 +49,7 @@ static func on_retire(h: Dictionary) -> Variant:
 		starts = HSU.or_(h.get("starts"), 0.0), wins = HSU.or_(h.get("wins"), 0.0), w2 = HSU.or_(h.get("w2"), 0.0), w3 = HSU.or_(h.get("w3"), 0.0), prize = HSU.or_(h.get("prize"), 0.0),
 		g1 = float(g1), gradedWins = HSU.or_(h.get("gradedWins"), []).map(func(g): return g.duplicate()),
 		trophies = trophies_of(h), titles = HSU.or_(h.get("titles"), []).duplicate(),
-		fh = { turf = fh.turf, dirt = fh.dirt }, first = res[0].y if res.size() else G.year, retiredY = G.year, results = res }
+		fh = { turf = fh.turf, dirt = fh.dirt }, fhShow = HSSeason.fh_show_peak(h), first = res[0].y if res.size() else G.year, retiredY = G.year, results = res }
 	_store(String(e.id), String(e.name), _split(e))   # 1走ごとの記録は別ファイルへ（殿堂入りのときに一度だけ）
 	G.hallOwn.append(e)
 	HSWorld.dirty()

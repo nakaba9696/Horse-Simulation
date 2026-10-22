@@ -42,7 +42,7 @@ const FRAME_FG := [Color("111111"), Color("ffffff"), Color("ffffff"), Color("fff
 # 段：0 低い（暗い青）・1 ふつう（灰）・2 良い（緑）・3 とても良い（金）・4 飛び抜けている（紅。光る）
 # 境目は「この値から上がその段」。史実馬・スペシャルホースの値を数えて決めた（docs/UI.md）。JS 版（js/ui/uikit.js の K.TIER）と同じ値にする（tests/extra_ui.js が比べる）
 const TIER_NAMES := ["低い", "ふつう", "良い", "とても良い", "飛び抜けている"]
-const TIER_FH := [51, 61, 66, 81]      # 総合力（芝・ダ 1〜99）
+const TIER_FH := [53, 60, 65, 77]      # 画面の総合力（0.5 刻み。G3 馬・G1 馬・名馬・神話級。持ち主の決定 2026-10-21 の目盛り）
 const TIER_STAT := [60, 75, 85, 95]    # 能力（芝SP・芝ST・ダSP・ダST・根性・気性・坂 20〜120）
 const TIER_KIRE := [3, 5, 7, 8]        # 脚の切れ（1〜8）
 const TIER_BG := [Color("15283a"), Color("26362e"), Color("1d6a42"), Color("7d5c14"), Color("a5233c")]
@@ -236,7 +236,7 @@ static func tier(v: float, kind := "fh") -> int:
 	var cut: Array = TIER_FH if kind == "fh" else (TIER_KIRE if kind == "kire" else TIER_STAT)
 	var t := 0
 	for c in cut:
-		if roundf(v) >= float(c):
+		if (v if kind == "fh" else roundf(v)) >= float(c):
 			t += 1
 	return t
 
@@ -249,7 +249,7 @@ static func stat_chip(v: float, kind := "fh", big := false, txt := "") -> PanelC
 		sb.shadow_color = Color(1.0, 0.33, 0.4, 0.55)
 		sb.shadow_size = 6
 	p.add_theme_stylebox_override("panel", sb)
-	var l := num_label(txt if txt != "" else str(int(roundf(v))), 17 if big else 14, TIER_FG[t])
+	var l := num_label(txt if txt != "" else (HSSeason.fh_text(v) if kind == "fh" else str(int(roundf(v)))), 17 if big else 14, TIER_FG[t])
 	if t >= 3:
 		l.add_theme_color_override("font_outline_color", TIER_FG[t])
 		l.add_theme_constant_override("outline_size", 2)

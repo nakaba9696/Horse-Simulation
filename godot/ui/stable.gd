@@ -104,7 +104,7 @@ func _fill() -> void:
 		if h.get("original"): nm.add_child(UiTheme.chip("オリジナル", UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
 		elif h.get("hist"): nm.add_child(UiTheme.chip("史実", UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
 		hb.add_child(nm)
-		var fh := HSSeason.fh_both(h, wi) if tab == 0 else HSSeason.fh_peak(h)
+		var fh := HSSeason.fh_show_both(h, wi) if tab == 0 else HSSeason.fh_show_peak(h)
 		if tab == 0:
 			var sa := UiTheme.num_label(HSText.sex_age(h, int(G.year - float(h.born))), 15)
 			sa.custom_minimum_size.x = 52
@@ -204,8 +204,8 @@ func _preview(i: int) -> void:
 	pv.add_child(sl)
 	var fr := HBoxContainer.new()
 	fr.add_theme_constant_override("separation", 8)
-	var now := HSSeason.fh_both(h, wi)
-	var pk := HSSeason.fh_peak(h)
+	var now := HSSeason.fh_show_both(h, wi)
+	var pk := HSSeason.fh_show_peak(h)
 	if h.loc != "retired":
 		fr.add_child(UiTheme.label("総合力 いま", 13, UiTheme.MUTED))
 		fr.add_child(UiTheme.stat_chip(float(now.turf), "fh", true))

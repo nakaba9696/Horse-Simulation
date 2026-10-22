@@ -175,7 +175,7 @@ func _build_hall(args: PackedStringArray) -> void:
 	v.add_child(portrait)
 	portrait.set_horse(String(h.name), String(HSU.or_(h.get("coat"), "鹿毛")), float(h.retiredY) - float(h.born))
 	v.add_child(UiTheme.chip("殿堂入り", UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 15))
-	var fh = h.get("fh")
+	var fh = h.get("fhShow", h.get("fh"))
 	if fh is Dictionary:
 		var fr := HBoxContainer.new()
 		fr.add_theme_constant_override("separation", 8)
@@ -265,7 +265,7 @@ func _build_left() -> void:
 	portrait.set_horse(String(h.name), String(HSU.or_(h.get("coat"), "鹿毛")), G.year - float(h.born))
 	var fr := HBoxContainer.new()
 	fr.add_theme_constant_override("separation", 8)
-	var now := HSSeason.fh_both(h, wi)
+	var now := HSSeason.fh_show_both(h, wi)
 	fr.add_child(UiTheme.label("総合力 いま", 14, UiTheme.MUTED))
 	fr.add_child(UiScreen.spacer())
 	fr.add_child(UiTheme.label("芝", 13, UiTheme.MUTED))
@@ -327,8 +327,8 @@ func _fill() -> void:
 # ---- 能力 ----
 func _stat() -> void:
 	var wi := HSWorld.w_idx()
-	var now := HSSeason.fh_both(h, wi)
-	var pk := HSSeason.fh_peak(h)
+	var now := HSSeason.fh_show_both(h, wi)
+	var pk := HSSeason.fh_show_peak(h)
 	var fr := HBoxContainer.new()
 	fr.add_theme_constant_override("separation", 10)
 	fr.add_child(UiScreen.section("総合力", "その馬場のスピードとスタミナから"))

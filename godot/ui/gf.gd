@@ -93,7 +93,7 @@ func _fill() -> void:
 			var sf := "ダ" if C.surface == "ダ" else "芝"
 			for e in el:
 				var hid: String = e.h.id
-				var b := UiScreen.button(HSText.t("出す：%s（%s・総合力 %d）") % [HSText.horse_name(e.h), HSText.tx(String(e.why)), int(HSSeason.fh(e.h, HSWorld.w_idx(), sf))], acts.is_empty(), 0, 48, 16)
+				var b := UiScreen.button(HSText.t("出す：%s（%s・総合力 %s）") % [HSText.horse_name(e.h), HSText.tx(String(e.why)), HSSeason.fh_text(HSSeason.fh_show(e.h, HSWorld.w_idx(), sf))], acts.is_empty(), 0, 48, 16)
 				b.pressed.connect(func():
 					var err = HSSeason.dc_choose(id, hid)
 					if err: toast(HSText.tx(String(err)), "bad"); return
@@ -131,7 +131,7 @@ func _fill() -> void:
 			hb.add_child(l)
 		var cw := CenterContainer.new()
 		cw.custom_minimum_size.x = 50
-		cw.add_child(UiTheme.stat_chip(float(x.fh)))
+		cw.add_child(UiTheme.stat_chip(HSSeason.fh_show(x.h, HSWorld.w_idx(), "ダ" if C.surface == "ダ" else "芝")))
 		hb.add_child(cw)
 		UiScreen.pass_mouse(hb)
 		list.add_child(b)

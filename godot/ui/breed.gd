@@ -229,7 +229,7 @@ func _slot(h, is_sire: bool) -> PanelContainer:
 	v.add_child(nm)
 	var st := HBoxContainer.new()
 	st.add_theme_constant_override("separation", 4)
-	var pk := HSSeason.fh_peak(h)
+	var pk := HSSeason.fh_show_peak(h)
 	st.add_child(UiTheme.label("芝", 12, UiTheme.MUTED))
 	st.add_child(UiTheme.stat_chip(float(pk.turf)))
 	st.add_child(UiTheme.label("ダ", 12, UiTheme.MUTED))
@@ -300,7 +300,7 @@ func _col(v: VBoxContainer, title: String, sub: String, list: Array, is_sire: bo
 		l2.clip_text = true
 		nv.add_child(l2)
 		hb.add_child(nv)
-		var pk := HSSeason.fh_peak(h)
+		var pk := HSSeason.fh_show_peak(h)
 		for k in ["turf", "dirt"]:
 			var cw := CenterContainer.new()
 			cw.custom_minimum_size.x = 34

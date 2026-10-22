@@ -84,7 +84,7 @@ func _load_items() -> void:
 	items.clear()
 	var wi := HSWorld.w_idx()
 	for it in HSWorld.market_historic():
-		items.append({"it": it, "fh": HSEraless.shop_fh(it.horse, wi), "f": it.horse.sex == "牝"})
+		items.append({"it": it, "fh": HSSeason.fh_show_both(it.horse, wi), "f": it.horse.sex == "牝"})
 
 func _val(x: Dictionary, k: String):
 	var h: Dictionary = x.it.horse

@@ -100,7 +100,7 @@ func _fill(refocus: bool) -> void:
 	var fv := HSFatigue.view(h)
 	l1.add_child(UiTheme.label("入厩前" if h.loc == "farm" else HSText.t("疲労 %s") % HSText.t(String(fv.label)), 15, Color(String(fv.color)) if h.loc == "stable" else UiTheme.FAINT))
 	l1.add_child(UiScreen.spacer())
-	var fh := HSSeason.fh_both(h, wi)
+	var fh := HSSeason.fh_show_both(h, wi)
 	l1.add_child(UiTheme.label("総合力", 12, UiTheme.MUTED))
 	l1.add_child(UiTheme.label("芝", 13, UiTheme.MUTED))
 	l1.add_child(UiTheme.stat_chip(float(fh.turf)))

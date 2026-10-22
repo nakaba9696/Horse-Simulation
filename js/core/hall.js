@@ -43,6 +43,7 @@
       gradedWins: (h.gradedWins || []).map(g => Object.assign({}, g)),
       trophies: HL.trophiesOf(h), titles: (h.titles || []).slice(),
       fh: fh ? { turf: fh.turf, dirt: fh.dirt } : null,
+      fhShow: S && S.fhShowPeak ? S.fhShowPeak(h) : null,   // 画面に出す総合力（0.5 刻み。godot/core/hs_hall.gd と同じ）
       first: res.length ? res[0].y : G.year, retiredY: G.year, results: res,
     };
     G.hallOwn.push(e);

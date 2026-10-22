@@ -521,7 +521,7 @@ const T := {
 	"辞退した": "Declined",
 	"自分の馬に招待は来ていない": "None of your horses were invited",
 	"招待が届いた。出す馬を1頭選ぶか、辞退する": "Invitation received. Choose one horse or decline",
-	"出す：%s（%s・総合力 %d）": "Send: %s (%s · Rating %d)",
+	"出す：%s（%s・総合力 %s）": "Send: %s (%s · Rating %s)",
 	"%sを出す": "%s will run",
 	"辞退": "Decline",
 	"%sの順位（%d年目）": "%s Standings (Year %d)",
