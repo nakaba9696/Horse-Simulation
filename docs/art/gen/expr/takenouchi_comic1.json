@@ -1,14 +1,14 @@
 {
- "prompt": "(Inuboshi:1.2),miyanogi_jiji,Anan Shokudow,yutokamizu,ikezawa shin, masterpiece, best quality, good quality, amazing quality, very aesthetic, absurdres, newest, blue archive, no halo, 1boy, male focus, (old man:1.4), (elderly:1.2), 68 years old, (thin:1.3), slender, wrinkles, (silver white hair slicked back:1.4), (grey mustache:1.3), (rimless monocle with thin chain:1.3), (sharp cold eyes:1.4), (stern expression:1.3), (dark navy three-piece suit:1.4), (red ascot:1.4), (pinstripe shirt:1.3), (white pocket square:1.3), dignified, (butler-like elegance:1.2), seasoned, solo, upper body, portrait, looking at viewer, facing viewer, simple background, white background, character focus, fully clothed, (monocle slipping off:1.4), (surprised:1.4), (wide eyes:1.3), (open mouth:1.2), (sweatdrop:1.2), comedic",
- "negative_prompt": "long neck,long body,(missing arms:1.2),extra arms,(mutated hands:1.2),extra legs,(bad hands:1.2),poorly drawn hands,(malformed hands:1.2),missing limb,floating limbs,disconnected limbs,extra fingers,bad fingers,liquid fingers,poorly drawn fingers,missing fingers,extra digit,fewer digits,ugly face,deformed eyes,partial face,partial head,worst quality,low quality,bad quality,bad anatomy,bad feet,displeasing,unfinished,missing,artistic error,[abstract],lowres,jpeg artifacts,scan,chromatic aberration,signature,username,watermark,(text:1.2),extra digits,stamp,date,logo,(signature:1.1),(username:1.1),(logo:1.1),error,fewer,extra,twins, multiple girls, multiple boys, 2girls, 2boys, 3girls, 3boys, multiple views, group, crowd, background characters, other characters, reference sheet, split screen, cropped, out of frame, nsfw, nude, nudity, topless, nipples, bare chest, cleavage, underwear, lingerie, swimsuit, revealing clothes, see-through, halo, (child:1.6), (young:1.4), (1girl:1.5), (female:1.4), (breasts:1.4), (beard:1.4), (fat:1.4), (smile:1.3), (kimono:1.3), (sunglasses:1.4), (cane:1.2), (text:1.5), (japanese text:1.5), (calligraphy:1.4), (sign:1.3), (multiple people:1.5), (2girls:1.4), (bubble tea:1.5), (drink:1.3), building, scenery, (angry:1.4), (spectacles:1.5)",
- "seed": 62,
+ "prompt": "(Inuboshi:1.2),miyanogi_jiji,Anan Shokudow,yutokamizu,ikezawa shin, masterpiece, best quality, good quality, amazing quality, very aesthetic, absurdres, newest, blue archive, no halo, 1boy, (old man:1.4), 68 years old, (thin:1.3), slender, wrinkles, (silver white hair slicked back:1.4), (grey mustache:1.3), (thin rimless glasses with chain:1.3), (sharp eyes:1.3), (dark navy three-piece suit:1.4), (red ascot:1.4), (pinstripe shirt:1.2), (white pocket square:1.2), dignified, butler-like elegance, solo, upper body, portrait, looking at viewer, facing viewer, simple background, white background, character focus, fully clothed, (glasses slipping down nose:1.5), (surprised:1.4), (wide eyes:1.3), (sweatdrop:1.3), comedic",
+ "negative_prompt": "long neck,long body,(missing arms:1.2),extra arms,(mutated hands:1.2),extra legs,(bad hands:1.2),poorly drawn hands,(malformed hands:1.2),missing limb,floating limbs,disconnected limbs,extra fingers,bad fingers,liquid fingers,poorly drawn fingers,missing fingers,extra digit,fewer digits,ugly face,deformed eyes,partial face,partial head,worst quality,low quality,bad quality,bad anatomy,bad feet,displeasing,unfinished,missing,artistic error,[abstract],lowres,jpeg artifacts,scan,chromatic aberration,signature,username,watermark,(text:1.2),extra digits,stamp,date,logo,(signature:1.1),(username:1.1),(logo:1.1),error,fewer,extra,twins, multiple girls, multiple boys, 2girls, 2boys, 3girls, 3boys, multiple views, group, crowd, background characters, other characters, reference sheet, split screen, cropped, out of frame, nsfw, nude, nudity, topless, nipples, bare chest, cleavage, underwear, lingerie, swimsuit, revealing clothes, see-through, halo, (child:1.6), (young:1.4), (1girl:1.5), (female:1.4), (breasts:1.4), (beard:1.4), (fat:1.4), (kimono:1.3), (sunglasses:1.4), (cane:1.2), (thick lineart:1.3), (text:1.5), (japanese text:1.5), (calligraphy:1.4), (sign:1.3), (multiple people:1.5), (2girls:1.4), (bubble tea:1.5), (drink:1.3), building, scenery, (angry:1.3)",
+ "seed": 21,
  "steps": 24,
  "cfg_scale": 5.5,
  "sampler_name": "Euler a",
  "scheduler": "Automatic",
  "width": 1024,
  "height": 1024,
- "denoising_strength": 0.75,
+ "denoising_strength": 0.72,
  "inpainting_fill": 1,
  "inpaint_full_res": true,
  "inpaint_full_res_padding": 96,
@@ -18,11 +18,11 @@
   "sd_model_checkpoint": "waiIllustriousSDXL_v140.safetensors [bdb59bac77]"
  },
  "override_settings_restore_afterwards": true,
- "init_image": "take.png",
+ "init_image": "takenouchi9_19305.png",
  "mask_ellipse": [
-  530.0,
-  520.0,
-  140.0,
-  130.0
+  512.0,
+  470.0,
+  160.0,
+  150.0
  ]
 }

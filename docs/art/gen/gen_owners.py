@@ -156,6 +156,11 @@ P["hinata"] = (P["hinata"][0], P["hinata"][1].replace("(tanned skin:1.3), (red c
                P["hinata"][2] + ", (blush:1.6), (tan:1.6), (tanned skin:1.6), (dark skin:1.6), (red cheeks:1.5), (sunburn:1.4)")
 P["sengoku"] = (P["sengoku"][0], P["sengoku"][1].replace("(modern short textured hair:1.3), (two-block haircut:1.1)", "(short neat businessman haircut:1.4), (short sides, slightly longer top swept to the side:1.3), (clean-cut:1.3)"),
                 P["sengoku"][2] + ", (long hair:1.4), (messy hair:1.3), (bangs over eyes:1.4), (hair over one eye:1.5)")
+# 2026-10-23 9 回目：竹之内は女と同じ絵柄（style.json）で、男のタグも最小に。ファリナ（競馬）は新しく生成
+P["takenouchi9"] = ("f2", "1boy, (old man:1.4), 68 years old, (thin:1.3), slender, wrinkles, (silver white hair slicked back:1.4), (grey mustache:1.3), (thin rimless glasses with chain:1.3), (sharp eyes:1.3), stern, closed mouth, (dark navy three-piece suit:1.4), (red ascot:1.4), (pinstripe shirt:1.2), (white pocket square:1.2), dignified, butler-like elegance",
+                    ", (child:1.6), (young:1.4), (1girl:1.5), (female:1.4), (breasts:1.4), (beard:1.4), (fat:1.4), (kimono:1.3), (sunglasses:1.4), (cane:1.2), (thick lineart:1.3)")
+P["farina9"] = ("f", "1girl, adult woman, 28 years old, slim, pale skin, (blue-black hair:1.3), long hair, (low ponytail:1.3), (straight blunt bangs:1.3), (grey eyes:1.3), narrow eyes, (silver-rimmed glasses:1.4), (dark navy high-collared dress:1.4), (silver chain necklace:1.2), (holding a red notebook to chest with both arms:1.4), serious, expressionless, earnest",
+                ", (child:1.5), (loli:1.5), (hands near face:1.5), (adjusting glasses:1.5), (six fingers:1.7), (extra fingers:1.7), (bad hands:1.6), (fused fingers:1.5)")
 who_list, seeds = sys.argv[1].split(","), [int(s) for s in sys.argv[2].split(",")]
 out = sys.argv[3] if len(sys.argv) > 3 else "."
 os.makedirs(out, exist_ok=True)

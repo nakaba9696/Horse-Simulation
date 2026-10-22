@@ -1,14 +1,14 @@
 {
- "prompt": "(Inuboshi:1.2),miyanogi_jiji,Anan Shokudow,yutokamizu, masterpiece, best quality, good quality, amazing quality, very aesthetic, absurdres, newest, blue archive, no halo, 1girl, princess, 28 years old, slim, pale skin, black hair, blue-black hair, long hair, low ponytail, straight bangs, grey eyes, narrow eyes, cold eyes, thin eyebrows, silver-rimmed glasses, dark blue noble dress, high collar, silver chain necklace, adjusting glasses, holding documents, serious expression, solo,  upper body, portrait, looking at viewer, facing viewer, straight-on, simple background, (green background:1.3), (chroma key:1.1), character focus, fully clothed, (slightly crooked glasses:1.4), (dot eyes:1.5), (blank stare:1.4), (frozen:1.3), (small straight mouth:1.2), comedic, sweatdrop",
- "negative_prompt": "long neck,long body,(missing arms:1.2),extra arms,(mutated hands:1.2),extra legs,(bad hands:1.2),poorly drawn hands,(malformed hands:1.2),missing limb,floating limbs,disconnected limbs,extra fingers,bad fingers,liquid fingers,poorly drawn fingers,missing fingers,extra digit,fewer digits,ugly face,deformed eyes,partial face,partial head,worst quality,low quality,bad quality,bad anatomy,bad feet,displeasing,unfinished,missing,artistic error,[abstract],lowres,jpeg artifacts,scan,chromatic aberration,signature,username,watermark,(text:1.2),extra digits,stamp,date,logo,(signature:1.1),(username:1.1),(logo:1.1),error,fewer,extra,twins, multiple girls, multiple boys, 2girls, 2boys, 3girls, 3boys, multiple views, group, crowd, background characters, other characters, reference sheet, split screen, cropped, out of frame, nsfw, nude, nudity, topless, nipples, bare chest, breasts, cleavage, underwear, lingerie, swimsuit, revealing clothes, see-through, halo, white background, white outline, white border, (green hair:1.4), green clothes, glow, (nose blush:1.6), (red nose:1.6), (broken glasses:1.5)",
- "seed": 96,
+ "prompt": "(Inuboshi:1.2),miyanogi_jiji,Anan Shokudow,yutokamizu,ikezawa shin, masterpiece, best quality, good quality, amazing quality, very aesthetic, absurdres, newest, blue archive, no halo, 1girl, adult woman, 28 years old, slim, pale skin, (blue-black hair:1.3), long hair, (low ponytail:1.3), (straight blunt bangs:1.3), (grey eyes:1.3), (silver-rimmed glasses:1.4), (dark navy high-collared dress:1.4), (silver chain necklace:1.2), (holding a red notebook to chest with both arms:1.4), earnest, solo, upper body, portrait, looking at viewer, facing viewer, simple background, white background, character focus, fully clothed, (dot eyes:1.7), (o_o:1.4), (blank stare:1.5), (frozen:1.4), (glasses askew:1.3), (small open mouth:1.2), comedic, sweatdrop",
+ "negative_prompt": "long neck,long body,(missing arms:1.2),extra arms,(mutated hands:1.2),extra legs,(bad hands:1.2),poorly drawn hands,(malformed hands:1.2),missing limb,floating limbs,disconnected limbs,extra fingers,bad fingers,liquid fingers,poorly drawn fingers,missing fingers,extra digit,fewer digits,ugly face,deformed eyes,partial face,partial head,worst quality,low quality,bad quality,bad anatomy,bad feet,displeasing,unfinished,missing,artistic error,[abstract],lowres,jpeg artifacts,scan,chromatic aberration,signature,username,watermark,(text:1.2),extra digits,stamp,date,logo,(signature:1.1),(username:1.1),(logo:1.1),error,fewer,extra,twins, multiple girls, multiple boys, 2girls, 2boys, 3girls, 3boys, multiple views, group, crowd, background characters, other characters, reference sheet, split screen, cropped, out of frame, nsfw, nude, nudity, topless, nipples, bare chest, breasts, cleavage, underwear, lingerie, swimsuit, revealing clothes, see-through, halo, (child:1.5), (loli:1.5), (hands near face:1.5), (adjusting glasses:1.5), (six fingers:1.7), (extra fingers:1.7), (bad hands:1.6), (fused fingers:1.5), (text:1.5), (japanese text:1.5), (calligraphy:1.4), (sign:1.3), (multiple people:1.5), (2girls:1.4), (bubble tea:1.5), (drink:1.3), building, scenery, (nose blush:1.6), (broken glasses:1.5), (detailed eyes:1.4)",
+ "seed": 32,
  "steps": 24,
  "cfg_scale": 5.5,
  "sampler_name": "Euler a",
  "scheduler": "Automatic",
  "width": 1024,
  "height": 1024,
- "denoising_strength": 0.8,
+ "denoising_strength": 0.88,
  "inpainting_fill": 1,
  "inpaint_full_res": true,
  "inpaint_full_res_padding": 96,
@@ -18,11 +18,11 @@
   "sd_model_checkpoint": "waiIllustriousSDXL_v140.safetensors [bdb59bac77]"
  },
  "override_settings_restore_afterwards": true,
- "init_image": "fv3/farina_18101.png",
+ "init_image": "farina9_19303.png",
  "mask_ellipse": [
-  512.0,
-  440.0,
-  175.0,
-  150.0
+  466.0,
+  405.0,
+  115.0,
+  110.0
  ]
 }
