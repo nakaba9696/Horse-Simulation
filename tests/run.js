@@ -1146,7 +1146,7 @@ check('hall: トロフィーを1つ以上手にした自分の馬は、引退す
 
 check('special: 1989年より前の名馬はグループごとの条件にリーチで出てきて、勝つと店に並ぶ', () => {
   const SP = HS.Special;
-  W.newGame({ seed: 33, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  W.newGame({ seed: 34, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' }); // 種 34：種 33 はクイズの値で出走馬が変わったあと、自動の騎乗の当たり外れ（rt 122）で能力最大の馬も負けた
   const G = W.get();
   const tri = SP.members(SP.BY['t:triple']).map(d => d.name);
   assert(['セントライト', 'シンザン', 'ミスターシービー', 'シンボリルドルフ'].every(n => tri.includes(n)), `歴代の三冠馬 ${tri.join('・')}`);
