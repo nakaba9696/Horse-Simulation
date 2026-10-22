@@ -20,16 +20,17 @@ const names = [...new Set(D.historic.filter(E.isPool).map(d => d.name).concat([.
 const r1 = v => v == null ? '' : Math.round(v * 10) / 10;
 const g1 = d => (d.wins || []).filter(w => { const n = String(w).replace(/^\d{4}/, ''); return (D.races || []).some(r => r.name === n && r.grade === 'G1'); });
 const esc = s => /[",\n]/.test(String(s)) ? '"' + String(s).replace(/"/g, '""') + '"' : String(s);
-const head = ['区分', '名前', '生年', '国', '性', '芝の総合力', 'ダートの総合力', 'スピード（芝）', 'スタミナ（芝）', 'スピード（ダ）', 'スタミナ（ダ）', '根性', '気性', '坂', '健康', '切れ', '芝の適性', 'ダートの適性', '重馬場の適性', '脚質', '距離', '成長型', '特殊能力', '発動する特殊能力', 'G1の勝ち数', 'G1の勝ち鞍', 'トロフィーの隠し馬'];
+const head = ['区分', '名前', '生年', '国', '性', '芝の総合力', 'ダートの総合力', 'スピード（芝）', 'スタミナ（芝）', 'スピード（ダ）', 'スタミナ（ダ）', '根性', '気性', '坂', '健康', '切れ', '芝の適性', 'ダートの適性', '重馬場の適性', '脚質', '距離', '成長型', '特殊能力', '発動する特殊能力', 'G1の勝ち数', 'G1の勝ち鞍', 'トロフィーの隠し馬', '持ち主が決めた値', '史実の主な勝鞍'];
 const rows = [head];
 for (const n of names) {
   const d = dataOf(n); if (!d) continue;
-  const h = H.fromHistoric(d, 'review'), f = T.fhPeak(h), p = h.pot;
+  const h = H.fromHistoric(d, 'review'), f = T.fhShowPeak(h), p = h.pot; // 総合力は画面の数（0.5 刻み）
   const kind = trophyOf.has(n) ? (special.has(n) ? 'スペシャル＋隠し馬' : '隠し馬') : special.has(n) ? 'スペシャルホース' : '史実馬（毎年デビュー）';
   const w = g1(d);
   rows.push([kind, n, d.born, d.country || '日', d.sex, f.turf, f.dirt, r1(p.spd), r1(p.sta), r1(p.dspd), r1(p.dsta), r1(p.guts), r1(p.mind), r1(p.slope), r1(h.health), h.kire,
     r1(h.apt.turf), r1(h.apt.dirt), r1(h.apt.heavy), h.style, `${h.distMin}-${h.distMax}`, h.growth,
-    (h.skills || []).map(K.label).join('・'), K.of(h).map(K.label).join('・'), w.length, w.join('・'), (trophyOf.get(n) || []).join('・')]);
+    (h.skills || []).map(K.label).join('・'), K.of(h).map(K.label).join('・'), w.length, w.join('・'), (trophyOf.get(n) || []).join('・'),
+    /クイズ|入力|持ち主の見直し|比較|持ち主が値を入力/.test(((D.horseFix || {})[n] || {}).why || '') ? '○' : '', (((D.mainWinsWorld || {})[n] || {}).ja || []).join('・')]);
 }
 const order = ['隠し馬', 'スペシャル＋隠し馬', 'スペシャルホース', '史実馬（毎年デビュー）'];
 const body = rows.slice(1).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]) || Math.max(b[5], b[6]) - Math.max(a[5], a[6]));
