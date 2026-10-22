@@ -151,7 +151,7 @@ sh godot/native/build.sh      # godot-cpp（版を固定）を取り、Linux 向
 ## Godot の用意（画面の無い container）
 - Godot 4.7.2（標準版）を https://github.com/godotengine/godot/releases から取り、`/home/user/godot-bin/godot` に置く（リポジトリに入れない）。
 - 中身のテストは headless で動く（GPU は要らない）。先に `--import` で `class_name` の一覧を作る（`run.sh` がやる）。
-- 馬モデルの試作 v2（Tripo の形・骨 54 本。ゲームからは呼ばない・書き出しにも入れない）は `godot/proto/tripo_horse/`。開くのは `sh godot/tools/run_scene.sh res://proto/tripo_horse/tripo_horse.tscn`（撮るときの引数は `tripo_horse.gd` の頭。絵は `docs/shots/godot/tripo_horse/`、確かめは `tests/test_tripo_horse.gd`）。
+- 馬モデルの試作（Tripo の形・骨 54 本。ゲームからは呼ばない・書き出しにも入れない）は `godot/proto/tripo_horse/`（`v2/`・`v3/`。v3 は競走の襲歩 RaceGallop 0.45 秒・1完歩 7m・UV2 の毛色の領域・首の補正）。開くのは `sh godot/tools/run_scene.sh res://proto/tripo_horse/tripo_horse.tscn`（v2・v3・いまの馬を切り替え・並べる。毛色・白い脚・顔の白徴も。撮るときの引数は `tripo_horse.gd` の頭）。レース画面で見た目だけ差し替えて比べるのは `res://scenes/race.tscn -- --proto-horse=v3`（騎手・ゼッケンは消える。移動は今の模擬のまま、走りの位相は 距離÷7m。`--no-jockey` はいまの馬のまま騎手を消す。ふだんの遊びでは使わない）。絵は `docs/shots/godot/tripo_horse/`（v3 は `v3/`）、確かめは `tests/test_tripo_horse.gd`。
 
 ## 移した範囲
 | JS | Godot | 一致テスト |

@@ -220,11 +220,11 @@ func set_jockey(on: bool) -> void:
 		if mi is MeshInstance3D and (mi.mesh == old.M.cloth_mesh or mi.mesh == old.M.saddle_mesh):
 			mi.visible = on
 
-# ---- 並べる位置（3頭：v2・v3・いまの馬の順に、横から見て右＝前へ） ----
+# ---- 並べる位置（3頭は横から見て左から v2・v3・いまの馬。馬は左（+Z）を向いて走る） ----
 func slot_off(k: int) -> Vector3:
 	if view == "side" or view == "feet":
-		return Vector3(0, 0, GAP_SIDE * k)
-	return Vector3(-GAP_WIDE * k, 0, 0)
+		return Vector3(0, 0, -(GAP_SIDE + (0.6 if lay == "trio" else 0.0)) * k)
+	return Vector3(GAP_WIDE * k, 0, 0)
 
 func slots() -> Dictionary:
 	match lay:
@@ -345,7 +345,7 @@ func update_hud() -> void:
 		return
 	var m = tri[ver]
 	var r := anim_rate()
-	var lays := {"solo": "試作だけ", "pair": "試作 %s・いまの馬" % ver, "trio": "左から v2・v3・いまの馬"}
+	var lays := {"solo": "試作だけ", "pair": "左から 試作 %s・いまの馬" % ver, "trio": "左から v2・v3・いまの馬"}
 	hud.text = "馬モデル試作 %s（Tripo の形・骨 %d 本・%s %.2f 秒）  倍率 %.1f・1完歩 %.2f m\n視点：%s　［1］横 ［2］斜め後ろ ［3］正面 ［4］足元　［V］版　［C］並べ方：%s\n速さ %.2f m/秒 ［↑↓］　再生の合わせ方 ［M］：%s　再生 ×%.2f・1秒に %.2f 完歩\n毛色 ［K］：%s　［W］白い脚：%s　［F］顔の白徴：%s　［R］領域：%s" % [
 		ver, m.skel.get_bone_count(), m.clip, m.cycle(), m.S, m.stride_m(), VIEWS.get(view, view), lays[lay],
 		v, "接地（蹄が滑らない）" if mode == "slip" else "完歩の数（いまの馬と同じ 7.2m）", r, r / m.cycle(),

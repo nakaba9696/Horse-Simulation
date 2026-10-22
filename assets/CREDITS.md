@@ -76,4 +76,11 @@ CC-BY-4.0 なので、ゲームの中のクレジット（タイトルの「ク�
 
 | ファイル | 中身 | 元の素材 | 作者 | ライセンス | 出典 | 手を加えたこと |
 |---|---|---|---|---|---|---|
-| `godot/proto/tripo_horse/horse-gallop.glb`（と取り込みで出る法線の絵 `horse-gallop_tripo_node_…_Normal_Bake.jpg`） | 骨入りの馬（17,437 頂点・骨 54 本・襲歩のその場走行 1 本 Gallop_Loop） | 持ち主が Tripo（AI の 3D モデル生成）で作った馬のモデル（同梱の source-rigged.glb） | 形：持ち主（Tripo で生成）。骨入れ・重みの直し・襲歩のアニメ：Codex が付けた試作 v2 | 持ち主の提供。Tripo の Pro プランで作った素材で、商用で使える（持ち主に確かめた 2026-10-22「proで作ってるから商用可能だよ」） | 枝 `codex/tripo-horse-handoff` の `artifacts/tripo-horse-v2/horse-claude-handoff-v2.zip`（SHA-256 `04e17a2d…270e`。2026-10-22） | GLB はそのまま（骨の向きも変えない）。試作の場面で Y に +90° 回して 2.6 倍に置き、毛色の代わりに材質の色を単色の鹿毛に寄せる |
+| `godot/proto/tripo_horse/v2/horse-gallop.glb`（と取り込みで出る法線の絵 `horse-gallop_tripo_node_…_Normal_Bake.jpg`。2026-10-22 に `v2/` へ移した） | 骨入りの馬（17,437 頂点・骨 54 本・襲歩のその場走行 1 本 Gallop_Loop） | 持ち主が Tripo（AI の 3D モデル生成）で作った馬のモデル（同梱の source-rigged.glb） | 形：持ち主（Tripo で生成）。骨入れ・重みの直し・襲歩のアニメ：Codex が付けた試作 v2 | 持ち主の提供。Tripo の Pro プランで作った素材で、商用で使える（持ち主に確かめた 2026-10-22「proで作ってるから商用可能だよ」） | 枝 `codex/tripo-horse-handoff` の `artifacts/tripo-horse-v2/horse-claude-handoff-v2.zip`（SHA-256 `04e17a2d…270e`。2026-10-22） | GLB はそのまま（骨の向きも変えない）。試作の場面で Y に +90° 回して 2.6 倍に置き、毛色の代わりに材質の色を単色の鹿毛に寄せる |
+
+## 馬モデルの試作 v3（Godot。`godot/proto/tripo_horse/v3/`。ゲームでは使っていない試作）
+
+| ファイル | 中身 | 元の素材 | 作者 | ライセンス | 出典 | 手を加えたこと |
+|---|---|---|---|---|---|---|
+| `godot/proto/tripo_horse/v3/horse-gallop-v3.glb` | 骨入りの馬（18,220 頂点（Godot の取り込み後）・骨 54 本・競走の襲歩のその場走行 1 本 RaceGallop_Loop（0.45 秒・倍率 2.6 で1完歩 7m）・UV2 に毛色の領域・首の補正のブレンドシェイプ RaceNeckCorrective） | v2 と同じ、持ち主が Tripo で作った馬のモデル（同梱の source-rigged.glb） | 形：持ち主（Tripo で生成）。骨入れ・重み・競走の襲歩・毛色の領域・首の補正：Codex が付けた試作 v3 | 持ち主の提供。Tripo の Pro プランで作った素材で、商用で使える（v2 と同じ。持ち主に確かめた 2026-10-22） | 枝 `codex/tripo-horse-handoff`（コミット `b0082a67`）の `artifacts/tripo-horse-v3/horse-claude-handoff-v3.zip`（SHA-256 `d0952963…8c4c`。2026-10-22。中の SHA256SUMS も全部一致） | GLB はそのまま（名前だけ `horse-gallop.glb` から変えた。骨の向きも変えない）。取り込みは法線の絵を GLB の中に入れたまま（`gltf/embedded_image_handling=3`。v2 と同じ絵なので2枚目を置かない）、UV2 を作り直さない（`meshes/light_baking=1`） |
+| `godot/proto/tripo_horse/v3/coat.gdshader` | v3 の毛色（UV2 の領域で胴・たてがみ・尾・蹄・鼻先・目・顔の白徴・白い脚を塗り分ける） | 同じ ZIP の `preview/coat.gdshader` | Codex（元）・このリポジトリで書き足し | 持ち主の提供（上と同じ） | 上と同じ ZIP | 脚先の色（前は膝・後は飛節まで）・背と腹の濃淡・下を向いた面の陰・全体の明るさ・毛づやを足し、色をいまのゲームの毛色の表（`godot/ui/art.gd` の COAT_LOOK）から渡す |

@@ -14,8 +14,9 @@ uniform vec4 points_color : source_color = vec4(0.02, 0.015, 0.012, 1.0); // 脚
 uniform vec4 hoof_color : source_color = vec4(0.065, 0.06, 0.055, 1.0);
 uniform vec4 muzzle_color : source_color = vec4(0.055, 0.035, 0.03, 1.0);
 uniform float points_on = 1.0;          // 脚先の色を出すか（0〜1）
-uniform float points_h = 0.17;          // 脚先の色の上の端（モデル単位。膝と飛節のあたり）
+uniform vec2 points_h = vec2(0.19, 0.24); // 脚先の色の上の端（モデル単位。前脚の膝 0.5m・後脚の飛節 0.62m の 2.6 分の 1）
 uniform float points_soft = 0.02;       // 脚先の境のぼかし（モデル単位）
+uniform float tone = 0.7;               // 全体の明るさ（いまの馬は素材の陰影の絵を掛けて暗く見えるので、それに寄せる）
 uniform float gloss = 0.5;              // 毛づや（毛色の表の gloss）
 uniform vec4 sock_heights = vec4(0.0);  // 白い脚の高さ（左前・右前・左後・右後。モデル単位。0 は無し）
 uniform bool face_mark = false;         // 顔の白徴（候補の領域を白く。史実の白徴の再現ではない）
@@ -40,7 +41,8 @@ void fragment() {
 	body = mix(body, belly_color.rgb, smoothstep(-0.35, -0.95, up_k) * 0.6);
 	vec3 color = body;
 	if (region == 0 && leg > 0) {
-		color = mix(color, points_color.rgb, points_on * (1.0 - smoothstep(points_h - points_soft, points_h + points_soft, rest_height)));
+		float ph = leg <= 2 ? points_h.x : points_h.y;
+		color = mix(color, points_color.rgb, points_on * (1.0 - smoothstep(ph - points_soft, ph + points_soft, rest_height)));
 	}
 	if (region == 1) color = mix(body, mane_color.rgb, clamp((fract(UV2.x * 8.0) - 0.1) / 0.8, 0.0, 1.0));
 	if (region == 2) color = tail_color.rgb;
@@ -66,6 +68,8 @@ void fragment() {
 		if (region == 7) color = vec3(0.1, 0.9, 0.1);
 		if (region == 0 && leg > 0) color = vec3(0.55 + 0.1 * float(leg), 0.6, 0.55);
 	}
+	// 遮蔽の陰：下を向いた面を暗く（いまの馬の毛色と同じ考え。最大 30%）
+	if (!show_regions) color *= tone * (1.0 - 0.3 * smoothstep(0.0, -0.9, up_k));
 	ALBEDO = color;
 	ROUGHNESS = 0.82 - 0.1 * gloss;
 	SPECULAR = 0.35;
