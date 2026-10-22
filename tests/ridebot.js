@@ -5,8 +5,9 @@
 //   fit    … 噛み合った乗り方（慣れた人の乗り方）：その日のペースと脚質・気性・特殊能力に合わせて位置を取り、仕掛けどころを選ぶ。
 //            追い出してからは脚の残りを見て、全開でゴールまで持つと読めてから全開にする（それまでは段 S.DRIVE.from で脚を配る。2026-10-22）
 //   misfit … 噛み合わない乗り方：ペースと逆の位置（スローで後ろ・ハイで前）へ動かし、仕掛けも逆（スローで遅く・ハイで早く）
-//   beat   … 噛み合った乗り方で、追い出してからは馬の拍子（S.BEAT。首が下がって前へ伸びる所）に合わせてしごき続ける
-//   mash   … 噛み合った乗り方で、追い出してからは拍子を見ずに 0.1 秒ごとに連打する
+//   beat   … ただ追うと同じ仕掛け（全開）で、追い出してからは馬の拍子（S.BEAT。首が下がって前へ伸びる所）に合わせてしごき続ける
+//   mash   … ただ追うと同じ仕掛け（全開）で、追い出してからは拍子を見ずに 0.1 秒ごとに連打する
+//   （2026-10-22 まで beat・mash は噛み合った乗り方に足していた。噛み合った乗り方は全開にするのが最後だけになったので、拍子の効きはただ追うと比べる）
 // おまかせ（騎手の腕で自動に乗る）は、模擬を opts.ride なしで作ればよい（ボットは要らない）
 module.exports = function (HS) {
   const S = HS.Sim, H = HS.Horse;
@@ -60,12 +61,16 @@ module.exports = function (HS) {
       const trig = s.trig || [];
       // 直線のムチ（どの乗り方も同じ）
       const whipNow = () => { if (R < st && sim.t >= nextWhip && c.whips < 9) { S.ctl.whip(sim, c.hand); nextWhip = sim.t + 0.5; } };
-      if (policy === 'push') {
-        if (R < st + 350) tapTo(sim, 1);
+      if (policy === 'push' || policy === 'beat' || policy === 'mash') {
+        if (R < st + 350) {
+          if (policy === 'beat' && c.gear > 0.9) { let off = Math.abs(S.beatPhase(s) - S.BEAT.at); if (off > 0.5) off = 1 - off; if (off < S.BEAT.win * 0.6 && sim.t - c.lastPush > 0.3) S.ctl.up(sim); }
+          else if (policy === 'mash' && c.gear > 0.9) S.ctl.up(sim);
+          else tapTo(sim, 1);
+        }
         whipNow();
         return;
       }
-      const fit = policy === 'fit' || policy === 'beat' || policy === 'mash';
+      const fit = policy === 'fit';
       // 仕掛けどころ（残り m）
       const early = st + 460, mid = st + 350, late = st + 80; // 東京の直線（525m）で、早め＝残り985m・ふつう＝875m・遅め＝605m
       let go = v === 'スローペース' ? (fit ? early : late) : v === 'ハイペース' ? (fit ? late : early) : mid;
@@ -77,9 +82,7 @@ module.exports = function (HS) {
         // 全開にするのは、脚の残り（計器のスタミナ）が全開でゴールまで持つと読めてから（馬の持ちはスタミナ・距離適性から。1割の余裕を見る）。
         // ただ追う・噛み合わない乗り方は、追い出したら段をいちばん上（全開）にする
         const gearGo = fit && s.E < driveNeed(sim, s, R) * 1.1 ? S.DRIVE.from : 1;
-        if (policy === 'beat' && gearGo === 1 && c.gear > 0.9) { let off = Math.abs(S.beatPhase(s) - S.BEAT.at); if (off > 0.5) off = 1 - off; if (off < S.BEAT.win * 0.6 && sim.t - c.lastPush > 0.3) S.ctl.up(sim); }
-        else if (policy === 'mash' && gearGo === 1 && c.gear > 0.9) S.ctl.up(sim);
-        else tapTo(sim, gearGo);
+        tapTo(sim, gearGo);
         whipNow();
         if (fit && trig.includes('oosoto') && c.lane < 5 && R < st + 100) S.ctl.lane(sim, 1);
         return;

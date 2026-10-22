@@ -36,14 +36,14 @@ module.exports = function (check, assert, HS) {
     return `段の動き 合う ${g1.toFixed(3)}・外れ ${g3.toFixed(3)}・続けて ${sim.ctl.beats} 回`;
   });
 
-  check('beat: 拍子に合わせて追うと噛み合った乗り方より少し良く、連打は得にならない', () => {
+  check('beat: 拍子に合わせて追うと、段を上げたまま手を止める（ただ追う）より少し良く、連打は得にならない', () => {
     const out = [];
     for (const style of ['先行', '差し']) {
-      const r = {}; for (const p of ['fit', 'beat', 'mash']) r[p] = B.bench({ style, mind: 88, policy: p, N, seed: 61 });
-      const gain = r.fit.pos - r.beat.pos;
-      assert(gain > 0.05 && gain < 0.9, `${style}：拍子の得 ${gain.toFixed(2)}（噛み合った ${r.fit.pos.toFixed(2)}・拍子 ${r.beat.pos.toFixed(2)}）`);
-      assert(r.mash.pos > r.fit.pos - 0.15, `${style}：連打 ${r.mash.pos.toFixed(2)} が噛み合った ${r.fit.pos.toFixed(2)} より良い`);
-      out.push(`${style} 平均着順 噛み合った${r.fit.pos.toFixed(2)}・拍子${r.beat.pos.toFixed(2)}・連打${r.mash.pos.toFixed(2)}`);
+      const r = {}; for (const p of ['push', 'beat', 'mash']) r[p] = B.bench({ style, mind: 88, policy: p, N, seed: 61 });
+      const gain = r.push.pos - r.beat.pos;
+      assert(gain > 0.05 && gain < 0.9, `${style}：拍子の得 ${gain.toFixed(2)}（ただ追う ${r.push.pos.toFixed(2)}・拍子 ${r.beat.pos.toFixed(2)}）`);
+      assert(r.mash.pos > r.push.pos - 0.15, `${style}：連打 ${r.mash.pos.toFixed(2)} がただ追う ${r.push.pos.toFixed(2)} より良い`);
+      out.push(`${style} 平均着順 ただ追う${r.push.pos.toFixed(2)}・拍子${r.beat.pos.toFixed(2)}・連打${r.mash.pos.toFixed(2)}`);
     }
     return out.join('　');
   });
