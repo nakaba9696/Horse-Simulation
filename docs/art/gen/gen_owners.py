@@ -127,6 +127,11 @@ V37 = [
 for k, v in enumerate(V37):
     P[f"ilona{61 + k:02d}"] = ("f", I37 + ", " + v + ", " + HS[k % len(HS)],
                                ", (child:1.5), (loli:1.5), (cleavage:1.5), (animal ears:1.6), (tail:1.5), (horse:1.4), (black hair:1.3), (flower wreath:1.6), (flowers in hair:1.5), (cat:1.4), (orange hair:1.7), (green hair:1.7), (blonde hair:1.5)" + NEGI)
+# 2026-10-22 5 回目：ひなたは少し芋っぽく、竹之内は持ち主の人物像（特徴だけ）で
+P["hinata"] = ("f", "1girl, adult, 26 years old, (large breasts:1.2), (unrefined country woman:1.4), (rustic:1.3), (plain looking:1.2), (no makeup:1.4), (tanned skin:1.3), (red cheeks:1.3), (thick eyebrows:1.4), (black hair:1.5), (simple single braid over shoulder:1.3), (messy stray hairs:1.2), brown eyes, gentle eyes, (green apron:1.3), (frumpy plain work clothes:1.3), (baggy beige long-sleeved shirt:1.2), buttoned up, rolled sleeves, (towel around neck:1.1), holding a wicker basket, warm big-sister smile",
+               ", (child:1.5), (loli:1.5), (animal ears:1.8), (dog ears:1.8), (makeup:1.5), (lipstick:1.5), (eyeshadow:1.4), (cleavage:1.6), (bare shoulders:1.4), (open clothes:1.4), (revealing clothes:1.5), (brown hair:1.4), (red hair:1.3), (glamorous:1.3), (hair over one eye:1.4), (wheat field:1.5), outdoors, landscape")
+P["takenouchi"] = ("f2", "1boy, male focus, (old man:1.4), (elderly:1.2), 68 years old, (thin:1.3), slender, wrinkles, (silver white hair slicked back:1.4), (grey mustache:1.3), (rimless monocle with thin chain:1.3), (sharp cold eyes:1.4), (stern expression:1.3), closed mouth, (dark navy three-piece suit:1.4), (red ascot:1.4), (pinstripe shirt:1.3), (white pocket square:1.3), dignified, (butler-like elegance:1.2), seasoned, intimidating calm",
+                   ", (child:1.6), (young:1.4), (1girl:1.5), (female:1.4), (breasts:1.4), (beard:1.4), (fat:1.4), (smile:1.3), (kimono:1.3), (sunglasses:1.4), (cane:1.2)")
 who_list, seeds = sys.argv[1].split(","), [int(s) for s in sys.argv[2].split(",")]
 out = sys.argv[3] if len(sys.argv) > 3 else "."
 os.makedirs(out, exist_ok=True)
