@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c7hd4gg72msf5"
-path="res://.godot/imported/horse-gallop.glb-19743f76dbd8d0b9f411433569c9c537.scn"
+path="res://.godot/imported/horse-gallop.glb-ac86cef5bc33a6d9c746616df1a062d0.scn"
 
 [deps]
 
-source_file="res://proto/tripo_horse/horse-gallop.glb"
-dest_files=["res://.godot/imported/horse-gallop.glb-19743f76dbd8d0b9f411433569c9c537.scn"]
+source_file="res://proto/tripo_horse/v2/horse-gallop.glb"
+dest_files=["res://.godot/imported/horse-gallop.glb-ac86cef5bc33a6d9c746616df1a062d0.scn"]
 
 [params]
 

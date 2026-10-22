@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b3vq4yb68uaf8"
-path="res://.godot/imported/horse-gallop_tripo_node_5905049a-e7a2-48a3-b48d-25efb09d2b2a_Normal_Bake.jpg-6b9d19f40f7dcb697479cbb638f77b81.ctex"
+path="res://.godot/imported/horse-gallop_tripo_node_5905049a-e7a2-48a3-b48d-25efb09d2b2a_Normal_Bake.jpg-70251b716b499e52ab59945529164271.ctex"
 metadata={
 "vram_texture": false
 }
@@ -13,8 +13,8 @@ generator_parameters={
 
 [deps]
 
-source_file="res://proto/tripo_horse/horse-gallop_tripo_node_5905049a-e7a2-48a3-b48d-25efb09d2b2a_Normal_Bake.jpg"
-dest_files=["res://.godot/imported/horse-gallop_tripo_node_5905049a-e7a2-48a3-b48d-25efb09d2b2a_Normal_Bake.jpg-6b9d19f40f7dcb697479cbb638f77b81.ctex"]
+source_file="res://proto/tripo_horse/v2/horse-gallop_tripo_node_5905049a-e7a2-48a3-b48d-25efb09d2b2a_Normal_Bake.jpg"
+dest_files=["res://.godot/imported/horse-gallop_tripo_node_5905049a-e7a2-48a3-b48d-25efb09d2b2a_Normal_Bake.jpg-70251b716b499e52ab59945529164271.ctex"]
 
 [params]
 

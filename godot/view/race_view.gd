@@ -91,6 +91,13 @@ var _whip_eff := 1.0       # ムチへの応え（使うほど鈍る。HSSim の
 # 全開の知らせ（docs/FEEL.md 3・4。持ち主の決定 2026-10-22）：模擬の ctl.drive を計器・音・振動へ。結果には触らない
 var drive := ViewRideDrive.new()
 var sfx: ViewRideSfx
+# 馬モデルの試作との見比べ（撮影だけ。ふだんの遊びでは使わない）：--proto-horse=v3（または v2）で馬の見た目だけ試作に差し替える。
+# 移動は今の模擬のまま。走りの位相は 距離÷試作の完歩（v3 は 7m＝再生の倍率 v×0.45÷7 と同じ）。試作には騎手が乗らないので騎手とゼッケンを消す。
+# --no-jockey は今の馬のまま騎手・鞍・ゼッケンだけを消す（形どうしを比べる）。試作は godot/proto/tripo_horse/（書き出しには入らない）
+const PROTO_MODEL := "res://proto/tripo_horse/tripo_model.gd"
+var proto_ver := ""
+var no_jockey := false
+var proto: Array = []
 
 func _ready() -> void:
 	ViewRideInput.ensure_actions()
@@ -154,6 +161,7 @@ func _ready() -> void:
 	sfx = ViewRideSfx.new()
 	add_child(sfx)
 	parse_args()
+	_proto_setup()
 	if shots.size() > 0 or not video.is_empty():
 		capturing = true
 		input.enabled = false
@@ -638,7 +646,12 @@ func place(H: Array, dt: float) -> void:
 		var cd := cam.global_position.distance_to(p)
 		g["cam_d"] = cd
 		kickups[j].run(v if moving else 0.0, cd < 45.0)
-		h.animate(g, dt, cd < 90.0 or j == me)
+		if proto.is_empty():
+			h.animate(g, dt, cd < 90.0 or j == me)
+		else:
+			if j == me:
+				h.animate(g, dt, true)   # 振り向くカメラが騎手の頭の位置を使う
+			proto[j].set_phase(x / proto[j].stride_m() + h.num * 0.137)
 
 # ---- カメラ（FEEL.md 2） ----
 func update_camera(H: Array, dt: float) -> void:
@@ -859,6 +872,10 @@ func parse_args() -> void:
 			hud_on = false
 		elif a == "--fast":
 			_fast()
+		elif a.begins_with("--proto-horse="):
+			proto_ver = a.substr(14)
+		elif a == "--no-jockey":
+			no_jockey = true
 		elif a.begins_with("--shot="):
 			var p := a.substr(7).split(":")
 			shots.append({"t": float(p[0]), "cam": p[1], "name": p[2]})
@@ -868,6 +885,30 @@ func parse_args() -> void:
 		elif a.begins_with("--press="):
 			var r := a.substr(8).split(":")
 			presses.append({"t": float(r[0]), "a": r[1], "done": false})
+
+# 馬モデルの試作に見た目だけ差し替える（--proto-horse=）・騎手を消す（--no-jockey）
+func _proto_setup() -> void:
+	if proto_ver != "" and not ResourceLoader.exists(PROTO_MODEL):
+		push_warning("proto-horse: 試作が無い（書き出した版には入らない）")
+		proto_ver = ""
+	if proto_ver == "" and not no_jockey:
+		return
+	for j in horses.size():
+		var h := horses[j]
+		h.jockey.visible = false
+		if h.jockey.body != null:
+			h.jockey.body.visible = false
+		h.cloth.visible = false
+		for mi in h.model.get_children():
+			if mi is MeshInstance3D and (mi.mesh == h.M.cloth_mesh or mi.mesh == h.M.saddle_mesh):
+				mi.visible = false
+		if proto_ver == "":
+			continue
+		h.model.visible = false
+		var pm = load(PROTO_MODEL).new()
+		h.add_child(pm)
+		pm.setup(proto_ver, race.horses[j])
+		proto.append(pm)
 
 # 動画を撮るとき（CPU の Vulkan で重いので）：画面の後処理と影を軽く
 func _fast() -> void:
