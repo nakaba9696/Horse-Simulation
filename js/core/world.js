@@ -644,7 +644,7 @@
       const hid = rides[c.race.key];
       // 騎手のゲームでは、自分の馬には自分が乗る（同じレースに2頭いれば1頭目）
       const me = hid ? runners.find(x => x.horse.id === hid) : (G.mode === 'jockey' ? runners.find(x => x.mine) : null);
-      if (me && HS.Jockey) { me.jockey = HS.Jockey.playerJockey(); me.rider = 'P'; me.allowance = HS.Jockey.allowance(c.race); me.weight = me.weight - me.allowance; }
+      if (me && HS.Jockey) { me.jockey = HS.Jockey.playerJockey(); me.rider = 'P'; } // 見習いの減量は無い（持ち主の決定 2026-10-21）
       W.setOdds(runners, c.race, wk.wIdx, new U.RNG(c.seed ^ 0x2545f491));
       return Object.assign({}, c, { runners, ride: !!me });
     });

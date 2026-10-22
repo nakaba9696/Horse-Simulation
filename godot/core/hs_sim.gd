@@ -336,10 +336,9 @@ static func _power_gd(horse: Dictionary, race: Dictionary, w_idx: Variant, ctx: 
 	var condAdj: float = -fatigue_pen(float(HSU.or_(horse.get("fatigue"), 0.0)) + trav, a) - layoff
 	var jockAdj := 0.0
 	if ctx and ctx.get("jockey"): jockAdj = (ctx.jockey.skill - 75.0) * 0.06
-	var wtAdj := 0.0
-	if ctx and ctx.get("weight"): wtAdj = -(ctx.weight - 56.0) * 1.4
+	# 斤量は強さに効かない（斤量の仕組みは無し。持ち主の決定 2026-10-21）
 	var skillAdj := skill_adj(horse, race, w_idx, ctx)
-	var total := a - distPen - surfPen + groundAdj + condAdj + jockAdj + wtAdj + skillAdj
+	var total := a - distPen - surfPen + groundAdj + condAdj + jockAdj + skillAdj
 	return { total = total, base = a, distPen = distPen, surfPen = surfPen, groundAdj = groundAdj, condAdj = condAdj, skillAdj = skillAdj, cur = c }
 
 # 特殊能力のうち、レースの条件で強さが上下するもの（ids を渡すと、その能力だけで数える）
@@ -373,7 +372,7 @@ static func skill_adj(horse: Dictionary, race: Dictionary, w_idx: Variant, ctx: 
 		elif id == "slowpace" and ctx and ctx.get("paceF") and ctx.paceF < PACE_LO: a += 1.8
 	return a
 
-# 斤量（簡略）
+# 斤量（簡略）。記録の形と前のセーブのために残す値で、強さにも画面にも使わない（持ち主の決定 2026-10-21）
 static func weight_for(horse: Dictionary, race: Dictionary, year: float) -> float:
 	var age: float = year - horse.born
 	var w: float

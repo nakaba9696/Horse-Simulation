@@ -61,7 +61,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `js/core/racesim.js` | レースの模擬（0.1秒刻み。S.create・S.step・S.finish）・プレイヤーの騎乗の操作（S.ctl）・実況・描画用のコマ | M |
 | `js/core/world.js` | 世界の状態・週の進行（W.prepareWeek → W.cards → W.finishWeek）・AI の出走・賞金・市場・配合・表彰・セーブ | C |
 | `data/owners.js`・`data/owner_races.js`・`js/core/owners.js`・`js/ui/ownersui.js`・`js/ui/ownerface.js`・`css/owners.css` | オーナー（画面の言葉。コードは owners）のキャラクター（架空・8人。仕様書の8つのジャンルに1人ずつ。口調の表・場面ごとの台詞・段階ごとのミッション・最後のアイテム）と騎乗依頼・出会いの点（OP 1・G3 2・G2 3・G1 4。4点で出会い）・友好度・ミッション形式の依頼（段階 OP → G3 → G2 → G1 は依頼の馬とレースが固定。レースの4週前に届き、負けたら次の年の同じレース。お手馬の段階は自分の馬で。依頼の馬はやり終えるまでデビューと店に出ない。OP の段階のレースは `data/owner_races.js` の名前のあるオープン）・店に頼む・名コンビ賞（`G.owners`。数は `docs/BALANCE.md`「9. オーナーの依頼」）。会話とミッションは下書きで、一覧は `docs/OWNERS_DRAFT.md`（`node tools/owners_draft.js`）。画面はホームの依頼の札・オーナーの一覧・場面（出会い・依頼・クリア）・パドックとレースの後のひと言。顔は持ち主が作った絵（`assets/owners_*.js`。札は丸い切り抜き・場面は胸から上・表情4つ）で、無い人は顔を出さない（コードで描いた顔は作らない。持ち主の指示 2026-10-20）。GF を開いている一族の人（イロナ。キンチェムモチーフ・依頼はしない。GF を全制覇すると花輪＝1頭の馬から作れるオリジナルホース＋1）は `data/gfhost.js`・`js/core/gfhost.js` | C |
-| `js/core/jockey.js` | 騎手のゲーム：持ち馬の入厩・評判・腕前・お手馬・見習いの減量・リーディング・騎手の表彰（騎乗依頼はオーナーのキャラクターから。`js/core/owners.js`） | C |
+| `js/core/jockey.js` | 騎手のゲーム：持ち馬の入厩・評判・腕前・お手馬・リーディング（斤量と見習いの減量は無い。持ち主の決定 2026-10-21）・騎手の表彰（騎乗依頼はオーナーのキャラクターから。`js/core/owners.js`） | C |
 | `js/ui/art.js` | 絵（馬・騎手・勝負服・肖像）。画像ファイルは使わず canvas で描く | V |
 | `js/ui/audio.js` | BGM と効果音（Web Audio で鳴らす。曲は書き下ろし） | V |
 | `js/ui/raceview.js` | レースの画面（カメラ・柵・ハロン棒・ミニマップ・順位・実況・掲示板） | V |

@@ -62,9 +62,9 @@
     // 調子は無い（持ち主の決定 2026-10-20「調子のパラメータは無し。疲労だけにする」）。調子の揺れの分は、その日の出来（S.FORM_SD）に入れた
     const condAdj = -S.fatiguePen((horse.fatigue || 0) + ((ctx && ctx.travel) || 0), a) - layoff;
     const jockAdj = ctx && ctx.jockey ? (ctx.jockey.skill - 75) * 0.06 : 0;
-    const wtAdj = ctx && ctx.weight ? -(ctx.weight - 56) * 1.4 : 0;
+    // 斤量は強さに効かない（斤量の仕組みは無し。持ち主の決定 2026-10-21「斤量というシステム自体なくしていい」）
     const skillAdj = S.skillAdj(horse, race, wIdx, ctx);
-    const total = a - distPen - surfPen + groundAdj + condAdj + jockAdj + wtAdj + skillAdj;
+    const total = a - distPen - surfPen + groundAdj + condAdj + jockAdj + skillAdj;
     return { total, base: a, distPen, surfPen, groundAdj, condAdj, skillAdj, cur: c };
   };
 
@@ -99,7 +99,7 @@
     return a;
   };
 
-  // 斤量（簡略）。定量・馬齢：年齢と性で、別定・ハンデ：実績で上下
+  // 斤量（簡略）。定量・馬齢：年齢と性で、別定・ハンデ：実績で上下。記録の形と前のセーブのために残す値で、強さにも画面にも使わない（持ち主の決定 2026-10-21）
   S.weightFor = function (horse, race, year) {
     const age = year - horse.born;
     let w;
