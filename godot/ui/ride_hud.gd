@@ -1,5 +1,5 @@
 # 騎乗の画面の上の表示（docs/FEEL.md 4・5）。ブラウザ版 js/ui/ride.js の hud() と同じ形を 960×600 の座標で描き、画面の大きさに合わせて広げる
-# 計器は4か所（左上＝順位と残り・上の真ん中＝ペース（チェックポイントを過ぎたときだけ）・右上＝時計・右＝馬群のレーダー）と左下の1つの塊（脚質・丸い計器＝速さ・馬の頭＝折り合い・STAMINA・手綱 HOLD/PUSH）
+# 計器は4か所（左上＝順位と残り・上の真ん中＝ペース（チェックポイントを過ぎたときだけ）・右上＝時計・右＝馬群のレーダー）と左下の1つの塊（丸い計器＝速さ と、その右の1枚の板に 脚質・馬の頭＝折り合い・STAMINA・手綱 HOLD/PUSH）
 # 文字は短い英語の見出しと数だけ（日本語は馬名と特殊能力の名前だけ）。操作の結果は文字で出さず、光で返す
 # 画面の箱・計器は揺らさない（揺れは 3D のカメラだけ。view/race_view.gd の kick）
 # 字はにじまないように、座標だけを広げて、字の大きさは画面の大きさで作り直す
@@ -23,6 +23,10 @@ const PALE := Color("ffe9a6")
 const HOT := Color("fff4d6")
 const HOT_GLOW := Color("ffc24a")
 const STYLES := ["逃げ", "先行", "差し", "追込"]
+# 左下の計器の板のいちばん上の段（脚質の矢印と得意な位置の帯）の高さと幅。持ち主の指摘 2026-10-22「脚質の表示箇所左下の項目にまとめて　今浮いてるから」：
+# 前は丸い計器の上に別の板で浮いていた。いまは STAMINA・手綱と同じ板の上の段に入れ、左の端と幅を手綱の帯とそろえる
+const STYLE_ROW := 32.0
+const STYLE_W := 212.0
 const PACE_SHOW := 4.5     # ペースはチェックポイント（sim.checkAt）を先頭が過ぎたときだけ、この秒だけ出す（持ち主の指摘「常にわかるとつまらない」）
 const PACE_FADE := 0.6
 const PACE_EN := {"スローペース": "SLOW", "平均ペース": "EVEN", "ハイペース": "HIGH"}
@@ -190,12 +194,11 @@ func _draw_hud() -> void:
 	_draw_whip()
 	if T >= 0.0 and fin == null:   # ゲートの中は数を出さない（目押し。持ち主の指摘 2026-10-17）
 		_top_left(rank, M)
-		_style_panel(M, rank)
 	if fin == null or float(fin.shown) < 0.0:
 		_draw_pace(M, T)
 		_timer(M, T)
 		_radar(M)
-		_meters(M)
+		_meters(M, rank, T >= 0.0 and fin == null)
 	if _skill != null:
 		_draw_skill()
 	if fin != null:
@@ -383,15 +386,7 @@ func _top_left(rank: int, M: Dictionary) -> void:
 	_circle(bx + bw * pr, by + 2.5, 4, Color.WHITE)
 
 # ---- 左下（丸い計器の上）：脚質の板（持ち主の指摘 2026-10-20「脚質は左下に」）----
-func _style_panel(M: Dictionary, rank: int) -> void:
-	var w := 232.0
-	var h := 40.0
-	var x := 16.0
-	var y := VH - 18.0 - 112.0 - 12.0 - h
-	_glass(x, y, w, h, 10)
-	_style_row(x + 12, y + 8, w - 24, M, rank, float(H[rv.me][0]) / rv.D)
-
-# ---- 左下の脚質の板の中：脚質の矢印4つ（出走表・馬の店の UiStyleArrows と同じ形。左から 追込・差し・先行・逃げ。自分の脚質が赤く光る）----
+# ---- 左下の計器の板のいちばん上の段：脚質の矢印4つ（出走表・馬の店の UiStyleArrows と同じ形。左から 追込・差し・先行・逃げ。自分の脚質が赤く光る）----
 # 持ち主の指摘 2026-10-17「レース中　自分の馬の脚質見えるUIにして△4つならべるやつ」。文字は出さない。
 # 矢印の下の細い帯：その脚質の得意な位置（HSSim.ZONE。右ほど前）を金で、いまの位置（隊列の前から何割か）を点で。
 # 点は隊列が決まるまで（距離の HSSim.MISFIT_FROM まで）は白、そのあとは得意な位置の中なら緑、外れていれば金（外れていると折り合いを欠く）
@@ -690,21 +685,45 @@ func _pause_fx() -> void:
 # 持ち主の指摘 2026-10-20「FIGHT・WHIP・縦のメーターは意味が分からない」「折り合いのゲージをもっと分かりやすく」「FIGHT いらない」「WHIP いらない」：
 # 気合の目盛りとムチの手の札は外した（競り合いは縁の光、ムチの持ち手は 3D の騎手の手で見える）。縦の ▲▼ は横の手綱の帯（左＝引く・右＝しごく）に、
 # 丸い計器の内の輪（気性）は馬の頭の絵に替えた（落ち着くと頭が下がって青、掛かると頭を上げて口を割り、赤く震える）
-func _meters(M: Dictionary) -> void:
+func _meters(M: Dictionary, rank := 0, show_pos := true) -> void:
+	var L := meters_layout()
+	var dial: Dictionary = L.dial
+	var panel: Rect2 = L.panel
+	_glass(panel.position.x, panel.position.y, panel.size.x, panel.size.y, 12)
+	_dial(M, float(dial.cx), float(dial.cy), float(dial.r))
+	var tp: Dictionary = L.temper
+	_temper(M, float(tp.cx), float(tp.cy), float(tp.r))
+	var st: Rect2 = L.style
+	var sa: Rect2 = L.stamina
+	# いちばん上の段：脚質の矢印と得意な位置の帯（STAMINA・手綱と同じ左の端と幅）。
+	# ゲートの中といまの位置の決まらない間（show_pos が偽）は、いまの位置の点だけ出さない（板の段を空けたままにしない）
+	_style_row(st.position.x, st.position.y, st.size.x, M, rank if show_pos else 0, float(H[rv.me][0]) / rv.D)
+	_stamina(M, sa.position.x, sa.position.y)
+	var rn: Rect2 = L.reins
+	_reins(M, rn.position.x, rn.position.y, rn.size.x)
+
+# 左下の塊の置き場所（960×600 の仮の画面の座標）。テスト（godot/tests/test_hud_layout.gd）も読む
+# dial＝丸い計器（速さ）・panel＝その右の1枚の板・style＝脚質の矢印と帯の段（矢印の上の端〜帯の下の端）・temper＝馬の頭の札・stamina・reins＝それぞれの段（見出し〜升）
+static func meters_layout() -> Dictionary:
 	var R := 56.0
 	var cx := 18.0 + R
 	var cy := VH - 18.0 - R
 	var px := cx + 20.0
 	var pw := 352.0
-	var ph := 92.0
-	var py := cy - ph / 2.0 + 8.0
-	_glass(px, py, pw, ph, 12)
-	_dial(M, cx, cy, R)
+	var ph := 92.0 + STYLE_ROW
+	var py := cy - 46.0 + 8.0 - STYLE_ROW
 	var x0 := cx + R + 10.0
-	_temper(M, x0 + 32.0, py + ph / 2.0, 30.0)
+	var lo := py + STYLE_ROW   # 下の2段（STAMINA・手綱）の上の端。馬の頭はこの2段の真ん中（前と同じ高さ）
 	var bx := x0 + 78.0
-	_stamina(M, bx, py + 10.0)
-	_reins(M, bx, py + 52.0, 212.0)
+	var sy := py + 8.0
+	return {
+		"dial": {"cx": cx, "cy": cy, "r": R},
+		"panel": Rect2(px, py, pw, ph),
+		"style": Rect2(bx, sy, STYLE_W, 22.0),   # 矢印は sy+6 を中心に高さ 15（sy−1.5〜sy+13.5）、帯は sy+19〜sy+22
+		"temper": {"cx": x0 + 32.0, "cy": lo + 46.0, "r": 30.0},
+		"stamina": Rect2(bx, lo + 10.0, 8 * 27.0, 30.0),
+		"reins": Rect2(bx, lo + 52.0, STYLE_W, 27.0),
+	}
 
 # 丸い計器：速さだけ（下の空いた 270° の 30 の目盛り。巡航の速さに金の目盛り。追い出すと縁が金に光る）
 # 全開の間（view/ride_drive.gd）：針（目盛り）は最大まで振り切り（抜けるとなめらかに実際の値へ戻る）、上の目盛りと縁が白く灼け、光が蹄の拍子で脈打つ。入った瞬間に白い輪が一度広がる
