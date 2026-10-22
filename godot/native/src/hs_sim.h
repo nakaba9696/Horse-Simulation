@@ -96,6 +96,7 @@ struct Ctl {
 	bool misfit = false, everKakari = false;
 	bool steered = false;          // 進路を自分で動かした
 	int beats = 0; double lastBeat = -9; // 拍子の合ったしごきの続いた数・最後の時刻
+	bool whipBeat = false;               // 最後のムチが拍子に合っていたか
 	double push() const { return mx(0.0, gear); }
 	bool hold() const { return gear < -0.05; }
 };

@@ -17,6 +17,22 @@ module.exports = function (check, assert, HS) {
     return out.join('　');
   });
 
+  // 持ち主の決定 2026-10-22「70が80にも勝てるゲームにしたい」「慣れた人間がのればだいたい勝てるくらい」：
+  // 画面の総合力で 5.0 上の格上（自分 70.0・格上 75.0・ほか12頭のまん中 67.0。tools/balance_bench.js の show）に、
+  // 上手な乗り方（噛み合った・拍子に合わせて追う）は6割以上先着し、ただ追う・何もしないは4割未満。先行・差し（気性88）を合わせて数える
+  check('balance: 見た目で 5.0 上の格上に、噛み合った乗り方は6割以上先着し、ただ追う・何もしないは4割未満', () => {
+    const n = process.env.QUICK ? 150 : 250, r = {};
+    for (const p of ['fit', 'push', 'none']) {
+      const per = ['先行', '差し'].map(style => B.bench({ style, mind: 88, policy: p, show: B.SHOW, N: n, seed: 71 }));
+      r[p] = { beat: (per[0].beat + per[1].beat) / 2, per: per.map(x => x.beat), win: (per[0].win + per[1].win) / 2 };
+    }
+    const pc = x => Math.round(x * 100) + '%';
+    assert(r.fit.beat >= 0.6 && Math.min(...r.fit.per) >= 0.55, `噛み合った乗り方の先着 ${pc(r.fit.beat)}（先行 ${pc(r.fit.per[0])}・差し ${pc(r.fit.per[1])}）`);
+    assert(r.push.beat < 0.4 && Math.max(...r.push.per) < 0.45, `ただ追うの先着 ${pc(r.push.beat)}（先行 ${pc(r.push.per[0])}・差し ${pc(r.push.per[1])}）`);
+    assert(r.none.beat < 0.4, `何もしないの先着 ${pc(r.none.beat)}`);
+    return `格上に先着 噛み合った ${pc(r.fit.beat)}（勝ち ${pc(r.fit.win)}）・ただ追う ${pc(r.push.beat)}・何もしない ${pc(r.none.beat)}`;
+  });
+
   check('balance: 気性の荒い馬は、脚質と違う位置へ動かすと掛かって大きく負ける（穏やかな馬は融通がきく）', () => {
     const hot = B.bench({ style: '差し', mind: 48, policy: 'misfit', N, seed: 52 });
     const calm = B.bench({ style: '差し', mind: 88, policy: 'misfit', N, seed: 52 });

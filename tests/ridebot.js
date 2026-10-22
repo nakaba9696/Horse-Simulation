@@ -2,10 +2,12 @@
 // 乗り方：
 //   none   … スタートだけ切って、あとは何もしない
 //   push   … 位置は気にせず、直線の手前からしごいて直線でムチ（ただ追う）
-//   fit    … 噛み合った乗り方：その日のペースと脚質・気性・特殊能力に合わせて位置を取り、仕掛けどころを選ぶ
+//   fit    … 噛み合った乗り方（上手な乗り方）：その日のペースと脚質・気性・特殊能力に合わせて位置を取り、仕掛けどころを選び、
+//            追い出してからは馬の拍子（S.BEAT。首が下がって前へ伸びる所）に合わせてしごき続ける（慣れた人の乗り方。2026-10-22 から拍子も入れた）
+//   flat   … fit と同じ位置と仕掛けで、追い出してからは段を上げたまま手を止める（拍子を見ない。2026-10-21 までの fit）
+//   beat   … fit と同じ（前の名前）
 //   misfit … 噛み合わない乗り方：ペースと逆の位置（スローで後ろ・ハイで前）へ動かし、仕掛けも逆（スローで遅く・ハイで早く）
-//   beat   … 噛み合った乗り方で、追い出してからは馬の拍子（S.BEAT。首が下がって前へ伸びる所）に合わせてしごき続ける
-//   mash   … 噛み合った乗り方で、追い出してからは拍子を見ずに 0.1 秒ごとに連打する
+//   mash   … fit と同じ位置と仕掛けで、追い出してからは拍子を見ずに 0.1 秒ごとに連打する
 // おまかせ（騎手の腕で自動に乗る）は、模擬を opts.ride なしで作ればよい（ボットは要らない）
 module.exports = function (HS) {
   const S = HS.Sim, H = HS.Horse;
@@ -52,24 +54,25 @@ module.exports = function (HS) {
       const R = sim.D - s.x, st = sim.straight, prog = s.x / sim.D;
       const v = paceRead(sim);
       const trig = s.trig || [];
-      // 直線のムチ（どの乗り方も同じ）
-      const whipNow = () => { if (R < st && sim.t >= nextWhip && c.whips < 9) { S.ctl.whip(sim, c.hand); nextWhip = sim.t + 0.5; } };
+      // 直線のムチ（0.5 秒に1回まで・9回まで）。拍子に合わせて乗る乗り方（fit）は、首が下がって前へ伸びる所で打つ
+      const whipNow = onBeat => { if (R < st && sim.t >= nextWhip && c.whips < 9 && (!onBeat || S.beatOff(s) < S.BEAT.win * 0.6)) { S.ctl.whip(sim, c.hand); nextWhip = sim.t + 0.5; } };
       if (policy === 'push') {
         if (R < st + 350) tapTo(sim, 1);
         whipNow();
         return;
       }
-      const fit = policy === 'fit' || policy === 'beat' || policy === 'mash';
+      const fit = policy === 'fit' || policy === 'beat' || policy === 'flat' || policy === 'mash';
+      const rhythm = policy === 'fit' || policy === 'beat';
       // 仕掛けどころ（残り m）
       const early = st + 460, mid = st + 350, late = st + 80; // 東京の直線（525m）で、早め＝残り985m・ふつう＝875m・遅め＝605m
       let go = v === 'スローペース' ? (fit ? early : late) : v === 'ハイペース' ? (fit ? late : early) : mid;
       if (fit && v === 'ハイペース' && !flexible(s) && (s.h.style === '逃げ' || s.h.style === '先行')) go = mid; // 荒い先行馬は抑えると掛かるので、ふつうに
             if (fit && H.has(s.h, 'longspurt')) go = Math.max(go, st + 320);
       if (R <= go) {
-        if (policy === 'beat' && c.gear > 0.9) { let off = Math.abs(S.beatPhase(s) - S.BEAT.at); if (off > 0.5) off = 1 - off; if (off < S.BEAT.win * 0.6 && sim.t - c.lastPush > 0.3) S.ctl.up(sim); }
+        if (rhythm && c.gear > 0.9) { let off = Math.abs(S.beatPhase(s) - S.BEAT.at); if (off > 0.5) off = 1 - off; if (off < S.BEAT.win * 0.6 && sim.t - c.lastPush > 0.3) S.ctl.up(sim); }
         else if (policy === 'mash' && c.gear > 0.9) S.ctl.up(sim);
         else tapTo(sim, 1);
-        whipNow();
+        whipNow(rhythm);
         if (fit && trig.includes('oosoto') && c.lane < 5 && R < st + 100) S.ctl.lane(sim, 1);
         return;
       }

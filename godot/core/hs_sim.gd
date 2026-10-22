@@ -115,6 +115,7 @@ class Ctl:
 	var steered := false        # 進路を自分で動かした
 	var beats := 0              # 拍子の合ったしごきの続いた数
 	var lastBeat := -9.0        # 最後に拍子の合ったしごきの時刻
+	var whipBeat := false       # 最後のムチが拍子に合っていたか
 	# しごく・引くの段（JS の getter）
 	var push: float:
 		get: return HSU.mx(0.0, gear)
@@ -170,7 +171,7 @@ static var START_ACC := 7.5
 static var START_STYLE := { "逃げ": 1.18, "先行": 1.07, "差し": 0.96, "追込": 0.88 }
 static var FAN := { x = 250.0, v = 0.1 }
 # 拍子（JS の S.BEAT。説明は js/core/racesim.js）
-static var BEAT := { stride = 7.2, lag = 0.05, at = 0.55, win = 0.2, minGap = 0.25, vmin = 8.0, gear = 1.4, calm = 0.5, keep = 0.95, k = 0.05, save = 0.985 }
+static var BEAT := { stride = 7.2, lag = 0.05, at = 0.55, win = 0.2, minGap = 0.25, vmin = 8.0, gear = 1.4, calm = 0.5, keep = 0.95, k = 0.15, save = 0.985 }
 static var START_SKILL_ACC := 1.35
 static var EASY_START := 0.95
 static var LATE_E := 0.15
@@ -181,7 +182,8 @@ static var GATE := { wait = 2.2, spread = 1.6, tell = 0.8, buf = 0.12, good = 0.
 static func gate_wait_of(rng: HSRng) -> float:
 	var g := HSRng.new(float((rng.s ^ 0x9E3779B9) & 0xFFFFFFFF))
 	return float(GATE.wait) + float(GATE.spread) * g.next()
-static var PUSH := { base = 0.25 }
+# 追い出したあと：base＝馬なりの伸び・hold＝拍子に合わせて追っていない間の、base より上の伸びの割合（JS の S.PUSH。持ち主の決定 2026-10-22）
+static var PUSH := { base = 0.25, hold = 0.2 }
 # 当たり判定（js/core/racesim.js の S.LANE_M・S.BODY と同じ。docs/BALANCE.md「2-3d. 当たり判定」）
 const LANE_M := 1.6
 static var BODY := { len = 2.4, wid = 0.5, look = 6.0, close = 0.8, follow = 1.0, side = 0.35 }
@@ -204,7 +206,8 @@ static var GEAR_GAP := 18.0
 static var GEAR_COST := 0.05
 static var POS_K := 0.004
 static var POS_MAX := 0.03
-static var WHIP := { k = 0.4, wind = 0.6, cost = 0.96, windCost = 0.98, early = 0.2, earlyCost = 1.2 }
+# off＝拍子に合っていないムチの伸びの割合（JS の S.WHIP.off）
+static var WHIP := { k = 0.4, wind = 0.6, cost = 0.96, windCost = 0.98, early = 0.2, earlyCost = 1.2, off = 0.4 }
 static var CALM_SAVE := 0.97
 static var PACE_HI := 1.006
 static var PACE_LO := 0.994
@@ -416,6 +419,10 @@ static func beat_phase(s) -> float:
 	var ph := fmod((s.x - s.v * BEAT.lag) / BEAT.stride + float(s.r.num) * 0.137, 1.0)
 	if ph < 0: ph += 1.0
 	return ph
+# 拍子の合う所からのずれ（0〜0.5。JS の S.beatOff）
+static func beat_off(s) -> float:
+	var o := absf(beat_phase(s) - BEAT.at)
+	return 1.0 - o if o > 0.5 else o
 static func _on_beat(sim, c) -> bool:
 	return c.beats >= 2 and sim.t - c.lastBeat < BEAT.keep
 
@@ -658,6 +665,7 @@ static func _ctl_whip_gd(sim: Sim, side: Variant = null) -> Variant:
 	# ムチでは進路は変わらない（どちらの手で打ってもよれない。持ち主の指摘 2026-10-17）。away は打った手と反対の側（見た目の向きだけ）
 	var away := -1.0 if ((dir_of(sim) == "左") == (side == "R")) else 1.0
 	c.lastWhip = { t = sim.t, side = side, away = away, yore = false }
+	c.whipBeat = s.v > BEAT.vmin and beat_off(s) < BEAT.win # 拍子に合ったムチ
 	if c.whips > 12: return "tired"
 	return "windmill" if c.windmill else "ok"
 # ムチの持ち替え（少しの間、打てない）
@@ -838,7 +846,10 @@ static func _step_gd(sim: Sim) -> bool:
 			else:
 				if s.spurting:
 					var ratioE := HSMath.cbrt(HSU.mx(0.0, s.E) * s.Ds / (0.9 * HSU.mx(R, 30.0) * s.spurtCost))
-					target = s.vc * HSU.clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * HSU.clamp(g, PUSH.base, 1.0)))
+					# 拍子に合わせて追っている間だけ段のぶん伸びきる。拍子を見ずに段を上げたままだと、馬なりより上の伸びは PUSH.hold の割合まで
+					var gp := HSU.clamp(g, PUSH.base, 1.0)
+					var gk: float = gp if _on_beat(sim, c) else PUSH.base + (gp - PUSH.base) * PUSH.hold
+					target = s.vc * HSU.clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * gk))
 				elif prog < 0.22:
 					target = pace * s.styleMult
 					if s.easyStart: costMul *= EASY_START
@@ -854,7 +865,7 @@ static func _step_gd(sim: Sim) -> bool:
 					var inZone := R < straight + 200
 					var W := WHIP; var k: float = W.wind if c.windmill else W.k
 					var resp := respOf(c)
-					target *= 1.0 + (k * resp if inZone else W.early) * s.kickS * whip_eff(c)
+					target *= 1.0 + (k * resp * (1.0 if c.whipBeat else W.off) if inZone else W.early) * s.kickS * whip_eff(c)
 					costMul *= ((W.windCost if c.windmill else W.cost) * (1.0 + (1.0 - resp) * 0.15)) if inZone else W.earlyCost
 				# 拍子の合ったしごきが続いている間は、馬が気持ちよく伸びる（追い出してから）
 				if s.spurting and _on_beat(sim, c):
