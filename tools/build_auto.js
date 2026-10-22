@@ -12,7 +12,7 @@ const D = HS.DATA, U = HS.U;
 
 // ---- 記録を読む ----
 const rows = [];
-for (const f of fs.readdirSync(path.join(ROOT, 'data/src')).filter(f => f.endsWith('.jsonl')).sort()) {
+for (const f of fs.readdirSync(path.join(ROOT, 'data/src')).filter(f => f.endsWith('.jsonl') && !f.startsWith('placings_')).sort()) {   // 着順の記録（placings_*）は勝ち馬の記録ではないので読まない
   for (const line of fs.readFileSync(path.join(ROOT, 'data/src', f), 'utf8').split('\n')) {
     if (!line.trim()) continue;
     try {
