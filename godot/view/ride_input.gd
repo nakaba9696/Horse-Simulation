@@ -149,7 +149,12 @@ const STRIDE := 7.2
 const STEPS := [[0.0, 1.0], [0.12, 0.85], [0.34, 0.55], [0.46, 0.5]]   # 着地の位相と強さ（後・後・前・前）
 var _last_ph = null
 
+static var trace: Array = []   # テスト用：tracing の間、鳴らした振動 [ms, strong, weak] を残す
+static var tracing := false
+
 static func play(ms: float, strong: float, weak: float) -> void:
+	if tracing:
+		trace.append([ms, strong, weak])
 	if level <= 0.0:
 		return
 	for d in Input.get_connected_joypads():
@@ -176,12 +181,27 @@ func fx(name: String) -> void:
 			get_tree().create_timer(0.16).timeout.connect(func(): play(90, 0.9, 0.5))
 			get_tree().create_timer(0.33).timeout.connect(func(): play(220, 0.5, 1.0))
 		"finish": play(350, 0.6, 0.6)
+		"drive":
+			# 全開に入った瞬間：一度大きく（両方のモーター）、続いて少し弱く押し出す（ゴールの win より短く、間が詰まる）
+			play(180, 1.0, 1.0)
+			get_tree().create_timer(0.2).timeout.connect(func(): play(240, 0.75, 0.55))
 		"win":
 			play(300, 1.0, 1.0)
 			get_tree().create_timer(0.42).timeout.connect(func(): play(500, 0.7, 1.0))
 
-# 蹄の拍子：前のコマから今のコマまでに着地の位相をまたいだら震える。速いほど・追うほど強い
-func gallop(x: float, num: int, v: float, push: float) -> void:
+# 1つの着地の振動 [ms, strong, weak]。k＝着地の強さ（後脚ほど強い）・v＝速さ・push＝追い・drive＝全開の強さ（ViewRideDrive.vis）
+# 全開の間は、強いモーターを上げ、長く（重い脚音が地面を叩く）。弱いモーターも上げて震えが途切れにくくする
+static func step_pulse(k: float, v: float, push: float, drive := 0.0) -> Array:
+	var sp := clampf((v - 8.0) / 9.0, 0.0, 1.0)
+	var amp := 0.25 + 0.45 * sp + 0.3 * clampf(push, 0.0, 1.0)
+	var d := clampf(drive, 0.0, 1.0)
+	var ms := (55.0 if k > 0.7 else 40.0) * (1.0 + 0.6 * d)
+	var strong := minf(1.0, k * amp * (1.0 + 0.45 * d))
+	var weak := minf(1.0, k * amp * (0.6 + 0.4 * d))
+	return [ms, strong, weak]
+
+# 蹄の拍子：前のコマから今のコマまでに着地の位相をまたいだら震える。速いほど・追うほど・全開ほど強い
+func gallop(x: float, num: int, v: float, push: float, drive := 0.0) -> void:
 	if level <= 0.0 or v <= 1.5:
 		_last_ph = null
 		return
@@ -189,13 +209,11 @@ func gallop(x: float, num: int, v: float, push: float) -> void:
 	if _last_ph == null or pos < _last_ph or pos - _last_ph > 1.0:
 		_last_ph = pos
 		return
-	var sp := clampf((v - 8.0) / 9.0, 0.0, 1.0)
-	var amp := 0.25 + 0.45 * sp + 0.3 * clampf(push, 0.0, 1.0)
 	for st in STEPS:
 		var n0 := floorf(_last_ph - st[0])
 		var n1 := floorf(pos - st[0])
 		if n1 > n0:
-			var k: float = st[1]
-			play(55.0 if k > 0.7 else 40.0, k * amp, k * amp * 0.6)
+			var pl := step_pulse(float(st[1]), v, push, drive)
+			play(pl[0], pl[1], pl[2])
 			break
 	_last_ph = pos

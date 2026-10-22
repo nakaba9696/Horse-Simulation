@@ -88,6 +88,9 @@ var _hpush := 0.0          # 馬の側の追い（騎手の追いに 0.7 秒ほ�
 var _beat_at := -99.0      # 拍子の合ったしごき（レースの秒）
 var _pull_at := -99.0      # 引いた（レースの秒）
 var _whip_eff := 1.0       # ムチへの応え（使うほど鈍る。HSSim の whip_eff と同じ式）
+# 全開の知らせ（docs/FEEL.md 3・4。持ち主の決定 2026-10-22）：模擬の ctl.drive を計器・音・振動へ。結果には触らない
+var drive := ViewRideDrive.new()
+var sfx: ViewRideSfx
 
 func _ready() -> void:
 	ViewRideInput.ensure_actions()
@@ -148,6 +151,8 @@ func _ready() -> void:
 	input = ViewRideInput.new()
 	add_child(input)
 	input.act.connect(_on_act)
+	sfx = ViewRideSfx.new()
+	add_child(sfx)
 	parse_args()
 	if shots.size() > 0 or not video.is_empty():
 		capturing = true
@@ -378,6 +383,8 @@ func _toggle_pause() -> void:
 	hud.paused = paused
 	hud.paused_at = rt
 	hud.queue_redraw()
+	if sfx != null:
+		sfx.set_paused(paused)
 	for d in Input.get_connected_joypads():
 		Input.stop_joy_vibration(d)
 
@@ -437,6 +444,7 @@ func advance(dt_real: float) -> void:
 		H[me] = hm
 	_last_H = H
 	_feel(H)
+	_drive_fx(H, dt_real)
 	place(H, dt)
 	update_camera(H, dt_real)
 	update_hud(H)
@@ -448,7 +456,7 @@ func advance(dt_real: float) -> void:
 		var c2 = ctl_obj()
 		if c2 != null and fin == null:
 			push = clampf(float(c2.gear) + (0.4 if r.spurting else 0.0) + maxf(0.0, float(r.fight)) / 200.0, 0.0, 1.0)
-		input.gallop(float(m[0]), int(race.horses[me].num), float(m[2]), push)
+		input.gallop(float(m[0]), int(race.horses[me].num), float(m[2]), push, drive.vis)
 	course.gate.visible = T < 12.0
 	if course.gate.visible:
 		# 前触れ：開く HSSim.GATE.tell 秒前に灯がつき、扉が 0.3 秒だけ小さく鳴る。灯は扉が開ききるころ消える
@@ -527,6 +535,33 @@ func _feel(_H: Array) -> void:
 				var h := fposmod(absf(sin(bin * 12.9898) * 43758.5453), 1.0)
 				if h > (0.45 if fight_now else 0.6):
 					ViewRideInput.play(50 + roundf(h * 40.0), 0.6 + 0.4 * h, 0.15)
+
+# 全開の知らせ：入った瞬間は振動を一度大きく・踏み込みの音・小さな揺れ（前へ押し出す画角）。間は計器の色と振り切り（ride_hud）・風と息の音・強い蹄の振動。
+# 段を下げて抜けたら、なめらかに戻す。脚が尽きて切れたら（バテ）、知らせをすぐ消し、スタミナの赤い升の知らせだけにする
+func _drive_fx(H: Array, dt_real: float) -> void:
+	var c = ctl_obj()
+	var r = me_runner()
+	var dv := 0.0
+	var E := 1.0
+	var done := fin != null or T <= 0.0
+	if c != null and r != null:
+		var x = c.get("drive")
+		dv = float(x) if x != null else 0.0
+		E = float(r.E)
+		done = done or bool(r.done)
+	var ev := drive.update(dv, E, done, dt_real, rt)
+	match ev:
+		"enter":
+			input.fx("drive")
+			sfx.enter()
+			kick({"dur": 0.4, "hz": 6.0, "ay": 0.02, "fov": 1.5})
+		"spent":
+			sfx.stop()
+	if done and fin != null:
+		sfx.stop()
+	sfx.vis = drive.vis
+	if H.size() > me:
+		sfx.stride_hz = clampf(float(H[me][2]) / STRIDE, 0.5, 3.0)
 
 # 外（模擬の進路の＋）がカメラの右か。騎乗の視点は馬の進む向きから、中継はカメラの向きから（横から見ていて決まらないときは進む向き）
 func _out_is_right() -> bool:
