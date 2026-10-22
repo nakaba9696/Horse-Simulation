@@ -326,7 +326,7 @@ module.exports = function (check, assert, HS) {
     const it = W.marketHistoric().find(x => x.horse.sex !== '牝');
     W.buy(it);
     const mine = W.mine()[0];
-    Object.assign(mine, { born: G2.year - 4, loc: 'stable', auto: false, fatigue: 0 });
+    Object.assign(mine, { born: G2.year - 4, loc: 'stable', auto: false, fatigue: 0, earn: 1e9 });   // 獲得賞金で除外されないように（フルゲートの除外はこの確かめの外。店の並びはデータで変わる）
     const key = O.jobKey(j2);
     W._week = null;
     assert(!W.enter(mine.id, key), '自分の馬を依頼のレースに登録できない');
