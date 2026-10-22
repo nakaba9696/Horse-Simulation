@@ -124,8 +124,10 @@ func run(t) -> void:
 		if female == null and it.horse.sex == "牝":
 			t.eq(HSWorld.buy(it), null, "flow: 牝馬を買う")
 			female = it.horse.name
+	# 父は、まだ走っていない牡馬を先に選ぶ（乗った鞍のリプレイが残る馬を、下の「戦績からリプレイ」の確かめに残すため）
 	for h in HSWorld.mine():
 		if h.sex == "牝" and h.name == female: female = h
+		elif h.sex != "牝" and HSU.or_(h.get("results"), []).is_empty() and (male == null or not HSU.or_(male.get("results"), []).is_empty()): male = h
 		elif h.sex != "牝" and male == null: male = h
 	t.ok(male is Dictionary and female is Dictionary, "flow: 牡馬と牝馬がいる")
 	t.eq(HSJockey.retire(male.id).get("to"), "retired", "flow: 牡馬を引退させると牧場に残る")
