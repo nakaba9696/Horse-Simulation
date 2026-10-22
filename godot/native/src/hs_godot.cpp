@@ -185,7 +185,7 @@ void HSNativeRunner::_get_property_list(List<PropertyInfo> *p_list) const {
 
 static const char *CTL_KEYS[] = { "tension", "started", "gear", "hand", "swapUntil", "lastPush", "lastPull", "pushes", "whips", "whipUntil", "windmill", "lane",
 	"blockedNow", "wide", "kakariNow", "behind", "surge", "shrink", "pullT", "reinFight", "bumpT", "bumpSide", "bond", "bondF", "spurtTension", "lastEv",
-	"startGood", "taps", "whipT", "lastWhip", "laneT", "driftT", "evT", "passSeen", "misfit", "everKakari", "push", "hold", "fumble" };
+	"startGood", "taps", "whipT", "lastWhip", "laneT", "driftT", "evT", "passSeen", "misfit", "everKakari", "push", "hold", "fumble", "drive" };
 static const int N_CTL_KEYS = sizeof(CTL_KEYS) / sizeof(CTL_KEYS[0]);
 
 bool HSNativeCtl::_get(const StringName &name, Variant &r) const {
@@ -210,6 +210,7 @@ bool HSNativeCtl::_get(const StringName &name, Variant &r) const {
 		case 32: { Dictionary d; if (c.evWallSet) d["wall"] = c.evWall; if (c.evSandSet) d["sand"] = c.evSand; if (c.evCoverSet) d["cover"] = c.evCover; r = d; } break;
 		case 33: { Dictionary d; for (size_t i = 0; i < c.passSeen.size(); i++) if (!std::isnan(c.passSeen[i])) d[(int64_t)i] = c.passSeen[i]; r = d; } break;
 		case 34: r = c.misfit; break; case 35: r = c.everKakari; break; case 36: r = c.push(); break; case 37: r = c.hold(); break; case 38: r = c.fumble; break;
+		case 39: r = c.drive; break;
 		default: return false;
 	}
 	return true;

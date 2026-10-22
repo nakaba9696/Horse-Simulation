@@ -522,7 +522,7 @@ bool sim_step(Sim &sim) {
 	Ctl *c = sim.hasCtl ? &sim.ctl : nullptr;
 	const Track *tr = sim.track;
 	for (auto &s : st) {
-		if (s.done) { s.v = maxf(6.0, s.v - 0.9 * DT); s.x += s.v * DT; s.kakari = 0.0; s.ears = 0.5; continue; }
+		if (s.done) { if (s.me && c) c->drive = 0.0; s.v = maxf(6.0, s.v - 0.9 * DT); s.x += s.v * DT; s.kakari = 0.0; s.ears = 0.5; continue; }
 		if (s.me && c && !c->started && t >= 0.9) { c->started = true; s.delay = 0.9; s.late = true; s.E -= LATE_E; say(sim, t, s.name + U8("、出遅れた！"), "trouble"); }
 		if (t < s.delay) continue;
 		double R = D - s.x;
@@ -546,6 +546,7 @@ bool sim_step(Sim &sim) {
 			if (kakariNow && !c->kakariNow && s.skills.has(kakariId)) fire(sim, s, kakariId);
 			c->kakariNow = kakariNow;
 			if (kakariNow) c->everKakari = true;
+			c->drive = 0.0;
 			if (s.E <= 0) target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu);
 			else {
 				if (s.spurting) {
@@ -556,6 +557,7 @@ bool sim_step(Sim &sim) {
 					double drive = clamp((g - DRIVE_FROM) / (1.0 - DRIVE_FROM), 0.0, 1.0);
 					target = s.vc * (sus + (1.0 + (up - 1.0) * (1.0 + DRIVE_K) - sus) * drive);
 					costMul *= 1.0 + DRIVE_C * drive;
+					c->drive = drive;
 				} else if (prog < 0.22) {
 					target = pace * s.styleMult;
 					if (s.easyStart) costMul *= EASY_START;

@@ -19,6 +19,9 @@ const BAD := Color("ff5a4d")
 const CALM := Color("5fb4ff")
 const CYAN := Color("7fe6ff")
 const PALE := Color("ffe9a6")
+# 全開（docs/FEEL.md 4）：金が白く灼ける。芯は白熱・にじみは濃い金。追い出した（金）の続きで、悪い（赤）・競り合い（橙）とは混ぜない
+const HOT := Color("fff4d6")
+const HOT_GLOW := Color("ffc24a")
 const STYLES := ["逃げ", "先行", "差し", "追込"]
 const PACE_SHOW := 4.5     # ペースはチェックポイント（sim.checkAt）を先頭が過ぎたときだけ、この秒だけ出す（持ち主の指摘「常にわかるとつまらない」）
 const PACE_FADE := 0.6
@@ -150,6 +153,14 @@ func _m() -> Dictionary:
 		"tension": float(a.get("tension", 30.0)), "hand": "R" if int(a.get("hand", 1)) == 1 else "L", "swapping": false, "whips": 0, "eff": 1.0,
 		"kakari": bool(a.get("kakari", false)), "reinFight": false, "surge": 0.0, "blocked": bool(a.get("blocked", false)),
 		"style": String(race.horses[me].get("style", "")), "jiyu": false}
+
+# 全開の知らせ（view/ride_drive.gd）：[vis＝色の強さ, peg＝速さの計器の振り切り, burst＝入った瞬間の一打, pulse＝蹄の拍子の脈（0〜1）]
+func _drive() -> Array:
+	var d = rv.get("drive") if rv != null else null
+	if d == null:
+		return [0.0, 0.0, 0.0, 0.0]
+	var pulse := 0.5 + 0.5 * sin(now * TAU * 2.3)
+	return [float(d.vis), float(d.peg), d.burst(now), pulse]
 
 func _straight() -> float:
 	if rv.live:
@@ -484,9 +495,12 @@ func _draw_pace(M: Dictionary, T: float) -> void:
 func _speed_lines(M: Dictionary) -> void:
 	if not bool(M.spurting):
 		return
-	var sp := clampf((float(M.v) / float(M.vc) - 0.98) / 0.1, 0.0, 1.0)
+	var dv := _drive()
+	var vis: float = dv[0]
+	var sp := maxf(clampf((float(M.v) / float(M.vc) - 0.98) / 0.1, 0.0, 1.0), vis)
 	if sp <= 0.05:
 		return
+	var lc := Color(1, 1, 1).lerp(HOT_GLOW, 0.45 * vis)
 	var cx := VW / 2.0
 	var cy := VH * 0.46
 	for i in 26:
@@ -494,7 +508,7 @@ func _speed_lines(M: Dictionary) -> void:
 		var ph := fposmod(now / 0.26 + fposmod(i * 0.618, 1.0), 1.0)
 		var r0 := maxf(VW, VH) * (0.42 + ph * 0.5)
 		var r1 := r0 + 40.0 + 50.0 * sp
-		_line(cx + cos(a) * r0, cy + sin(a) * r0 * 0.62, cx + cos(a) * r1, cy + sin(a) * r1 * 0.62, Color(1, 1, 1, 0.16 * sp * (1.0 - ph)), 1.5)
+		_line(cx + cos(a) * r0, cy + sin(a) * r0 * 0.62, cx + cos(a) * r1, cy + sin(a) * r1 * 0.62, _a(lc, 0.16 * sp * (1.0 + 0.6 * vis) * (1.0 - ph)), 1.5 + vis)
 
 # 縁の光（内は透明、外へ向けて濃く）
 func _edge(col: Color, inner: float) -> void:
@@ -693,11 +707,17 @@ func _meters(M: Dictionary) -> void:
 	_reins(M, bx, py + 52.0, 212.0)
 
 # 丸い計器：速さだけ（下の空いた 270° の 30 の目盛り。巡航の速さに金の目盛り。追い出すと縁が金に光る）
+# 全開の間（view/ride_drive.gd）：針（目盛り）は最大まで振り切り（抜けるとなめらかに実際の値へ戻る）、上の目盛りと縁が白く灼け、光が蹄の拍子で脈打つ。入った瞬間に白い輪が一度広がる
 func _dial(M: Dictionary, cx: float, cy: float, R: float) -> void:
 	var spurt: bool = bool(M.spurting) and not bool(M.done)
+	var dv := _drive()
+	var vis: float = dv[0]
+	var peg: float = dv[1]
 	var halo := Color(1, 214 / 255.0, 90 / 255.0, 0.7) if spurt else Color(0, 0, 0, 0.6)
+	if vis > 0.0:
+		halo = halo.lerp(HOT_GLOW, vis)
 	for k in 4:
-		_circle(cx, cy + (0 if spurt else 3), R + 2.0 + k * (5.0 if spurt else 3.0), _a(halo, 0.16))
+		_circle(cx, cy + (0 if spurt else 3), R + 2.0 + k * ((5.0 + 2.5 * vis) if spurt else 3.0), _a(halo, 0.16 + vis * (0.06 + 0.08 * float(dv[3]))))
 	var g0 := Color(34 / 255.0, 58 / 255.0, 46 / 255.0, 0.96)
 	var g1 := Color(5 / 255.0, 13 / 255.0, 10 / 255.0, 0.94)
 	for k in 6:
@@ -707,7 +727,7 @@ func _dial(M: Dictionary, cx: float, cy: float, R: float) -> void:
 	var a0 := PI * 0.75
 	var sweep := PI * 1.5
 	var N := 30
-	var f := clampf((float(M.v) / float(M.vc) - 0.85) / 0.27, 0.0, 1.0)
+	var f := ViewRideDrive.dial_frac((float(M.v) / float(M.vc) - 0.85) / 0.27, peg)
 	var cruise := (1.0 - 0.85) / 0.27
 	var lit := int(round(f * N))
 	for i in N:
@@ -716,15 +736,28 @@ func _dial(M: Dictionary, cx: float, cy: float, R: float) -> void:
 		var col := OFF
 		if i < lit:
 			col = (PALE if spurt else CYAN) if over else Color("3a9cf0")
+			if over and vis > 0.0:
+				col = col.lerp(HOT, vis)
+		# 振り切った最後の目盛りは、止めに当たって細かく明滅する
+		if i == N - 1 and i < lit and peg > 0.95:
+			col = _a(col, 0.7 + 0.3 * absf(sin(now / 0.035)))
 		var r0 := R - 13.0
 		var r1 := R - 4.0
 		if i < lit and over:
-			_line(cx + cos(a) * r0, cy + sin(a) * r0, cx + cos(a) * r1, cy + sin(a) * r1, _a(WARN if spurt else CYAN, 0.3), 7.0)
+			_line(cx + cos(a) * r0, cy + sin(a) * r0, cx + cos(a) * r1, cy + sin(a) * r1, _a((WARN if spurt else CYAN).lerp(HOT_GLOW, vis), 0.3 + 0.25 * vis), 7.0 + 3.0 * vis)
 		_line(cx + cos(a) * r0, cy + sin(a) * r0, cx + cos(a) * r1, cy + sin(a) * r1, col, 3.6)
 	var ac := a0 + sweep * cruise
 	_line(cx + cos(ac) * (R - 15), cy + sin(ac) * (R - 15), cx + cos(ac) * (R - 1), cy + sin(ac) * (R - 1), GOLD, 2)
+	if vis > 0.0:
+		# 縁：目盛りの弧ぜんぶが白く灼ける。止め（いちばん右）に白い光の点
+		_arc(cx, cy, R - 0.5, a0, a0 + sweep, _a(HOT, 0.85 * vis), 2.0 + 1.5 * vis)
+		var ae := a0 + sweep
+		_glow_circle(cx + cos(ae) * (R - 8.5), cy + sin(ae) * (R - 8.5), 2.5, _a(HOT, peg), 7.0 + 4.0 * float(dv[3]))
+	if float(dv[2]) > 0.0:
+		var b: float = dv[2]
+		_arc(cx, cy, R + 4.0 + 22.0 * (1.0 - b), 0, TAU, _a(HOT, 0.85 * b), 2.0 + 3.0 * b)
 	var kmh := int(round(float(M.v) * 3.6))
-	_txt(str(kmh), cx, cy + 9, 30, PALE if spurt else Color.WHITE, "center", f_num)
+	_txt(str(kmh), cx, cy + 9, 30, (PALE if spurt else Color.WHITE).lerp(HOT, vis), "center", f_num)
 	_tag("km/h", cx, cy + 25, LABEL, "center")
 
 # 気性の段（0〜1）→ 色：落ち着き＝青・ふつう＝緑・高ぶり＝金・掛かり＝赤
@@ -799,19 +832,22 @@ func _reins(M: Dictionary, x: float, y: float, w: float) -> void:
 	var up_f := maxf(0.0, 1.0 - (now - _up_t) / 0.22)
 	var dn_f := maxf(0.0, 1.0 - (now - _down_t) / 0.22)
 	var hold_c := Color("7fc8ff")
+	var dv := _drive()
+	var vis: float = dv[0]
+	var push_c := WARN.lerp(HOT, vis * (0.55 + 0.45 * float(dv[3])))
 	# 見出し：左に ▼ HOLD、右に PUSH ▲（十字キーの向きと同じ）
 	_poly([Vector2(x, y + 2), Vector2(x + 8, y + 2), Vector2(x + 4, y + 8)], _a(hold_c, 0.9 if g < -0.05 else 0.55))
 	_tag("HOLD", x + 12, y + 8, hold_c if g < -0.05 else LABEL)
-	_poly([Vector2(x + w - 8, y + 8), Vector2(x + w, y + 8), Vector2(x + w - 4, y + 2)], _a(WARN, 0.9 if g > 0.05 else 0.55))
-	_tag("PUSH", x + w - 12, y + 8, WARN if g > 0.05 else LABEL, "right")
+	_poly([Vector2(x + w - 8, y + 8), Vector2(x + w, y + 8), Vector2(x + w - 4, y + 2)], _a(push_c, 0.9 if g > 0.05 else 0.55))
+	_tag("PUSH", x + w - 12, y + 8, push_c if g > 0.05 else LABEL, "right")
 	var mid := x + w / 2.0
 	var cw := (w / 2.0 - 8.0 - 3.0 * 3) / 4.0
 	var cy := y + 14.0
 	for i in 4:
 		# 右（しごく）
 		var on_r := g > 0.05 and i < n
-		var cr := WARN if on_r else OFF
-		var glow_r := 6.0 if on_r else 0.0
+		var cr := push_c if on_r else OFF
+		var glow_r := (6.0 + 8.0 * vis) if on_r else 0.0
 		if up_f > 0.0 and (_up_beat or i == 0):
 			cr = (WARN.lerp(Color(1, 0.97, 0.8), 0.5 * up_f)) if _up_beat else Color(1, 1, 1, 0.25 + 0.55 * up_f)
 			glow_r = 6.0 + 8.0 * up_f
@@ -824,6 +860,12 @@ func _reins(M: Dictionary, x: float, y: float, w: float) -> void:
 			cl = Color(1, 1, 1, 0.25 + 0.55 * dn_f)
 			glow_l = 4.0
 		_cell(mid - 6.0 - (i + 1) * cw - i * 3.0, cy, cw, 13, cl, glow_l)
+	# 全開：いちばん右の升の先へ光が突き抜ける（度合いに応じて長く・濃く）
+	if vis > 0.0:
+		var ex := mid + 6.0 + 4.0 * (cw + 3.0) - 3.0 + 13.0 * 0.35
+		var ln := (8.0 + 8.0 * vis) * (0.85 + 0.15 * float(dv[3]))
+		_poly([Vector2(ex - 2.0, cy), Vector2(ex + ln, cy + 6.5), Vector2(ex - 2.0, cy + 13.0)], [_a(HOT_GLOW, 0.7 * vis), _a(HOT_GLOW, 0.0), _a(HOT_GLOW, 0.7 * vis)])
+		_poly([Vector2(ex - 2.0, cy + 3.5), Vector2(ex + ln * 0.6, cy + 6.5), Vector2(ex - 2.0, cy + 9.5)], [_a(HOT, vis), _a(HOT, 0.0), _a(HOT, vis)])
 	# 真ん中の手（白い丸）：段の分だけ左右へ寄る
 	var hx := mid + clampf(g, -1.0, 1.0) * (w / 2.0 - 10.0)
 	_rect(mid - 0.75, cy - 3, 1.5, 19, Color(1, 1, 1, 0.35))

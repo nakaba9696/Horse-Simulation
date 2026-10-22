@@ -115,6 +115,7 @@ class Ctl:
 	var steered := false        # 進路を自分で動かした
 	var beats := 0              # 拍子の合ったしごきの続いた数
 	var lastBeat := -9.0        # 最後に拍子の合ったしごきの時刻
+	var drive := 0.0            # 全開の度合い（0〜1。計器・音・振動へ渡すだけで、模擬の結果には使わない。docs/FEEL.md 8）
 	# しごく・引くの段（JS の getter）
 	var push: float:
 		get: return HSU.mx(0.0, gear)
@@ -811,6 +812,7 @@ static func _step_gd(sim: Sim) -> bool:
 	var c := sim.ctl
 	for s: Runner in st:
 		if s.done:
+			if s.me and c: c.drive = 0.0
 			s.v = maxf(6.0, s.v - 0.9 * DT); s.x += s.v * DT; s.kakari = 0.0; s.ears = 0.5; continue
 		if s.me and c and not c.started and t >= 0.9:
 			c.started = true; s.delay = 0.9; s.late = true; s.E -= LATE_E; say(sim, t, "%s、出遅れた！" % s.h.name, "trouble")
@@ -836,6 +838,7 @@ static func _step_gd(sim: Sim) -> bool:
 			if kakariNow and not c.kakariNow and _has(s.h, "kakari"): fire(sim, s, "kakari")
 			c.kakariNow = kakariNow
 			if kakariNow: c.everKakari = true
+			c.drive = 0.0
 			if s.E <= 0: target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu)
 			else:
 				if s.spurting:
@@ -846,6 +849,7 @@ static func _step_gd(sim: Sim) -> bool:
 					var drive := HSU.clamp((g - DRIVE.from) / (1.0 - DRIVE.from), 0.0, 1.0)
 					target = s.vc * (sus + (1.0 + (up - 1.0) * (1.0 + DRIVE.k) - sus) * drive)
 					costMul *= 1.0 + DRIVE.c * drive
+					c.drive = drive
 				elif prog < 0.22:
 					target = pace * s.styleMult
 					if s.easyStart: costMul *= EASY_START
