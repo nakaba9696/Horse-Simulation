@@ -24,8 +24,8 @@ module.exports = function (check, assert, HS) {
   check('placings: 馬の識別（ゲームにいる馬はカナ名と生年で正しく紐づき、同名の別世代の馬には紐づかない）', () => {
     const by = new Map(D.historic.map(h => [h.name, h]));
     const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\(.*?\)/g, '').replace(/[^a-z0-9]/g, '');
-    // ゲームの側の生年が見積もりで外れている馬（着順のデータの誤りではない。docs/review/PLACINGS_FIXES.md）
-    const GAME_BORN_EST = new Set(['メタルベンダー|ローズヒルギニー|2009']);
+    // ゲームの側の生年が見積もりで外れている馬（いまは無し。メタルベンダーは元の記録の年齢を出典に合わせて 2005年生に直した 2026-10-22）
+    const GAME_BORN_EST = new Set([]);
     const bad = [];
     for (const x of ALL) {
       if (!x.inData) continue;

@@ -5175,7 +5175,7 @@
 {"race": "ジョージライダーステークス", "year": 2009, "horse": "ヴィジョンアンドパワー", "horseEn": "Vision And Power", "sex": "牡", "age": 5, "country": "豪", "jockey": "", "surface": "芝", "dist": 1500, "course": "ローズヒル", "est": ["sex", "age"]}
 {"race": "ジョージライダーステークス", "year": 2010, "horse": "ダンリー", "horseEn": "Danleigh", "sex": "牡", "age": 4, "country": "豪", "jockey": "", "surface": "芝", "dist": 1500, "course": "ローズヒル", "est": ["sex", "age"]}
 {"race": "ジョージライダーステークス", "year": 2011, "horse": "ランギランドゥー", "horseEn": "Rangirangdoo", "sex": "セ", "age": 6, "country": "豪", "jockey": "", "surface": "芝", "dist": 1500, "course": "ローズヒル", "est": ["age"]}
-{"race": "ジョージライダーステークス", "year": 2012, "horse": "メタルベンダー", "horseEn": "Metal Bender", "sex": "牡", "age": 4, "country": "豪", "jockey": "", "surface": "芝", "dist": 1500, "course": "ローズヒル", "est": ["sex", "age"]}
+{"race": "ジョージライダーステークス", "year": 2012, "horse": "メタルベンダー", "horseEn": "Metal Bender", "sex": "牡", "age": 7, "country": "豪", "jockey": "", "surface": "芝", "dist": 1500, "course": "ローズヒル", "est": ["sex", "age"]}
 {"race": "ジョージライダーステークス", "year": 2013, "horse": "ピエロ", "horseEn": "Pierro", "sex": "牡", "age": 3, "country": "豪", "jockey": "", "surface": "芝", "dist": 1500, "course": "ローズヒル"}
 {"race": "ジョージライダーステークス", "year": 2014, "horse": "ゴードンロードバイロン", "horseEn": "Gordon Lord Byron", "sex": "セ", "age": 6, "country": "豪", "jockey": "", "surface": "芝", "dist": 1500, "course": "ローズヒル"}
 {"race": "ジョージライダーステークス", "year": 2015, "horse": "リアルインパクト", "horseEn": "Real Impact", "sex": "牡", "age": 4, "country": "日", "jockey": "", "surface": "芝", "dist": 1500, "course": "ローズヒル", "est": ["age"]}
