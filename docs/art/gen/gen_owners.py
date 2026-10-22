@@ -132,6 +132,25 @@ P["hinata"] = ("f", "1girl, adult, 26 years old, (large breasts:1.2), (unrefined
                ", (child:1.5), (loli:1.5), (animal ears:1.8), (dog ears:1.8), (makeup:1.5), (lipstick:1.5), (eyeshadow:1.4), (cleavage:1.6), (bare shoulders:1.4), (open clothes:1.4), (revealing clothes:1.5), (brown hair:1.4), (red hair:1.3), (glamorous:1.3), (hair over one eye:1.4), (wheat field:1.5), outdoors, landscape")
 P["takenouchi"] = ("f2", "1boy, male focus, (old man:1.4), (elderly:1.2), 68 years old, (thin:1.3), slender, wrinkles, (silver white hair slicked back:1.4), (grey mustache:1.3), (rimless monocle with thin chain:1.3), (sharp cold eyes:1.4), (stern expression:1.3), closed mouth, (dark navy three-piece suit:1.4), (red ascot:1.4), (pinstripe shirt:1.3), (white pocket square:1.3), dignified, (butler-like elegance:1.2), seasoned, intimidating calm",
                    ", (child:1.6), (young:1.4), (1girl:1.5), (female:1.4), (breasts:1.4), (beard:1.4), (fat:1.4), (smile:1.3), (kimono:1.3), (sunglasses:1.4), (cane:1.2)")
+# 2026-10-22 6 回目：千石をもっと若く（30 歳前後）。イロナ 81〜90（37 の続き・深い赤茶〜マホガニーの髪）
+P["sengoku"] = ("f2", "1boy, male focus, (adult man:1.5), 30 years old, (tall:1.3), (sharp jawline:1.3), adam's apple, (smooth skin:1.3), handsome, slim, black hair, (modern short textured hair:1.3), (two-block haircut:1.1), sharp eyes, amber eyes, (startup ceo:1.2), white shirt, rolled-up sleeves, open collar, no necktie, (light grey vest:1.2), (smartwatch:1.1), hands in pockets, sky blue accents, (confident smirk:1.3), closed mouth smile, slightly arrogant",
+                ", (child:1.6), (shota:1.6), (teenage:1.6), (boy:1.5), (student:1.5), (backpack:1.5), (short stature:1.4), (1girl:1.5), (female:1.4), (breasts:1.4), (glasses:1.3), (beard:1.4), (stubble:1.4), (wrinkles:1.6), (nasolabial folds:1.6), (crow's feet:1.5), (old:1.4), (multicolored hair:1.5), (hair over one eye:1.4), (muscular:1.3), (sharp teeth:1.7), (fangs:1.7), (phone:1.7), (smartphone:1.7), (holding phone:1.7)")
+I81 = "1girl, adult, young woman, 25 years old, (elegant hungarian noble lady:1.2), (deep reddish brown hair:1.4), (mahogany hair:1.3), amber eyes, (relaxed slightly sleepy expression:1.3), half-closed eyes, refined, graceful"
+V81 = [
+ "(short bob hair:1.3), (gold laurel hairpin:1.2), white high-neck blouse, deep green bolero, amber brooch",
+ "(low twin tails:1.3), (green ribbon:1.2), cream knit cardigan over white blouse, small gold horseshoe necklace",
+ "(braided bun:1.3), (black riding helmet held under arm:1.2), white stock tie, navy riding jacket",
+ "(long side ponytail:1.3), (deep green beret:1.3), white blouse, gold buttons, plaid shawl",
+ "(wavy hair with gold hair chain:1.2), (long-sleeved high-collar white gown with green sash:1.3), amber earrings",
+ "(hair tied with red-white-green ribbon:1.3), (traditional hungarian vest with paprika embroidery:1.3), white puffy sleeves",
+ "(straight hair with blunt bangs:1.3), (scholar outfit:1.2), (round glasses:1.2), green tie, white shirt, book under arm",
+ "(windswept long hair:1.2), (long dark green travel coat:1.3), (scarf:1.1), (train ticket in hand:1.1), gold laurel pin",
+ "(elegant updo with laurel comb:1.3), (black evening dress with gold trim:1.3), (opera gloves:1.1), amber pendant",
+ "(half updo with braids:1.2), (stable hand outfit:1.2), white shirt, brown leather vest, (riding gloves:1.1), gold laurel brooch",
+]
+for k, v in enumerate(V81):
+    P[f"ilona{81 + k:02d}"] = ("f", I81 + ", " + v,
+                               ", (child:1.5), (loli:1.5), (cleavage:1.5), (animal ears:1.6), (tail:1.5), (horse:1.4), (black hair:1.3), (flower wreath:1.6), (flowers in hair:1.5), (cat:1.4), (orange hair:1.7), (green hair:1.7), (blonde hair:1.5), (bright red hair:1.5)" + NEGI)
 who_list, seeds = sys.argv[1].split(","), [int(s) for s in sys.argv[2].split(",")]
 out = sys.argv[3] if len(sys.argv) > 3 else "."
 os.makedirs(out, exist_ok=True)
