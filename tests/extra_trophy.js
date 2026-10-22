@@ -409,7 +409,9 @@ module.exports = function (check, assert, HS) {
     assert(SP.members(SP.BY['t:hk3']).some(d => d.name === 'ロマンチックウォリアー') && SP.members(SP.BY['t:hksp']).some(d => d.name === 'サイレントウィットネス'), '香港の名馬がいない');
     // ほかのトロフィー・グループに1989年からの馬は入らない
     assert(SP.list().every(x => !E.isPool(x.d) || (x.groups.length === 1 && ['t:hk3', 't:hksp'].includes(x.groups[0]))), '1989年からの馬が香港の三冠のほかにいる');
-    const G = newGame(68);
+    // 種はロマンチックウォリアーが始めの世界でデビューしていないもの（外した馬を戻すと世界の顔ぶれが変わり、種 68 ではデビューしていた）
+    const G = newGame(69);
+    assert(!HS.Eraless.activeNames().has('ロマンチックウォリアー'), '始めの世界にロマンチックウォリアーがいる（種を替える）');
     G.player.money = 1e9;
     const m = cal();
     const h = myHorse(G, '牡');
