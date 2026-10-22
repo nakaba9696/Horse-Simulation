@@ -1,183 +1,188 @@
 # G1上位着順レビュー
 
-対象：`claude/lucid-ptolemy-j204a3`、`733d912cbf43ec9694e674ba27d74d3eb2772349`。確認日：2026-10-22 JST。
+確認日：2026-10-22（UTC）。対象：`claude/lucid-ptolemy-j204a3` の `9d368b9357ab62b94fb088c4b74ebe5b9525ce23`。
+一覧21,304行（国内5,308・海外15,996）を読み、元JSONLとの対応・国内着差の計算・同名重複・ゲームの暦との対応を検査した。外部照合は主要古馬G1、米欧クラシック、既存レビューの重要候補を優先した抽出確認であり、全行の史実を保証するものではない。
 
-**コード・データは変更していない。本書では「内部で確認できた不整合」と「外部の出典確認待ち」を分ける。外部サイト本文を取得できたレースは0件であり、以下の修正案を公式結果で裏取り済みとは扱わない。** 特に、重複や世代違いは判定できても、差し替える馬名・正しい全着順まで確定できない場合は、その旨を書く。
+既存の本書（`a917797e`）を、今回読めたJRA・NAR・主催者発表・結果表で更新した。確定した誤り、カナ補完、未確認候補を分ける。コード・JSONL・CSVは変更しない。
 
-## 確認範囲
-
-- 国内：`data/src/placings_jra.jsonl` 5,308行、1,061レース×年。
-- 海外：`data/src/placings_world.jsonl` 15,996行、4,184レース×年。
-- CSV：21,304行。元の2ファイルと、レース・年・着順・馬名・出典の多重集合が一致。CSVの行順の違いは誤りとしない。
-- 全行について、同一レースの馬名重複、順位と同着の整合、欠落順位、国内着差の積み上げ、JBISのURL日付、ゲーム内の馬の生年との整合を機械照合。候補を個別に確認した。
-- 全5,245組のレース名・年は、ゲームの暦の当該年のG1定義に対応した。ただし、同じリポジトリ内の整合確認であり、実際の当時の名称・格・開催条件の正しさを保証しない。
-
-## 優先して確認・修正する不整合
-
-この表の「正しい内容」が「要確認」となっている場合、不整合の存在は確認済みだが正解の馬名や順位は未確定である。元データの着順そのものを当て推量で置換しない。
+## 確認済み：着順・別競走混入・抜け・収録年
 
 | レース | 年 | 着順 | いまの内容 | 正しい内容 | 出典（URL か「未確認」） |
 |---|---|---|---|---|---|
-| ドバイデューティフリー | 2005 | 3・5 | Right Approach が同じレースの2行に別順位で入る | 同一の馬は1つの確定着順だけ。少なくとも片方の馬名・順位・対象年が誤り。正しい差し替え名は未確認 | 内部確認：[元データL637](../../../data/src/placings_world.jsonl#L637)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=UADuFre)）、[元データL639](../../../data/src/placings_world.jsonl#L639) |
-| ドバイターフ | 2023 | 1・4 | Lord North が同じレースの2行に別順位で入る | 同一の馬は1つの確定着順だけ。少なくとも片方の馬名・順位・対象年が誤り。正しい差し替え名は未確認 | 内部確認：[元データL700](../../../data/src/placings_world.jsonl#L700)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=UADuFre)）、[元データL703](../../../data/src/placings_world.jsonl#L703) |
-| フォレ賞 | 2007 | 2・5 | Welsh Emperor が同じレースの2行に別順位で入る | 同一の馬は1つの確定着順だけ。少なくとも片方の馬名・順位・対象年が誤り。正しい差し替え名は未確認 | 内部確認：[元データL7992](../../../data/src/placings_world.jsonl#L7992)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FR-011)）、[元データL7995](../../../data/src/placings_world.jsonl#L7995) |
-| ヴィコンテスヴィジエ賞 | 2016 | 4〜5 | 4着同着が3頭（Walzertakt / Bathyrhon / Kicky Blue）で、その後にMille et Milleが5着 | 現状の4着3頭と5着は両立しない。4着3頭が正しければ次は7着であり1〜5着から外れる。実際に3頭同着だったかを含め原典再確認 | 内部確認：[元データL14324](../../../data/src/placings_world.jsonl#L14324)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FLoViVi)）、[元データL14330](../../../data/src/placings_world.jsonl#L14330) |
-| ジャパンカップダート | 2009 | 3 | ゴールデンチケット / inData=true。ゲームの同名馬は2009年生 / Golden Ticket | このゲーム内の同名馬への紐付けを外す（現行データでは inData=false 相当）。実際の出走馬の生年・IDは原典確認後に記録する。元の出走馬名は保持 | 内部確認：[元データL2873](../../../data/src/placings_jra.jsonl#L2873)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20091206/109/11/)）。ゲームの生年は読み込み済みhistoricデータと照合 |
-| 朝日杯フューチュリティステークス | 2018 | 5 | ディープダイバー / inData=true。ゲームの同名馬は1969年生 / Deep Diver | このゲーム内の同名馬への紐付けを外す（現行データでは inData=false 相当）。実際の出走馬の生年・IDは原典確認後に記録する。元の出走馬名は保持 | 内部確認：[元データL3230](../../../data/src/placings_jra.jsonl#L3230)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20181216/109/11/)）。ゲームの生年は読み込み済みhistoricデータと照合 |
-| 東京大賞典 | 2009 | 5 | ゴールデンチケット / inData=true。ゲームの同名馬は2009年生 / Golden Ticket | このゲーム内の同名馬への紐付けを外す（現行データでは inData=false 相当）。実際の出走馬の生年・IDは原典確認後に記録する。元の出走馬名は保持 | 内部確認：[元データL3541](../../../data/src/placings_jra.jsonl#L3541)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20091229/220/10/)）。ゲームの生年は読み込み済みhistoricデータと照合 |
-| マイルチャンピオンシップ南部杯 | 2022 | 2 | ヘリオス / inData=true。ゲームの同名馬は1957年生 / Helios | このゲーム内の同名馬への紐付けを外す（現行データでは inData=false 相当）。実際の出走馬の生年・IDは原典確認後に記録する。元の出走馬名は保持 | 内部確認：[元データL4183](../../../data/src/placings_jra.jsonl#L4183)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20221010/210/12/)）。ゲームの生年は読み込み済みhistoricデータと照合 |
-| 全日本2歳優駿 | 2008 | 2 | ナサニエル / inData=true。ゲームの同名馬は2008年生 / Nathaniel | このゲーム内の同名馬への紐付けを外す（現行データでは inData=false 相当）。実際の出走馬の生年・IDは原典確認後に記録する。元の出走馬名は保持 | 内部確認：[元データL4238](../../../data/src/placings_jra.jsonl#L4238)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20081217/221/10/)）。ゲームの生年は読み込み済みhistoricデータと照合 |
-| ジャパンダートダービー | 2009 | 3 | ゴールデンチケット / inData=true。ゲームの同名馬は2009年生 / Golden Ticket | このゲーム内の同名馬への紐付けを外す（現行データでは inData=false 相当）。実際の出走馬の生年・IDは原典確認後に記録する。元の出走馬名は保持 | 内部確認：[元データL4379](../../../data/src/placings_jra.jsonl#L4379)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20090708/220/11/)）。ゲームの生年は読み込み済みhistoricデータと照合 |
-| JBCスプリント | 2022 | 3 | ヘリオス / inData=true。ゲームの同名馬は1957年生 / Helios | このゲーム内の同名馬への紐付けを外す（現行データでは inData=false 相当）。実際の出走馬の生年・IDは原典確認後に記録する。元の出走馬名は保持 | 内部確認：[元データL4774](../../../data/src/placings_jra.jsonl#L4774)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20221103/210/11/)）。ゲームの生年は読み込み済みhistoricデータと照合 |
-| ジャパンカップ | 1992 | 5 | ヒシマサル / inData=true。ゲームの同名馬は1955年生 / Hishi Masaru | ゲームの対象は「ヒシマサル（1989）」へ。1955年生の「ヒシマサル」と分ける（表記の史実裏取りは未確認） | 内部確認：[元データL5177](../../../data/src/placings_jra.jsonl#L5177)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/19921129/105/10/)）。ゲームの生年は読み込み済みhistoricデータと照合 |
-| ブリーダーズカップフィリー＆メアターフ | 2026 | 1〜3 | Destino d'Oro / Crevalle d'Oro / Movin' on Up の結果が入る | 当該年のゲーム暦は11月。確認日2026-10-22にはまだ将来の競走なので、2026年の確定結果として採用しない。別競走・別年混入を調べる（正しい対応競走は未確認） | 内部確認：[元データL2767](../../../data/src/placings_world.jsonl#L2767)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=USBcFi)）。ゲームの暦の当該年は11月1週 |
-| サウジカップ | 2020 | 1〜5 | 1着Maximum Security、2着Midnight Bisou。既存の勝ち馬データはMidnight Bisou | 勝ち馬データとの食い違いを解消する。後日の失格・裁決による確定着順の更新漏れを優先確認し、最新の公式結果がMidnight Bisouを1着としていれば全順位・着差を更新。公式本文未確認のため本書で確定しない | 内部確認：[元データL1528](../../../data/src/placings_world.jsonl#L1528)。外部未確認（[収録出典](https://www.sportinglife.com/racing/results/2020-02-29/riyadh/566608)）、[勝ち馬データL5193](../../../data/src/winners_world.jsonl#L5193) |
+| ドバイターフ | 2023 | 4 | Lord North（1着にも同馬） | Shirl's Speight。Lord North は1着だけ | https://www.sportinglife.com/racing/results/2023-03-25/meydan/730202/dubai-turf-sponsored-by-dp-world-group-1-turf |
+| ドバイターフ | 2023 | 5 | Panthalassa（同着） | Serifos の単独5着。Panthalassa は当該競走に出走していない | https://www.sportinglife.com/racing/results/2023-03-25/meydan/730202/dubai-turf-sponsored-by-dp-world-group-1-turf |
+| ドバイターフ | 2023 | 5 | Sir Busker（同着） | Sir Busker は10着。1〜5着から除外 | https://www.sportinglife.com/racing/results/2023-03-25/meydan/730202/dubai-turf-sponsored-by-dp-world-group-1-turf |
+| ドバイデューティフリー | 2005 | 4 | Paolini | Alkaadhem | https://www.godolphin.com/runners-and-results/racecard/380858 |
+| ドバイデューティフリー | 2005 | 5 | Right Approach（3着にも同馬、同着注記） | Prince Kirk の単独5着。Right Approach は3着だけ | https://www.godolphin.com/runners-and-results/racecard/380858 |
+| ドバイデューティフリー | 2005 | 5 | Martillo（同着） | 当該年の出走馬ではない。余分な5着行を除外 | https://www.godolphin.com/runners-and-results/racecard/380858 |
+| フォレ賞 | 2007 | 4 | Caradak | US Ranger | https://www.racingpost.com/results/211/longchamp/2007-10-06/442182/ |
+| フォレ賞 | 2007 | 5 | Welsh Emperor（2着にも同馬） | Tariq。Welsh Emperor は2着だけ | https://www.racingpost.com/results/211/longchamp/2007-10-06/442182/ |
+| サウジカップ | 2020 | 1 | Maximum Security | 失格。確定着順1〜5着から除外（2024年8月の裁決後） | https://jcsa.sa/en/news/20240802_thesaudicup_2020_title/ |
+| サウジカップ | 2020 | 2 | Midnight Bisou | 1着 Midnight Bisou（2024年8月の裁決後） | https://jcsa.sa/en/news/20240802_thesaudicup_2020_title/ |
+| サウジカップ | 2020 | 3 | Benbatl | 2着 Benbatl（2024年8月の裁決後） | https://jcsa.sa/en/news/20240802_thesaudicup_2020_title/ |
+| サウジカップ | 2020 | 4 | Mucho Gusto | 3着 Mucho Gusto（2024年8月の裁決後） | https://jcsa.sa/en/news/20240802_thesaudicup_2020_title/ |
+| サウジカップ | 2020 | 5 | Tacitus | 4着 Tacitus（2024年8月の裁決後） | https://jcsa.sa/en/news/20240802_thesaudicup_2020_title/ |
+| サウジカップ | 2020 | 5（欠落） | Gold Dream の行なし | 5着 Gold Dream（ゴールドドリーム）を補充（2024年8月の裁決後） | https://jcsa.sa/en/news/20240802_thesaudicup_2020_title/ |
+| ブリーダーズカップフィリー＆メアターフ | 2026 | 1〜3 | Destino d'Oro / Crevalle d'Oro / Movin' on Up を確定結果として収録 | 2026年10月22日時点では未施行（10月31日予定）。3頭の並びと½・½は1月24日のペガサスWCフィリー＆メアターフ（G2）の結果に一致。BCの結果として採用しない | https://nominations.breederscup.com/Championships/RaceSchedule 、 https://www.americasbestracing.net/races/2026-pegasus-world-cup-filly-and-mare-turf-invitational-s-presented-thoroughbred-aftercare |
+| コックスプレート | 2018 | 4（欠落） | 1・2・3・5着だけ。Rostropovich は5着 | 4着 Avilius を補充（Humidor から3馬身） | https://www.asianracing.org/news/an-historic-fourth-cox-plate-win-for-world-champion-mare-winx-aus |
+| ドイツダービー | 2011 | 4（欠落） | 1・2・3・5着だけ。Brown Panther は5着 | 4着 Mawingo を補充（Saltas から hd） | https://www.ahonoora.com/gerderby_2011.html |
+| 川崎記念 | 1995 | 1〜5（6頭） | 統一GI/JpnIの一覧に1995年の結果を収録。ゲームの暦にも当該年の同名競走なし | 結果の年をずらすのではなく、統一GI/JpnIとしての収録範囲から外すか旧地方重賞として区別。統一GI格付けは1998年から | https://www.keiba.go.jp/dirtgraderace/2026/0408_kawasakikinen/introduction.html |
 
-### 同名馬の突合せを誤りと判断した理由
+サウジカップ2020の着順は引用元の当日記事よりも後日の主催者裁決を優先した。1〜5着を並べ直す際には着差も一緒に再設定する必要がある。2026年BCの混入元は、馬名だけでなく上位3頭と着差½・½まで一致する。
 
-ヒシマサルはゲームに1955年生と1989年生が別名で存在する。1992年の出走馬を1955年生へ結びつけるべきではない。他の4つの名前もゲーム側では海外馬・過去世代で、対象年に生まれたばかり、まだ生まれていない、または数十歳となる組み合わせだった。
+## 確認済み：着差
 
-これは「史実の出走馬名を変えよ」という意味ではなく、**表示名だけでゲームの能力へ結合してはいけない**という指摘。英字名・生年・国・血統・登録IDなどで識別する必要がある。全馬の生年を公式に確認したという意味ではない。
-
-## 着差・同着の表現で原典確認が必要な14組
-
-以下は全て `marginTo="prev"`。同着の2頭・3頭に正の差が重複して入るか、同着の先頭行に `dh` が入り次の同着行に数値が入る。**単純に前の行から足すと同着馬の累計着差が食い違う。** ただし「前の異なる順位の馬から各同着馬への差」という表現なら同じ正数の併記も可能なため、外部表の転記ミスと一律には断定しない。収録規約・利用側の同着処理と原典を合わせて確認する。
-
-前行から積む形式へ統一するなら、同着グループの最初に前順位との差を1回だけ持たせ、後続の同着行は差0または同着とする。元の値を保持するなら、同着グループへ同じ累計着差を割り当て、二重に加算しない。HKJCの勝ち馬基準の着差はこの表に混ぜていない。
+以下の訂正値は、特記のない限り「前の異なる着順の馬との差」。同着内の直前行との差とは区別する。
 
 | レース | 年 | 着順 | いまの内容 | 正しい内容 | 出典（URL か「未確認」） |
 |---|---|---|---|---|---|
-| ドバイデューティフリー | 2005 | 5着同着 | Right Approach：shd / Martillo：shd | 同着グループの差を1回だけ扱う形へ。正しい数値・元表の列の意味は未確認 | 内部確認：[元データL639](../../../data/src/placings_world.jsonl#L639)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=UADuFre)）、[元データL640](../../../data/src/placings_world.jsonl#L640) |
-| ドバイターフ | 2023 | 5着同着 | Panthalassa：nk / Sir Busker：nk | 同着グループの差を1回だけ扱う形へ。正しい数値・元表の列の意味は未確認 | 内部確認：[元データL704](../../../data/src/placings_world.jsonl#L704)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=UADuFre)）、[元データL705](../../../data/src/placings_world.jsonl#L705) |
-| 仏ダービー | 2022 | 5着同着 | Vagalame：dh / Onesto：nk | dhと数値の対応順を原典で再確認。同着の最初の行に前順位との差を持たせる規約なら、現状は順序が逆になる | 内部確認：[元データL6448](../../../data/src/placings_world.jsonl#L6448)。外部未確認（[収録出典](https://www.sportinglife.com/racing/results/2022-06-05/chantilly/687466)）、[元データL6449](../../../data/src/placings_world.jsonl#L6449) |
-| カドラン賞 | 2011 | 3着同着 | Ley Hunter：s.h / Brigantin：s.h | 同着グループの差を1回だけ扱う形へ。正しい数値・元表の列の意味は未確認 | 内部確認：[元データL7865](../../../data/src/placings_world.jsonl#L7865)。外部未確認（[収録出典](https://www.sportinglife.com/racing/results/2011-10-02/longchamp/90840)）、[元データL7866](../../../data/src/placings_world.jsonl#L7866) |
-| ジャンリュックラガルデール賞 | 2025 | 4着同着 | Imperial Me Cen：dh / Campacite：1 | dhと数値の対応順を原典で再確認。同着の最初の行に前順位との差を持たせる規約なら、現状は順序が逆になる | 内部確認：[元データL8344](../../../data/src/placings_world.jsonl#L8344)。外部未確認（[収録出典](https://www.sportinglife.com/racing/results/2025-10-05/parislongchamp/883244)）、[元データL8345](../../../data/src/placings_world.jsonl#L8345) |
-| ケンタッキーダービー | 2006 | 4着同着 | Brother Derek：9½ / Jazil：9½ | 同着グループの差を1回だけ扱う形へ。正しい数値・元表の列の意味は未確認 | 内部確認：[元データL8780](../../../data/src/placings_world.jsonl#L8780)。外部未確認（[収録出典](https://en.wikipedia.org/wiki/2006_Kentucky_Derby)）、[元データL8781](../../../data/src/placings_world.jsonl#L8781) |
-| ベルモントステークス | 2023 | 4着同着 | Hit Show：¾ / Angel of Empire：1½ | 同着グループの差を1回だけ扱う形へ。正しい数値・元表の列の意味は未確認 | 内部確認：[元データL9231](../../../data/src/placings_world.jsonl#L9231)。外部未確認（[収録出典](https://en.wikipedia.org/wiki/2023_Belmont_Stakes)）、[元データL9232](../../../data/src/placings_world.jsonl#L9232) |
-| アーリントンミリオン | 2012 | 3着同着 | Rahystrada：1½ / Colombian：1½ | 同着グループの差を1回だけ扱う形へ。正しい数値・元表の列の意味は未確認 | 内部確認：[元データL10215](../../../data/src/placings_world.jsonl#L10215)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=USArM)）、[元データL10216](../../../data/src/placings_world.jsonl#L10216) |
-| シンガポール航空国際カップ | 2011 | 3着同着 | Waikato：1 / Irian：1 | 同着グループの差を1回だけ扱う形へ。正しい数値・元表の列の意味は未確認 | 内部確認：[元データL11495](../../../data/src/placings_world.jsonl#L11495)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=SiSiCup)）、[元データL11496](../../../data/src/placings_world.jsonl#L11496) |
-| キングチャールズ3世ステークス | 2025 | 5着同着 | Asfoora：dh / Kerdos：½ | dhと数値の対応順を原典で再確認。同着の最初の行に前順位との差を持たせる規約なら、現状は順序が逆になる | 内部確認：[元データL13095](../../../data/src/placings_world.jsonl#L13095)。外部未確認（[収録出典](https://www.sportinglife.com/racing/results/2025-06-17/royal-ascot/855901)）、[元データL13096](../../../data/src/placings_world.jsonl#L13096) |
-| クイーンエリザベス2世ジュビリーステークス | 2022 | 3着同着 | Campanelle：dh / Artorius：½ | dhと数値の対応順を原典で再確認。同着の最初の行に前順位との差を持たせる規約なら、現状は順序が逆になる | 内部確認：[元データL13279](../../../data/src/placings_world.jsonl#L13279)。外部未確認（[収録出典](https://www.sportinglife.com/racing/results/2022-06-18/royal-ascot/681150)）、[元データL13280](../../../data/src/placings_world.jsonl#L13280) |
-| ファルマスステークス | 2024 | 3着同着 | A Lilac Rolla：dh / Rogue Millennium：hd | dhと数値の対応順を原典で再確認。同着の最初の行に前順位との差を持たせる規約なら、現状は順序が逆になる | 内部確認：[元データL13343](../../../data/src/placings_world.jsonl#L13343)。外部未確認（[収録出典](https://www.sportinglife.com/racing/results/2024-07-12/newmarket/804346)）、[元データL13344](../../../data/src/placings_world.jsonl#L13344) |
-| ヴィコンテスヴィジエ賞 | 2015 | 2着同着 | Mille Et Mille：d.h / Glaring：2.5 | dhと数値の対応順を原典で再確認。同着の最初の行に前順位との差を持たせる規約なら、現状は順序が逆になる | 内部確認：[元データL14322](../../../data/src/placings_world.jsonl#L14322)。外部未確認（[収録出典](https://www.sportinglife.com/racing/results/2015-05-24/longchamp/162023)）、[元データL14323](../../../data/src/placings_world.jsonl#L14323) |
-| ヴィコンテスヴィジエ賞 | 2016 | 4着同着 | Walzertakt：4 / Bathyrhon：4 / Kicky Blue：4 | 同着グループの差を1回だけ扱う形へ。正しい数値・元表の列の意味は未確認 | 内部確認：[元データL14327](../../../data/src/placings_world.jsonl#L14327)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FLoViVi)）、[元データL14329](../../../data/src/placings_world.jsonl#L14329) |
+| ブリーダーズカップクラシック | 2018 | 3 | Thunder Snow：1¾（前の馬との差） | ¾（前の馬との差） | https://www.ahonoora.com/bcclassic_2018.html |
+| ブリーダーズカップクラシック | 2018 | 4 | Yoshida：1¾（前の馬との差） | nose（前の馬との差） | https://www.godolphin.com/news/terrific-breeders-cup-classic-third-for-thunder-snow |
+| ブリーダーズカップクラシック | 2018 | 5 | Mendelssohn：4（前の馬との差） | 2¼（前の馬との差） | https://www.ahonoora.com/bcclassic_2018.html |
+| ブリーダーズカップクラシック | 2019 | 4 | Elate：8½（前の馬との差） | 2¼（前の馬との差） | https://en.wikipedia.org/wiki/2019_Breeders%27_Cup_Classic |
+| ブリーダーズカップクラシック | 2019 | 5 | Math Wizard：10¾（前の馬との差） | 4¼（前の馬との差） | https://en.wikipedia.org/wiki/2019_Breeders%27_Cup_Classic |
+| ブリーダーズカップクラシック | 2020 | 3 | Global Campaign：3¼（前の馬との差） | 1（前の馬との差） | https://www.ahonoora.com/bcclassic_2020.html |
+| ブリーダーズカップクラシック | 2020 | 4 | Tacitus：5¼（前の馬との差） | 2（前の馬との差） | https://www.ahonoora.com/bcclassic_2020.html |
+| ブリーダーズカップクラシック | 2020 | 5 | Maximum Security：5¼（前の馬との差） | nose（前の馬との差） | https://www.ahonoora.com/bcclassic_2020.html |
+| ブリーダーズカップクラシック | 2021 | 3 | Essential Quality：2¾（前の馬との差） | ¾（前の馬との差） | https://www.ahonoora.com/bcclassic_2021.html |
+| ブリーダーズカップクラシック | 2021 | 4 | Hot Rod Charlie：3½（前の馬との差） | 1（前の馬との差） | https://www.ahonoora.com/bcclassic_2021.html |
+| ブリーダーズカップクラシック | 2021 | 5 | Stilleto Boy：4½（前の馬との差） | 5¾（前の馬との差） | https://www.ahonoora.com/bcclassic_2021.html |
+| ブリーダーズカップクラシック | 2022 | 3 | Taiba：8¾（前の馬との差） | ½（前の馬との差） | https://en.wikipedia.org/wiki/2022_Breeders%27_Cup_Classic |
+| ブリーダーズカップクラシック | 2022 | 4 | Rich Strike：11¼（前の馬との差） | 2½（前の馬との差） | https://en.wikipedia.org/wiki/2022_Breeders%27_Cup_Classic |
+| ブリーダーズカップクラシック | 2022 | 5 | Life Is Good：12½（前の馬との差） | 1¼（前の馬との差） | https://en.wikipedia.org/wiki/2022_Breeders%27_Cup_Classic |
+| プリークネスステークス | 1989 | 2 | Easy Goer：0（前の馬との差） | nose（前の馬との差） | https://en.wikipedia.org/wiki/1989_Preakness_Stakes |
+| プリークネスステークス | 1998 | 2 | Victory Gallop：0（前の馬との差） | 2¼（前の馬との差） | https://www.nyra.com/belmont/news/nyra-experts-top-5-belmont-stakes-victory-gallop-and-affirmed-thrill-packed-belmont-park-crowds |
+| プリークネスステークス | 2012 | 2 | Bodemeister：0（前の馬との差） | nk（前の馬との差） | https://www.horse-races.net/library/preak12-results.htm |
+| プリークネスステークス | 2015 | 2 | Tale of Verve：0（前の馬との差） | 7（前の馬との差） | https://en.wikipedia.org/wiki/2015_Preakness_Stakes |
+| プリークネスステークス | 2015 | 3 | Divining Rod：7（前の馬との差） | 1（前の馬との差） | https://en.wikipedia.org/wiki/2015_Preakness_Stakes |
+| プリークネスステークス | 2015 | 4 | Dortmund：8（前の馬との差） | 7½（前の馬との差） | https://en.wikipedia.org/wiki/2015_Preakness_Stakes |
+| プリークネスステークス | 2015 | 5 | Mr. Z：15½（前の馬との差） | 1¾（前の馬との差） | https://en.wikipedia.org/wiki/2015_Preakness_Stakes |
+| ベルモントステークス | 2022 | 3 | Skippylongstocking：6¼（前の馬との差） | 3¼（前の馬との差） | https://en.wikipedia.org/wiki/2022_Belmont_Stakes |
+| ベルモントステークス | 2022 | 4 | We The People：7（前の馬との差） | ¾（前の馬との差） | https://en.wikipedia.org/wiki/2022_Belmont_Stakes |
+| ベルモントステークス | 2022 | 5 | Creative Minister：12（前の馬との差） | 5（前の馬との差） | https://en.wikipedia.org/wiki/2022_Belmont_Stakes |
+| ベルモントステークス | 2023 | 4（同着） | Angel of Empire：1½。もう一頭の4着 Hit Show は¾ | 同着2頭とも3着 Tapit Trice から¾。前行との差を積む方式なら後続の同着行は0または同着とし、¾を二重加算しない | https://cms.equibase.com/node/233408 |
 
-2006ケンタッキーダービーの「6½・8½・9½」は勝ち馬基準の累計を前の馬との差として扱っていないかも要確認。ただし数字の並びだけで基準を断定せず、原表の見出しで確かめる。米国の「次の馬との差」を一行ずらす処理は、同着を含むレースでは特に検証が必要。
+米国のWikipediaは表ごとに意味が違う。例えば2022年BCクラシックの8¼・8¾・11¼・12½は勝ち馬からの累計であり、一律の行ずらしでは直せない。2021年のように勝ち馬行にも優勝着差を置く表もある。2018・2020年の微差は累計の丸め値を引くと消えるため、別の結果表でnoseを確認した。1989〜2015年プリークネスの2着27行すべてが「0」なのは内部確認済みだが、この表では外部照合した代表年だけ訂正した。
 
-## 4着が抜けている30組（補充する馬名は未確認）
+## 確認済み：同名別馬への紐付け
 
-次は全て収録順位が `[1,2,3,5]` の組。3着までしか取れていない組は誤りに数えず、5着があるのに4着がない組を分けた。**4着行の欠落は内部で確認できるが、5着とされた馬が本当は4着なのか、別の4着馬を落としたのかは未確認。** 元表を見ずに5→4へ詰めない。収集済みが部分結果であると明示して使う選択もある。
-
-| レース | 年 | 着順 | いまの内容 | 正しい内容 | 出典（URL か「未確認」） |
-|---|---|---|---|---|---|
-| コックスプレート | 2018 | 4（欠落） | 1・2・3・5着を収録。5着行は Rostropovich | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL1648](../../../data/src/placings_world.jsonl#L1648)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=AusCoxPl)） |
-| ジャックルマロワ賞 | 1998 | 4（欠落） | 1・2・3・5着を収録。5着行は Waky Nao | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL1882](../../../data/src/placings_world.jsonl#L1882)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FPJleM)） |
-| ジャックルマロワ賞 | 2014 | 4（欠落） | 1・2・3・5着を収録。5着行は Red Dubawi | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL1935](../../../data/src/placings_world.jsonl#L1935)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FPJleM)） |
-| ムーラン・ド・ロンシャン賞 | 2010 | 4（欠落） | 1・2・3・5着を収録。5着行は Lope de Vega | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL2057](../../../data/src/placings_world.jsonl#L2057)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FPMuLo)） |
-| ムーラン・ド・ロンシャン賞 | 2015 | 4（欠落） | 1・2・3・5着を収録。5着行は Wild Chief | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL2075](../../../data/src/placings_world.jsonl#L2075)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FPMuLo)） |
-| ムーラン・ド・ロンシャン賞 | 2021 | 4（欠落） | 1・2・3・5着を収録。5着行は Novemba | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL2098](../../../data/src/placings_world.jsonl#L2098)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FPMuLo)） |
-| ブリーダーズカップフィリー＆メアターフ | 1999 | 4（欠落） | 1・2・3・5着を収録。5着行は Borgia | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL2665](../../../data/src/placings_world.jsonl#L2665)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=USBcFi)） |
-| 英セントレジャー | 2006 | 4（欠落） | 1・2・3・5着を収録。5着行は Tusculum | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL3476](../../../data/src/placings_world.jsonl#L3476)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=EL)） |
-| アスコットゴールドカップ | 2011 | 4（欠落） | 1・2・3・5着を収録。5着行は Askar Tau | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL4374](../../../data/src/placings_world.jsonl#L4374)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=EAsGoCup)） |
-| コロネーションカップ | 1999 | 4（欠落） | 1・2・3・5着を収録。5着行は Borgia | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL4484](../../../data/src/placings_world.jsonl#L4484)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=ECorCu)） |
-| コロネーションカップ | 2008 | 4（欠落） | 1・2・3・5着を収録。5着行は Getaway | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL4513](../../../data/src/placings_world.jsonl#L4513)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=ECorCu)） |
-| ヨークシャーオークス | 2005 | 4（欠落） | 1・2・3・5着を収録。5着行は Iota | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL5196](../../../data/src/placings_world.jsonl#L5196)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=EYoOaks)） |
-| 仏オークス | 2010 | 4（欠落） | 1・2・3・5着を収録。5着行は Zagora | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL6533](../../../data/src/placings_world.jsonl#L6533)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FO)） |
-| パリ大賞 | 1996 | 4（欠落） | 1・2・3・5着を収録。5着行は Blackwater II | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL6632](../../../data/src/placings_world.jsonl#L6632)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FLoPrPar)） |
-| ガネー賞 | 2007 | 4（欠落） | 1・2・3・5着を収録。5着行は Egerton | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL6795](../../../data/src/placings_world.jsonl#L6795)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FR-014)） |
-| イスパーン賞 | 2014 | 4（欠落） | 1・2・3・5着を収録。5着行は Neatico | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL6954](../../../data/src/placings_world.jsonl#L6954)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FR-018)） |
-| サンクルー大賞 | 1994 | 4（欠落） | 1・2・3・5着を収録。5着行は Kornado | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL7028](../../../data/src/placings_world.jsonl#L7028)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FSCl)） |
-| サンクルー大賞 | 1999 | 4（欠落） | 1・2・3・5着を収録。5着行は Borgia | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL7044](../../../data/src/placings_world.jsonl#L7044)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FSCl)） |
-| サンクルー大賞 | 2008 | 4（欠落） | 1・2・3・5着を収録。5着行は Getaway | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL7072](../../../data/src/placings_world.jsonl#L7072)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FSCl)） |
-| アベイドロンシャン賞 | 2002 | 4（欠落） | 1・2・3・5着を収録。5着行は Agnetha | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL7330](../../../data/src/placings_world.jsonl#L7330)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FR-008)） |
-| モーリスドゲスト賞 | 2000 | 4（欠落） | 1・2・3・5着を収録。5着行は Tertullian | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL7448](../../../data/src/placings_world.jsonl#L7448)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FR-024)） |
-| オペラ賞 | 2011 | 4（欠落） | 1・2・3・5着を収録。5着行は Djumama | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL7587](../../../data/src/placings_world.jsonl#L7587)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FOpera)） |
-| ドイツダービー | 2011 | 4（欠落） | 1・2・3・5着を収録。5着行は Brown Panther | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL8419](../../../data/src/placings_world.jsonl#L8419)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=DD)） |
-| ベルリン大賞 | 1996 | 4（欠落） | 1・2・3・5着を収録。5着行は Phantom Gold | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL8604](../../../data/src/placings_world.jsonl#L8604)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=DDuGB)） |
-| ブリーダーズカップスプリント | 2003 | 4（欠落） | 1・2・3・5着を収録。5着行は Yankee Gentleman | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL10310](../../../data/src/placings_world.jsonl#L10310)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=USBcSpri)） |
-| コーフィールドカップ | 2011 | 4（欠落） | 1・2・3・5着を収録。5着行は Lucas Cranach | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL11081](../../../data/src/placings_world.jsonl#L11081)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=AuCaCauC)） |
-| コーフィールドカップ | 2014 | 4（欠落） | 1・2・3・5着を収録。5着行は Araldo | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL11091](../../../data/src/placings_world.jsonl#L11091)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=AuCaCauC)） |
-| キングチャールズ3世ステークス | 2015 | 4（欠落） | 1・2・3・5着を収録。5着行は Sole Power | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL13047](../../../data/src/placings_world.jsonl#L13047)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=EAsKiStS)） |
-| クイーンエリザベス2世ジュビリーステークス | 2010 | 4（欠落） | 1・2・3・5着を収録。5着行は Amico Fritz | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL13232](../../../data/src/placings_world.jsonl#L13232)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=EAsGolJu)） |
-| オーストラリアンカップ | 2016 | 4（欠落） | 1・2・3・5着を収録。5着行は Our Ivanhowe | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 内部確認：[元データL15204](../../../data/src/placings_world.jsonl#L15204)。外部未確認（[収録出典](http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=AuFlCup)） |
-
-## 国内の大差の数値化（計算ミスとは別の注意）
-
-国内の `behind` が数値の4,214行のうち9行は、原文の `タイサ` を10として積んでいる。残り4,205行が既知の数値から直接検算できた行である。文字列 `margin` はタイサを保持しているため表示は区別されるが、数値だけをレース水準の計算へ入れると正確な10馬身と近似値を区別できない。**9行の計算が算術的に誤っているという指摘ではなく、換算の仮定を保存・明記する提案。**
+ゲーム側は `data/historic_auto.js`・`data/historic_old.js`・`data/historic_world.js` と `docs/review/horses.csv` を確認した。以下は国内行にも起きている誤紐付け。表示上の出走馬名が合っていても、別馬の能力を参照する。
 
 | レース | 年 | 着順 | いまの内容 | 正しい内容 | 出典（URL か「未確認」） |
 |---|---|---|---|---|---|
-| 川崎記念 | 2019 | 5着以降 | marginPrev=タイサ、behind=14.2。タイサ部分を10として計算 | タイサの原文は保持。数値を使うなら「10と置いた近似」と明記し、厳密な勝ち馬との差と区別する。正確な馬身数は未確認 | 内部確認：[元データL3901](../../../data/src/placings_jra.jsonl#L3901)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20190130/221/11/)） |
-| マイルチャンピオンシップ南部杯 | 2023 | 2着以降 | marginPrev=タイサ、behind=10.0。タイサ部分を10として計算 | タイサの原文は保持。数値を使うなら「10と置いた近似」と明記し、厳密な勝ち馬との差と区別する。正確な馬身数は未確認 | 内部確認：[元データL4188](../../../data/src/placings_jra.jsonl#L4188)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20231009/210/12/)） |
-| JBCクラシック | 2011 | 4着以降 | marginPrev=タイサ、behind=14.5。タイサ部分を10として計算 | タイサの原文は保持。数値を使うなら「10と置いた近似」と明記し、厳密な勝ち馬との差と区別する。正確な馬身数は未確認 | 内部確認：[元データL4615](../../../data/src/placings_jra.jsonl#L4615)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20111103/220/11/)） |
-| JBCクラシック | 2013 | 4着以降 | marginPrev=タイサ、behind=12.1。タイサ部分を10として計算 | タイサの原文は保持。数値を使うなら「10と置いた近似」と明記し、厳密な勝ち馬との差と区別する。正確な馬身数は未確認 | 内部確認：[元データL4635](../../../data/src/placings_jra.jsonl#L4635)。外部未確認（[収録出典](https://www.jbis.or.jp/race/result/20131104/222/10/)） |
+| ジャパンカップダート | 2009 | 3 | ゴールデンチケット：○。ゲームの同名馬は2009年生・米国の Golden Ticket | 出走馬は2006年生の日本馬（父キングカメハメハ）。2009年生の米国馬への紐付けを外す | https://www.jbis.or.jp/horse/0000991264/ |
+| ジャパンダートダービー | 2009 | 3 | ゴールデンチケット：○。ゲームの同名馬は2009年生・米国の Golden Ticket | 出走馬は2006年生の日本馬（父キングカメハメハ）。2009年生の米国馬への紐付けを外す | https://www.jbis.or.jp/horse/0000991264/ |
+| 東京大賞典 | 2009 | 5 | ゴールデンチケット：○。ゲームの同名馬は2009年生・米国の Golden Ticket | 出走馬は2006年生の日本馬（父キングカメハメハ）。2009年生の米国馬への紐付けを外す | https://www.jbis.or.jp/horse/0000991264/ |
+| 川崎記念 | 2010 | 4 | ゴールデンチケット：○。ゲームの同名馬は2009年生・米国の Golden Ticket | 出走馬は2006年生の日本馬（父キングカメハメハ）。2009年生の米国馬への紐付けを外す | https://www.jbis.or.jp/horse/0000991264/ |
+| ジャパンカップ | 1992 | 5 | ヒシマサル：○。ゲームの「ヒシマサル」は1955年生 | ゲームの「ヒシマサル（1989）」へ対応させる。出走馬は1989年2月20日生 | https://www.meiba.jp/horses/view/1989108574 |
+| 全日本2歳優駿 | 2008 | 2 | ナサニエル：○。ゲームの同名馬は2008年生の Nathaniel（父Galileo） | 出走馬は2006年生の Nathanael（父キングカメハメハ）。Nathaniel への紐付けを外す | https://www.jbis.or.jp/horse/0000990504/ |
+| 朝日杯フューチュリティステークス | 2018 | 5 | ディープダイバー：○。ゲームの同名馬は1969年生・英国馬 | 出走馬は2016年生（父ブラックタイド）。1969年生の馬への紐付けを外す | https://jse.jpn.org/jrasrch.cgi?key=%4027927616 |
+| マイルチャンピオンシップ南部杯 | 2022 | 2 | ヘリオス：○。ゲームの同名馬は1957年生 | 出走馬は2016年2月23日生。1957年生の馬への紐付けを外す | https://sp.keiba.go.jp/KeibaWeb/DataRoom/RaceHorseInfo?k_activeCode=2&k_lineageLoginCode=30044405236 |
+| JBCスプリント | 2022 | 3 | ヘリオス：○。ゲームの同名馬は1957年生 | 出走馬は2016年生。1957年生の馬への紐付けを外す | https://www.keiba.go.jp/dirtgraderace/2022/rating/dirtgraderacerating/1103_JBCsprint.html |
 
-## 海外の馬名突合せの候補（未確認、採用保留）
+「○を外す」は該当する別世代馬との対応を外す意味であり、実際の出走馬を結果から削除する意味ではない。海外行で既にカナが入った馬については、今回の抽出照合で別個体への誤対応を確定できなかった。
 
-以下は英字の大文字小文字・アクセント等を正規化し、ゲームの馬名・生年・当該年の年齢条件で拾った候補。**同名の別馬を排除する外部照合が済むまで `inData=true` にしない。** 年齢の不一致があるSahlan、英セントレジャーのTower Of Londonなどは、名前だけで既存馬へ結びつける候補から除外した。
+## 確認済み：英字名への注記混入
 
 | レース | 年 | 着順 | いまの内容 | 正しい内容 | 出典（URL か「未確認」） |
 |---|---|---|---|---|---|
-| 仏1000ギニー | 2013 | 1 | Flotilla、馬欄空・ゲームにいる空欄 | 対応候補：フロティラ（2010年生）。登録情報で同一個体と確認できた場合にだけ紐付け | 未確認（[収録出典](https://www.sportinglife.com/racing/results/2013-05-12/longchamp/120000)）。[元データL6264](../../../data/src/placings_world.jsonl#L6264) |
-| 仏オークス | 2011 | 2 | Galikova、馬欄空・ゲームにいる空欄 | 対応候補：ガリコヴァ（2008年生）。登録情報で同一個体と確認できた場合にだけ紐付け | 未確認（[収録出典](https://www.sportinglife.com/racing/results/2011-06-12/chantilly/85058)）。[元データL6535](../../../data/src/placings_world.jsonl#L6535) |
-| パリ大賞 | 2011 | 1 | Meandre、馬欄空・ゲームにいる空欄 | 対応候補：メアンドル（2008年生）。登録情報で同一個体と確認できた場合にだけ紐付け | 未確認（[収録出典](https://www.sportinglife.com/racing/results/2011-07-14/longchamp/86868)）。[元データL6676](../../../data/src/placings_world.jsonl#L6676) |
-| ヴェルメイユ賞 | 2011 | 1 | Galikova、馬欄空・ゲームにいる空欄 | 対応候補：ガリコヴァ（2008年生）。登録情報で同一個体と確認できた場合にだけ紐付け | 未確認（[収録出典](https://www.sportinglife.com/racing/results/2011-09-11/longchamp/89917)）。[元データL7217](../../../data/src/placings_world.jsonl#L7217) |
-| マルセルブサック賞 | 2010 | 5 | Galikova、馬欄空・ゲームにいる空欄 | 対応候補：ガリコヴァ（2008年生）。登録情報で同一個体と確認できた場合にだけ紐付け | 未確認（[収録出典](https://www.sportinglife.com/racing/results/2010-10-03/longchamp/74220)）。[元データL8149](../../../data/src/placings_world.jsonl#L8149) |
-| マルセルブサック賞 | 2012 | 4 | Flotilla、馬欄空・ゲームにいる空欄 | 対応候補：フロティラ（2010年生）。登録情報で同一個体と確認できた場合にだけ紐付け | 未確認（[収録出典](https://www.sportinglife.com/racing/results/2012-10-07/longchamp/109438)）。[元データL8158](../../../data/src/placings_world.jsonl#L8158) |
+| ドバイワールドカップ | 2004 | 5 | 元の綴り：Qaayed Alkhail** | Qaayed Alkhail。** は馬名から除き、King's Boy という別名は注へ | https://en.wikipedia.org/wiki/2004_Dubai_World_Cup |
+| ケンタッキーダービー | 2021 | 1 | 元の綴り：Mandaloun (winner) | Mandaloun。着順説明の (winner) は馬名に含めない | https://en.wikipedia.org/wiki/2021_Kentucky_Derby |
+| ケンタッキーダービー | 2021 | 2 | 元の綴り：Hot Rod Charlie (place) | Hot Rod Charlie。着順説明の (place) は馬名に含めない | https://en.wikipedia.org/wiki/2021_Kentucky_Derby |
+| ケンタッキーダービー | 2021 | 3 | 元の綴り：Essential Quality (show) | Essential Quality。着順説明の (show) は馬名に含めない | https://en.wikipedia.org/wiki/2021_Kentucky_Derby |
+| ベルモントステークス | 2022 | 2 | 元の綴り：ƒ Nest | Nest。ƒ は牝馬を示す記号で馬名ではない | https://en.wikipedia.org/wiki/2022_Belmont_Stakes |
 
-## カナ未確定の20頭について
+海外の英字名をカナへ一律置換する提案ではない。馬名に入り込んだ着順説明・性別・脚注記号だけを分離する。
 
-既存の注のとおり、20頭・21行（Blizzardが2行）を確認した。次はカナ表記の外部裏付けを取得できておらず、今回は採用するカナを確定しない。既に「未確認」とされているものを、新しい誤りの件数には加えない。
+## カナ補完：保留20頭・21行
 
-- Blizzard：2018年高松宮記念 5着（[元データL265](../../../data/src/placings_jra.jsonl#L265)）、2017年スプリンターズステークス 5着（[元データL1850](../../../data/src/placings_jra.jsonl#L1850)）。カナ・同一性は未確認。
-- Victor the Winner：2024年高松宮記念 3着（[元データL293](../../../data/src/placings_jra.jsonl#L293)）。カナ・同一性は未確認。
-- Allied Forces：1998年安田記念 5着（[元データL1435](../../../data/src/placings_jra.jsonl#L1435)）。カナ・同一性は未確認。
-- Joyful Winner：2006年安田記念 3着（[元データL1473](../../../data/src/placings_jra.jsonl#L1473)）。カナ・同一性は未確認。
-- armada：2008年安田記念 2着（[元データL1482](../../../data/src/placings_jra.jsonl#L1482)）。カナ・同一性は未確認。
-- Cape of Good Hope：2004年スプリンターズステークス 3着（[元データL1783](../../../data/src/placings_jra.jsonl#L1783)）。カナ・同一性は未確認。
-- Tigertail：2003年エリザベス女王杯 3着（[元データL2403](../../../data/src/placings_jra.jsonl#L2403)）。カナ・同一性は未確認。
-- Caitano：1997年ジャパンカップ 4着（[元データL2684](../../../data/src/placings_jra.jsonl#L2684)）。カナ・同一性は未確認。
-- Ela Athena：2000年ジャパンカップ 4着（[元データL2699](../../../data/src/placings_jra.jsonl#L2699)）。カナ・同一性は未確認。
-- Sarafan：2002年ジャパンカップ 2着（[元データL2707](../../../data/src/placings_jra.jsonl#L2707)）。カナ・同一性は未確認。
-- Policy Maker：2004年ジャパンカップ 4着（[元データL2719](../../../data/src/placings_jra.jsonl#L2719)）。カナ・同一性は未確認。
-- Idaho：2017年ジャパンカップ 5着（[元データL2785](../../../data/src/placings_jra.jsonl#L2785)）。カナ・同一性は未確認。
-- Lord Sterling：2000年ジャパンカップダート 3着（[元データL2828](../../../data/src/placings_jra.jsonl#L2828)）。カナ・同一性は未確認。
-- Party Maker：2014年全日本2歳優駿 5着（[元データL4271](../../../data/src/placings_jra.jsonl#L4271)）。カナ・同一性は未確認。
-- Lotus Pool：1993年安田記念 5着（[元データL4942](../../../data/src/placings_jra.jsonl#L4942)）。カナ・同一性は未確認。
-- Shaftesbury Avenue：1991年ジャパンカップ 3着（[元データL5170](../../../data/src/placings_jra.jsonl#L5170)）。カナ・同一性は未確認。
-- Rough Habit：1991年ジャパンカップ 5着（[元データL5172](../../../data/src/placings_jra.jsonl#L5172)）。カナ・同一性は未確認。
-- Naturalism：1992年ジャパンカップ 2着（[元データL5174](../../../data/src/placings_jra.jsonl#L5174)）。カナ・同一性は未確認。
-- Dear Doctor：1992年ジャパンカップ 3着（[元データL5175](../../../data/src/placings_jra.jsonl#L5175)）。カナ・同一性は未確認。
-- Sandpit：1994年ジャパンカップ 5着（[元データL5187](../../../data/src/placings_jra.jsonl#L5187)）。カナ・同一性は未確認。
+これは既知の保留欄への補完であり、新発見の誤着順には数えない。Blizzardが2行ある。Party Makerは外国馬ではなく浦和所属馬。以下のカナは当該レースのJRA成績・関連公式資料で確認した（Party MakerはNAR）。
 
-## 誤りに数えなかったもの・確認できた点
+| レース | 年 | 着順 | いまの内容 | 正しい内容 | 出典（URL か「未確認」） |
+|---|---|---|---|---|---|
+| エリザベス女王杯 | 2003 | 3 | Tigertail（カナ未確認の注） | タイガーテイル。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/eliza/result/eliza2003.html |
+| ジャパンカップ | 1991 | 3 | Shaftesbury Avenue（カナ未確認の注） | シャフツベリーアヴェニュー。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/jc/result/jc1991.html |
+| ジャパンカップ | 1991 | 5 | Rough Habit（カナ未確認の注） | ラフハビット。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/jc/result/jc1991.html |
+| ジャパンカップ | 1992 | 2 | Naturalism（カナ未確認の注） | ナチュラリズム。元の英字は「元の綴り」列へ | https://jra.jp/datafile/seiseki/g1/jc/result/jc1992.html |
+| ジャパンカップ | 1992 | 3 | Dear Doctor（カナ未確認の注） | ディアドクター。元の英字は「元の綴り」列へ | https://jra.jp/datafile/seiseki/g1/jc/result/jc1992.html |
+| ジャパンカップ | 1994 | 5 | Sandpit（カナ未確認の注） | サンドピット。元の英字は「元の綴り」列へ | https://jra.jp/datafile/seiseki/g1/jc/result/jc1994.html |
+| ジャパンカップ | 1997 | 4 | Caitano（カナ未確認の注） | カイタノ。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/jc/result/jc1997.html |
+| ジャパンカップ | 2000 | 4 | Ela Athena（カナ未確認の注） | エラアシーナ。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/jc/result/jc2000.html |
+| ジャパンカップ | 2002 | 2 | Sarafan（カナ未確認の注） | サラファン。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/jc/result/jc2002.html |
+| ジャパンカップ | 2004 | 4 | Policy Maker（カナ未確認の注） | ポリシーメイカー。元の英字は「元の綴り」列へ | https://jra.jp/datafile/seiseki/g1/jc/result/jc2004.html |
+| ジャパンカップ | 2017 | 5 | Idaho（カナ未確認の注） | アイダホ。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/jc/result/jc2017.html |
+| ジャパンカップダート | 2000 | 3 | Lord Sterling（カナ未確認の注） | ロードスターリング。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/jcd/result/jcd2000.html |
+| スプリンターズステークス | 2004 | 3 | Cape of Good Hope（カナ未確認の注） | ケープオブグッドホープ。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/sprint/result/sprint2004.html |
+| スプリンターズステークス | 2017 | 5 | Blizzard（カナ未確認の注） | ブリザード。元の英字は「元の綴り」列へ | https://jra.jp/datafile/seiseki/g1/sprint/result/sprint2017.html |
+| 全日本2歳優駿 | 2014 | 5 | Party Maker（カナ未確認の注） | パーティメーカー（浦和所属の日本馬）。元の英字は「元の綴り」列へ | https://www.keiba.go.jp/furlong/2014/highlight/1217-01.html |
+| 安田記念 | 1993 | 5 | Lotus Pool（カナ未確認の注） | ロータスプール。元の英字は「元の綴り」列へ | https://own.jra.jp/datafile/seiseki/g1/yasuda/result/yasuda1993.html |
+| 安田記念 | 1998 | 5 | Allied Forces（カナ未確認の注） | アライドフォーシズ。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/yasuda/result/yasuda1998.html |
+| 安田記念 | 2006 | 3 | Joyful Winner（カナ未確認の注） | ジョイフルウィナー。元の英字は「元の綴り」列へ | https://own.jra.jp/datafile/seiseki/g1/yasuda/result/yasuda2006.html |
+| 安田記念 | 2008 | 2 | armada（カナ未確認の注） | アルマダ。元の英字は「元の綴り」列へ | https://www.jra.go.jp/datafile/seiseki/g1/yasuda/result/yasuda2008.html |
+| 高松宮記念 | 2018 | 5 | Blizzard（カナ未確認の注） | ブリザード。元の英字は「元の綴り」列へ | https://jra.jp/datafile/seiseki/g1/takamatsu/result/takamatsu2018.html |
+| 高松宮記念 | 2024 | 3 | Victor the Winner（カナ未確認の注） | ビクターザウィナー。元の英字は「元の綴り」列へ | https://jra.jp/datafile/seiseki/g1/takamatsu/result/takamatsu2024.html |
 
-- 国内の同着9組は、順位の飛ばし方を含めて内部矛盾を検出しなかった。5着同着で6行になる有馬記念2020・天皇賞春1994・川崎記念1995は「1〜5着」なので余計な行ではない。
-- 国内の勝ち馬との差 `behind` が数値である4,214行のうち、既知の数値・ハナ・アタマ・クビから検算できた4,205行は積み上げ結果と一致。残る9行はタイサを含む近似（「国内の大差の数値化」参照）。クビ0.3・アタマ0.2・ハナ0.1という**データ内の換算**での整合を確認したもので、公式の厳密な長さの保証ではない。本検査では `タイサ`・`*****` を既知の数値に含めず、別扱いにした。
-- 指定の降着6レースは2着以下の24行が空欄になっていた。これを欠落・計算違いと扱わない。2010年オークスの1着2頭も保持する。
-- JBIS出典URLの日付年と行の年に不一致はなく、国内行のURL日付は全て2026-10-18以前だった。
-- HKJCの勝ち馬との差（1,283行）と、海外の前の馬との差（9,670行）は分離して確認した。勝ち馬基準の同着で同じ差が並ぶのは正常。
-- 国内の勝ち馬は、別収録の勝ち馬データと同じレース名・年で比較できた788行に不一致なし。海外のカナ表記差は同一個体の別表記が多く、英字・世代を見ずに全件誤りとしない。2020サウジカップは別途掲載した。
-- 古い海外年の3着まで、未取得と説明済みの競走、数値がない着差だけを理由に「写し間違い」とは判定していない。1〜5着がない年・競走からレース水準を出す際は、標本数と未取得状態も残したい。
+## 未確認：失格後の着差と残る順位矛盾
 
-## 外部確認の制約・次に確認する原典
+外部の元記事は読めたが、失格後の隣接馬間の着差を確定できない2件と、正しい順位列が未確認の1件。順位を勝手に元へ戻さない。
 
-このセッションにWeb検索ツールは提供されていない。managed環境の通信設定はpackage_managersの許可先が中心で、JRA・JBIS・Wikipedia・Sporting Life・HKJC・galopp-siegerを許可した状態とは確認できなかった。実際に次へ接続し、いずれも403で拒否された。認証画面や原文を読めたという意味ではない。
+| レース | 年 | 着順 | いまの内容 | 正しい内容 | 出典（URL か「未確認」） |
+|---|---|---|---|---|---|
+| 凱旋門賞 | 2006 | 3 | Hurricane Run：2½、基準は前の馬 | 引用元の2½は失格馬 Deep Impact との差。繰上げ後の2着 Pride との差として使えるか未確認。元表の½を足すと3だが、裁決後の着差として裏付けるまでは採用保留 | 未確認 |
+| ドバイワールドカップ | 2006 | 2 | Wilko：3、基準は前の馬 | 引用元の3は失格馬 Brass Hat との差。繰上げ後の1着 Electrocutionist との差は3だけでは表せない。裁決後の公表値を確認するまで採用保留 | 未確認 |
+| ヴィコンテスヴィジエ賞 | 2016 | 4〜5 | Walzertakt / Bathyrhon / Kicky Blue が4着同着、その次に Mille et Mille が5着 | 順位列が両立しない。実際の同着頭数・後続順位は未確認のため、推測で詰めない | 未確認 |
 
-- JBISの実レース結果： https://www.jbis.or.jp/race/result/19970216/105/11/
-- Wikipediaの年別結果： https://en.wikipedia.org/wiki/2023_Belmont_Stakes
-- Sporting Lifeの2020サウジカップ： https://www.sportinglife.com/racing/results/2020-02-29/riyadh/566608
-- HKJC： https://racing.hkjc.com/
-- galopp-siegerのドバイターフ系統： http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=UADuFre
+2006年の参照表：[凱旋門賞](https://en.wikipedia.org/wiki/2006_Prix_de_l%27Arc_de_Triomphe)、[ドバイWC](https://en.wikipedia.org/wiki/2006_Dubai_World_Cup)。表には失格馬を含む着差が残っている。ヴィコンテスヴィジエ賞の収録出典は `http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=FLoViVi`。正しい差・着順を外部確認できたとは扱わない。
 
-原典にアクセスできる環境では、重複3組、2026BCフィリー＆メアターフの対象年、2020サウジカップの最新裁決、8行の別世代紐付け、同着14組を優先する。特に重複や順位矛盾を解消する前に、これらを「倒した相手」の強さの計算へ入れないことを提案する。
+## 未確認：旧版から残す4着補充候補
 
-入力を変更しない読み取りスクリプトで検査し、本書の追加だけをコミットする。ゲームのコード・元データ・CSVには変更しないため、ゲーム全体テストは再実行していない。
+次の28組は元データ内で1・2・3・5着だけを収録していることは再確認した。ただし、4着の馬名は外部照合未了。部分収録という扱いもあり得るため、全件を誤着順とは数えない。旧版の候補から、今回AviliusとMawingoを確定できた2組を上の表へ移した。
+
+| レース | 年 | 着順 | いまの内容 | 正しい内容 | 出典（URL か「未確認」） |
+|---|---|---|---|---|---|
+| ジャックルマロワ賞 | 1998 | 4（欠落） | 1・2・3・5着を収録。5着行は Waky Nao | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| ジャックルマロワ賞 | 2014 | 4（欠落） | 1・2・3・5着を収録。5着行は Red Dubawi | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| ムーラン・ド・ロンシャン賞 | 2010 | 4（欠落） | 1・2・3・5着を収録。5着行は Lope de Vega | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| ムーラン・ド・ロンシャン賞 | 2015 | 4（欠落） | 1・2・3・5着を収録。5着行は Wild Chief | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| ムーラン・ド・ロンシャン賞 | 2021 | 4（欠落） | 1・2・3・5着を収録。5着行は Novemba | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| ブリーダーズカップフィリー＆メアターフ | 1999 | 4（欠落） | 1・2・3・5着を収録。5着行は Borgia | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| 英セントレジャー | 2006 | 4（欠落） | 1・2・3・5着を収録。5着行は Tusculum | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| アスコットゴールドカップ | 2011 | 4（欠落） | 1・2・3・5着を収録。5着行は Askar Tau | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| コロネーションカップ | 1999 | 4（欠落） | 1・2・3・5着を収録。5着行は Borgia | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| コロネーションカップ | 2008 | 4（欠落） | 1・2・3・5着を収録。5着行は Getaway | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| ヨークシャーオークス | 2005 | 4（欠落） | 1・2・3・5着を収録。5着行は Iota | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| 仏オークス | 2010 | 4（欠落） | 1・2・3・5着を収録。5着行は Zagora | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| パリ大賞 | 1996 | 4（欠落） | 1・2・3・5着を収録。5着行は Blackwater II | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| ガネー賞 | 2007 | 4（欠落） | 1・2・3・5着を収録。5着行は Egerton | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| イスパーン賞 | 2014 | 4（欠落） | 1・2・3・5着を収録。5着行は Neatico | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| サンクルー大賞 | 1994 | 4（欠落） | 1・2・3・5着を収録。5着行は Kornado | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| サンクルー大賞 | 1999 | 4（欠落） | 1・2・3・5着を収録。5着行は Borgia | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| サンクルー大賞 | 2008 | 4（欠落） | 1・2・3・5着を収録。5着行は Getaway | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| アベイドロンシャン賞 | 2002 | 4（欠落） | 1・2・3・5着を収録。5着行は Agnetha | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| モーリスドゲスト賞 | 2000 | 4（欠落） | 1・2・3・5着を収録。5着行は Tertullian | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| オペラ賞 | 2011 | 4（欠落） | 1・2・3・5着を収録。5着行は Djumama | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| ベルリン大賞 | 1996 | 4（欠落） | 1・2・3・5着を収録。5着行は Phantom Gold | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| ブリーダーズカップスプリント | 2003 | 4（欠落） | 1・2・3・5着を収録。5着行は Yankee Gentleman | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| コーフィールドカップ | 2011 | 4（欠落） | 1・2・3・5着を収録。5着行は Lucas Cranach | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| コーフィールドカップ | 2014 | 4（欠落） | 1・2・3・5着を収録。5着行は Araldo | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| キングチャールズ3世ステークス | 2015 | 4（欠落） | 1・2・3・5着を収録。5着行は Sole Power | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| クイーンエリザベス2世ジュビリーステークス | 2010 | 4（欠落） | 1・2・3・5着を収録。5着行は Amico Fritz | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+| オーストラリアンカップ | 2016 | 4（欠落） | 1・2・3・5着を収録。5着行は Our Ivanhowe | 4着の馬・確定順位を出典で確認して補充、または部分結果と明示。正解の馬名は未確認 | 未確認 |
+
+## 検査範囲と除外した誤検出
+
+- CSVと2つのJSONLは、レース・年・着順・馬・元の英字・出典の多重集合が一致した。今回の確定指摘はCSVだけの書き出しミスではなく元データにもある。
+- 国内の着差文字列4,214行は、元JSONLの `marginPrev` を仕様どおり積み上げると一致した（タイサは文字のまま保持）。これは元のJBIS値が全行正しいことを示す検査ではない。`*****` と降着を含む計算不能箇所は正解を推測していない。
+- 指定の降着6レースの2着以下24行の空欄は誤りに数えない。有馬記念2020の5着2頭もJBISで確認でき、6行あることは正しい。[JBIS結果](https://www.jbis.or.jp/race/result/20201227/106/11/)
+- ジャパンカップ1996の3着同着もJRA公式結果と一致する。[JRA結果](https://www.jra.go.jp/datafile/seiseki/g1/jc/result/jc1996.html)
+- `data/races.js`・`races_old.js`・`races_world.js`・`races_more.js` とのレース名・年の照合では、川崎記念1995以外は当該年に同名定義があった。海外の暦が現在名へ統一し旧称をnoteへ置く仕様を、名称の誤りとはしない。各年の実格付けの全件監査は未実施。
+- 古い海外年の3着止まり、説明済みの未取得競走、単なる着差空欄は新しい誤りに数えない。旧版の任意の紐付け候補やタイサの近似換算案も、外部で確定した誤記とは区別する。
+- 読み取りはGitHub接続機能、外部確認はWeb検索・本文取得を使用。一部JBIS・Equibaseページは取得できず、別の結果表を読めた箇所だけ確認済みにした。
 
 ## 全体の所見（5行）
 
-1. 国内の数値着差の積み上げは整合し、同着や指定の降着空欄を一律に誤りとする必要はない。
-2. 同名馬の世代違い8行はレース水準を歪めるため、馬名だけでゲーム内の馬へ結合する処理を避けたい。
-3. 海外の重複・順位矛盾・将来年の結果らしき行は、対象年と原典の表構造を最優先で再確認する。
-4. 海外の同着は着差の基準とグループを保持し、前行との差の単純積算や、欠落順位の自動詰めをしない。
-5. 正しい差し替え馬名・カナ・確定着順の外部裏付けは未完了であり、内部指摘と採用保留の候補を分けて扱う。
+1. 優先修正はドバイターフ等の別馬混入、サウジカップの裁決更新、将来のBCに入った別競走の結果である。
+2. 米国の着差は「前馬・次馬・勝ち馬からの累計」を表ごとに判別する必要があり、一律の行ずらしは複数年を壊している。
+3. 国内の積み上げ計算は内部整合しているが、同名別世代への9行の紐付けは相手の強さの評価を直接歪める。
+4. 保留20頭・21行のカナは公式資料で補完でき、未知の外国馬扱いになっていたパーティメーカーも日本馬と確認できた。
+5. 未確認の差・欠けた4着を推測で埋めず、同着・失格・部分収録を区別してからゲームへ取り込むのがよい。
