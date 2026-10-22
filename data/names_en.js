@@ -727,6 +727,7 @@
     'フィオライア': 'Fioraia', 'フォーエバーヤング': 'Forever Young', 'ブエナオンダ': 'Buena Onda', 'ヘデントール': 'Redentor', 'ペアポルックス': 'Pair Pollux', 'ホーエリート': 'Hohelied',
     'ミアネーロ': 'Mi Anhelo', 'ミッキーファイト': 'Mikki Fight', 'ムルソー': 'Meursault', 'メイショウタバル': 'Meisho Tabaru', 'ヤマニンアルリフラ': 'Yamanin al Rihla', 'ラムジェット': 'Ramjet',
     'ラヴァンダ': 'Lavanda', 'レガレイラ': 'Regaleira', 'ロードクロンヌ': 'Lord Couronne', 'ワイドラトゥール': 'Wide Latour', 'ワールズエンド': 'World\'s End', 'ヴェローチェエラ': 'Veloce Era',
+    'アマンテビアンコ': 'Amante Bianco',   // JBIS サーチ（2026-10-22。G1 上位着順の記録から足した馬）
     // 2022年生
     'アイサンサン': 'Ai Sansan', 'アドマイヤズーム': 'Admire Zoom', 'アブキールベイ': 'Abu Qir Bay', 'アルテヴェローチェ': 'Arte Veloce', 'アルマヴェローチェ': 'Arma Veloce', 'イミグラントソング': 'Immigrant Song',
     'エイシンワンド': 'A Shin Wand', 'エキサイトバイオ': 'Excite Bio', 'エコロディノス': 'Ecoro Dinos', 'エネルジコ': 'Energico', 'エリカエクスプレス': 'Erika Express', 'エリキング': 'Eri King',
@@ -738,7 +739,9 @@
     'マイユニバース': 'My Universe', 'マジックサンズ': 'Magic Sands', 'マスカレードボール': 'Masquerade Ball', 'マテンロウコマンド': 'Matenro Command', 'マピュース': 'Ma Puce', 'ミュージアムマイル': 'Museum Mile',
     'ミリアッドラヴ': 'Myriad Love', 'ヤンキーバローズ': 'Yankee Barows', 'ランスオブカオス': 'Lance of Chaos', 'ランフォーヴァウ': 'Run for Vow', 'リラエンブレム': 'Lila Emblem', 'ルクソールカフェ': 'Luxor Cafe',
     'レーゼドラマ': 'Lesedrama',
+    'ナチュラルライズ': 'Natural Rise',   // JBIS サーチ（2026-10-22。G1 上位着順の記録から足した馬）
     // 2023年生
+    'フィンガー': 'Finger', 'パイロマンサー': 'Pyromancer',   // JBIS サーチ（2026-10-22。G1 上位着順の記録から足した馬）
     'アウダーシア': 'Audacia', 'アスクイキゴミ': 'Ask Ikigomi', 'アドマイヤクワッズ': 'Admire Quads', 'アルトラムス': 'Altramuz', 'エイシンディード': 'A Shin Deed', 'エコロアルバ': 'Ecoro Alba',
     'カヴァレリッツォ': 'Cavallerizzo', 'キャンディード': 'Candide', 'ギリーズボール': 'Ghillies\' Ball', 'グリーンエナジー': 'Green Energy', 'コンジェスタス': 'Congestus', 'ゴーイントゥスカイ': 'Going to Sky',
     'サノノグレーター': 'Sanono Greater', 'サンダーストラック': 'Thunderstruck', 'ショウナンガルフ': 'Shonan Gulf', 'シルバーレシオ': 'Silver Ratio', 'ジャスティンシカゴ': 'Justin Chicago', 'ジャスティンビスタ': 'Justin Vista',

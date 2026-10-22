@@ -99,7 +99,7 @@ module.exports = function (check, assert, HS) {
     g.player.money = 1e9;
     W.buy(W.marketHistoric().find(x => x.horse.sex !== '牝'));
     const mine = W.mine()[0];
-    Object.assign(mine, { born: g.year - 4, loc: 'stable', auto: false, fatigue: 0 });
+    Object.assign(mine, { born: g.year - 4, loc: 'stable', auto: false, fatigue: 0, earn: 1e9 });   // 獲得賞金で除外されないように（フルゲートの除外はこの確かめの外。店の並びはデータで変わる）
     const key = O.jobKey(j);
     W._week = null;
     assert(!W.enter(mine.id, key), '依頼の騎乗が決まる前は、自分の馬を登録できる');
