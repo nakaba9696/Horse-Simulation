@@ -17,6 +17,7 @@
 | `assets/owners/*.webp` | 馬主の顔（持ち主の絵のある6人・表情4つ：base・smile・joy・sad）。ブラウザ版の `../assets/owners_*.js` から `tools/export_ui_assets.js` で取り出したもの。絵の無い人は顔を出さない（名前とその人の色の帯だけ。コードで描いた顔は作らない・置かない。持ち主の指示 2026-10-20） | 持ち主 | 持ち主の作った絵（このゲームで使ってよい。持ち主の決定 2026-10-16） | https://github.com/nakaba9696/trpg-game/tree/main/assets/portraits （`../assets/CREDITS.md`） |
 | `assets/fonts/NotoSansJP_700Bold.ttf`（と `OFL.txt`） | 画面の字（Noto Sans JP Bold） | Adobe（Source Han Sans）・Google | SIL Open Font License 1.1 | Google Fonts の Noto Sans JP。npm の `@expo-google-fonts/noto-sans-jp@0.4.4` に入っているものを使った |
 | `assets/fonts/NotoSerifJP_900Black_sub.ttf` | 見出しの明朝（Noto Serif JP Black）。ゲームで使う字だけに減らした（`tools/subset_font.py`） | Adobe（Source Han Serif）・Google | SIL Open Font License 1.1 | Google Fonts の Noto Serif JP。npm の `@expo-google-fonts/noto-serif-jp@0.4.4` に入っているものから作った（減らしたものも同じ OFL で配れる。`OFL.txt` を一緒に配る） |
+| `proto/tripo_horse/horse-gallop.glb`（と法線の絵） | 馬モデルの試作 v2（骨 54 本・襲歩のその場走行）。ゲームでは使わない試作で、書き出しにも入れない | 形：持ち主（Tripo で生成）。骨とアニメ：Codex | 持ち主の提供（Tripo の利用規約のもとで作った素材。商用の条件は持ち主に確かめる） | 枝 `codex/tripo-horse-handoff`（`../assets/CREDITS.md` の「馬モデルの試作 v2」） |
 
 ## 確かめたこと
 - 骨入りの馬は CC-BY 4.0（作者 abhayexe。`../assets/src/horse_rigged/license.txt`）。作者の名前とクレジットの文をゲームの中のクレジットに出す。
