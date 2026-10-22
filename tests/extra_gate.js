@@ -81,32 +81,5 @@ module.exports = function (check, assert, HS) {
     assert(/func _temper/.test(hud) && /func _reins/.test(hud) && /"HOLD"/.test(hud) && /"PUSH"/.test(hud), 'ride_hud.gd に馬の頭の札・手綱の帯が無い');
   });
 
-  check('farm: 騎手のゲームでは「放牧に出す」を出さない（前のセーブで放牧中の馬は次の週に入厩へ戻る）', () => {
-    // 画面：馬の詳細の操作の並び（js/ui/screens.js）を読んで、騎手のゲームで「放牧に出す」が出ないことを見る
-    globalThis.HS = HS;
-    const UI = HS.UI = HS.UI || {};
-    vm.runInThisContext(read('js/ui/screens.js'), { filename: 'js/ui/screens.js' });
-    const stub = ['thumb', 'histMark', 'fatigue', 'gradeTag', 'age', 'fatigueMark', 'surf', 'programTab'];
-    for (const k of stub) if (!UI[k]) UI[k] = () => '';
-    W.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
-    const g = W.get(); g.player.money = 60000;
-    for (const it of W.marketHistoric().slice().sort((a, b) => a.price - b.price).slice(0, 2)) W.buy(it);
-    let guard = 0; while (!W.mine('stable').length && guard++ < 80) W.finishWeek({});
-    const h = W.mine('stable')[0];
-    assert(h, '入厩した馬がいない');
-    const html = UI.screens.horse({ id: h.id, htab: 'info' });
-    assert(!/data-act="to-farm"/.test(html) && !html.includes('放牧に出す'), '騎手のゲームで「放牧に出す」が出る');
-    assert(html.includes('data-act="auto"'), 'おまかせのボタンまで消えた');
-    // 前のセーブ：放牧に出していた馬（parked）は、読み直すと次の週の頭に入厩へ戻る
-    W.toFarm(h.id); h.parked = true;
-    W.load(W.serialize());
-    const h2 = W.horse(h.id);
-    assert(h2.loc === 'farm' && !h2.parked, '読み直しで放牧の印が消えない');
-    W.finishWeek({});
-    assert(W.horse(h.id).loc === 'stable', '前のセーブで放牧に出していた馬が入厩に戻らない');
-    // 馬主のゲーム（前の遊び方）では残す
-    const jockeyMode = HS.Jockey.isMode;
-    HS.Jockey.isMode = () => false;
-    try { assert(UI.screens.horse({ id: h.id, htab: 'info' }).includes('放牧に出す'), '馬主のゲームの「放牧に出す」まで消えた'); } finally { HS.Jockey.isMode = jockeyMode; }
-  });
+  // JS 版にしかない確かめ「farm: 騎手のゲームでは…」は外した（持ち主の決定 2026-10-22「不要なら消していい」。JS 版はもう作らない）
 };

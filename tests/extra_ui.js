@@ -79,36 +79,5 @@ module.exports = function (check, assert, HS) {
     assert(now.some(r => r.wk.i === 0 && r.state === 'entered'), '今週の出走登録の印');
     return `${rows.length}行・予約 ${c.race.name}（${c.wk.m}月${c.wk.w}週）`;
   });
-  check('ui: 能力の段（境目の値・JS と Godot で同じ境目と色・史実馬の値で段が偏りすぎない）', () => {
-    const fs = require('fs'), path = require('path'), vm = require('vm');
-    const ROOT = path.join(__dirname, '..');
-    // uikit は画面の部品なので、document の代わりを置いた箱で読む
-    const ctx = vm.createContext({ HS: { U: HS.U, UI: {}, App: {} }, document: { addEventListener() {}, getElementById() { return null; } } });
-    vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/ui/uikit.js'), 'utf8'), ctx, { filename: 'js/ui/uikit.js' });
-    const K = ctx.HS.UI.kit;
-    const cases = [[50, 'fh', 0], [50.4, 'fh', 0], [50.5, 'fh', 1], [51, 'fh', 1], [60, 'fh', 1], [61, 'fh', 2], [65, 'fh', 2], [66, 'fh', 3], [80, 'fh', 3], [81, 'fh', 4], [99, 'fh', 4],
-      [59, 'stat', 0], [60, 'stat', 1], [74, 'stat', 1], [75, 'stat', 2], [84, 'stat', 2], [85, 'stat', 3], [94, 'stat', 3], [94.6, 'stat', 4], [95, 'stat', 4], [120, 'stat', 4],
-      [2, 'kire', 0], [3, 'kire', 1], [4, 'kire', 1], [5, 'kire', 2], [6, 'kire', 2], [7, 'kire', 3], [8, 'kire', 4]];
-    for (const [v, kind, t] of cases) assert(K.tier(v, kind) === t, `段が違う ${kind} ${v} → ${K.tier(v, kind)}（${t}）`);
-    assert(/class="u-num t3 big"/.test(K.num(66, '総合力', true, 'fh')), '札に段の印が付かない');
-    assert(/u-num t3/.test(K.num(66, '総合力', false, 40, 85)) && /u-num t3/.test(K.num(86)), '前の呼び方（lo・hi）の段');
-    assert(/t0[^]*t2/.test(K.fh(40, 62)), '総合力の芝・ダの札に段の印');
-    // Godot の UiTheme と同じ境目・同じ色
-    const gd = fs.readFileSync(path.join(ROOT, 'godot/ui/theme.gd'), 'utf8');
-    const arr = n => { const m = gd.match(new RegExp(`const ${n} := \\[([^\\]]*)\\]`)); assert(m, `theme.gd に ${n} が無い`); return m[1]; };
-    for (const [n, k] of [['TIER_FH', 'fh'], ['TIER_STAT', 'stat'], ['TIER_KIRE', 'kire']]) assert(arr(n).split(',').map(Number).join() === K.TIER[k].join(), `${n} が JS と違う`);
-    const gcol = (arr('TIER_BG').match(/"([0-9a-f]{6})"/g) || []).map(x => x.slice(1, -1));
-    const css = fs.readFileSync(path.join(ROOT, 'css/style.css'), 'utf8');
-    for (let i = 0; i < 5; i++) { const m = css.match(new RegExp(`--tier${i}: #([0-9a-f]{6})`)); assert(m && m[1] === gcol[i], `段 ${i} の地の色が JS と Godot で違う`); }
-    // 史実馬（年代なしで出る馬）の伸びきった値で数える：飛び抜けているは少数、低いもほどほど
-    const H = HS.Horse, T = HS.Season, pool = HS.Eraless.pool();
-    const cnt = { fh: [0, 0, 0, 0, 0], stat: [0, 0, 0, 0, 0] };
-    pool.forEach((d, i) => { const h = H.fromHistoric(d, 'tier' + i), f = T.fhPeak(h); cnt.fh[K.tier(Math.max(f.turf, f.dirt), 'fh')]++; for (const k of H.STATS) cnt.stat[K.tier(h.pot[k], 'stat')]++; });
-    const pct = a => { const n = a.reduce((x, y) => x + y, 0); return a.map(x => Math.round(x / n * 1000) / 10); };
-    const pf = pct(cnt.fh), ps = pct(cnt.stat);
-    assert(pf[4] < 3 && pf[0] < 5 && pf[2] > 20 && pf[3] > 5, '総合力の段の割合が偏っている ' + pf.join('/'));
-    // 能力の運をやめてから（持ち主の決定 2026-10-20）、いちばん低い段（強さの元から大きく下の能力）はほとんどいない
-    assert(ps[4] < 8 && ps[0] < 12 && ps.slice(1).every(x => x > 1), '能力の段の割合が偏っている ' + ps.join('/'));
-    return `総合力（良いほう）の段 ${pf.join('/')}%・能力の段 ${ps.join('/')}%`;
-  });
+  // JS 版にしかない確かめ「ui: 能力の段…」は外した（持ち主の決定 2026-10-22「不要なら消していい」。JS 版はもう作らない）
 };
