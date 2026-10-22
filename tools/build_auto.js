@@ -7,7 +7,7 @@ const { load, ROOT } = require('../tests/load.js');
 const GR = require('./growth_rule.js');
 
 const OUT = 'data/historic_auto.js';
-const HS = load({ skip: [OUT], allowMissing: true });
+const HS = load({ skip: [OUT, 'data/drop_horses.js'], allowMissing: true })   // 外した馬（data/drop_horses.js）を「データに無い馬」と見て作り直さないよう読まない;
 const D = HS.DATA, U = HS.U;
 
 // ---- 記録を読む ----

@@ -5243,3 +5243,4 @@
 {"race": "センテナリースプリントカップ", "year": 2026, "horse": "カーインライジング", "horseEn": "Ka Ying Rising", "sex": "セ", "age": 6, "country": "香港", "jockey": "Z.パートン", "surface": "芝", "dist": 1200, "course": "シャティン"}
 {"race": "クイーンズシルヴァージュビリーカップ", "year": 2026, "horse": "カーインライジング", "horseEn": "Ka Ying Rising", "sex": "セ", "age": 6, "country": "香港", "jockey": "Z.パートン", "surface": "芝", "dist": 1400, "course": "シャティン"}
 {"race": "チェアマンズスプリントプライズ", "year": 2026, "horse": "カーインライジング", "horseEn": "Ka Ying Rising", "sex": "セ", "age": 6, "country": "香港", "jockey": "Z.パートン", "surface": "芝", "dist": 1200, "course": "シャティン"}
+{"race": "ローズヒルギニー", "year": 2009, "horse": "メタルベンダー", "horseEn": "Metal Bender", "sex": "牡", "age": 4, "country": "豪", "jockey": "", "surface": "芝", "dist": 2000, "course": "ローズヒル", "ref": "http://www.galopp-sieger.de/galoppsieger/sieger?rennkz=AuRhG2", "note": "G1 上位着順の記録（placings_world）の1着から足した（2026-10-22）"}
