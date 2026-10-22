@@ -952,7 +952,9 @@ check('dream: GF ごとの資格（G1・前年の勝ち馬・その距離の票�
 
 check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデビューし、走っている間は馬の店に並ばない', () => {
   const E = HS.Eraless;
-  W.newGame({ seed: 22, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' }); // 種 22：外した馬を戻して世界の顔ぶれが変わり、種 21 では高い馬がみなデビューして店に残らなかった
+  // 種 23：殿堂馬を足して世界の顔ぶれが変わり（2026-10-22）、種 22 では見張った引退馬（スパークリングプレンティ）が年明けに2歳として出直して店に戻らなかった
+  //（その前の種 22：外した馬を戻して世界の顔ぶれが変わり、種 21 では高い馬がみなデビューして店に残らなかった）
+  W.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
   assert(G.eraless && U.ERA === E.ERA && W.dateLabel(G.year, 1, 1).startsWith('1年目'), '年代なしになっていない');
   const hist = W.all().filter(h => h.hist);
