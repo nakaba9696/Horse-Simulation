@@ -139,11 +139,7 @@
   S.GATE = { wait: 2.2, spread: 1.6, tell: 0.8, buf: 0.12, good: 0.1, fumble: 0.35, fret: 4 };
   // ゲートで待つ秒（レースの種から。種の乱数は進めないので、ほかの結果は変わらない）
   S.gateWaitOf = rng => S.GATE.wait + S.GATE.spread * new U.RNG((rng.s ^ 0x9E3779B9) >>> 0).next();
-  // 追い出したあと：base＝しごかずに馬なりで行くときの伸び（段に置き換えた値）。
-  // hold＝しごく手が馬の拍子に合っていない間（段を上げたまま手を止めている・拍子を見ずに連打している）、base より上の伸びがこの割合しか出ない。
-  // 拍子に合わせて追い続けている間（S.onBeat）だけ、段のぶん伸びきる（持ち主の決定 2026-10-22「70が80にも勝てるゲームにしたい」「慣れた人間がのればだいたい勝てるくらい」。
-  // 前は段を上げたままでも伸びきり、ただ追うだけで格上に6割近く先着していた。docs/BALANCE.md「20」）
-  S.PUSH = { base: 0.25, hold: 0.2 };
+  S.PUSH = { base: 0.25 }; // 追い出したあと、しごかずに馬なりで行くときの伸び（段に置き換えた値）
   // 自分で乗る馬：しごいて巡航より速く走ると脚を大きく使う境目（直線の手前 m）。道中は手綱の段が隊列の位置の注文（段 1 で GEAR_GAP m 前・しごいている間の脚の使い方 GEAR_COST）。
   // 注文の位置へ寄せる強さ（差 1m あたりの速さの割合 POS_K と上限 POS_MAX）
   // 当たり判定（持ち主の指摘 2026-10-20「馬と馬が重なって抜ける」「何もない所にぶつかる」）。数は docs/BALANCE.md「2-3d. 当たり判定」
@@ -171,10 +167,9 @@
   S.EARLY_PUSH = 500; S.GEAR_GAP = 18; S.GEAR_COST = 0.05; S.POS_K = 0.004; S.POS_MAX = 0.03;
   // ムチ（直線で打ったときの伸びの倍率・風車ムチ・脚の使い方、直線の前で打ったとき）。折り合っている（気分 35 未満）間の脚の使い方
   // 前は伸び 0.6・0.9、脚 0.9・0.95、折り合い 0.94 で、直線の手前から追ってムチを入れるだけで、おまかせの3倍以上勝てた（tools/balance_bench.js）
-  // off＝拍子に合っていないムチ（首が下がって前へ伸びる所の前後 S.BEAT.win の外で打った）の伸びの割合（2026-10-22。拍子を見ずに打ち続けるだけでは伸びない）
   // ムチへの素直さ：追い出したときの気分が35以下で ×1.1、35を越えると下がり、75で ×0.6（そのぶん脚も使う）
   S.respOf = c => { const t = c.spurtTension != null ? c.spurtTension : c.tension; return U.clamp(1.1 - Math.max(0, t - 35) / 80, 0.6, 1.1); };
-  S.WHIP = { k: 0.4, wind: 0.6, cost: 0.96, windCost: 0.98, early: 0.2, earlyCost: 1.2, off: 0.4 }; S.CALM_SAVE = 0.97;
+  S.WHIP = { k: 0.4, wind: 0.6, cost: 0.96, windCost: 0.98, early: 0.2, earlyCost: 1.2 }; S.CALM_SAVE = 0.97;
   // PACE_K・DRAFT・PACE_NIGE は、頭数合わせの馬の脚質が平均ペースでおおむね釣り合うように合わせた（tools/skills_bench.js style。前は 70・0.12・2頭で +0.009 で、ハイペースが半分を占め、逃げ馬が平均10〜11着だった）
   S.PACE_HI = 1.006; S.PACE_LO = 0.994; S.PACE_K = 25; S.DRAFT = 0.08; S.PACE_TOP = 50; S.PACE_EARLY = 60;
   // 逃げ馬の数（0・1・2・3頭以上）で決まるペースの片寄りと、レースごとのぶれ
@@ -323,7 +318,7 @@
       if (opts.ride) {
         sim.ctl = { tension: U.clamp(30 + (75 - st[meIdx].mind) * 0.4 * S.bondF(opts.bond) + (st[meIdx].kakariDay ? 15 : 0), 10, 70), started: false, fumble: false, gear: 0, hand: 'R', swapUntil: -1, lastPush: -9, lastPull: -9, pushes: 0, whips: 0, whipUntil: -1, windmill: false, lane: s.lane, blockedNow: false, wide: false, kakariNow: false, behind: false,
           surge: 0, shrink: 0, pullT: 0, reinFight: false, bumpT: null, bumpSide: 0, bond: opts.bond, bondF: S.bondF(opts.bond), spurtTension: null, lastEv: null,
-          steered: false, beats: 0, lastBeat: -9, whipBeat: false };
+          steered: false, beats: 0, lastBeat: -9 };
         Object.defineProperty(sim.ctl, 'push', { get() { return Math.max(0, this.gear); }, enumerable: false });
         Object.defineProperty(sim.ctl, 'hold', { get() { return this.gear < -0.05; }, enumerable: false });
         s.delay = 99; s.late = false; // スタートはプレイヤーの合図で
@@ -352,9 +347,8 @@
   // 拍子（持ち主の指摘 2026-10-17「操作感は生き物に乗ってる手応えがほしい」）：馬の1完歩（stride m）のうち、首が下がって前へ伸びる所（at）の前後 win に
   // しごくと拍子が合う。合うと手綱の段が gear 倍動き、気分の上がりは calm 倍。追い出してから拍子の合ったしごきが続く（keep 秒以内に2回目から）間は、
   // 脚の使い方 ×save・伸び ×(1＋k×終いの伸び)。連打（前のしごきから minGap 秒より短い）は拍子に数えない。位相は描画と同じ式（騎乗の画面は lag 秒ぶん先の模擬を補間して見せる）
-  S.BEAT = { stride: 7.2, lag: 0.05, at: 0.55, win: 0.2, minGap: 0.25, vmin: 8, gear: 1.4, calm: 0.5, keep: 0.95, k: 0.15, save: 0.985 };
+  S.BEAT = { stride: 7.2, lag: 0.05, at: 0.55, win: 0.2, minGap: 0.25, vmin: 8, gear: 1.4, calm: 0.5, keep: 0.95, k: 0.05, save: 0.985 };
   S.beatPhase = s => { let ph = ((s.x - s.v * S.BEAT.lag) / S.BEAT.stride + s.r.num * 0.137) % 1; if (ph < 0) ph += 1; return ph; };
-  S.beatOff = s => { const o = Math.abs(S.beatPhase(s) - S.BEAT.at); return o > 0.5 ? 1 - o : o; }; // 拍子の合う所からのずれ（0〜0.5）
   S.onBeat = (sim, s, c) => c.beats >= 2 && sim.t - c.lastBeat < S.BEAT.keep;
   const rateOf = (c, t) => { c.taps = (c.taps || []).filter(x => t - x < 1); c.taps.push(t); return c.taps.length; };
   const gearStep = n => Math.min(0.25, 0.05 + 0.025 * Math.min(n, 8));
@@ -413,7 +407,6 @@
       // away は打った手と反対の側（見た目の向きだけに使う）
       const away = ((S.dirOf(sim) === '左') === (side === 'R')) ? -1 : 1;
       c.lastWhip = { t: sim.t, side, away, yore: false };
-      c.whipBeat = s.v > S.BEAT.vmin && S.beatOff(s) < S.BEAT.win; // 拍子に合ったムチ（首が下がって前へ伸びる所）
       if (c.whips > 12) return 'tired';
       return c.windmill ? 'windmill' : 'ok';
     },
@@ -589,13 +582,10 @@
         if (s.E <= 0) target = s.vc * (0.9 + 0.0005 * s.guts + s.zubu);
         else {
           if (s.spurting) {
-            // 馬なりでは伸びきらない。しごいて段を上げるほど、残っている脚を使って伸びる（段がいちばん上で拍子に合わせて追うと、おまかせと同じ上限）。
+            // 馬なりでは伸びきらない。しごいて段を上げるほど、残っている脚を使って伸びる（段がいちばん上で、おまかせと同じ伸び）。
             // いつ追い出すかが腕の見せどころ：スローなら早め、ハイなら遅め（脚が残っていれば伸び、無ければバテる）
             const ratioE = Math.cbrt(Math.max(0, s.E) * s.Ds / (0.9 * Math.max(R, 30) * s.spurtCost));
-            // 拍子に合わせて追っている間だけ段のぶん伸びきる。拍子を見ずに段を上げたままだと、馬なりより上の伸びは S.PUSH.hold の割合まで
-            const P = S.PUSH, gp = U.clamp(g, P.base, 1);
-            const gk = S.onBeat(sim, s, c) ? gp : P.base + (gp - P.base) * P.hold;
-            target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * (1 + (sim.top + (s.topAdd || 0) - 1) * gk));
+            target = s.vc * U.clamp(ratioE, 1 + s.kickS, 1 + s.kickS * (1 + (sim.top + (s.topAdd || 0) - 1) * U.clamp(g, S.PUSH.base, 1)));
           } else if (prog < 0.22) {
             // 出だし：段の高さだけ速く（前へ）、深さだけ遅く（後ろへ）。出だしで押すと脚を使う
             target = pace * s.styleMult; if (s.easyStart) costMul *= S.EASY_START;
@@ -615,7 +605,7 @@
             // 直線のムチは気合が入って、もうひと伸びし、脚ももつ。直線の前のムチは脚を使うだけ
             // 折り合っていた馬ほどムチに素直に応え、掛かっていた馬はムダに脚を使う（追い出したときの気分で）
             const resp = S.respOf(c);
-            target *= 1 + (inZone ? k * resp * (c.whipBeat ? 1 : W.off) : W.early) * s.kickS * S.whipEff(c); costMul *= inZone ? (c.windmill ? W.windCost : W.cost) * (1 + (1 - resp) * 0.15) : W.earlyCost;
+            target *= 1 + (inZone ? k * resp : W.early) * s.kickS * S.whipEff(c); costMul *= inZone ? (c.windmill ? W.windCost : W.cost) * (1 + (1 - resp) * 0.15) : W.earlyCost;
           }
           // 拍子の合ったしごきが続いている間は、馬が気持ちよく伸びる（追い出してから）
           if (s.spurting && S.onBeat(sim, s, c)) { target *= 1 + S.BEAT.k * s.kickS; costMul *= S.BEAT.save; }

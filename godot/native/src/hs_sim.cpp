@@ -16,7 +16,7 @@ static const double LEN = 2.4;
 // ---------- 調整の値（hs_sim.gd と同じ） ----------
 static const double DS = 0.68, MISFIT = 10.0, MISFIT_FROM = 0.2, TENSE_COST = 1.0, KAKARI_COST = 1.6;
 static const double T_BASE = 25.0, T_HOT = 0.5, T_KAKARI = 15.0, T_SETTLE = 0.08, T_CALM = 1.2, T_LANE = 8.0;
-static const double START_ACC = 7.5, START_SKILL_ACC = 1.35, EASY_START = 0.95, LATE_E = 0.15, PUSH_BASE = 0.25, PUSH_HOLD = 0.2; // PUSH_HOLD：拍子に合わせて追っていない間の、馬なりより上の伸びの割合（JS の S.PUSH.hold）
+static const double START_ACC = 7.5, START_SKILL_ACC = 1.35, EASY_START = 0.95, LATE_E = 0.15, PUSH_BASE = 0.25;
 // ゲート（JS の S.GATE）：待つ秒＝wait＋spread×くじ（種の乱数は進めない）・GOOD の幅 buf と good・早押しの出の遅れ fumble・早押しで上がる気分 fret
 static const double G_WAIT = 2.2, G_SPREAD = 1.6, G_BUF = 0.12, G_GOOD = 0.1, G_FUMBLE = 0.35, G_FRET = 4.0;
 // 当たり判定（JS の S.LANE_M・S.BODY と同じ。docs/BALANCE.md「2-3d. 当たり判定」）。押さない限り自分の馬は横へ動かない
@@ -26,9 +26,9 @@ static const double LANE_V = 3.0, LANE_DX = 2.4, LANE_GAP = 0.65;
 static const double START_STYLE[4] = { 1.18, 1.07, 0.96, 0.88 };
 static const double FAN_X = 250.0, FAN_V = 0.1;
 // 拍子（JS の S.BEAT）
-static const double BEAT_STRIDE = 7.2, BEAT_LAG = 0.05, BEAT_AT = 0.55, BEAT_WIN = 0.2, BEAT_MINGAP = 0.25, BEAT_VMIN = 8.0, BEAT_GEAR = 1.4, BEAT_CALM = 0.5, BEAT_KEEP = 0.95, BEAT_K = 0.15, BEAT_SAVE = 0.985;
+static const double BEAT_STRIDE = 7.2, BEAT_LAG = 0.05, BEAT_AT = 0.55, BEAT_WIN = 0.2, BEAT_MINGAP = 0.25, BEAT_VMIN = 8.0, BEAT_GEAR = 1.4, BEAT_CALM = 0.5, BEAT_KEEP = 0.95, BEAT_K = 0.05, BEAT_SAVE = 0.985;
 static const double EARLY_PUSH = 500.0, GEAR_GAP = 18.0, GEAR_COST = 0.05, POS_K = 0.004, POS_MAX = 0.03;
-static const double W_K = 0.4, W_WIND = 0.6, W_COST = 0.96, W_WINDCOST = 0.98, W_EARLY = 0.2, W_EARLYCOST = 1.2, W_OFF = 0.4; // W_OFF：拍子に合っていないムチの伸びの割合
+static const double W_K = 0.4, W_WIND = 0.6, W_COST = 0.96, W_WINDCOST = 0.98, W_EARLY = 0.2, W_EARLYCOST = 1.2;
 static const double CALM_SAVE = 0.97, PACE_HI = 1.006, PACE_LO = 0.994, PACE_K = 25.0, DRAFT = 0.08, PACE_TOP = 50.0, PACE_EARLY = 60.0;
 static const double PACE_NIGE[4] = { -0.009, -0.002, 0.003, 0.008 };
 static const double PACE_SD = 0.006;
@@ -255,8 +255,6 @@ static double beat_phase(const Runner &s) {
 	if (ph < 0) ph += 1.0;
 	return ph;
 }
-// 拍子の合う所からのずれ（0〜0.5。JS の S.beatOff）
-static double beat_off(const Runner &s) { double o = std::fabs(beat_phase(s) - BEAT_AT); return o > 0.5 ? 1.0 - o : o; }
 static inline bool on_beat(const Sim &sim, const Ctl &c) { return c.beats >= 2 && sim.t - c.lastBeat < BEAT_KEEP; }
 
 Variant ctl_up(Sim &sim, const Variant &at) {
@@ -323,7 +321,6 @@ Variant ctl_whip(Sim &sim, const Variant &side_) {
 	// ムチでは進路は変わらない（どちらの手で打ってもよれない）。away は打った手と反対の側（見た目の向きだけ）
 	double away = (sim.dirLeft == sideR) ? -1.0 : 1.0;
 	c.hasLastWhip = true; c.lwT = sim.t; c.lwR = sideR; c.lwAway = away; c.lwYore = false;
-	c.whipBeat = s.v > BEAT_VMIN && beat_off(s) < BEAT_WIN; // 拍子に合ったムチ
 	if (c.whips > 12) return String("tired");
 	return String(c.windmill ? "windmill" : "ok");
 }
@@ -551,10 +548,7 @@ bool sim_step(Sim &sim) {
 			else {
 				if (s.spurting) {
 					double ratioE = cbrt(mx(0.0, s.E) * s.Ds / (0.9 * mx(R, 30.0) * s.spurtCost));
-					// 拍子に合わせて追っている間だけ段のぶん伸びきる。拍子を見ずに段を上げたままだと、馬なりより上の伸びは PUSH_HOLD の割合まで
-					double gp = clamp(g, PUSH_BASE, 1.0);
-					double gk = on_beat(sim, *c) ? gp : PUSH_BASE + (gp - PUSH_BASE) * PUSH_HOLD;
-					target = s.vc * clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * gk));
+					target = s.vc * clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * clamp(g, PUSH_BASE, 1.0)));
 				} else if (prog < 0.22) {
 					target = pace * s.styleMult;
 					if (s.easyStart) costMul *= EASY_START;
@@ -570,7 +564,7 @@ bool sim_step(Sim &sim) {
 					bool inZone = R < straight + 200;
 					double k = c->windmill ? W_WIND : W_K;
 					double resp = respOf(*c);
-					target *= 1.0 + (inZone ? k * resp * (c->whipBeat ? 1.0 : W_OFF) : W_EARLY) * s.kickS * whip_eff(*c);
+					target *= 1.0 + (inZone ? k * resp : W_EARLY) * s.kickS * whip_eff(*c);
 					costMul *= inZone ? ((c->windmill ? W_WINDCOST : W_COST) * (1.0 + (1.0 - resp) * 0.15)) : W_EARLYCOST;
 				}
 				// 拍子の合ったしごきが続いている間は、馬が気持ちよく伸びる（追い出してから）

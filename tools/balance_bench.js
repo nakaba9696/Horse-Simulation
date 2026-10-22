@@ -8,7 +8,7 @@
 //   strong … 自分の馬だけ総合力が4上。噛み合わないと強い馬でも負けるか
 //   fight … 競り合いの気合：根性の高い馬・低い馬の、競り合ったあとの伸び
 //   bond … 絆（同じ馬に自分で乗った回数）で、気性の荒い馬の折り合いがどう変わるか
-//   beat … 拍子：噛み合った乗り方（拍子に合わせてしごき続ける）・同じ位置と仕掛けで段を上げたら手を止める・拍子を見ずに連打する・おまかせ
+//   beat … 拍子：追い出してから馬の拍子に合わせてしごき続ける・拍子を見ずに連打する・噛み合った乗り方（段を上げたら手を止める）・おまかせ
 const { load } = require('../tests/load.js');
 const HS = globalThis.HS && globalThis.HS.Sim ? globalThis.HS : load();
 const U = HS.U, H = HS.Horse, S = HS.Sim;
@@ -122,8 +122,8 @@ function upsetTable() {
 // 画面の総合力で 5.0 上の格上（持ち主の決定 2026-10-22「70が80にも勝てるゲームにしたい」「慣れた人間がのればだいたい勝てるくらい」）。
 // 自分の馬 70.0・格上 75.0（どちらもちょうど）・ほかの12頭はまん中 67.0。格上より先に入る割合・勝率・平均着順
 const SHOW = { self: 70, rival: 75, rest: 67 };
-const POL_SHOW = ['omakase', 'none', 'push', 'fit', 'flat', 'mash', 'misfit'];
-const JA_SHOW = Object.assign({ flat: '噛み合った・拍子なし', mash: '噛み合った・連打' }, POL_JA);
+const POL_SHOW = ['omakase', 'none', 'push', 'fit', 'misfit'];
+const JA_SHOW = POL_JA;
 function showTable(o) {
   o = o || {};
   const rows = [];
@@ -182,8 +182,8 @@ function fightTable() {
 // 拍子：同じ相手・同じ種で、追い出してからの手の動かし方だけを変える
 function beatTable() {
   const rows = [];
-  const P = ['omakase', 'fit', 'flat', 'mash'];
-  const JA = { omakase: 'おまかせ', fit: '噛み合った（拍子に合わせる）', flat: '噛み合った・手を止める', mash: '噛み合った・連打' };
+  const P = ['omakase', 'fit', 'beat', 'mash'];
+  const JA = { omakase: 'おまかせ', fit: '噛み合った', beat: '拍子に合わせる', mash: '連打' };
   console.log('拍子（14頭・東京芝2000・気性88）。勝率％／平均着順');
   for (const style of ['先行', '差し']) {
     const r = {}; for (const p of P) r[p] = bench({ style, mind: 88, policy: p });
