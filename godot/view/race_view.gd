@@ -889,7 +889,7 @@ func parse_args() -> void:
 # 馬モデルの試作に見た目だけ差し替える（--proto-horse=）・騎手を消す（--no-jockey）
 func _proto_setup() -> void:
 	if proto_ver != "" and not ResourceLoader.exists(PROTO_MODEL):
-		push_warning("proto-horse: 試作が無い（書き出した版には入らない）")
+		push_warning("proto-horse: prototype model not found (not included in exported builds)")
 		proto_ver = ""
 	if proto_ver == "" and not no_jockey:
 		return
