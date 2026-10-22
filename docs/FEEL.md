@@ -156,6 +156,8 @@
 - Godot 版・生き物に乗る手応え（2026-10-17・`docs/shots/godot/feel_ref/`）：A 3・B 4・C 3・D 4・E 4＝18 点（合格のまま）。D は、しごくが拍子の合う・合わないで別の光（▲ の金／白）と振動（重い／軽い）と馬の首で返るようになった。A は自分の騎手と馬が大きく映り、首の振り・疲れ（首が下がる）・掛かり（カメラが引かれる）が絵で読めるが、得意な位置の帯は前と同じ。
 - 騎乗の画面の見直し（2026-10-20・`docs/shots/godot/ride_v3/`。前の形は `before_mid.jpg`）：A 3 → 4（左上は順位と残りだけで読む所が減り、掛かりは馬の頭の札の色と頭の上がりで、手綱の段は HOLD／PUSH の帯で一目で分かる。止め絵で掛かりと折り合いを見分けられる：`temper_kakari_calm.jpg`）・B 4（FIGHT・WHIP の見出しを外した）・C 3（左下が脚質・速さ・馬の頭・スタミナ・手綱の1つの塊にまとまった。ペースの板は前と同じ）・D 4・E 4＝19 点（前の形 18 点）。左右を見る：`look_right_half.jpg`（振り向く途中）・`look_right.jpg`（外の柵）・`look_left.jpg`（内の柵とダート）・`jockey_head_turned.jpg`（騎手の頭が右を向く）。
 
+- 全開の知らせ（2026-10-22・`docs/shots/godot/drive/`。drive_1_before＝追っているが全開の前・2_enter＝入った瞬間・3_full＝全開の間・4_exit_mid＝段を下げて戻る途中・5_after＝抜けた後・6_last＝脚が尽きる直前・7_spent＝脚が尽きた。`meters.jpg` は左下の計器を並べたもの）：A 4（速さの計器の振り切りと白熱・手綱の帯の突き抜けで、全開かどうかが止め絵でひと目で分かる。バテはスタミナの赤い枠だけで、全開の光と見分けられる）・B 4（文字を足していない）・C 3（光は左下の塊の中だけ。全開の間は輪の光が強く、ほかの計器より目立つ）・D 4（入った瞬間は計器・音・振動・揺れの4つで返す）・E 4＝19 点（前の形 19 点）。
+
 ## 7. 確かめ方
 - `NODE_PATH=$(npm root -g) node tools/shot_feel.js docs/shots/feel after [--video] [--gate]`：画面の時計を道具の側で進めて、ゲート・前触れの灯・灯を見て押して開いた直後・向こう正面・ムチ・流している所・着順の7枚（--gate はゲートの3枚だけ）（1600×1000）と、ムチから着順までの動画を撮る。遅い描画（ソフトウェアの WebGL）でも、遊んだときと同じ時の流れの絵になる。前の形は `docs/shots/feel/before_*.jpg`。
 - Godot のゲート：`sh godot/tools/run_scene.sh res://scenes/race.tscn 1600x1000 -- --out=<絶対パス> --shot=-1.5:jockey:gd_gate --shot=-0.45:jockey:gd_tell --press=-0.05:ride_up --shot=0.4:jockey:gd_open`（秒はレースの秒。開く 0.05 秒前に ↑）。
@@ -163,6 +165,7 @@
 - `godot/tests/test_ride_input.gd`：進路の左右が右回り・左回りの全周でカメラから見て押した側へ動くこと、左右を見るのが 0.3 秒で振り向ききって離すと戻ること・角度が真横よりやや後ろであること。
 - `godot/tests/test_drive.gd`：全開の度合いが計器へ渡ること（GDScript と C++。段が from 以下・脚が尽きた・ゴールでは 0）、速さの計器が全開の間は最大まで振り切り、抜けるとなめらかに戻ること、脚が尽きたら知らせがすぐ消えること、蹄の振動が強く長くなり入った瞬間に両方のモーターが最大で震えること、音が全開でなければ鳴らず入った瞬間と全開の間は鳴ること。
 - Godot の騎乗の撮影で左右を見る：`--press=秒:look_r`（右）・`look_l`（左）・`look_0`（離す）。
+- Godot の全開の撮影（既定のレース＝ジャパンC。秒はレースの秒）：`sh godot/tools/run_scene.sh res://scenes/race.tscn 1600x1000 -- --out=<絶対パス> --press=-0.05:ride_up --press=112:ride_up --press=112.4:ride_up --press=112.8:ride_up --press=113.2:ride_up --press=117:ride_up --press=117.3:ride_up --press=117.6:ride_up --press=117.9:ride_up --press=118.2:ride_up --press=118.5:ride_up --press=121:ride_down --press=121.3:ride_down --shot=116.5:jockey:drive_1_before --shot=118.1:jockey:drive_2_enter --shot=120.5:jockey:drive_3_full --shot=121.45:jockey:drive_4_exit_mid --shot=122.6:jockey:drive_5_after`（117.9 秒ごろ全開に入る。↓ を外すと 129.5 秒ごろ脚が尽きる）。
 - `tests/extra_feel.js`：パッドの向きの読み取り（標準・スティック・hat の8方向・axes[6]/[7]）と、ride.js に日本語の状態の文字・画面の箱の揺れが無いこと。
 - 揺れを足すときは `kick({ dur, hz, ax, ay, fov, roll })` を使い、上の上限を守る。騎乗中に新しい文字を出したくなったら、まず計器・レーダー・光・音・振動で返せないかを考える。
 

@@ -751,8 +751,13 @@ func _dial(M: Dictionary, cx: float, cy: float, R: float) -> void:
 	if vis > 0.0:
 		# 縁：目盛りの弧ぜんぶが白く灼ける。止め（いちばん右）に白い光の点
 		_arc(cx, cy, R - 0.5, a0, a0 + sweep, _a(HOT, 0.85 * vis), 2.0 + 1.5 * vis)
+		_arc(cx, cy, R + 4.0, a0, a0 + sweep, _a(HOT_GLOW, vis * (0.45 + 0.3 * float(dv[3]))), 3.0)
+		# 止め（いちばん右）：針が当たって白く光る点
 		var ae := a0 + sweep
-		_glow_circle(cx + cos(ae) * (R - 8.5), cy + sin(ae) * (R - 8.5), 2.5, _a(HOT, peg), 7.0 + 4.0 * float(dv[3]))
+		var sx := cx + cos(ae) * (R - 8.5)
+		var sy := cy + sin(ae) * (R - 8.5)
+		_glow_circle(sx, sy, 3.0, _a(HOT_GLOW, peg), 6.0 + 4.0 * float(dv[3]))
+		_circle(sx, sy, 3.0, _a(HOT, peg))
 	if float(dv[2]) > 0.0:
 		var b: float = dv[2]
 		_arc(cx, cy, R + 4.0 + 22.0 * (1.0 - b), 0, TAU, _a(HOT, 0.85 * b), 2.0 + 3.0 * b)
