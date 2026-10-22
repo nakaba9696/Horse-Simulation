@@ -10,7 +10,10 @@ out = a[..., 3] < 128
 near = ndimage.distance_transform_edt(~out) <= rim
 mx = np.maximum(a[..., 0], a[..., 2])
 a[..., 1] = np.where(near & (a[..., 1] > mx), mx, a[..., 1])
-if len(sys.argv) > 4:
+if len(sys.argv) > 5 and sys.argv[5] == "teal":   # 青みの髪の影が緑かぶりで青緑になった所：G を (R+B)/2 まで下げる
+    av = (a[..., 0] + a[..., 2]) / 2
+    a[..., 1] = np.where(near & (a[..., 1] > av), av, a[..., 1])
+if len(sys.argv) > 4 and sys.argv[4]:
     c = a[..., :3]
     hb = np.zeros(out.shape, bool)
     for b in sys.argv[4].split(";"):

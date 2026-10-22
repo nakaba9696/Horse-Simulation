@@ -151,6 +151,11 @@ V81 = [
 for k, v in enumerate(V81):
     P[f"ilona{81 + k:02d}"] = ("f", I81 + ", " + v,
                                ", (child:1.5), (loli:1.5), (cleavage:1.5), (animal ears:1.6), (tail:1.5), (horse:1.4), (black hair:1.3), (flower wreath:1.6), (flowers in hair:1.5), (cat:1.4), (orange hair:1.7), (green hair:1.7), (blonde hair:1.5), (bright red hair:1.5)" + NEGI)
+# 2026-10-22 7 回目：ひなたは頬の赤みと日焼けをやめる。千石はよくいる IT 社長風の髪型
+P["hinata"] = (P["hinata"][0], P["hinata"][1].replace("(tanned skin:1.3), (red cheeks:1.3), ", "(fair skin:1.2), "),
+               P["hinata"][2] + ", (blush:1.6), (tan:1.6), (tanned skin:1.6), (dark skin:1.6), (red cheeks:1.5), (sunburn:1.4)")
+P["sengoku"] = (P["sengoku"][0], P["sengoku"][1].replace("(modern short textured hair:1.3), (two-block haircut:1.1)", "(short neat businessman haircut:1.4), (short sides, slightly longer top swept to the side:1.3), (clean-cut:1.3)"),
+                P["sengoku"][2] + ", (long hair:1.4), (messy hair:1.3), (bangs over eyes:1.4), (hair over one eye:1.5)")
 who_list, seeds = sys.argv[1].split(","), [int(s) for s in sys.argv[2].split(",")]
 out = sys.argv[3] if len(sys.argv) > 3 else "."
 os.makedirs(out, exist_ok=True)
