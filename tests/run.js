@@ -1551,6 +1551,7 @@ require('./extra_i18n.js')(check, assert); // 画面の言語：Godot 版の画�
 require('./extra_i18n_data.js')(check, assert, HS); // データの英語の名前（馬・レース・競馬場・特殊能力・騎手）
 require('./extra_drop.js')(check, assert, HS); // ゲームに出さない史実馬（名の知れていない古い海外の G1 1勝馬）
 require('./extra_mainwins.js')(check, assert, HS); // 名鑑の無い海外の馬の史実の主な勝鞍
+require('./extra_placings.js')(check, assert, HS); // G1 の上位着順（一覧と元データの一致・馬の識別・着差の基準・同着・収録の日付）
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
 require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
 require('./extra_gdgame.js')(check, assert); // Godot 版の週の流れを本物の画面で自動で遊ぶ
