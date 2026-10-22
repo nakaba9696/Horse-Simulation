@@ -182,6 +182,8 @@ static func gate_wait_of(rng: HSRng) -> float:
 	var g := HSRng.new(float((rng.s ^ 0x9E3779B9) & 0xFFFFFFFF))
 	return float(GATE.wait) + float(GATE.spread) * g.next()
 static var PUSH := { base = 0.25 }
+# 全開（JS の S.DRIVE。持ち主の決定 2026-10-22）：段が from より上の分だけ、脚の残りを見ずに伸びの上限の上 k まで走り、脚の使い方 ×(1＋c×drive)
+static var DRIVE := { from = 0.85, k = 0.4, c = 0.5 }
 # 当たり判定（js/core/racesim.js の S.LANE_M・S.BODY と同じ。docs/BALANCE.md「2-3d. 当たり判定」）
 const LANE_M := 1.6
 static var BODY := { len = 2.4, wid = 0.5, look = 6.0, close = 0.8, follow = 1.0, side = 0.35 }
@@ -838,7 +840,12 @@ static func _step_gd(sim: Sim) -> bool:
 			else:
 				if s.spurting:
 					var ratioE := HSMath.cbrt(HSU.mx(0.0, s.E) * s.Ds / (0.9 * HSU.mx(R, 30.0) * s.spurtCost))
-					target = s.vc * HSU.clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * HSU.clamp(g, PUSH.base, 1.0)))
+					var up: float = 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * HSU.clamp(g, PUSH.base, 1.0))
+					var sus := HSU.clamp(ratioE, 1.0 + s.kickS, up)
+					# 全開：段が DRIVE.from より上の分だけ、脚の残りを見ずに上限の上まで（脚も余計に使う）
+					var drive := HSU.clamp((g - DRIVE.from) / (1.0 - DRIVE.from), 0.0, 1.0)
+					target = s.vc * (sus + (1.0 + (up - 1.0) * (1.0 + DRIVE.k) - sus) * drive)
+					costMul *= 1.0 + DRIVE.c * drive
 				elif prog < 0.22:
 					target = pace * s.styleMult
 					if s.easyStart: costMul *= EASY_START

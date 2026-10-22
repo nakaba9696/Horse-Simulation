@@ -17,6 +17,8 @@ static const double LEN = 2.4;
 static const double DS = 0.68, MISFIT = 10.0, MISFIT_FROM = 0.2, TENSE_COST = 1.0, KAKARI_COST = 1.6;
 static const double T_BASE = 25.0, T_HOT = 0.5, T_KAKARI = 15.0, T_SETTLE = 0.08, T_CALM = 1.2, T_LANE = 8.0;
 static const double START_ACC = 7.5, START_SKILL_ACC = 1.35, EASY_START = 0.95, LATE_E = 0.15, PUSH_BASE = 0.25;
+// 全開（JS の S.DRIVE。持ち主の決定 2026-10-22）
+static const double DRIVE_FROM = 0.85, DRIVE_K = 0.4, DRIVE_C = 0.5;
 // ゲート（JS の S.GATE）：待つ秒＝wait＋spread×くじ（種の乱数は進めない）・GOOD の幅 buf と good・早押しの出の遅れ fumble・早押しで上がる気分 fret
 static const double G_WAIT = 2.2, G_SPREAD = 1.6, G_BUF = 0.12, G_GOOD = 0.1, G_FUMBLE = 0.35, G_FRET = 4.0;
 // 当たり判定（JS の S.LANE_M・S.BODY と同じ。docs/BALANCE.md「2-3d. 当たり判定」）。押さない限り自分の馬は横へ動かない
@@ -548,7 +550,12 @@ bool sim_step(Sim &sim) {
 			else {
 				if (s.spurting) {
 					double ratioE = cbrt(mx(0.0, s.E) * s.Ds / (0.9 * mx(R, 30.0) * s.spurtCost));
-					target = s.vc * clamp(ratioE, 1.0 + s.kickS, 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * clamp(g, PUSH_BASE, 1.0)));
+					double up = 1.0 + s.kickS * (1.0 + (sim.top + s.topAdd - 1.0) * clamp(g, PUSH_BASE, 1.0));
+					double sus = clamp(ratioE, 1.0 + s.kickS, up);
+					// 全開：段が DRIVE_FROM より上の分だけ、脚の残りを見ずに上限の上まで（脚も余計に使う）
+					double drive = clamp((g - DRIVE_FROM) / (1.0 - DRIVE_FROM), 0.0, 1.0);
+					target = s.vc * (sus + (1.0 + (up - 1.0) * (1.0 + DRIVE_K) - sus) * drive);
+					costMul *= 1.0 + DRIVE_C * drive;
 				} else if (prog < 0.22) {
 					target = pace * s.styleMult;
 					if (s.easyStart) costMul *= EASY_START;
