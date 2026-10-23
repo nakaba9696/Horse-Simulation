@@ -60,7 +60,10 @@
     { name: 'コロネーションステークス', short: 'コロネーションS', grade: 'G1', region: '海外', country: '英', course: 'アスコット', surface: '芝', dist: 1600, month: 6, week: 3, age: '3', sex: '牝', weight: '定量', prize: 4000, from: FAMOUS_FROM, to: 9999, uncertain: true },
     { name: 'クイーンエリザベス2世ジュビリーステークス', short: 'QE2世ジュビリーS', grade: 'G1', region: '海外', country: '英', course: 'アスコット', surface: '芝', dist: 1200, month: 6, week: 3, age: '4+', weight: '定量', prize: 5000, from: FAMOUS_FROM, to: 9999, uncertain: true, note: '前の名前はダイヤモンドジュビリーステークス・ゴールデンジュビリーステークス' },
     { name: 'ファルマスステークス', short: 'ファルマスS', grade: 'G1', region: '海外', country: '英', course: 'ニューマーケット', surface: '芝', dist: 1600, month: 7, week: 2, age: '3+', sex: '牝', weight: '定量', prize: 3000, from: FAMOUS_FROM, to: 9999, uncertain: true },
-    { name: 'シティオブヨークステークス', short: 'シティオブヨークS', grade: 'G1', region: '海外', country: '英', course: 'ヨーク', surface: '芝', dist: 1400, month: 8, week: 4, age: '3+', weight: '定量', prize: 3000, from: FAMOUS_FROM, to: 9999, uncertain: true },
+    // シティオブヨークS：2016年 G3・2019年 G2・2025年 G1（en.wikipedia「City of York Stakes」）。2015年までは Listed なので持たない
+    { name: 'シティオブヨークステークス', short: 'シティオブヨークS', grade: 'G3', region: '海外', country: '英', course: 'ヨーク', surface: '芝', dist: 1400, month: 8, week: 4, age: '3+', weight: '定量', prize: 3000, from: 2016, to: 2018, uncertain: true },
+    { name: 'シティオブヨークステークス', short: 'シティオブヨークS', grade: 'G2', region: '海外', country: '英', course: 'ヨーク', surface: '芝', dist: 1400, month: 8, week: 4, age: '3+', weight: '定量', prize: 3000, from: 2019, to: 2024, uncertain: true },
+    { name: 'シティオブヨークステークス', short: 'シティオブヨークS', grade: 'G1', region: '海外', country: '英', course: 'ヨーク', surface: '芝', dist: 1400, month: 8, week: 4, age: '3+', weight: '定量', prize: 3000, from: 2025, to: 9999, uncertain: true },
     { name: 'スプリントカップ', short: 'スプリントC', grade: 'G1', region: '海外', country: '英', course: 'ヘイドック', surface: '芝', dist: 1200, month: 9, week: 1, age: '3+', weight: '定量', prize: 3500, from: FAMOUS_FROM, to: 9999, uncertain: true, note: 'ヘイドックパーク' },
     { name: 'チェヴァリーパークステークス', short: 'チェヴァリーパークS', grade: 'G1', region: '海外', country: '英', course: 'ニューマーケット', surface: '芝', dist: 1200, month: 9, week: 4, age: '2', sex: '牝', weight: '定量', prize: 2500, from: FAMOUS_FROM, to: 9999, uncertain: true },
     { name: 'ミドルパークステークス', short: 'ミドルパークS', grade: 'G1', region: '海外', country: '英', course: 'ニューマーケット', surface: '芝', dist: 1200, month: 9, week: 4, age: '2', weight: '定量', prize: 2500, from: FAMOUS_FROM, to: 9999, uncertain: true, note: '2歳の牡馬' },
@@ -145,7 +148,9 @@
     // ロイヤルロッジS（2歳・1マイル）：フランケルが2010年に勝った（当時はアスコット）。2011年からニューマーケットの9月末。古い年の形は確かめきれていない
     { name: 'ロイヤルロッジステークス', short: 'ロイヤルロッジS', grade: 'G2', region: '海外', country: '英', course: 'ニューマーケット', surface: '芝', dist: 1600, month: 9, week: 4, age: '2', weight: '馬齢', prize: 1500, from: 1990, to: 9999, uncertain: true },
     // スキラッチS（コーフィールド・1000m）：ブラックキャビアが2010年・2011年に勝った（en.wikipedia「Black Caviar」の成績の表）。10月の2週。古い年の形は確かめきれていない
-    { name: 'スキラッチステークス', short: 'スキラッチS', grade: 'G2', region: '海外', country: '豪', course: 'コーフィールド', surface: '芝', dist: 1000, month: 10, week: 2, age: '3+', weight: '別定', prize: 1000, from: 2000, to: 9999, uncertain: true },
+    // 2015年から 1100m・定量（WFA）（en.wikipedia「Schillaci Stakes」）
+    { name: 'スキラッチステークス', short: 'スキラッチS', grade: 'G2', region: '海外', country: '豪', course: 'コーフィールド', surface: '芝', dist: 1000, month: 10, week: 2, age: '3+', weight: '別定', prize: 1000, from: 2000, to: 2014, uncertain: true },
+    { name: 'スキラッチステークス', short: 'スキラッチS', grade: 'G2', region: '海外', country: '豪', course: 'コーフィールド', surface: '芝', dist: 1100, month: 10, week: 2, age: '3+', weight: '定量', prize: 1000, from: 2015, to: 9999, uncertain: true },
   );
   // ---- 重賞の一覧（2025年の番組）を見直して足したもの（2026-10-20。出典で確かめた年だけを持つ） ----
   add.push(

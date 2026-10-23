@@ -785,7 +785,7 @@
     },
     'コーフィールド': {
       turf: [
-        { id: '周回', lap: 2080, straight: 367, use: [1000, 1200, 1600, 2400],
+        { id: '周回', lap: 2080, straight: 367, use: [1000, 1100, 1200, 1600, 2400],
           segs: [['S', 367], ['C', 153.4, 153.4, 120.9, 3], ['S', 418.2], ['C', 113.3, 113.3, 120, 2], ['S', 443.1], ['C', 135, 135, 119.1, 1], ['S', 10]],
           elev: [[0, 0], [367, 0], [1100, 1.5], [1300, 0], [2080, 0]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/australia/caulfield.html', 'https://www.jairs.jp/contents/courses/au.html', 'https://en.wikipedia.org/wiki/Caulfield_Racecourse'],

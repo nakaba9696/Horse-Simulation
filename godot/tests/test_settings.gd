@@ -179,7 +179,7 @@ func _achieve(t) -> void:
 	for r in tb:
 		ids[r.id] = true
 		if re.search(String(r.id)) == null: bad += 1
-	t.eq(tb.size(), 40, "achieve: 実績はトロフィーの40個")
+	t.eq(tb.size(), 41, "achieve: 実績はトロフィーの41個（2026-10-23 にワールドターフ GS を足した）")
 	t.ok(ids.size() == tb.size() and bad == 0, "achieve: 実績の id は重ならず、Steam の API 名に使える形")
 	HSAchieve.clear()
 	UiFlow.delete_save()
