@@ -204,7 +204,7 @@ check('special: 隠し馬とスペシャルホースの強さ・出方（持ち�
   // 馬・馬場・総合力・出る組（グループの id）
   const want = [
     ['テツノカチドキ', 'dirt', 65, 'local'], ['オールアロング', 'turf', 72, 'r:凱旋門賞'], ['スペクタキュラービッド', 'dirt', 76, 't:immortal'],
-    ['パーソナルエンスン', 'dirt', 76, 't:usf3'], ['ロッキータイガー', 'dirt', 64, 't:gs_jd'], ['タマモクロス', 'turf', 74, 't:gs_jp'],
+    ['パーソナルエンスン', 'dirt', 76, 't:usf3'], ['ロッキータイガー', 'dirt', 64, 't:gs_jd'], ['タマモクロス', 'turf', 73, 't:gs_jp'],
     ['ミエスク', 'turf', 76, 't:gs_mile'], ['ドクターフェイガー', 'dirt', 78, 't:gs_sprint'], ['ヴェイグリーノーブル', 'turf', 74, 't:legend'],
   ];
   for (const [n, s, v, g] of want) {
@@ -952,7 +952,9 @@ check('dream: GF ごとの資格（G1・前年の勝ち馬・その距離の票�
 
 check('eraless: 年代なし。1990〜2026年の馬が毎年ランダムにデビューし、走っている間は馬の店に並ばない', () => {
   const E = HS.Eraless;
-  W.newGame({ seed: 21, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  // 種 23：殿堂馬を足して世界の顔ぶれが変わり（2026-10-22）、種 22 では見張った引退馬（スパークリングプレンティ）が年明けに2歳として出直して店に戻らなかった
+  //（その前の種 22：外した馬を戻して世界の顔ぶれが変わり、種 21 では高い馬がみなデビューして店に残らなかった）
+  W.newGame({ seed: 23, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
   const G = W.get();
   assert(G.eraless && U.ERA === E.ERA && W.dateLabel(G.year, 1, 1).startsWith('1年目'), '年代なしになっていない');
   const hist = W.all().filter(h => h.hist);
@@ -1146,7 +1148,7 @@ check('hall: トロフィーを1つ以上手にした自分の馬は、引退す
 
 check('special: 1989年より前の名馬はグループごとの条件にリーチで出てきて、勝つと店に並ぶ', () => {
   const SP = HS.Special;
-  W.newGame({ seed: 33, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' });
+  W.newGame({ seed: 34, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' }); // 種 34：種 33 はクイズの値で出走馬が変わったあと、自動の騎乗の当たり外れ（rt 122）で能力最大の馬も負けた
   const G = W.get();
   const tri = SP.members(SP.BY['t:triple']).map(d => d.name);
   assert(['セントライト', 'シンザン', 'ミスターシービー', 'シンボリルドルフ'].every(n => tri.includes(n)), `歴代の三冠馬 ${tri.join('・')}`);

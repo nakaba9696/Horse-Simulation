@@ -844,7 +844,7 @@ const T := {
 	"ペガサスWC・メトロポリタンH・ホイットニーS・BCクラシックを同じ年に": "Pegasus WC, Metropolitan, Whitney and BC Classic in one year",
 	"天皇賞・春・宝塚記念・天皇賞・秋・ジャパンC・有馬記念を同じ年に": "Tenno Sho (Spring), Takarazuka Kinen, Tenno Sho (Autumn), Japan Cup and Arima Kinen in one year",
 	"フェブラリーS・帝王賞・マイルCS南部杯・JBCクラシック・東京大賞典を同じ年に": "February Stakes, Teio Sho, Mile CS Nambu Hai, JBC Classic and Tokyo Daishoten in one year",
-	"メルボルンカップ・コックスプレート・ジ・エベレストを同じ年に": "Melbourne Cup, Cox Plate and The Everest in one year",
+	"メルボルンカップ・コックスプレート・ジ・エベレスト・クイーンエリザベスSを同じ年に": "Melbourne Cup, Cox Plate, The Everest and Queen Elizabeth Stakes in one year",
 	"同じ馬で凱旋門賞を2連覇": "Win the Arc twice in a row with one horse",
 	"同じ馬でドバイワールドカップを2連覇": "Win the Dubai World Cup twice in a row with one horse",
 	"同じ馬でジ・エベレストを2連覇": "Win The Everest twice in a row with one horse",

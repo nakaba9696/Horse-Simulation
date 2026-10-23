@@ -38,7 +38,8 @@ module.exports = function (check, assert, HS) {
     const candy = of('キャンディライド'), lava = of('ラヴァマン');
     // 芝の G1（アルゼンチン）を勝ったダートの馬：芝はダートの G1 から3引いた 97。走っていない扱いの 55 ではない
     assert(candy.apt.turf === 97 && candy.apt.dirt === 100, `キャンディライド ${JSON.stringify(candy.apt)}`);
-    assert(lava.apt.turf === 100 && lava.apt.dirt === 100, `ラヴァマン ${JSON.stringify(lava.apt)}`);
+    // ラヴァマンは芝の G1 も勝ったが、総合力のレビュー（2026-10-23）で芝をダートより下げた。芝は苦手の扱い（55）にはならない
+    assert(lava.apt.turf === 90 && lava.apt.dirt === 100, `ラヴァマン ${JSON.stringify(lava.apt)}`);
     const g1 = d => H.winRaces(d).filter(r => r.grade === 'G1').length;
     const bay = D.historic.find(x => x.name === 'バヤコア');
     assert(g1(bay) >= 10, `バヤコアの G1 ${g1(bay)}`);
