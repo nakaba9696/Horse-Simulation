@@ -1,4 +1,8 @@
-# 馬モデル試作 v2・v3・v4（godot/proto/tripo_horse/。ゲームからは呼ばない独立した場面と、レース画面の見比べの差し替え --proto-horse=v3・v4）
+# 馬モデル試作 v2・v3・v4・v5（godot/proto/tripo_horse/。ゲームからは呼ばない独立した場面と、レース画面の見比べの差し替え --proto-horse=v3・v4・v5）
+# - v5：骨 54 本・RaceGallop 0.45・Stand 3・Walk 1.2・Trot 173/240・Canter 0.6 秒（どれも LOOP_LINEAR・1 周で同じ形に戻る）・首の補正は走り・速歩・駈歩 1、立ち姿と常歩 0
+#        毛色は v5/coat.gdshader（法線の補正・鼻先とたてがみの混ぜ・法線の絵の強さは GLB の 0.03）・頭絡は元の材質・三角形 19,358 まで
+#        取付点 6 つが引き継ぎの saddle-track.json の位置に合う（取り込みで AnimationPlayer の optimizer を切った確かめ）・き甲の上下 0.13〜0.17m
+#        速さで歩き方を選ぶ・走りから立ち姿へ戻すと立ち姿の形に戻る・騎手を Saddle に乗せる・レース画面で v5 に替わる
 # - v4：骨 54 本・RaceGallop 0.45 秒・Stand 3 秒・Walk 1.2 秒（どれも LOOP_LINEAR）・首の補正は走り 1・立ち姿と常歩 0（クリップが持つ）
 #        毛色は Horse にだけ（頭絡は別の材質）・取付点 6 つ・鞍の点が走りで上下する（0.08〜0.16m）・き甲の上下 0.10〜0.15m・三角形 2 万まで
 #        騎手を Saddle に乗せられる・レース画面で v4 に替わり、ゲートの中は立ち姿・走ると位相が 距離÷7m
@@ -199,6 +203,126 @@ func run(t) -> void:
 	var fwd: Vector3 = m4.rider_hold.global_basis.z.normalized()
 	var rig_fwd: Vector3 = m4.global_basis.z.normalized()
 	t.ok(fwd.dot(rig_fwd) > 0.98 and m4.rider_hold.global_basis.y.normalized().y > 0.98, "tripo v4: 騎手は馬の前（+Z）を向き、上は +Y（%s）" % str(fwd))
+	# ---- v5 ----
+	var m5 = sc.tri["v5"]
+	var ap5: AnimationPlayer = m5.player
+	t.eq(m5.skel.get_bone_count(), 54, "tripo v5: 骨 54 本")
+	var lens5 := {"RaceGallop": 0.45, "Stand": 3.0, "Walk": 1.2, "Trot": 173.0 / 240.0, "Canter": 0.6}
+	var morph5 := {"RaceGallop": 1.0, "Stand": 0.0, "Walk": 0.0, "Trot": 1.0, "Canter": 1.0}
+	var gait5 := {"RaceGallop": "race", "Stand": "stand", "Walk": "walk", "Trot": "trot", "Canter": "canter"}
+	for c in lens5:
+		t.ok(ap5.has_animation(c), "tripo v5: クリップ %s がある" % c)
+		if not ap5.has_animation(c):
+			continue
+		var a5 := ap5.get_animation(c)
+		t.ok(absf(a5.length - float(lens5[c])) < 0.002 and a5.loop_mode == Animation.LOOP_LINEAR, "tripo v5: %s は約 %.3f 秒のループ（%.4f）" % [c, lens5[c], a5.length])
+		# 1 周で同じ形に戻る・骨が有限・首の補正はクリップの値
+		var g5: String = gait5[c]
+		m5.set_motion(g5, 0.0, 0.0)
+		var p0: Array[Vector3] = []
+		for i in m5.skel.get_bone_count():
+			p0.append(m5.skel.get_bone_global_pose(i).origin)
+		var fin5 := true
+		for k in range(1, 49):
+			m5.set_motion(g5, k / 48.0, 0.0)
+			if not m5.bones_finite():
+				fin5 = false
+		var dr5 := 0.0
+		for i in m5.skel.get_bone_count():
+			dr5 = maxf(dr5, m5.skel.get_bone_global_pose(i).origin.distance_to(p0[i]))
+		t.ok(fin5 and dr5 < 1e-3, "tripo v5: %s は 1 周で同じ形に戻り骨が有限（ずれ %s）" % [c, str(dr5)])
+		m5.set_motion(g5, 0.37, 0.0)
+		t.ok(String(ap5.current_animation) == c and is_equal_approx(m5.neck_value(), float(morph5[c])), "tripo v5: %s の首の補正 %.0f（%.3f）" % [c, morph5[c], m5.neck_value()])
+	t.ok(absf(m5.gait_stride_m("trot") - 2.8) < 1e-4 and absf(m5.gait_stride_m("canter") - 4.5) < 1e-4 and absf(m5.gait_stride_m("walk") - 1.6) < 1e-4 and absf(m5.stride_m() - 7.0) < 1e-4, "tripo v5: 倍率 2.6 の完歩 常歩 1.6・速歩 2.8・駈歩 4.5・襲歩 7m")
+	var gv := []
+	for vv in [0.0, 1.3, 3.9, 7.5, 16.0]:
+		gv.append(m5.gait_for(vv))
+	t.eq(gv, ["stand", "walk", "trot", "canter", "race"], "tripo v5: 速さ 0・1.3・3.9・7.5・16 m/秒で 立ち姿・常歩・速歩・駈歩・走り")
+	t.eq(m5.gait_for(16.0, true), "stand", "tripo v5: ゲートの中は立ち姿")
+	t.eq(m4.gait_for(3.9), "walk", "tripo v4: 速歩が無いので 3.9 m/秒は常歩のまま")
+	# 毛色（付属のシェーダの補正を合わせたもの）
+	var horse5: MeshInstance3D = null
+	var tack5 := true
+	var tris5 := 0
+	for x in m5.meshes:
+		tris5 += x.mesh.surface_get_array_index_len(0) / 3
+		if String(x.name) == "Horse":
+			horse5 = x
+		elif x.material_override != null:
+			tack5 = false
+	t.ok(tack5 and m5.meshes.size() == 3, "tripo v5: 頭絡は元の材質のまま（%d の形）" % m5.meshes.size())
+	t.ok(tris5 <= 19358, "tripo v5: 三角形は v4（19,358）より増えない（%d）" % tris5)
+	var sm5: ShaderMaterial = horse5.material_override if horse5 != null else null
+	t.ok(sm5 != null and sm5.shader.resource_path.ends_with("v5/coat.gdshader"), "tripo v5: 毛色は v5/coat.gdshader")
+	if sm5 != null:
+		var code := sm5.shader.code
+		t.ok(code.contains("geometric_normal") and code.contains("dot(NORMAL, geometric_normal) < 0.15"), "tripo v5: 毛色のシェーダに法線の補正（面の向きと 0.15 より食い違う画素を戻す）がある")
+		t.ok(code.contains("mix(body, muzzle_color.rgb, region_blend)") and code.contains("mix(body, mane_color.rgb, region_blend)"), "tripo v5: 鼻先とたてがみの根元を UV2 の小数で混ぜる")
+		t.ok(code.contains("points_color") and code.contains("top_color") and code.contains("belly_color"), "tripo v5: v3 の脚先・背と腹の濃淡も残す")
+		var names := []
+		for u in sm5.shader.get_shader_uniform_list():
+			names.append(String(u.name))
+		t.ok(names.has("coat_color") and names.has("muzzle_color") and names.has("normal_strength"), "tripo v5: 毛色のシェーダが読める（uniform %d 個）" % names.size())
+		t.ok(absf(float(sm5.get_shader_parameter("normal_strength")) - 0.03) < 1e-3 and sm5.get_shader_parameter("has_normal_map") == true, "tripo v5: 法線の絵は GLB の強さ 0.03 のまま（%s）" % str(sm5.get_shader_parameter("normal_strength")))
+		m5.set_coat({"coatLook": UiArt.coat_look("栗毛")})
+		var want_body := Color.html(String(UiArt.coat_look("栗毛").body))
+		t.ok((sm5.get_shader_parameter("coat_color") as Color).is_equal_approx(want_body), "tripo v5: 毛色の表（UiArt.coat_look）の色を渡す")
+		var uv5 = horse5.mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV2]
+		var rg5 := {}
+		var lg5 := {}
+		var mixed := 0
+		for uv in uv5:
+			var r5 := int(floor(uv.x * 8.0))
+			rg5[r5] = true
+			lg5[int(floor(uv.y * 8.0))] = true
+			var fr := fposmod(uv.x * 8.0, 1.0)
+			if (r5 == 1 or r5 == 4) and fr > 0.12 and fr < 0.88:
+				mixed += 1
+		t.ok(rg5.size() == 8 and lg5.size() == 5, "tripo v5: UV2 の領域 8・脚の番号 5（v3・v4 と同じ決まり）")
+		t.ok(mixed > 0, "tripo v5: 鼻先・たてがみの根元に混ぜる途中の頂点がある（%d）" % mixed)
+	# 取付点：引き継ぎの saddle-track.json（モデル座標・倍率を掛ける前）の位置に合う
+	var socks5 := true
+	for n in ["Saddle", "Stirrup_L", "Stirrup_R", "Bit_L", "Bit_R", "Withers"]:
+		if not m5.sockets.has(n):
+			socks5 = false
+	t.ok(socks5, "tripo v5: 取付点 6 つがある（%s）" % str(m5.sockets.keys()))
+	var track5 := [[0.0, "Saddle", Vector3(0.02302, 0.53869, 0.0)], [0.23333, "Saddle", Vector3(0.03487, 0.52309, 0.0)],
+		[0.11667, "Bit_L", Vector3(-0.48224, 0.44807, 0.039)], [0.35, "Withers", Vector3(-0.15226, 0.5155, -0.00191)]]
+	var err5 := 0.0
+	for e in track5:
+		m5.set_motion("race", float(e[0]) / 0.45, 0.0)
+		var pm5: Vector3 = m5.glb.global_transform.affine_inverse() * m5.socket_xf(String(e[1])).origin
+		err5 = maxf(err5, pm5.distance_to(e[2]) * 2.6)
+	t.ok(err5 < 0.002, "tripo v5: 取付点が引き継ぎの記録に合う（最大 %.4fm・2mm まで）" % err5)
+	# き甲の上下・走りから立ち姿へ戻す
+	var wl := 1e9
+	var wh := -1e9
+	for k in 96:
+		m5.set_motion("race", k / 96.0, 0.0)
+		var wy5: float = m5.socket_xf("Withers").origin.y
+		wl = minf(wl, wy5); wh = maxf(wh, wy5)
+	t.ok(wh - wl > 0.13 and wh - wl < 0.17, "tripo v5: き甲が 0.13〜0.17m 上下する（%.3f）" % (wh - wl))
+	var ref5 = TripoModel.new()
+	sc.add_child(ref5)
+	ref5.setup("v5")
+	m5.set_motion("race", 0.5, 0.0)
+	var tt := 0.3
+	for k in 30:
+		tt += 0.05
+		m5.set_motion("stand", tt / 3.0, 0.05)
+	ref5.set_motion("stand", tt / 3.0, 0.0)
+	var sw5 := 0.0
+	for i in m5.skel.get_bone_count():
+		sw5 = maxf(sw5, m5.skel.get_bone_global_pose(i).origin.distance_to(ref5.skel.get_bone_global_pose(i).origin))
+	t.ok(sw5 < 1e-3 and is_equal_approx(m5.neck_value(), 0.0), "tripo v5: 走りから立ち姿へ戻すと立ち姿の形に戻り首の補正 0（ずれ %s）" % str(sw5))
+	ref5.free()
+	# 騎手を Saddle に乗せる（Saddle の軸は v4 と同じなので −90° のまま）
+	m5.mount_jockey(sc.race_info)
+	m5.set_motion("race", 0.4, 0.0)
+	m5.update_rider(0.4, 1.0, 1.0, 0.0)
+	t.ok(m5.rider != null and (m5.rider_hold.global_transform * m5._seat0).distance_to(m5.socket_xf("Saddle").origin) < 1e-3, "tripo v5: 騎手の鞍の上面が Saddle に重なる")
+	var fwd5: Vector3 = m5.rider_hold.global_basis.z.normalized()
+	t.ok(fwd5.dot(m5.global_basis.z.normalized()) > 0.98 and m5.rider_hold.global_basis.y.normalized().y > 0.98, "tripo v5: 騎手は馬の前（+Z）を向き、上は +Y（%s）" % str(fwd5))
 	sc.free()
 	# ---- レース画面の差し替え（--proto-horse=v4） ----
 	var rv4 = load("res://scenes/race.tscn").instantiate()
@@ -220,6 +344,30 @@ func run(t) -> void:
 	var got4: float = rv4.proto[me4].player.current_animation_position
 	t.ok(String(rv4.proto[me4].player.current_animation) == "RaceGallop" and absf(got4 - want4) < 1e-3, "tripo race v4: 走りの位相は 距離÷7m（%.3f・%.3f 秒）" % [got4, want4])
 	rv4.free()
+	# ---- レース画面の差し替え（--proto-horse=v5） ----
+	var rv5 = load("res://scenes/race.tscn").instantiate()
+	rv5.proto_ver = "v5"
+	t.root.add_child(rv5)
+	rv5.set_process(false)
+	t.eq(rv5.proto.size(), rv5.horses.size(), "tripo race v5: 全部の馬が試作 v5 に替わる（%d 頭）" % rv5.horses.size())
+	var riders5 := 0
+	var shader5 := 0
+	for p in rv5.proto:
+		if p.rider != null:
+			riders5 += 1
+		if p.coat != null and p.coat.shader.resource_path.ends_with("v5/coat.gdshader"):
+			shader5 += 1
+	t.eq(riders5, rv5.horses.size(), "tripo race v5: 全部の v5 に騎手が乗る")
+	t.eq(shader5, rv5.horses.size(), "tripo race v5: 全部の v5 が v5 の毛色のシェーダ")
+	rv5._jump_to(-1.0)
+	t.eq(String(rv5.proto[0].player.current_animation), "Stand", "tripo race v5: ゲートの中は立ち姿")
+	rv5._jump_to(8.0)
+	var me5: int = rv5.me
+	var x5: float = rv5._last_H[me5][0] if rv5._last_H.size() > me5 else -1.0
+	var want5 := fposmod((x5 / 7.0 + rv5.horses[me5].num * 0.137), 1.0) * 0.45
+	var got5: float = rv5.proto[me5].player.current_animation_position
+	t.ok(String(rv5.proto[me5].player.current_animation) == "RaceGallop" and absf(got5 - want5) < 1e-3, "tripo race v5: 走りの位相は 距離÷7m（%.3f・%.3f 秒）" % [got5, want5])
+	rv5.free()
 	# ---- レース画面の差し替え（--proto-horse=v3 と同じ） ----
 	var rv = load("res://scenes/race.tscn").instantiate()
 	rv.proto_ver = "v3"

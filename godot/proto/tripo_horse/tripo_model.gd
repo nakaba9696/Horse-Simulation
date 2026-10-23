@@ -6,6 +6,9 @@
 #   v4：v3 の約束のまま、立ち姿 Stand（3 秒）・常歩 Walk（1.2 秒・倍率 2.6 で1完歩 1.6m）を足したもの。首の補正の値はクリップが持つ（走り 1・立ち姿と常歩 0）。
 #       頭絡（BridleLeather・BridleMetal）は別の材質なので毛色は Horse にだけ塗る。騎手を乗せる点 Saddle・Stirrup_L/R（背の骨 Spine_3）・手綱の点 Bit_L/R（頭の骨 Head_5）・測る点 Withers
 #       歩き方の切り替えは 0.2 秒で混ぜる（set_motion）。騎手は mount_jockey で Saddle に乗せる（試作）
+#   v5：v4 の約束（完歩・周期・取付点・Saddle の向き・UV2 の決まり）のまま、首と肩を作り直したもの。速歩 Trot（173/240 秒・1完歩 2.8m）と
+#       駈歩 Canter（0.6 秒・4.5m）を足した。毛色は v5/coat.gdshader（v3 の毛色に引き継ぎのシェーダの補正：法線・鼻先とたてがみの混ぜ）。
+#       法線の絵の強さは GLB の 0.03。取り込みは AnimationPlayer の optimizer と compression を切る（.import の _subresources）
 # 向き：GLB は Y-up・前 -X → 親の Y に +90°（骨は回さない）
 extends Node3D
 
@@ -17,10 +20,18 @@ const SPEC := {
 	"v3": {"glb": "res://proto/tripo_horse/v3/horse-gallop-v3.glb", "clip": "RaceGallop", "cycle": 0.45, "stride26": 7.0},
 	"v4": {"glb": "res://proto/tripo_horse/v4/horse-gallop-v4.glb", "clip": "RaceGallop", "cycle": 0.45, "stride26": 7.0,
 		"stand": "Stand", "stand_cycle": 3.0, "walk": "Walk", "walk_cycle": 1.2, "walk26": 1.6, "morph_in_clip": true},
+	"v5": {"glb": "res://proto/tripo_horse/v5/horse-gallop-v5.glb", "clip": "RaceGallop", "cycle": 0.45, "stride26": 7.0,
+		"stand": "Stand", "stand_cycle": 3.0, "walk": "Walk", "walk_cycle": 1.2, "walk26": 1.6,
+		"trot": "Trot", "trot_cycle": 173.0 / 240.0, "trot26": 2.8, "canter": "Canter", "canter_cycle": 0.6, "canter26": 4.5,
+		"morph_in_clip": true, "shader": "res://proto/tripo_horse/v5/coat.gdshader"},
 }
+# 速さ（m/秒）で歩き方を決める境：これより遅いとその歩き方（立ち姿・常歩・速歩・駈歩。無い歩き方は飛ばす）
+#   常歩の自然な速さ 1.6÷1.2＝1.3・速歩 2.8÷0.72＝3.9・駈歩 4.5÷0.6＝7.5・襲歩 7÷0.45＝15.6 の間。v4 は立ち姿 0.3・常歩 5.5（いまの馬の常歩の混ぜ方が半分になる所）
+const GAIT_V := [["stand", 0.3], ["walk", 2.4], ["trot", 5.5], ["canter", 11.0]]
+const GAIT_V_NO_TROT := [["stand", 0.3], ["walk", 5.5]]
 const XFADE := 0.2              # 歩き方を替えるときに混ぜる時間（秒。引き継ぎの目安 0.18〜0.25）
 # 根からの前後のずれ（m。立ち姿の AABB の前後のまん中をゲームの馬にそろえる。試作は -1.27〜+1.27、ゲームの馬は -1.02〜+1.42 → +0.2）
-const ROOT_DZ := {"v2": 0.2, "v3": 0.2, "v4": 0.2}
+const ROOT_DZ := {"v2": 0.2, "v3": 0.2, "v4": 0.2, "v5": 0.2}
 const COAT_SHADER := "res://proto/tripo_horse/v3/coat.gdshader"
 
 var ver := "v3"
@@ -33,7 +44,7 @@ var meshes: Array[MeshInstance3D] = []
 var coat: ShaderMaterial        # v3
 var flat: StandardMaterial3D    # v2
 var neck_idx := {}              # MeshInstance3D → 首の補正の番号
-var gait := "race"              # race・walk・stand（v4）
+var gait := "race"              # race・canter・trot・walk・stand（v4 は race・walk・stand）
 var sockets := {}               # 名前 → Node3D（v4：Saddle・Stirrup_L・Stirrup_R・Bit_L・Bit_R・Withers）
 var rider_hold: Node3D          # 騎手の親（いまの馬の胴の代わり。Saddle に合わせて毎コマ置く）
 var rider: ViewJockey
@@ -58,7 +69,7 @@ func setup(v: String, info: Dictionary = {}, s := SCALE) -> void:
 				clip = a
 				break
 	player.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
-	for k in ["stand", "walk"]:
+	for k in ["stand", "walk", "trot", "canter"]:
 		if SPEC[ver].has(k) and player.has_animation(SPEC[ver][k]):
 			player.get_animation(SPEC[ver][k]).loop_mode = Animation.LOOP_LINEAR
 	if has_gaits():
@@ -79,7 +90,7 @@ func setup(v: String, info: Dictionary = {}, s := SCALE) -> void:
 				neck_idx[mi] = k
 	if ver != "v2":
 		coat = ShaderMaterial.new()
-		coat.shader = load(COAT_SHADER)
+		coat.shader = load(String(SPEC[ver].get("shader", COAT_SHADER)))
 		for mi in meshes:
 			if ver != "v3" and String(mi.name) != "Horse":
 				continue   # 頭絡は元の材質のまま
@@ -105,15 +116,41 @@ func has_gaits() -> bool:
 func morph_in_clip() -> bool:
 	return bool(SPEC[ver].get("morph_in_clip", false))
 
+func has_gait(g: String) -> bool:
+	return g == "race" or SPEC[ver].has(g)
+
+# 速さ v（m/秒）の歩き方（gate は発走の前＝立ち姿）
+func gait_for(v: float, gate := false) -> String:
+	if not has_gaits():
+		return "race"
+	if gate:
+		return "stand"
+	for e in (GAIT_V if SPEC[ver].has("trot") else GAIT_V_NO_TROT):
+		if v < float(e[1]) and has_gait(String(e[0])):
+			return String(e[0])
+	return "race"
+
+# 歩き方 g の位相（0〜1 を超えてよい）：立ち姿は時間÷周期、ほかは 距離÷その歩き方の完歩
+func gait_phase(g: String, dist: float, t: float) -> float:
+	if g == "stand":
+		return t / cycle_of("stand")
+	return dist / gait_stride_m(g)
+
+# 歩き方 g の1完歩（m）
+func gait_stride_m(g: String) -> float:
+	match g:
+		"walk": return walk_stride_m()
+		"trot", "canter": return float(SPEC[ver].get(g + "26", 7.0)) * S / SCALE
+	return stride_m()
+
 func clip_of(g: String) -> String:
 	if g == "race" or not SPEC[ver].has(g):
 		return String(SPEC[ver].clip)
 	return String(SPEC[ver][g])
 
 func cycle_of(g: String) -> float:
-	match g:
-		"stand": return float(SPEC[ver].get("stand_cycle", cycle()))
-		"walk": return float(SPEC[ver].get("walk_cycle", cycle()))
+	if g != "race" and SPEC[ver].has(g + "_cycle"):
+		return float(SPEC[ver][g + "_cycle"])
 	return cycle()
 
 # 常歩の1完歩（m）
@@ -139,7 +176,7 @@ func set_phase(ph: float) -> void:
 	player.seek(fposmod(ph, 1.0) * cycle(), true)
 	set_neck(1.0)
 
-# 歩き方 g（race・walk・stand）の位相 ph（0〜1）の形にする（v4）。歩き方が替わったら XFADE 秒で混ぜる。dt は実の時間（混ぜる進み）
+# 歩き方 g（race・canter・trot・walk・stand）の位相 ph（0〜1）の形にする（v4）。歩き方が替わったら XFADE 秒で混ぜる。dt は実の時間（混ぜる進み）
 func set_motion(g: String, ph: float, dt: float) -> void:
 	if not has_gaits():
 		set_phase(ph)
