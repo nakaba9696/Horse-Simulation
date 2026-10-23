@@ -1,0 +1,64 @@
+{
+  "archive_sha256": "81c484ed6cd8fc76a5e120f70f6f5bf0681248f8fed489e11d0ab1daef7cbda0",
+  "fresh_extract_hash_checks_passed": 100,
+  "godot_version": "4.6.3",
+  "fresh_extract_import_and_verify_passed": true,
+  "godot_result": {
+    "bones": 54,
+    "clips": {
+      "RaceGallop": {
+        "duration": 0.450000017881393,
+        "loop_error": 0.0,
+        "morph": 1.0,
+        "samples": 1920,
+        "tracks": 163
+      },
+      "Stand": {
+        "duration": 3.0,
+        "loop_error": 0.0,
+        "morph": 0.0,
+        "samples": 1920,
+        "tracks": 163
+      },
+      "Walk": {
+        "duration": 1.19999992847443,
+        "loop_error": 0.0,
+        "morph": 0.0,
+        "samples": 1920,
+        "tracks": 163
+      }
+    },
+    "legs": {
+      "0": 12020,
+      "1": 1740,
+      "2": 1850,
+      "3": 1720,
+      "4": 1699
+    },
+    "other_socket_tolerance_m": 0.007,
+    "reference_scale": 2.6,
+    "regions": {
+      "0": 11440,
+      "1": 1883,
+      "2": 3310,
+      "3": 1224,
+      "4": 736,
+      "5": 25,
+      "6": 292,
+      "7": 119
+    },
+    "seat_tolerance_m": 0.002,
+    "socket_count": 6,
+    "socket_max_angle_error_radians": 0.00452813785523176,
+    "socket_max_position_error": 0.0022583834361285,
+    "socket_position_error_model_by_node": {
+      "Bit_L": 0.0022583834361285,
+      "Bit_R": 0.00225832383148372,
+      "Saddle": 0.000502937182318419,
+      "Stirrup_L": 0.000535724859219044,
+      "Stirrup_R": 0.000535813858732581,
+      "Withers": 0.000958639138843864
+    },
+    "stand_switch_error": 0.0
+  }
+}
