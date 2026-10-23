@@ -1,0 +1,78 @@
+{
+  "method": "Final GLB reimport, skeleton REST pose, corrective 0. Base-body triangles only (first source body triangle count; exporter preserves polygon order). Neck sections perpendicular to withers-poll chord, width measured at midpoint between dorsal/ventral skin hits. Head bounding box uses >0.995 Head_5 weight, excluding added geometry. Upper neck rays may include the jaw; this is a geometric cross-section diagnostic, not an anatomical acceptance score.",
+  "reference_scale": 2.6,
+  "versions": {
+    "v5": {
+      "neck_sections": [
+        {
+          "fraction_from_withers": 0.25,
+          "dorsoventral_thickness_m": 0.287551159880828,
+          "lateral_width_m": 0.25756982848123594
+        },
+        {
+          "fraction_from_withers": 0.5,
+          "dorsoventral_thickness_m": 0.2390161922115437,
+          "lateral_width_m": 0.20770756198044105
+        },
+        {
+          "fraction_from_withers": 0.75,
+          "dorsoventral_thickness_m": 0.47670256588776244,
+          "lateral_width_m": 0.2981792204237513
+        }
+      ],
+      "rigid_head_bbox_m": {
+        "longitudinal_extent": 0.6748854935169221,
+        "depth": 0.35019474029541015,
+        "width": 0.3776566058397293
+      }
+    },
+    "v6": {
+      "neck_sections": [
+        {
+          "fraction_from_withers": 0.25,
+          "dorsoventral_thickness_m": 0.3108254266643917,
+          "lateral_width_m": 0.2296035702462586
+        },
+        {
+          "fraction_from_withers": 0.5,
+          "dorsoventral_thickness_m": 0.23204837406352488,
+          "lateral_width_m": 0.16830077484642603
+        },
+        {
+          "fraction_from_withers": 0.75,
+          "dorsoventral_thickness_m": 0.2766420397834076,
+          "lateral_width_m": 0.14748090021532306
+        }
+      ],
+      "rigid_head_bbox_m": {
+        "longitudinal_extent": 0.5696574002504349,
+        "depth": 0.27768810987472536,
+        "width": 0.2773875996470451
+      }
+    }
+  },
+  "v6_over_v5": {
+    "neck_sections": [
+      {
+        "fraction_from_withers": 0.25,
+        "thickness": 1.080939568434394,
+        "width": 0.8914226157625652
+      },
+      {
+        "fraction_from_withers": 0.5,
+        "thickness": 0.9708479242199128,
+        "width": 0.8102775519664238
+      },
+      {
+        "fraction_from_withers": 0.75,
+        "thickness": 0.5803242096425841,
+        "width": 0.49460488898499905
+      }
+    ],
+    "rigid_head_bbox": {
+      "longitudinal_extent": 0.8440800783579908,
+      "depth": 0.792953399701203,
+      "width": 0.7344968825059118
+    }
+  }
+}

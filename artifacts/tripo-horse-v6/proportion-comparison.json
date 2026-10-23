@@ -1,0 +1,64 @@
+{
+  "coordinate_space": "distances in physical meters at reference scale 2.6",
+  "method": "Actual evaluated skin landmarks from neck-line.json; 108 phases excluding duplicate endpoint. Head length is poll to midpoint of bilateral muzzle surface landmarks, not the scale parameter.",
+  "versions": {
+    "v5": {
+      "neck_horizontal_length_m": {
+        "mean": 0.532058032775762,
+        "min": 0.5320041796197966,
+        "max": 0.5321112321173743,
+        "range": 0.00010705249757769764
+      },
+      "neck_chord_length_m": {
+        "mean": 0.5849637893920467,
+        "min": 0.5797788361592482,
+        "max": 0.5913455360133032,
+        "range": 0.011566699854055007
+      },
+      "head_length_m": {
+        "mean": 0.6246039130420094,
+        "min": 0.6244472325637398,
+        "max": 0.6246691887498446,
+        "range": 0.00022195618610476586
+      },
+      "poll_height_m": {
+        "mean": 1.6700667873207624,
+        "min": 1.580929457965059,
+        "max": 1.7522868234782472,
+        "range": 0.17135736551318814
+      }
+    },
+    "v6": {
+      "neck_horizontal_length_m": {
+        "mean": 0.665193517545943,
+        "min": 0.6651196356121479,
+        "max": 0.6653185185434491,
+        "range": 0.00019888293130121415
+      },
+      "neck_chord_length_m": {
+        "mean": 0.7407684017527594,
+        "min": 0.71209532729383,
+        "max": 0.782299930261841,
+        "range": 0.07020460296801101
+      },
+      "head_length_m": {
+        "mean": 0.5571689404556848,
+        "min": 0.5566234595208269,
+        "max": 0.5575268194953411,
+        "range": 0.000903359974514184
+      },
+      "poll_height_m": {
+        "mean": 1.7517743339798653,
+        "min": 1.6106411985017002,
+        "max": 1.8969449421642375,
+        "range": 0.2863037436625373
+      }
+    }
+  },
+  "v6_over_v5": {
+    "neck_horizontal_length_m": 1.2502273747764119,
+    "neck_chord_length_m": 1.2663491573087635,
+    "head_length_m": 0.8920356226109825
+  },
+  "source_glb_sha256": "e1ace4f2834512d6a606d9779192f76c6db4edeba98539c976bbfcf300eb6656"
+}

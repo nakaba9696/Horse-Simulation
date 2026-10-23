@@ -1,0 +1,17 @@
+{
+  "base": {
+    "symmetric_hausdorff_model": 3.039309544876352e-07,
+    "symmetric_hausdorff_m_at_2_6": 7.902204816678515e-07
+  },
+  "corrective": {
+    "symmetric_hausdorff_model": 3.039309544876352e-07,
+    "symmetric_hausdorff_m_at_2_6": 7.902204816678515e-07
+  },
+  "delivered_glb_sha256": "e1ace4f2834512d6a606d9779192f76c6db4edeba98539c976bbfcf300eb6656",
+  "clean_rebuild_glb_sha256": "8a91c4f62ffa14ee654c65f5dd1013413c3289418f15ea78b3ca1641aa609815",
+  "byte_identical": false,
+  "vertex_count_each": 9442,
+  "triangle_count_each": 18620,
+  "clean_rebuild_all_numeric_and_godot_checks_passed": true,
+  "note": "Full clean rebuild passes its own numerical and Godot validations. Boolean output vertex order, float rounding and sparse encoding differ, so byte identity is not claimed. Bidirectional nearest-vertex distance compares both base and corrective meshes. It does not certify identical topology indexing. Deliver and review the original e1ace... asset."
+}
