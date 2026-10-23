@@ -19,6 +19,7 @@
 | `assets/fonts/NotoSerifJP_900Black_sub.ttf` | 見出しの明朝（Noto Serif JP Black）。ゲームで使う字だけに減らした（`tools/subset_font.py`） | Adobe（Source Han Serif）・Google | SIL Open Font License 1.1 | Google Fonts の Noto Serif JP。npm の `@expo-google-fonts/noto-serif-jp@0.4.4` に入っているものから作った（減らしたものも同じ OFL で配れる。`OFL.txt` を一緒に配る） |
 | `proto/tripo_horse/v2/horse-gallop.glb`（と法線の絵） | 馬モデルの試作 v2（骨 54 本・襲歩のその場走行）。ゲームでは使わない試作で、書き出しにも入れない | 形：持ち主（Tripo で生成）。骨とアニメ：Codex | 持ち主の提供（Tripo の Pro プランで作った素材で、商用で使える。2026-10-22 持ち主に確かめた） | 枝 `codex/tripo-horse-handoff`（`../assets/CREDITS.md` の「馬モデルの試作 v2」） |
 | `proto/tripo_horse/v3/horse-gallop-v3.glb`・`v3/coat.gdshader` | 馬モデルの試作 v3（骨 54 本・競走の襲歩 RaceGallop 0.45 秒・1完歩 7m・UV2 の毛色の領域・首の補正）と毛色のシェーダ。ゲームでは使わない試作で、書き出しにも入れない | 形：持ち主（Tripo で生成）。骨・アニメ・毛色の領域・シェーダの元：Codex | 持ち主の提供（Tripo の Pro プランで作った素材で、商用で使える。2026-10-22 持ち主に確かめた） | 枝 `codex/tripo-horse-handoff` の `artifacts/tripo-horse-v3/horse-claude-handoff-v3.zip`（SHA-256 `d0952963…8c4c`。2026-10-22。`../assets/CREDITS.md` の「馬モデルの試作 v3」） |
+| `proto/tripo_horse/v4/horse-gallop-v4.glb` | 馬モデルの試作 v4（骨 54 本・襲歩 RaceGallop 0.45 秒・立ち姿 Stand・常歩 Walk・UV2 の毛色の領域・首の補正・房・頭絡・騎手と手綱の取付点）。ゲームでは使わない試作で、書き出しにも入れない。毛色は `v3/coat.gdshader` を使う | 形：持ち主（Tripo で生成）。骨・アニメ・房・頭絡・取付点：Codex | 持ち主の提供（Tripo の Pro プランで作った素材で、商用で使える。2026-10-22 持ち主に確かめた） | 枝 `codex/tripo-horse-handoff` の `artifacts/tripo-horse-v4/horse-claude-handoff-v4.zip`（SHA-256 `81c484ed…daf0`。2026-10-23。`../assets/CREDITS.md` の「馬モデルの試作 v4」） |
 
 ## 確かめたこと
 - 骨入りの馬は CC-BY 4.0（作者 abhayexe。`../assets/src/horse_rigged/license.txt`）。作者の名前とクレジットの文をゲームの中のクレジットに出す。

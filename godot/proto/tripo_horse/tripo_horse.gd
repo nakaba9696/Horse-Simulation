@@ -1,10 +1,13 @@
 # 馬モデル試作（持ち主が Tripo で作った形に、骨54本と襲歩のその場走行を付けたもの）を見るだけの独立した場面
-# v2（Gallop・0.8 秒・1完歩 約 1.84m）と v3（RaceGallop・0.45 秒・1完歩 7m・UV2 の毛色の領域・首の補正）と、いまの馬（ViewHorse）を切り替え・並べて見る
+# v2（Gallop・0.8 秒・1完歩 約 1.84m）と v3（RaceGallop・0.45 秒・1完歩 7m・UV2 の毛色の領域・首の補正）と
+# v4（v3 に 4本とも浮く走り・立ち姿 Stand・常歩 Walk・騎手の点 Saddle・頭絡）と、いまの馬（ViewHorse）を切り替え・並べて見る
 # ゲームの場面・メニューからは呼ばない。本採用は持ち主が実画面で比べてから決める（2026-10-22）
 #   開く：sh godot/tools/run_scene.sh res://proto/tripo_horse/tripo_horse.tscn
-#   撮る：… -- --out=DIR --ver=v3|v2 --view=side|rear|front|feet --lay=solo|pair|trio --v=16 --mode=slip|cadence --t=秒 --seq=枚数 --dt=秒
+#   撮る：… -- --out=DIR --ver=v4|v3|v2 --view=side|rear|front|feet|neck --lay=solo|pair|trio|trio4|quad --v=16 --mode=slip|cadence --t=秒 --seq=枚数 --dt=秒
 #             --coat=bay|chestnut|grey --socks=1 --face=1 --regions=1 --jockey=1 --tag=名前 --shots=キー:値,…/…（1回の起動で何枚も）
-#   操作：1 横・2 斜め後ろ・3 正面・4 足元／V v2 と v3／C 並べ方（1頭・いまの馬と・3頭）／↑↓ 速さ／M 再生の合わせ方
+#             --neckof=v3|v4|old（--view=neck で寄る馬）
+#             速さで歩き方が替わる（v4。0.3 m/秒より遅いと立ち姿・5.5 m/秒より遅いと常歩）。--jockey=1 は v4 にも騎手を乗せる
+#   操作：1 横・2 斜め後ろ・3 正面・4 足元・5 首と肩の寄り／V v2・v3・v4／C 並べ方（1頭・いまの馬と・v2/v3/いまの馬・v3/v4/いまの馬・4頭）／↑↓ 速さ／M 再生の合わせ方
 #         K 毛色（鹿毛・栗毛・芦毛）／W 白い脚／F 顔の白徴／R 領域の表示／J いまの馬の騎手／Space 止める
 #
 # 向き：元の GLB は Y-up・前 -X・馬の左 +Z。ゲームの馬（ViewHorse）は前 +Z・左 +X なので、GLB の根を Y のまわりに +90° 回す（骨は回さない。tripo_model.gd）
@@ -17,8 +20,11 @@ const STRIDE_OLD := 7.2                     # いまの馬の1完歩（m。view/
 const GAP_SIDE := 3.4                       # 横・足元から見るとき、並べる馬の前後の間（m）
 const GAP_WIDE := 2.4                       # 正面・斜め後ろから見るとき、並べる馬の左右の間（m）
 const LOOP_Z := 400.0                       # この長さごとに位置を巻き戻す（カメラも一緒なので見えない）
-const SPEEDS := [4.0, 8.0, 12.0, 15.56, 16.0, 18.0]
-const VIEWS := {"side": "横", "rear": "斜め後ろ", "front": "正面", "feet": "足元"}
+const SPEEDS := [0.0, 1.6, 4.0, 8.0, 12.0, 15.56, 16.0, 18.0]
+const VIEWS := {"side": "横", "rear": "斜め後ろ", "front": "正面", "feet": "足元", "neck": "首と肩の寄り"}
+const VERS := ["v2", "v3", "v4"]
+const STAND_V := 0.3                        # これより遅いと立ち姿（v4）
+const WALK_V := 5.5                         # これより遅いと常歩（v4。いまの馬の常歩の混ぜ方 1−smooth((v−4)/3) が半分になる所）
 const COATS := {"bay": ["鹿毛", 4.0], "chestnut": ["栗毛", 4.0], "grey": ["芦毛", 7.0]}
 const COAT_NAME := {"bay": "鹿毛", "chestnut": "栗毛", "grey": "芦毛"}
 const SOCKS := [0.24, 0.16, 0.34, 0.46]     # 白い脚を試すときの長さ（m。左前・右前・左後・右後）
@@ -26,7 +32,7 @@ const SOCKS := [0.24, 0.16, 0.34, 0.46]     # 白い脚を試すときの長さ�
 var rig: Node3D               # 試作の馬の親（移動する。いま見ている版）
 var tri := {}                 # 版 → 試作の馬（tripo_model.gd）
 var tri_rig := {}             # 版 → 親
-var ver := "v3"               # いま見ている版
+var ver := "v4"               # いま見ている版
 var old: ViewHorse            # いまの馬（比べる）
 var old_rig: Node3D
 var race_info: Dictionary
@@ -35,12 +41,13 @@ var hud: Label
 var v := 16.0                 # 移動の速さ（m/秒）
 var mode := "slip"            # slip＝蹄が滑らない（距離÷試作の完歩）／cadence＝いまの馬と同じ完歩の数（距離÷7.2m）
 var view := "side"
-var lay := "solo"             # solo＝試作1頭／pair＝試作といまの馬／trio＝v2・v3・いまの馬
+var lay := "solo"             # solo＝試作1頭／pair＝試作といまの馬／trio＝v2・v3・いまの馬／trio4＝v3・v4・いまの馬／quad＝v2・v3・v4・いまの馬
 var coat := "bay"
 var socks := false
 var face := false
 var regions := false
 var paused := false
+var neck_of := ""             # 首と肩の寄りで見る馬（v2・v3・v4・old。空はいま見ている版）
 var t := 0.0                  # 経った時間（秒）
 var dist := 0.0               # 走った距離（m）
 
@@ -61,7 +68,7 @@ func _ready() -> void:
 		args[kv[0]] = kv[1] if kv.size() > 1 else "1"
 	build_world()
 	race_info = (JSON.parse_string(FileAccess.get_file_as_string("res://assets/replay_race.json")) as Dictionary).horses[0]
-	for vv in ["v2", "v3"]:
+	for vv in VERS:
 		var r := Node3D.new()
 		add_child(r)
 		var m = TripoModel.new()
@@ -87,6 +94,7 @@ func apply(a: Dictionary) -> void:
 	socks = a.get("socks", "0") == "1"
 	face = a.get("face", "0") == "1"
 	regions = a.get("regions", "0") == "1"
+	neck_of = String(a.get("neckof", ""))
 	set_jockey(a.get("jockey", "0") == "1")
 	refresh()
 
@@ -94,7 +102,7 @@ func apply(a: Dictionary) -> void:
 func refresh() -> void:
 	rig = tri_rig[ver]
 	for vv in tri_rig:
-		tri_rig[vv].visible = vv == ver or lay == "trio"
+		tri_rig[vv].visible = vv == ver or slots().has(vv)
 	old_rig.visible = lay != "solo"
 	var info := coat_info()
 	for vv in tri:
@@ -212,6 +220,13 @@ func build_old(with_jockey: bool) -> void:
 
 # 騎手・鞍・ゼッケンを出すか（馬の形どうしを比べるときは消す）
 func set_jockey(on: bool) -> void:
+	if tri.has("v4"):
+		if on and tri.v4.rider == null:
+			tri.v4.mount_jockey(race_info)
+		if tri.v4.rider_hold != null:
+			tri.v4.rider_hold.visible = on
+			if tri.v4.rider.body != null:
+				tri.v4.rider.body.visible = on
 	old.jockey.visible = on
 	if old.jockey.body != null:
 		old.jockey.body.visible = on
@@ -222,6 +237,8 @@ func set_jockey(on: bool) -> void:
 
 # ---- 並べる位置（3頭は横から見て左から v2・v3・いまの馬。馬は左（+Z）を向いて走る） ----
 func slot_off(k: int) -> Vector3:
+	if view == "neck":
+		return Vector3(0, 0, -14.0 * k)   # 寄るときは隣の馬が画面に入らないように離す
 	if view == "side" or view == "feet":
 		return Vector3(0, 0, -(GAP_SIDE + (0.6 if lay == "trio" else 0.0)) * k)
 	return Vector3(GAP_WIDE * k, 0, 0)
@@ -229,17 +246,37 @@ func slot_off(k: int) -> Vector3:
 func slots() -> Dictionary:
 	match lay:
 		"trio": return {"v2": -1, "v3": 0, "old": 1}
+		"trio4": return {"v3": -1, "v4": 0, "old": 1}
+		"quad": return {"v2": -1, "v3": 0, "v4": 1, "old": 2}
 		"pair": return {ver: 0, "old": 1}
 	return {ver: 0}
 
 # 試作の走りの位相：slip は 距離÷試作の完歩、cadence は いまの馬と同じ 距離÷7.2m
 func phase_of(vv: String) -> float:
+	var g := gait_of(vv)
+	if g == "stand":
+		return t / tri[vv].cycle_of("stand")
+	if g == "walk":
+		return dist / tri[vv].walk_stride_m()
 	var L: float = STRIDE_OLD if mode == "cadence" else tri[vv].stride_m()
 	return dist / L
+
+# 歩き方（v4 だけ。ほかは走りだけ）
+func gait_of(vv: String) -> String:
+	if not tri[vv].has_gaits():
+		return "race"
+	if v < STAND_V:
+		return "stand"
+	return "walk" if v < WALK_V else "race"
 
 # 再生の倍率（1秒あたりのクリップの進み）：位相の進み × 周期
 func anim_rate(vv := "") -> float:
 	var k: String = ver if vv == "" else vv
+	var g := gait_of(k)
+	if g == "stand":
+		return 1.0
+	if g == "walk":
+		return v * tri[k].cycle_of("walk") / tri[k].walk_stride_m()
 	var L: float = STRIDE_OLD if mode == "cadence" else tri[k].stride_m()
 	return v * tri[k].cycle() / L
 
@@ -252,7 +289,13 @@ func step(dt: float) -> void:
 	var sl := slots()
 	for vv in tri:
 		tri_rig[vv].position = base + slot_off(int(sl.get(vv, 0)))
-		tri[vv].set_phase(phase_of(vv))
+		if tri[vv].has_gaits():
+			var g := gait_of(vv)
+			tri[vv].set_motion(g, phase_of(vv), dt)
+			var ww := 1.0 if g != "race" else 0.0
+			tri[vv].update_rider(fposmod(dist / tri[vv].stride_m(), 1.0), clampf(v / 16.0, 0.35, 1.15), t + 3.0, ww)
+		else:
+			tri[vv].set_phase(phase_of(vv))
 	if sl.has("old"):
 		old_rig.position = base + slot_off(int(sl.old))
 		var sp := clampf(v / 16.0, 0.35, 1.15)
@@ -273,10 +316,10 @@ func place_cam(base: Vector3) -> void:
 		hi = maxi(hi, int(sl[k]))
 	var c := base + (slot_off(lo) + slot_off(hi)) * 0.5
 	var nh := hi - lo + 1
-	var far: float = [1.0, 1.45, 1.9][nh - 1]
+	var far: float = [1.0, 1.45, 1.9, 2.35][nh - 1]
 	match view:
 		"side":
-			cam.position = c + Vector3(7.5 * float([1.0, 1.3, 1.85][nh - 1]), 1.35, 0.4)
+			cam.position = c + Vector3(7.5 * float([1.0, 1.3, 1.85, 2.4][nh - 1]), 1.35, 0.4)
 			cam.look_at(c + Vector3(0, 1.05, 0.4))
 		"rear":
 			cam.position = c + Vector3(3.4 * far, 2.7, -6.5 * far)
@@ -288,6 +331,12 @@ func place_cam(base: Vector3) -> void:
 			var r: Vector3 = tri_rig[ver].position
 			cam.position = r + Vector3(3.6, 0.45, 0.2)
 			cam.look_at(r + Vector3(0, 0.38, 0.2))
+		"neck":
+			# 首の付け根・喉・肩の寄り（馬の左から、少し前・少し上）。並べたときは選んだ版を見る
+			var nk := neck_of if neck_of != "" else ver
+			var r2: Vector3 = old_rig.position if nk == "old" else tri_rig[nk].position
+			cam.position = r2 + Vector3(3.3, 1.5, 1.75)
+			cam.look_at(r2 + Vector3(0, 1.25, 0.95))
 
 func _process(delta: float) -> void:
 	if not paused:
@@ -301,8 +350,9 @@ func _unhandled_input(e: InputEvent) -> void:
 		KEY_2: view = "rear"
 		KEY_3: view = "front"
 		KEY_4: view = "feet"
-		KEY_V: ver = "v2" if ver == "v3" else "v3"
-		KEY_C: lay = {"solo": "pair", "pair": "trio", "trio": "solo"}[lay]
+		KEY_5: view = "neck"
+		KEY_V: ver = VERS[(VERS.find(ver) + 1) % VERS.size()]
+		KEY_C: lay = {"solo": "pair", "pair": "trio", "trio": "trio4", "trio4": "quad", "quad": "solo"}[lay]
 		KEY_J: set_jockey(not old.jockey.visible)
 		KEY_K: coat = {"bay": "chestnut", "chestnut": "grey", "grey": "bay"}[coat]
 		KEY_W: socks = not socks
@@ -345,10 +395,10 @@ func update_hud() -> void:
 		return
 	var m = tri[ver]
 	var r := anim_rate()
-	var lays := {"solo": "試作だけ", "pair": "左から 試作 %s・いまの馬" % ver, "trio": "左から v2・v3・いまの馬"}
+	var lays := {"solo": "試作だけ", "pair": "左から 試作 %s・いまの馬" % ver, "trio": "左から v2・v3・いまの馬", "trio4": "左から v3・v4・いまの馬", "quad": "左から v2・v3・v4・いまの馬"}
 	hud.text = "馬モデル試作 %s（Tripo の形・骨 %d 本・%s %.2f 秒）  倍率 %.1f・1完歩 %.2f m\n視点：%s　［1］横 ［2］斜め後ろ ［3］正面 ［4］足元　［V］版　［C］並べ方：%s\n速さ %.2f m/秒 ［↑↓］　再生の合わせ方 ［M］：%s　再生 ×%.2f・1秒に %.2f 完歩\n毛色 ［K］：%s　［W］白い脚：%s　［F］顔の白徴：%s　［R］領域：%s" % [
-		ver, m.skel.get_bone_count(), m.clip, m.cycle(), m.S, m.stride_m(), VIEWS.get(view, view), lays[lay],
-		v, "接地（蹄が滑らない）" if mode == "slip" else "完歩の数（いまの馬と同じ 7.2m）", r, r / m.cycle(),
+		ver, m.skel.get_bone_count(), m.clip_of(gait_of(ver)) if m.has_gaits() else m.clip, m.cycle_of(gait_of(ver)) if m.has_gaits() else m.cycle(), m.S, m.stride_m(), VIEWS.get(view, view), lays[lay],
+		v, "接地（蹄が滑らない）" if mode == "slip" else "完歩の数（いまの馬と同じ 7.2m）", r, r / (m.cycle_of(gait_of(ver)) if m.has_gaits() else m.cycle()),
 		COAT_NAME[coat], "あり" if socks else "なし", "あり" if face else "なし", "あり" if regions else "なし"]
 
 # ---- 撮る（決まった時刻へ進めて撮る） ----

@@ -91,8 +91,9 @@ var _whip_eff := 1.0       # ムチへの応え（使うほど鈍る。HSSim の
 # 全開の知らせ（docs/FEEL.md 3・4。持ち主の決定 2026-10-22）：模擬の ctl.drive を計器・音・振動へ。結果には触らない
 var drive := ViewRideDrive.new()
 var sfx: ViewRideSfx
-# 馬モデルの試作との見比べ（撮影だけ。ふだんの遊びでは使わない）：--proto-horse=v3（または v2）で馬の見た目だけ試作に差し替える。
-# 移動は今の模擬のまま。走りの位相は 距離÷試作の完歩（v3 は 7m＝再生の倍率 v×0.45÷7 と同じ）。試作には騎手が乗らないので騎手とゼッケンを消す。
+# 馬モデルの試作との見比べ（撮影だけ。ふだんの遊びでは使わない）：--proto-horse=v4（または v3・v2）で馬の見た目だけ試作に差し替える。
+# 移動は今の模擬のまま。走りの位相は 距離÷試作の完歩（v3・v4 は 7m＝再生の倍率 v×0.45÷7 と同じ）。v2・v3 には騎手が乗らないので騎手とゼッケンを消す。
+# v4 はゲートの中で立ち姿・遅いと常歩・速いと走り（0.2 秒で混ぜる）。騎手はいまの騎手を v4 の鞍の点 Saddle に乗せる（試作。--no-jockey で乗せない）。
 # --no-jockey は今の馬のまま騎手・鞍・ゼッケンだけを消す（形どうしを比べる）。試作は godot/proto/tripo_horse/（書き出しには入らない）
 const PROTO_MODEL := "res://proto/tripo_horse/tripo_model.gd"
 var proto_ver := ""
@@ -651,7 +652,14 @@ func place(H: Array, dt: float) -> void:
 		else:
 			if j == me:
 				h.animate(g, dt, true)   # 振り向くカメラが騎手の頭の位置を使う
-			proto[j].set_phase(x / proto[j].stride_m() + h.num * 0.137)
+			var pm = proto[j]
+			if pm.has_gaits():
+				var pg: String = "stand" if gate_now or v < 0.3 else ("walk" if v < 5.5 else "race")
+				var pph: float = maxf(T, 0.0) / pm.cycle_of("stand") if pg == "stand" else (x / pm.walk_stride_m() if pg == "walk" else x / pm.stride_m())
+				pm.set_motion(pg, pph + h.num * 0.137, dt)
+				pm.update_rider(fposmod(x / pm.stride_m() + h.num * 0.137, 1.0), sp if moving else 0.35, maxf(T, 0.0) + 3.0, 0.0 if pg == "race" else 1.0, cd < 90.0 or j == me)
+			else:
+				pm.set_phase(x / pm.stride_m() + h.num * 0.137)
 
 # ---- カメラ（FEEL.md 2） ----
 func update_camera(H: Array, dt: float) -> void:
@@ -690,6 +698,8 @@ func update_camera(H: Array, dt: float) -> void:
 	cam_state.look = ViewRideInput.look_ease(float(cam_state.look_t))
 	if horses.size() > me:
 		horses[me].jockey.head_yaw = float(cam_state.look) * JOCKEY_HEAD_YAW
+		if not proto.is_empty() and proto[me].rider != null:
+			proto[me].rider.head_yaw = horses[me].jockey.head_yaw
 	match mode:
 		"gate":
 			var n := float(src.n)
@@ -799,7 +809,8 @@ func _look_from(cp: Vector3, lk: Vector3, e: float) -> Array:
 # 自分の騎手の頭（世界の座標）。走りの拍子の細かな上下は、馬の根に対する位置をならして抑える
 func _head_pos() -> Vector3:
 	var hm := horses[me]
-	var w := hm.jockey.head_world()
+	var jk: ViewJockey = proto[me].rider if (not proto.is_empty() and proto[me].rider != null) else hm.jockey
+	var w := jk.head_world()
 	var loc := hm.global_transform.affine_inverse() * w
 	var prev = cam_state.get("head_loc")
 	if prev != null:
@@ -908,6 +919,8 @@ func _proto_setup() -> void:
 		var pm = load(PROTO_MODEL).new()
 		h.add_child(pm)
 		pm.setup(proto_ver, race.horses[j])
+		if not no_jockey and pm.sockets.has("Saddle"):
+			pm.mount_jockey(race.horses[j])
 		proto.append(pm)
 
 # 動画を撮るとき（CPU の Vulkan で重いので）：画面の後処理と影を軽く
