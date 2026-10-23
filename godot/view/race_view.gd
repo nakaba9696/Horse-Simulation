@@ -91,9 +91,9 @@ var _whip_eff := 1.0       # ムチへの応え（使うほど鈍る。HSSim の
 # 全開の知らせ（docs/FEEL.md 3・4。持ち主の決定 2026-10-22）：模擬の ctl.drive を計器・音・振動へ。結果には触らない
 var drive := ViewRideDrive.new()
 var sfx: ViewRideSfx
-# 馬モデルの試作との見比べ（撮影だけ。ふだんの遊びでは使わない）：--proto-horse=v5（または v4・v3・v2）で馬の見た目だけ試作に差し替える。
+# 馬モデルの試作との見比べ（撮影だけ。ふだんの遊びでは使わない）：--proto-horse=v6（または v5・v4・v3・v2）で馬の見た目だけ試作に差し替える。
 # 移動は今の模擬のまま。走りの位相は 距離÷試作の完歩（v3・v4 は 7m＝再生の倍率 v×0.45÷7 と同じ）。v2・v3 には騎手が乗らないので騎手とゼッケンを消す。
-# v4・v5 はゲートの中で立ち姿・遅いと常歩（v5 は速歩・駈歩も）・速いと走り（0.2 秒で混ぜる）。騎手はいまの騎手を鞍の点 Saddle に乗せる（試作。--no-jockey で乗せない）。
+# v4〜v6 はゲートの中で立ち姿・遅いと常歩（v5・v6 は速歩・駈歩も）・速いと走り（0.2 秒で混ぜる）。騎手はいまの騎手を鞍の点 Saddle に乗せる（試作。--no-jockey で乗せない）。
 # --no-jockey は今の馬のまま騎手・鞍・ゼッケンだけを消す（形どうしを比べる）。試作は godot/proto/tripo_horse/（書き出しには入らない）
 const PROTO_MODEL := "res://proto/tripo_horse/tripo_model.gd"
 var proto_ver := ""
@@ -654,7 +654,7 @@ func place(H: Array, dt: float) -> void:
 				h.animate(g, dt, true)   # 振り向くカメラが騎手の頭の位置を使う
 			var pm = proto[j]
 			if pm.has_gaits():
-				var pg: String = pm.gait_for(v, gate_now)   # 立ち姿・常歩・（v5 は速歩・駈歩）・走り。境は tripo_model.gd の GAIT_V
+				var pg: String = pm.gait_for(v, gate_now)   # 立ち姿・常歩・（v5・v6 は速歩・駈歩）・走り。境は tripo_model.gd の GAIT_V
 				var pph: float = pm.gait_phase(pg, x, maxf(T, 0.0))
 				pm.set_motion(pg, pph + h.num * 0.137, dt)
 				var rph: float = x / pm.stride_m() if pg == "race" else pph

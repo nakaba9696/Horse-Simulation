@@ -1,4 +1,4 @@
-# 馬モデル試作の比べの数を測る（v3・v4・v5・いまの馬を同じ物差しで。速さ 16 m/秒・倍率 2.6）
+# 馬モデル試作の比べの数を測る（v3・v4・v5・v6・いまの馬を同じ物差しで。速さ 16 m/秒・倍率 2.6）
 #   godot --headless --path godot -s res://proto/tripo_horse/measure.gd [-- --cpu=0]
 # 形の数：試作の場面（tripo_horse.gd）で 3 頭を同じ距離だけ走らせ、1/240 秒ごとに
 #   蹄（試作は UV2 の領域 3 と脚の番号、いまの馬は指と趾の骨が主な頂点）を CPU で皮に写して、
@@ -9,6 +9,9 @@
 #   鼻先＝いちばん前の頂点（試作は鼻先の領域 4 の中、いまの馬は高さ 0.9m より上）。尾（試作の領域 2）は除く（たてがみの帯は首の上の線なので残す）。
 #   v5 で引き継ぎの値（首の傾き 23.4〜25.9°・頭と首 100.1°）と 3°以内に合うことを確かめた（こちらは 20〜23°・99.7°）。首の傾き＝き甲→うなじの線の水平からの角、頭と首の角度＝うなじで き甲 と 鼻先 を見込む角
 #   （引き継ぎの neck-line.json は表面の決まった点と左右の中点で測る。こちらは同じ物差しで3頭を並べるための目安）
+# 首と頭の長さ（v6 の依頼の物差し）：同じ3点で、首の水平の長さ＝き甲→うなじの水平の距離・首の弦＝き甲→うなじの距離・頭の長さ＝うなじ→鼻先の距離（平均）。
+#   皮の点はたてがみの帯の上を取るので、点の選び方に左右されない 骨の首の水平の長さ（き甲の骨→頭の付け根の骨）も出す。
+#   引き継ぎの proportion-comparison.json（き甲は Spine_7 の真上の皮・うなじは決まった皮の点・鼻先は左右の中点。たてがみを除く）とは点が違うので、比は合わない
 # 1コマの CPU：レース画面（scenes/race.tscn。16 頭）を 20 秒まで進め、advance(1/60) を 180 回まわした時間（描く所は含まない）
 extends SceneTree
 
@@ -30,7 +33,7 @@ func _initialize() -> void:
 	sc.mode = "slip"
 	sc.refresh()
 	var subj := {}
-	for vv in ["v3", "v4", "v5"]:
+	for vv in ["v4", "v5", "v6"]:
 		subj[vv] = tripo_subject(sc.tri[vv])
 	subj["old"] = old_subject(sc.old)
 	var t := 0.0
@@ -42,7 +45,7 @@ func _initialize() -> void:
 	var acc := {}
 	for k in subj:
 		acc[k] = {"air": 0, "n": 0, "slip_sum": 0.0, "slip_n": 0, "spread": 0.0, "swing": [[1e9, -1e9], [1e9, -1e9], [1e9, -1e9], [1e9, -1e9]],
-			"nape": [1e9, -1e9, 0.0], "neck": [1e9, -1e9], "headneck": [1e9, -1e9], "lowest": 1e9, "stance_lo": [], "wither": [1e9, -1e9], "saddle": [1e9, -1e9], "prev": []}
+			"nape": [1e9, -1e9, 0.0], "neck": [1e9, -1e9], "headneck": [1e9, -1e9], "neckh": 0.0, "neckc": 0.0, "headl": 0.0, "neckb": 0.0, "lowest": 1e9, "stance_lo": [], "wither": [1e9, -1e9], "saddle": [1e9, -1e9], "prev": []}
 	t = 0.0
 	while t < SPAN - 1e-6:
 		sc.step(DT)
@@ -56,13 +59,13 @@ func _initialize() -> void:
 		var sw := 0.0
 		for l in 4:
 			sw = maxf(sw, a.swing[l][1] - a.swing[l][0])
-		print("%s: 1完歩 %.2fm・1秒 %.2f 完歩・うなじ 平均 %.2fm（%.2f〜%.2f・幅 %.3f）・き甲の上下 %.3fm・鞍 %s・4本とも浮く %.1f%%・前後の蹄の開き %.2fm・1本の振れ %.2fm・接地中の滑り %.2fm/秒・蹄の最も低い点 %.3fm・浮く割合（いちばん低い蹄が 0/3/5cm より上）%s・首の傾き %.1f〜%.1f°・頭と首の角度 %.1f〜%.1f°・三角形 %d・骨 %d・体の長さ（立ち姿の形）%.2fm" % [
+		print("%s: 1完歩 %.2fm・1秒 %.2f 完歩・うなじ 平均 %.2fm（%.2f〜%.2f・幅 %.3f）・き甲の上下 %.3fm・鞍 %s・4本とも浮く %.1f%%・前後の蹄の開き %.2fm・1本の振れ %.2fm・接地中の滑り %.2fm/秒・蹄の最も低い点 %.3fm・浮く割合（いちばん低い蹄が 0/3/5cm より上）%s・首の傾き %.1f〜%.1f°・頭と首の角度 %.1f〜%.1f°・首の水平の長さ %.3fm（骨 %.3fm）・首の弦 %.3fm・頭の長さ %.3fm・三角形 %d・骨 %d・体の長さ（立ち姿の形）%.2fm" % [
 			k, s.stride, 16.0 / s.stride, a.nape[2] / a.n, a.nape[0], a.nape[1], a.nape[1] - a.nape[0], a.wither[1] - a.wither[0],
 			("%.2f〜%.2fm（幅 %.3f）" % [a.saddle[0], a.saddle[1], a.saddle[1] - a.saddle[0]]) if a.saddle[0] < 1e8 else "なし",
-			100.0 * a.air / a.n, a.spread, sw, a.slip_sum / maxf(1.0, a.slip_n), a.lowest, air_by(a.stance_lo), a.neck[0], a.neck[1], a.headneck[0], a.headneck[1], s.tris, s.bones, s.length])
+			100.0 * a.air / a.n, a.spread, sw, a.slip_sum / maxf(1.0, a.slip_n), a.lowest, air_by(a.stance_lo), a.neck[0], a.neck[1], a.headneck[0], a.headneck[1], a.neckh / a.n, a.neckb / a.n, a.neckc / a.n, a.headl / a.n, s.tris, s.bones, s.length])
 	sc.free()
 	if do_cpu:
-		for pv in ["", "v3", "v4", "v4-nojockey", "v5", "v5-nojockey"]:
+		for pv in ["", "v3", "v4", "v4-nojockey", "v5", "v5-nojockey", "v6", "v6-nojockey"]:
 			cpu(pv)
 	quit()
 
@@ -230,7 +233,13 @@ func sample(s: Dictionary, a: Dictionary) -> void:
 		var hn := rad_to_deg((pw - pp).angle_to(pn - pp))
 		a.neck[0] = minf(a.neck[0], na); a.neck[1] = maxf(a.neck[1], na)
 		a.headneck[0] = minf(a.headneck[0], hn); a.headneck[1] = maxf(a.headneck[1], hn)
-	var wy := (sk.global_transform * sk.get_bone_global_pose(s.wither).origin).y
+		a.neckh += Vector2(pp.x - pw.x, pp.z - pw.z).length()
+		a.neckc += pw.distance_to(pp)
+		a.headl += pp.distance_to(pn)
+	var bwp := sk.global_transform * sk.get_bone_global_pose(s.wither).origin
+	var bnp := sk.global_transform * sk.get_bone_global_pose(s.nape).origin
+	a.neckb += Vector2(bnp.x - bwp.x, bnp.z - bwp.z).length()
+	var wy := bwp.y
 	a.wither[0] = minf(a.wither[0], wy)
 	a.wither[1] = maxf(a.wither[1], wy)
 	var sy := 1e9

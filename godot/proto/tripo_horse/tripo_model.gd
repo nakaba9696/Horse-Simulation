@@ -9,6 +9,10 @@
 #   v5：v4 の約束（完歩・周期・取付点・Saddle の向き・UV2 の決まり）のまま、首と肩を作り直したもの。速歩 Trot（173/240 秒・1完歩 2.8m）と
 #       駈歩 Canter（0.6 秒・4.5m）を足した。毛色は v5/coat.gdshader（v3 の毛色に引き継ぎのシェーダの補正：法線・鼻先とたてがみの混ぜ）。
 #       法線の絵の強さは GLB の 0.03。取り込みは AnimationPlayer の optimizer と compression を切る（.import の _subresources）
+#   v6：v5 の約束（完歩・周期・5つの歩き方・取付点の名前と Saddle の向き・UV2 の決まり・骨 54 本）のまま、首を長く細く・頭を小さく・首と頭を完歩に合わせて振り・
+#       たてがみを細い房に・目と鼻先の黒を小さくしたもの。毛色は v6/coat.gdshader（v5 と同じ補正。付属は法線の強さの既定値だけ 0.03 に変わった）。
+#       Bit_L/R は頭の形と首の振りに合わせて動きが変わった（v5 の記録と比べない。v6 の saddle-track.json・attachment-tracks.json と比べる）。
+#       取り込みは v5 と同じに、5つのクリップのループ（settings/loop_mode＝1）を .import に書く
 # 向き：GLB は Y-up・前 -X → 親の Y に +90°（骨は回さない）
 extends Node3D
 
@@ -24,6 +28,10 @@ const SPEC := {
 		"stand": "Stand", "stand_cycle": 3.0, "walk": "Walk", "walk_cycle": 1.2, "walk26": 1.6,
 		"trot": "Trot", "trot_cycle": 173.0 / 240.0, "trot26": 2.8, "canter": "Canter", "canter_cycle": 0.6, "canter26": 4.5,
 		"morph_in_clip": true, "shader": "res://proto/tripo_horse/v5/coat.gdshader"},
+	"v6": {"glb": "res://proto/tripo_horse/v6/horse-gallop-v6.glb", "clip": "RaceGallop", "cycle": 0.45, "stride26": 7.0,
+		"stand": "Stand", "stand_cycle": 3.0, "walk": "Walk", "walk_cycle": 1.2, "walk26": 1.6,
+		"trot": "Trot", "trot_cycle": 173.0 / 240.0, "trot26": 2.8, "canter": "Canter", "canter_cycle": 0.6, "canter26": 4.5,
+		"morph_in_clip": true, "shader": "res://proto/tripo_horse/v6/coat.gdshader"},
 }
 # 速さ（m/秒）で歩き方を決める境：これより遅いとその歩き方（立ち姿・常歩・速歩・駈歩。無い歩き方は飛ばす）
 #   常歩の自然な速さ 1.6÷1.2＝1.3・速歩 2.8÷0.72＝3.9・駈歩 4.5÷0.6＝7.5・襲歩 7÷0.45＝15.6 の間。v4 は立ち姿 0.3・常歩 5.5（いまの馬の常歩の混ぜ方が半分になる所）
@@ -31,7 +39,7 @@ const GAIT_V := [["stand", 0.3], ["walk", 2.4], ["trot", 5.5], ["canter", 11.0]]
 const GAIT_V_NO_TROT := [["stand", 0.3], ["walk", 5.5]]
 const XFADE := 0.2              # 歩き方を替えるときに混ぜる時間（秒。引き継ぎの目安 0.18〜0.25）
 # 根からの前後のずれ（m。立ち姿の AABB の前後のまん中をゲームの馬にそろえる。試作は -1.27〜+1.27、ゲームの馬は -1.02〜+1.42 → +0.2）
-const ROOT_DZ := {"v2": 0.2, "v3": 0.2, "v4": 0.2, "v5": 0.2}
+const ROOT_DZ := {"v2": 0.2, "v3": 0.2, "v4": 0.2, "v5": 0.2, "v6": 0.2}
 const COAT_SHADER := "res://proto/tripo_horse/v3/coat.gdshader"
 
 var ver := "v3"
