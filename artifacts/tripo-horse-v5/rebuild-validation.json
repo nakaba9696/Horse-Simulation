@@ -1,0 +1,23 @@
+{
+  "source_glb_sha256": "ec68c59db8131d29586cb5bfb9630d7cb9870e7b85dc7b1ba00ec91d6dc62223",
+  "source_request_commit": "20b43752859c0803884c1eb65e24ef27a33ba37d",
+  "rebuild_test": {
+    "isolated_directory": true,
+    "inputs": [
+      "source-rigged.glb",
+      "v4-socket-rest.json",
+      "tools",
+      "preview"
+    ],
+    "result": "REBUILD_PASS",
+    "original_glb_sha256": "ec68c59db8131d29586cb5bfb9630d7cb9870e7b85dc7b1ba00ec91d6dc62223",
+    "rebuilt_glb_sha256": "ec68c59db8131d29586cb5bfb9630d7cb9870e7b85dc7b1ba00ec91d6dc62223",
+    "byte_identical_glb": true
+  },
+  "versions": {
+    "blender": "4.3.2",
+    "godot": "4.6.3",
+    "python": "3.12"
+  },
+  "game_code_or_data_changed": false
+}

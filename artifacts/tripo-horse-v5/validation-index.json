@@ -1,0 +1,39 @@
+{
+  "source_glb_sha256": "ec68c59db8131d29586cb5bfb9630d7cb9870e7b85dc7b1ba00ec91d6dc62223",
+  "reports": {
+    "animation-specs.json": "e5c7d18a5c61d0f0f0d5953ebc892cb7826a91410b5c1386b9c9d35225e2f7ca",
+    "attachment-tracks.json": "e22dac4faa4dbe32fc5bc16c54160291cbc7e72ae078c8030690c9c62e8ee080",
+    "build-info.json": "bcaa7e3cc02eb23ec1f41590d432747cdbe3324958594de994fe33d9aceb452c",
+    "coat-face-ids.json": "f9d6fa8cd490467671fe13823eb02c0ed60fdd389c6c3474ff6256bfbc914d92",
+    "coat-region-schema.json": "b14d0669b1293b2a978e5b2eabfc193467b2054541ed14dcaa1901f7b54d6fb4",
+    "contact-validation.json": "bab88bdbe3a014d328884fa782653ed83f90337fde6d30902308c14bd83fdfc1",
+    "export-info.json": "0196d9c92c901e6a0905362841b6c6b50dac4d2270c4d220b1379d73958e2143",
+    "geometry-report.json": "0f87049f233a330142a60e7cdeaebeb491ed92f95cc83553719de0cac485ba70",
+    "gltf-validation.json": "46e3119576c10775f5ab549eb987ce873a41ddd7acc8f892ee36694a60a35cd0",
+    "godot-capture-manifest.json": "7f08f4195e672bb0e6d071871f344e6c1407842055f95101763dbbeda94ac202",
+    "godot-validation.json": "286bd65dabbb20dc192b2e173edd5b1bb64c4072867d62552604a8ff87a68dd1",
+    "hair-face-regions.json": "aea4ec39de43d5fff982f71687c40f14057a28469447cc9b4e2a892919998e65",
+    "hair-roots.json": "bd7ba5c308252e8b200ab3447e0afddcece284120c00d3200c7feea7cb47736a",
+    "mane-crest.json": "2515ddfce458c02d17c305809ce479b193b5fb9f66dd4c68b8b7243ab4022532",
+    "motion-validation.json": "9ca86dcd68873422909b819d1b45b8944ae67a5312876b1d328feeac1b5383ed",
+    "neck-corrective.json": "84f3211d87b8c1ace4299796aef66369a69c6bbea75f4764326a5e6c0c60af35",
+    "neck-design.json": "495de711b47e30a715055b8fdf427c95d4c7a1aec927368401972e6e422c6689",
+    "neck-line.json": "0ff67b7b3e133ef4902fd53c48d90124dc8a20f7838795993885592e9f521a37",
+    "normal-render-validation.json": "05269f2da71cee807abe82339b8fd7577db8f2af5d548d2fe848cec79ed1f252",
+    "rebuild-validation.json": "13595979348d4596100b9e278fcb703bf8635a577b7ada58241c3b005ac6133b",
+    "roundtrip-validation.json": "b49b430b008f3801fe863dc9456ce9e655b869f5bdaa7d95fbce5dd86f16c86c",
+    "saddle-track.json": "9c02988e40cdc04d5388b6808c1970103ec905786a33b9a8e6b281cf216e18e7",
+    "socket-rest.json": "c42475688af117a3cf3bf8f6b5ccec3cb3bc839aacb6e5716bdf9f8dab9a2316",
+    "surface-repair.json": "920590f9cab71ccc119bd0197c495eba148534aa80bdade1df312c823e03f333",
+    "surface-validation.json": "791a426b028067ebf0e8d038720d495e10bd93514314aafe66c7a52389e1fa77",
+    "voxel-repair.json": "67dd704fb1cebb742f3b3d8f48487f0bb7e168798922782f15fa471cdc2127d3"
+  },
+  "inspection_images": 133,
+  "image_resolution": [
+    1600,
+    1000
+  ],
+  "required_shader": "preview/coat.gdshader",
+  "shader_sha256": "4ae013beb70140b10bd9c081a402f3a86d9c06af085bcdc638295d0b8cb32a4f",
+  "disclosure": "Normal transport disagreement is nonzero; supplied shader correction is required. See CLAUDE_HANDOFF.md."
+}

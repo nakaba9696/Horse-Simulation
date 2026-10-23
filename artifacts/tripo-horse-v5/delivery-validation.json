@@ -1,0 +1,86 @@
+{
+  "zip": "tripo-horse-v5.zip",
+  "zip_sha256": "f82f0d521df748340366866e2a23e70a0609a8aa099825767cb13d9e09a8cd47",
+  "zip_integrity_test": "PASS",
+  "extracted_manifest_files_verified": 211,
+  "fresh_extraction_import": "PASS",
+  "godot_runtime_verification": "PASS",
+  "godot_runtime": {
+    "bones": 54,
+    "clips": {
+      "Canter": {
+        "duration": 0.600000023841858,
+        "loop_error": 0.0,
+        "morph": 1.0,
+        "samples": 1920,
+        "tracks": 163
+      },
+      "RaceGallop": {
+        "duration": 0.450000017881393,
+        "loop_error": 0.0,
+        "morph": 1.0,
+        "samples": 1920,
+        "tracks": 163
+      },
+      "Stand": {
+        "duration": 3.0,
+        "loop_error": 0.0,
+        "morph": 0.0,
+        "samples": 1920,
+        "tracks": 163
+      },
+      "Trot": {
+        "duration": 0.720833361148834,
+        "loop_error": 9.68575477600098e-08,
+        "morph": 1.0,
+        "samples": 1920,
+        "tracks": 163
+      },
+      "Walk": {
+        "duration": 1.19999992847443,
+        "loop_error": 0.0,
+        "morph": 0.0,
+        "samples": 1920,
+        "tracks": 163
+      }
+    },
+    "legs": {
+      "0": 8854,
+      "1": 460,
+      "2": 460,
+      "3": 782,
+      "4": 783
+    },
+    "other_socket_tolerance_m": 0.007,
+    "reference_scale": 2.6,
+    "regions": {
+      "0": 6621,
+      "1": 2313,
+      "2": 1497,
+      "3": 356,
+      "4": 417,
+      "5": 18,
+      "6": 99,
+      "7": 18
+    },
+    "seat_tolerance_m": 0.002,
+    "socket_count": 6,
+    "socket_max_angle_error_radians": 0.000690533954184502,
+    "socket_max_position_error": 5.4159107776286e-07,
+    "socket_position_error_model_by_node": {
+      "Bit_L": 5.4159107776286e-07,
+      "Bit_R": 5.39948644018295e-07,
+      "Saddle": 1.87839916065968e-07,
+      "Stirrup_L": 1.8907454091277e-07,
+      "Stirrup_R": 1.62384310442576e-07,
+      "Withers": 2.75161312401906e-07
+    },
+    "stand_switch_error": 0.0
+  },
+  "all_133_capture_images_resolution": [
+    1600,
+    1000
+  ],
+  "source_glb_sha256": "ec68c59db8131d29586cb5bfb9630d7cb9870e7b85dc7b1ba00ec91d6dc62223",
+  "game_code_or_data_changed": false
+}
