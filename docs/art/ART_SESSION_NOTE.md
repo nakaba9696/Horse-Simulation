@@ -223,3 +223,7 @@
     19. バイクで牧場を回る娘（革ジャン・ゴーグルを額に）
     20. 乳しぼりの娘（バンダナ・エプロン・牛乳瓶）
   - 見本は 6 枚ずつ並べた `docs/art/candidates/hinata_r4/sheet1.webp`〜`sheet4.webp` に番号を振って置く（1 枚ずつの png も）。表情はまだ作らない。
+
+## 2026-10-24 持ち主の選び（20 回目）
+- **ilona（gfhost）**：base・smile・sad とも OK。イロナは済み。
+- **takenouchi**：「強そうな爺さん」の候補 **4** に決定（`docs/art/candidates/takenouchi_r3/4.png`）。これを基本の絵にして、同じ服・同じ向きで顔と手だけ変えた表情を作る：base・smile・joy・sad・anger・コミカル 3 種（`takenouchi_<mood>.png`、コミカルは強面の爺さんが思わず崩れる顔）。今ある `takenouchi_*.png`（和服の前の絵）は全部置き換える。鼻は赤くしない、`style.json` だけ。ひなたの 20 案（19 回目）と一緒に進める。
