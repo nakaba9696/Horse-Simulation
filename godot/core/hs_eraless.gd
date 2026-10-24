@@ -103,7 +103,16 @@ static func pick(n: int, rng: HSRng) -> Array:
 	for i in TIERS.size(): free.append([])
 	for d in pool():
 		if not act.has(d.name): free[tier_of(d)].append(d)
+	for d in beaten_hidden():
+		if not act.has(d.name): free[tier_of(d)].append(d)
 	return pick_tiers(free, n, rng)
+# 1989年からの隠し馬は、一度倒して店に並んだら（G.unlocked）毎年のデビューにも選ぶ（持ち主の決定 2026-10-24。JS の E.beatenHidden と同じ）
+static func beaten_hidden() -> Array:
+	var out: Array = []
+	for n in HSU.or_(HSWorld.G.get("unlocked"), []):
+		var d = HSWorld.histByName.get(n)
+		if d != null and is_pool(d) and is_hidden(d): out.append(d)
+	return out
 static func populate() -> void:
 	var G = HSWorld.G
 	var rng := HSRng.new(G.seed + 7.0)

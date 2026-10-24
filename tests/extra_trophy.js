@@ -241,13 +241,13 @@ module.exports = function (check, assert, HS) {
     const gfs = TR.LIST.filter(t => t.kind === 'gf');
     assert(gfs.length === 6 && gfs.every(t => t.tier === 4), `GF の難しさ ${gfs.map(t => t.tier)}`);
     // 無敗のときだけの馬・いつでもの馬
-    const UNB = { triple: ['シンボリルドルフ', 'シンザン'], uk3: ['バーラム', 'オーモンド'], us3: ['ウォーアドミラル', 'シアトルスルー'], eu3: ['シーバード'], ftriple: ['テスコガビー'],
-      ukf3: ['プリティーポリー'], arc2: ['リボー'] }; // オーモンドはインモータルロードから英国三冠へ（持ち主の決定 2026-10-24） // パーソナルエンスンはインモータルロードの無敗のときから米国牝馬三冠（いつでも）へ（持ち主の決定 2026-10-20）
+    // 無敗のときだけの条件は外した（持ち主の決定 2026-10-24「無敗のとき条件なしで」）。どの隠し馬もいつでも出てくる
+    const UNB = {};
     const whenOf = {}; for (const [id, xs] of Object.entries(D.trophyHorses)) for (const x of xs) whenOf[x.name] = x.when || 'any';
     for (const [id, ns] of Object.entries(UNB)) for (const n of ns) assert((D.trophyHorses[id] || []).some(x => x.name === n && x.when === 'unbeaten'), `${n}（${id}）が無敗のときの馬でない`);
     const unbN = Object.values(UNB).reduce((a, b) => a.concat(b), []);
     assert(Object.entries(whenOf).every(([n, w]) => (w === 'unbeaten') === unbN.includes(n)), '無敗のときの馬が多い');
-    assert(whenOf['ファリス'] === 'any' && whenOf['サンオーイ'] === 'any', 'ファリス・サンオーイはいつでも');
+    assert(Object.values(whenOf).every(w => w === 'any'), '無敗のときだけの隠し馬が残る');
     // 外した馬・動かした馬
     const all = n => Object.keys(D.trophyHorses).filter(id => D.trophyHorses[id].some(x => x.name === n));
     // トムフール（アメリカン GS）とカーバイン（ワールドステイヤー GS に）は戻した（持ち主の決定 2026-10-24）
@@ -324,7 +324,7 @@ module.exports = function (check, assert, HS) {
     }
     // ホールオブフェイム・ワンダーホース・インモータルロードは隠し馬なし（持ち主の決定 2026-10-24）。いた馬は別のトロフィーへ
     assert(['legend', 'wonder', 'immortal'].every(id => !SP.BY['t:' + id]), 'ホールオブフェイム・ワンダーホース・インモータルロードに隠し馬がいる');
-    for (const [n, id] of [['ヴェイグリーノーブル', 'gs_wturf'], ['スペクタキュラービッド', 'us3'], ['セクレタリアト', 'dwc2'], ['フランケル', 'gs_eu'], ['ゼニヤッタ', 'bc2']]) assert(SP.byName(n).groups.join() === 't:' + id, `${n}のグループ ${SP.byName(n).groups}`);
+    for (const [n, id] of [['スペクタキュラービッド', 'us3'], ['セクレタリアト', 'dwc2'], ['フランケル', 'gs_eu'], ['ゼニヤッタ', 'bc2']]) assert(SP.byName(n).groups.join() === 't:' + id, `${n}のグループ ${SP.byName(n).groups}`);
     // データのまま：その場限りの馬の能力は、史実馬のデータから作った馬と同じ。データ（史実馬の値）も変えない
     let n = 0;
     for (const t of TR.LIST) {
@@ -470,13 +470,13 @@ module.exports = function (check, assert, HS) {
     assert(live && E.activeNames().has(rw) && !names().includes(rw) && names().length, `世界にいるのに隠し馬で出る（${names()}）`);
     live.loc = 'retired';
     assert(names().includes(rw), '引退したあとも出てこない');
-    // 倒すと店に並ぶ（1頭だけ）。そのあとは毎年のデビューに選ばれない
+    // 倒すと店に並ぶ（1頭だけ）。そのあとは毎年のデビューにも選ばれる（持ち主の決定 2026-10-24「一度倒したら毎年のデビューするプールの馬にいれて大丈夫」）
     G.unlocked.push(rw);
     const shop = W.marketHistoric().filter(x => x.horse.name === rw);
     assert(shop.length === 1 && shop[0].legend, `店の並び ${shop.length}`);
     assert(E.market().filter(x => x.horse.name === rw).length === 1, '開いている馬に二重に入る');
     const rng = new U.RNG(5);
-    assert(!E.pick(100000, rng).some(x => x.name === rw), '倒した隠し馬がデビューに選ばれる');
+    assert(E.pick(100000, rng).some(x => x.name === rw), '倒した1989年からの隠し馬がデビューに選ばれない');
     const s1 = W.serialize(); W.load(s1); assert(W.serialize() === s1, 'セーブの往復で変わる');
     return `香港トリプルクラウン：${SP.members(SP.BY['t:hk3']).map(x => x.name).join('・')}／香港スプリント三冠：${SP.members(SP.BY['t:hksp']).map(x => x.name).join('・')}`;
   });

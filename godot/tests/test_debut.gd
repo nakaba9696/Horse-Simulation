@@ -127,5 +127,9 @@ func run(t) -> void:
 		if x.name == rw and x.get("loc") != "retired": x.loc = "retired"
 	t.ok(appear.call().has(rw), "debut: 引退したあとも隠し馬で出てこない")
 	t.ok(not HSEraless.pick(100000, HSRng.new(3.0)).any(func(d): return d.name == rw), "debut: 引退した隠し馬がデビューに選ばれる")
+	# 倒して店に並んだ1989年からの隠し馬は、毎年のデビューにも選ぶ（持ち主の決定 2026-10-24）
+	if not HSWorld.G.get("unlocked"): HSWorld.G.unlocked = []
+	HSWorld.G.unlocked.append(rw)
+	t.ok(HSEraless.beaten_hidden().any(func(d): return d.name == rw) and HSEraless.pick(100000, HSRng.new(3.0)).any(func(d): return d.name == rw), "debut: 倒した隠し馬がデビューに選ばれない")
 	print("    debut: プール %s 頭・%d ミリ秒" % [_tiers(HSEraless.pool()), Time.get_ticks_msec() - t0])
 	HSU.ERA = era0

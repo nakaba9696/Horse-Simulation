@@ -28,6 +28,8 @@
     return hiddenSet.has(d.name);
   };
   let poolCache = null;
+  // 1989年からの隠し馬は、一度倒して店に並んだら（G.unlocked）毎年のデビューにも選ぶ（持ち主の決定 2026-10-24「89年以降の隠し馬は一度倒したら毎年のデビューするプールの馬にいれて大丈夫です」）
+  E.beatenHidden = () => (W.get().unlocked || []).map(n => W.histByName.get(n)).filter(d => d && E.isPool(d) && E.isHidden(d));
   E.pool = () => poolCache || (poolCache = (HS.DATA.historic || []).filter(d => E.isPool(d) && !E.isHidden(d)));
 
   // いま世界で走っている（入厩・牧場の）馬の名前
@@ -90,6 +92,7 @@
     const act = E.activeNames();
     const free = E.TIERS.map(() => []);
     for (const d of E.pool()) if (!act.has(d.name)) free[E.tierOf(d)].push(d);
+    for (const d of E.beatenHidden()) if (!act.has(d.name)) free[E.tierOf(d)].push(d);
     return E.pickTiers(free, n, rng);
   };
   // 始めたとき：2〜6歳の世代をそろえる（それまでの実績も、本当の勝ち鞍をずらして持たせる）

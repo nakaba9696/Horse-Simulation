@@ -127,8 +127,8 @@ func run(t) -> void:
 	# 父は、まだ走っていない牡馬を先に選ぶ（乗った鞍のリプレイが残る馬を、下の「戦績からリプレイ」の確かめに残すため）
 	for h in HSWorld.mine():
 		if h.sex == "牝" and h.name == female: female = h
-		elif h.sex != "牝" and HSU.or_(h.get("results"), []).is_empty() and (male == null or not HSU.or_(male.get("results"), []).is_empty()): male = h
-		elif h.sex != "牝" and male == null: male = h
+		elif h.sex != "牝" and not h.get("gelding") and HSU.or_(h.get("results"), []).is_empty() and (male == null or not HSU.or_(male.get("results"), []).is_empty()): male = h
+		elif h.sex != "牝" and not h.get("gelding") and male == null: male = h   # セン馬は引退で牧場に残らない
 	t.ok(male is Dictionary and female is Dictionary, "flow: 牡馬と牝馬がいる")
 	t.eq(HSJockey.retire(male.id).get("to"), "retired", "flow: 牡馬を引退させると牧場に残る")
 	t.eq(HSJockey.retire(female.id).get("to"), "retired", "flow: 牝馬を引退させると牧場に残る")
