@@ -21,6 +21,9 @@ module.exports = function (check, assert, HS) {
       }
       const a = T.fhShowPeak(H.fromHistoric(x, 'was')), b = T.fhShowPeak(H.fromHistoric(d, 'now'));
       assert(a.turf === b.turf && a.dirt === b.dirt, `${name} の総合力が動いた ${a.turf}/${a.dirt} → ${b.turf}/${b.dirt}`);
+      // 中の総合力（T.fhPeak。持ち主の1回目の見直しの値はこちらで持つ）も動かない
+      const ap = T.fhPeak(H.fromHistoric(x, 'was')), bp = T.fhPeak(H.fromHistoric(d, 'now'));
+      assert(ap.turf === bp.turf && ap.dirt === bp.dirt, `${name} の中の総合力が動いた ${ap.turf}/${ap.dirt} → ${bp.turf}/${bp.dirt}`);
       assert(/能力の洗い出し/.test(f.why || ''), `${name} の why に洗い出しの理由が無い`);
       n++;
     }
