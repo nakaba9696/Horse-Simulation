@@ -391,6 +391,9 @@ JS 版の関数名（`UI.kit`）と、Godot で作るときの形。
 | 設定 | 2 | 2 | 2 | 2 | 2 | 2 | 12 | 8 → 0 | 「初めの設定に戻す」を赤い革に |
 ほかに見つけた問題と、持ち主に聞くことは `docs/review/UI_REVIEW.md`。
 
+### 画面に収めたあとの点（Godot 版・`docs/shots/godot/ui_fit`・2026-10-24）
+持ち主の指示「基本的にスクロールはさせないで　画面に収めてかつ情報量を抑えて」。番組表を除く管理画面の中身を y 104〜872 にスクロール無しで収めた（小物は `godot/ui/fit.gd` の `UiFit`、確かめは `godot/tests/test_fit.gd`、直し方の表は `docs/review/UI_REVIEW.md` 5）。F が 1 → 2 になった画面：ホーム・厩舎・お手馬の詳しい画面・馬の店・オーナー・データ・GF・設定（前は下の端を越えるかスクロールの箱）。ほかの点は上の表のまま（データ・GF の B は 1）。
+
 ### いまの点（Godot 版・`docs/shots/godot/game`・2026-10-17）
 撮り方：`sh godot/tools/run_scene.sh res://scenes/<画面>.tscn -- --demo=1 --out=DIR --shot=0.8:名前`（`--demo=1` は決まった種の新しいゲームで1週進めた見本。セーブは書かない）。
 | 画面 | A | B | C | D | E | F | 計 | 次に直す所 |
