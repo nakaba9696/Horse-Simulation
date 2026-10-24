@@ -87,11 +87,15 @@ func _tick() -> void:
 				cs.confirm_ok.pressed.emit()
 			cs.on_back()
 		"home":
-			if acted.has("go"): return
+			# 騎乗の無い週は、次週でホームのまま週が進む（UiWeek。締めている間と、止まった週の 0.35 秒は待つ）。押すのは週ごとに1度
+			if UiWeek.busy() or cs.clock < cs._guard: return
+			var gk := "go%d" % int(HSWorld.w_idx())
+			if acted.has(gk): return
 			if HSWorld.w_idx() - week0 >= weeks:
 				_finish(true)
 				return
-			acted.go = true
+			acted[gk] = true
+			scene_since = now   # ホームに留まって週が進むので、止まった時間は週ごとに数え直す
 			# 4週ごとに、ほかの画面を1つ開いて戻る（画面を組むときの誤りを探す）
 			var wk := HSWorld.w_idx()
 			if int(wk - week0) % 4 == 2 and tour_week != wk:
@@ -177,6 +181,7 @@ func _finish(ok: bool) -> void:
 		# -- --lang=en：英語で遊んで、表に無かった文を書き出す（画面の文＝missing・決まりの組む文＝missing_tx。docs/I18N.md）
 		for k in HSText.missing: _say("i18n missing: " + JSON.stringify(k))
 		for k in HSText.missing_tx: _say("i18n missing_tx: " + JSON.stringify(k))
-	_say("autoplay: %s %d週（%.0f秒）・画面の数 %s" % ["ok" if ok else "NG", done_weeks, sec, JSON.stringify(counts)])
+	# 進んだ週（騎乗の無い週は週の結果の画面を通らないので、暦で数える）・そのうち週の結果の画面を通った週
+	_say("autoplay: %s %d週（週の結果 %d）（%.0f秒）・画面の数 %s" % ["ok" if ok else "NG", int(HSWorld.w_idx() - week0), done_weeks, sec, JSON.stringify(counts)])
 	UiFlow.delete_save()   # セーブと、その枠の殿堂の記録
 	quit(0 if ok else 1)
