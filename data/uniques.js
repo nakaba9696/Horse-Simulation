@@ -1,6 +1,6 @@
 // 名馬の固有の能力。持ち主が選んだ名馬（50頭）に1頭1つ（持ち主の決定 2026-10-17。前は「伝説級の名馬にだけ」。親にすればオリジナルホースに引き継げる）。
 // 持つかどうかは、ここに馬名があるかで決まる（js/core/skills.js の K.hasUnique）。スペシャルホースでも、1989年からの史実馬でも、名前が合えば持つ。
-// 名前（label）は、その馬の異名か、馬名か、その馬だけの数字・レースを入れる（持ち主の指摘「名前もうちょっと元の馬がわかるような感じで」）。異名は出典で確かめたものだけ。
+// 名前（label）は、その馬の異名か、馬名を入れる。秒数・馬身・勝ち数などの数字は名前にしない（持ち主の指摘 2026-10-23「スキル名なのに秒数や馬身や勝利数をだしてもダサい」。数字は why に書く）。前は「その馬だけの数字・レース」も入れてよいとしていた（持ち主の指摘「名前もうちょっと元の馬がわかるような感じで」）。異名は出典で確かめたものだけ。
 // 効き目は名鑑（data/profiles*.js）に書いてある史実の勝ち方から決めた（why に根になった史実を書く。人の名前は書かない）。
 // at：調べる区間（start・mid・st・any。js/core/skills.js と同じ）。when：場面の型（js/core/skills.js の K.UWHEN）。
 // fx：spd＝速さの倍率と秒（free なら脚を使わない）、E＝スタミナの増減、top＝終いの伸びの上限、pos＝隊列の目標を前へ（m）、foeE＝ほかの馬のスタミナの増減（foe があればその脚質だけ）
@@ -16,7 +16,7 @@ HS.DATA.uniques = [
   { horse:'セントサイモン', id:'u_stsimon', label:'煮えたぎる蒸気機関車', labelEn:'Raging Steam Engine', noteEn:'In races of 2400m or more, recovers on entering the straight and keeps pulling away', at:'st', when:'longStraight', fx:{ spd:0.03, sec:4, free:true, E:0.04 },
     note:'2400m以上のレースで直線に入ると、脚が戻ってぐんぐん離す',
     why:'長い距離のアスコットゴールドカップとグッドウッドカップを、どちらも20馬身差で勝った' },
-  { horse:'オーモンド', id:'u_ormonde', label:'英国の至宝', labelEn:'Jewel of England', noteEn:'Pressed near the line, it forces its head in front', at:'st', when:'neck', fx:{ spd:0.06, sec:2.5, free:true },
+  { horse:'オーモンド', id:'u_ormonde', label:'世紀の名馬', labelEn:'Horse of the Century', noteEn:'Pressed near the line, it forces its head in front', at:'st', when:'neck', fx:{ spd:0.06, sec:2.5, free:true },
     note:'ゴール前で並ばれると、意地で前に出る',
     why:'喘鳴症が重くなった4歳でも、ハードウィックステークスで首差に競り勝ち、16戦16勝のまま引退した' },
   { horse:'マンノウォー', id:'u_manowar', label:'ビッグレッド', labelEn:'Big Red', noteEn:'Passing halfway in front saves stamina and lifts its finishing speed', at:'mid', when:'leadMid', fx:{ E:0.06, top:0.2 },
@@ -34,14 +34,14 @@ HS.DATA.uniques = [
   { horse:'カウントフリート', id:'u_countfleet', label:'疾風の伯爵', labelEn:'Flying Count', noteEn:'Leading in the straight two lengths clear of the second: pulls away further', at:'st', when:'bigLead', fx:{ spd:0.07, sec:5, free:true },
     note:'直線で先頭に立ち、2番手を2馬身以上離していれば、さらに突き放す',
     why:'ベルモントステークスを25馬身差で勝った。のちに破られるまでレース史上最大の着差' },
-  { horse:'ザテトラーク', id:'u_tetrarch', label:'白斑の稲妻', labelEn:'Spotted Lightning', noteEn:'Out of the gate it shoots clear at once', at:'start', when:'start', fx:{ spd:0.07, sec:4, free:true, pos:3 },
+  { horse:'ザテトラーク', id:'u_tetrarch', label:'驚異の斑点', labelEn:'The Spotted Wonder', noteEn:'Out of the gate it shoots clear at once', at:'start', when:'start', fx:{ spd:0.07, sec:4, free:true, pos:3 },
     note:'ゲートを出ると、すぐに他馬を引き離す',
     why:'デビュー戦はスタートから他馬を引き離して勝ち、コヴェントリーステークスは10馬身差。白い斑点のまだら模様の芦毛' },
   { horse:'ドミノ', id:'u_domino', label:'黒い旋風', labelEn:'Black Whirlwind', noteEn:'At 1400m or less, entering the straight in the first three: kicks again', at:'st', when:'sprint', fx:{ spd:0.07, sec:4, free:true },
     note:'1400m以下のレースで、3番手以内で直線に入ると、もうひと伸び',
     why:'6ハロン前後の競走ではほとんど負けなかった。2歳時は9戦無敗で、メイトロンステークスは国内レコード' },
   // ===== 2026-10-17 に足した名馬（持ち主が選んだ名馬。根は名鑑 data/profiles*.js の史実） =====
-  { horse:'ブリガディアジェラード', id:'u_brigadier', label:'常勝准将', labelEn:'The Brigadier', noteEn:'At 1400-2000m, 2nd to 6th from 400m out: quickens clear with a miler\'s speed', at:'st', when:'mile', fx:{ spd:0.05, sec:4, free:true },
+  { horse:'ブリガディアジェラード', id:'u_brigadier', label:'ザ・ブリガディア', labelEn:'The Brigadier', noteEn:'At 1400-2000m, 2nd to 6th from 400m out: quickens clear with a miler\'s speed', at:'st', when:'mile', fx:{ spd:0.05, sec:4, free:true },
     note:'1400〜2000mのレースで、残り400mから2〜6番手にいると、マイルの脚で抜け出す',
     why:'18戦17勝。3歳は主にマイルを走り、英2000ギニーをのちの凱旋門賞馬に3馬身差、サセックスSやクイーンエリザベス2世Sも勝った' },
   { horse:'ミルリーフ', id:'u_millreef', label:'小さな巨人', labelEn:'Little Giant', noteEn:'Entering the straight 2nd to 4th, recovers and quickens clear', at:'st', when:'posBreak', fx:{ spd:0.05, sec:4, free:true, E:0.03 },
@@ -68,10 +68,10 @@ HS.DATA.uniques = [
   { horse:'オルフェーヴル', id:'u_orfevre', label:'金色の暴君', labelEn:'Golden Tyrant', noteEn:'Back half at halfway, passes three or more into the straight: recovers and pulls clear', at:'st', when:'comeback', fx:{ spd:0.05, sec:4, free:true, E:0.03, top:0.2 },
     note:'中間点で後ろ半分にいた馬が、3頭以上抜いて直線に入ると、脚が戻ってそのまま突き放す',
     why:'激しい気性で「金色の暴君」と呼ばれた。阪神大賞典で外へ逃げて大きく下がりながら、半馬身差の2着まで追い上げた。三冠馬で、引退レースの有馬記念は後方から3コーナーで外を上がり、4コーナーで先頭に立って8馬身差' },
-  { horse:'ゴールデンシックスティ', id:'u_goldensixty', label:'黄金のマイラー', labelEn:'Golden Miler', noteEn:'From 400m to 100m out, second or worse within five lengths of the lead: chases down the front (idles once in front)', at:'st', when:'chase5', fx:{ spd:0.05, sec:3, free:true },
+  { horse:'ゴールデンシックスティ', id:'u_goldensixty', label:'香港之光', labelEn:'Light of Hong Kong', noteEn:'From 400m to 100m out, second or worse within five lengths of the lead: chases down the front (idles once in front)', at:'st', when:'chase5', fx:{ spd:0.05, sec:3, free:true },
     note:'直線の残り400〜100mで、先頭から5馬身以内の2番手以下にいると、前をとらえにいく（先頭に立つと気を抜くので出ない）',
     why:'たいてい後方から終いに伸びて16連勝し、香港マイルを3勝、チャンピオンズマイルを3連覇した。2000mの香港ダービーと香港ゴールドカップも勝った' },
-  { horse:'ゴルディコヴァ', id:'u_goldikova', label:'欧州マイルの女王', labelEn:'Queen of the Mile', noteEn:'At 1400-2000m, 2nd to 6th from 400m out: quickens clear with a miler\'s speed', at:'st', when:'mile', fx:{ spd:0.05, sec:4, free:true },
+  { horse:'ゴルディコヴァ', id:'u_goldikova', label:'クイーンオブザマイル', labelEn:'Queen of the Mile', noteEn:'At 1400-2000m, 2nd to 6th from 400m out: quickens clear with a miler\'s speed', at:'st', when:'mile', fx:{ spd:0.05, sec:4, free:true },
     note:'1400〜2000mのレースで、残り400mから2〜6番手にいると、マイルの脚で抜け出す',
     why:'ブリーダーズカップマイルを初めて3連覇した。ジャックルマロワ賞は6馬身差のレースレコード。G1は14勝' },
   { horse:'シンザン', id:'u_shinzan', label:'ナタの切れ味', labelEn:'Hatchet Kick', noteEn:'Second or third with 200m left: kicks again', at:'st', when:'top2', fx:{ spd:0.05, sec:3, free:true },
@@ -117,10 +117,10 @@ HS.DATA.uniques = [
   { horse:'サイテーション', id:'u_citation', label:'100万ドルホース', labelEn:'Million-Dollar Horse', noteEn:'In the first two 400m before the straight: saves stamina and holds on from the front', at:'mid', when:'front2Late', fx:{ E:0.04, top:0.1 },
     note:'直線の手前400mで2番手以内にいると、脚が残り、前から押し切る',
     why:'プリークネスステークスとベルモントステークスはスタート直後から先頭に立ってそのまま勝った。三冠の年の終わりまでに15連勝し、のちに16連勝まで伸ばした。6歳でハリウッドゴールドカップを勝ち、史上初めて獲得賞金が100万ドルを超えた' },
-  { horse:'マニカト', id:'u_manikato', label:'豪州の短距離王', labelEn:'Sprint King of Australia', noteEn:'At 1400m or less, entering the straight in the first three: kicks again', at:'st', when:'sprint', fx:{ spd:0.06, sec:4, free:true },
+  { horse:'マニカト', id:'u_manikato', label:'ザ・マン', labelEn:'The Man', noteEn:'At 1400m or less, entering the straight in the first three: kicks again', at:'st', when:'sprint', fx:{ spd:0.06, sec:4, free:true },
     note:'1400m以下のレースで、3番手以内で直線に入ると、もうひと伸び',
     why:'豪州の短距離のセン馬。ウィリアムリードステークスを5連覇し、3つのレースをレコードで勝った' },
-  { horse:'ケルソ', id:'u_kelso', label:'不屈の鉄人', labelEn:'Iron Horse', noteEn:'In races of 2400m or more, recovers 400m before the straight', at:'mid', when:'longHaul', fx:{ E:0.05 },
+  { horse:'ケルソ', id:'u_kelso', label:'キング・ケリー', labelEn:'King Kelly', noteEn:'In races of 2400m or more, recovers 400m before the straight', at:'mid', when:'longHaul', fx:{ E:0.05 },
     note:'2400m以上のレースで直線の手前400mまで来ると、脚が戻る',
     why:'2マイルのジョッキークラブゴールドカップを5連覇し、7歳の年は3分19秒1の世界レコード。5年続けて年度代表馬になった' },
   { horse:'ドクターフェイガー', id:'u_drfager', label:'最速の逃亡者', labelEn:'Fastest Runaway', noteEn:'Leading from 600m out and still in front at 400m: holds on with sheer speed', at:'st', when:'ledAll', fx:{ spd:0.06, sec:3, free:true },
@@ -147,7 +147,7 @@ HS.DATA.uniques = [
   { horse:'シーザスターズ', id:'u_seathestars', label:'星の王', labelEn:'King of the Stars', noteEn:'Drawn level in the last 300m: goes all out to win the duel', at:'st', when:'duelEnd', fx:{ spd:0.05, sec:3, free:true, E:0.03 },
     note:'ゴール前の300mで馬と並ぶと、一騎打ちを制しにいく',
     why:'英2000ギニー・英ダービー・凱旋門賞を同じ年に勝った初めての馬。英インターナショナルステークスの一騎打ちをレコードで制した' },
-  { horse:'リボー', id:'u_ribot', label:'イタリアの巨匠', labelEn:'Italian Maestro', noteEn:'In races of 2400m or more, recovers on entering the straight and pulls clear', at:'st', when:'longStraight', fx:{ spd:0.03, sec:4, free:true, E:0.03 },
+  { horse:'リボー', id:'u_ribot', label:'イル・カヴァッロ・スーペル', labelEn:'Il Cavallo Super', noteEn:'In races of 2400m or more, recovers on entering the straight and pulls clear', at:'st', when:'longStraight', fx:{ spd:0.03, sec:4, free:true, E:0.03 },
     note:'2400m以上のレースで直線に入ると、脚が戻って離す',
     why:'16戦16勝で凱旋門賞を連覇した。2度目の凱旋門賞は公式で6馬身差' },
   { horse:'ナリタブライアン', id:'u_brian', label:'シャドーロールの怪物', labelEn:'Shadow-Roll Monster', noteEn:'From 400m to 100m out, in front or within three lengths: catches the leader, and if in front, extends', at:'st', when:'chaseOrLead', fx:{ spd:0.05, sec:5, free:true, top:0.2 },
