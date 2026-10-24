@@ -91,6 +91,14 @@ var _whip_eff := 1.0       # ムチへの応え（使うほど鈍る。HSSim の
 # 全開の知らせ（docs/FEEL.md 3・4。持ち主の決定 2026-10-22）：模擬の ctl.drive を計器・音・振動へ。結果には触らない
 var drive := ViewRideDrive.new()
 var sfx: ViewRideSfx
+# 馬モデルの試作との見比べ（撮影だけ。ふだんの遊びでは使わない）：--proto-horse=v7（または v6・v5・v4・v3・v2）で馬の見た目だけ試作に差し替える。
+# 移動は今の模擬のまま。走りの位相は 距離÷試作の完歩（v3・v4 は 7m＝再生の倍率 v×0.45÷7 と同じ）。v2・v3 には騎手が乗らないので騎手とゼッケンを消す。
+# v4〜v7 はゲートの中で立ち姿・遅いと常歩（v5〜v7 は速歩・駈歩も。v7 は常歩の首の補正もクリップの値で混ざる）・速いと走り（0.2 秒で混ぜる）。騎手はいまの騎手を鞍の点 Saddle に乗せる（試作。--no-jockey で乗せない）。
+# --no-jockey は今の馬のまま騎手・鞍・ゼッケンだけを消す（形どうしを比べる）。試作は godot/proto/tripo_horse/（書き出しには入らない）
+const PROTO_MODEL := "res://proto/tripo_horse/tripo_model.gd"
+var proto_ver := ""
+var no_jockey := false
+var proto: Array = []
 
 func _ready() -> void:
 	ViewRideInput.ensure_actions()
@@ -154,6 +162,7 @@ func _ready() -> void:
 	sfx = ViewRideSfx.new()
 	add_child(sfx)
 	parse_args()
+	_proto_setup()
 	if shots.size() > 0 or not video.is_empty():
 		capturing = true
 		input.enabled = false
@@ -638,7 +647,20 @@ func place(H: Array, dt: float) -> void:
 		var cd := cam.global_position.distance_to(p)
 		g["cam_d"] = cd
 		kickups[j].run(v if moving else 0.0, cd < 45.0)
-		h.animate(g, dt, cd < 90.0 or j == me)
+		if proto.is_empty():
+			h.animate(g, dt, cd < 90.0 or j == me)
+		else:
+			if j == me:
+				h.animate(g, dt, true)   # 振り向くカメラが騎手の頭の位置を使う
+			var pm = proto[j]
+			if pm.has_gaits():
+				var pg: String = pm.gait_for(v, gate_now)   # 立ち姿・常歩・（v5〜v7 は速歩・駈歩）・走り。境は tripo_model.gd の GAIT_V
+				var pph: float = pm.gait_phase(pg, x, maxf(T, 0.0))
+				pm.set_motion(pg, pph + h.num * 0.137, dt)
+				var rph: float = x / pm.stride_m() if pg == "race" else pph
+				pm.update_rider(fposmod(rph + h.num * 0.137, 1.0), sp if moving else 0.35, maxf(T, 0.0) + 3.0, 0.0 if pg in ["race", "canter"] else 1.0, cd < 90.0 or j == me)
+			else:
+				pm.set_phase(x / pm.stride_m() + h.num * 0.137)
 
 # ---- カメラ（FEEL.md 2） ----
 func update_camera(H: Array, dt: float) -> void:
@@ -677,6 +699,8 @@ func update_camera(H: Array, dt: float) -> void:
 	cam_state.look = ViewRideInput.look_ease(float(cam_state.look_t))
 	if horses.size() > me:
 		horses[me].jockey.head_yaw = float(cam_state.look) * JOCKEY_HEAD_YAW
+		if not proto.is_empty() and proto[me].rider != null:
+			proto[me].rider.head_yaw = horses[me].jockey.head_yaw
 	match mode:
 		"gate":
 			var n := float(src.n)
@@ -786,7 +810,8 @@ func _look_from(cp: Vector3, lk: Vector3, e: float) -> Array:
 # 自分の騎手の頭（世界の座標）。走りの拍子の細かな上下は、馬の根に対する位置をならして抑える
 func _head_pos() -> Vector3:
 	var hm := horses[me]
-	var w := hm.jockey.head_world()
+	var jk: ViewJockey = proto[me].rider if (not proto.is_empty() and proto[me].rider != null) else hm.jockey
+	var w := jk.head_world()
 	var loc := hm.global_transform.affine_inverse() * w
 	var prev = cam_state.get("head_loc")
 	if prev != null:
@@ -859,6 +884,10 @@ func parse_args() -> void:
 			hud_on = false
 		elif a == "--fast":
 			_fast()
+		elif a.begins_with("--proto-horse="):
+			proto_ver = a.substr(14)
+		elif a == "--no-jockey":
+			no_jockey = true
 		elif a.begins_with("--shot="):
 			var p := a.substr(7).split(":")
 			shots.append({"t": float(p[0]), "cam": p[1], "name": p[2]})
@@ -868,6 +897,32 @@ func parse_args() -> void:
 		elif a.begins_with("--press="):
 			var r := a.substr(8).split(":")
 			presses.append({"t": float(r[0]), "a": r[1], "done": false})
+
+# 馬モデルの試作に見た目だけ差し替える（--proto-horse=）・騎手を消す（--no-jockey）
+func _proto_setup() -> void:
+	if proto_ver != "" and not ResourceLoader.exists(PROTO_MODEL):
+		push_warning("proto-horse: prototype model not found (not included in exported builds)")
+		proto_ver = ""
+	if proto_ver == "" and not no_jockey:
+		return
+	for j in horses.size():
+		var h := horses[j]
+		h.jockey.visible = false
+		if h.jockey.body != null:
+			h.jockey.body.visible = false
+		h.cloth.visible = false
+		for mi in h.model.get_children():
+			if mi is MeshInstance3D and (mi.mesh == h.M.cloth_mesh or mi.mesh == h.M.saddle_mesh):
+				mi.visible = false
+		if proto_ver == "":
+			continue
+		h.model.visible = false
+		var pm = load(PROTO_MODEL).new()
+		h.add_child(pm)
+		pm.setup(proto_ver, race.horses[j])
+		if not no_jockey and pm.sockets.has("Saddle"):
+			pm.mount_jockey(race.horses[j])
+		proto.append(pm)
 
 # 動画を撮るとき（CPU の Vulkan で重いので）：画面の後処理と影を軽く
 func _fast() -> void:
