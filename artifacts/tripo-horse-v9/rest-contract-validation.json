@@ -1,0 +1,29 @@
+{
+  "source_glb_sha256": "50f8c9d320b6cb72a19a258f237d8589446b1d18b27af18b69cc77fac61dc125",
+  "bone_count": 54,
+  "rest_matrix_max_difference": 1.6987323760986328e-06,
+  "rest_matrix_element_tolerance": 2e-06,
+  "changed_parents": {
+    "tripo::0_Left_Limb_3": {
+      "old": "tripo::0_Left_Limb_2",
+      "new": "tripo::Root"
+    },
+    "tripo::0_Right_Limb_3": {
+      "old": "tripo::0_Right_Limb_2",
+      "new": "tripo::Root"
+    },
+    "tripo::1_Left_Limb_3": {
+      "old": "tripo::1_Left_Limb_2",
+      "new": "tripo::Root"
+    },
+    "tripo::1_Right_Limb_3": {
+      "old": "tripo::1_Right_Limb_2",
+      "new": "tripo::Root"
+    }
+  },
+  "base_topology_exact": true,
+  "base_uv_exact": true,
+  "local_sculpt_max_model_shift": 0.017999887466430664,
+  "moved_base_vertices": 816,
+  "scope": "Neutral source vs generated rest. Does not assert weights/neutral positions unchanged; they are intentionally edited. Four existing hoof parents changed, other bone names and rest matrices retained."
+}

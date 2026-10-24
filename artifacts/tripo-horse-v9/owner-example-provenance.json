@@ -1,0 +1,30 @@
+{
+  "owner_confirmation_date_jst": "2026-10-25",
+  "authority": "Owner explicitly re-uploaded two clips and stated running example is this; these two are canonical for v9. No additional Canter upload requested.",
+  "running": {
+    "sha256": "f605e7a729a2994959131f975f83eb9a162b12f91edae07176b7c39db2c35b32",
+    "size": [
+      240,
+      144
+    ],
+    "fps": 33,
+    "frames": 15,
+    "duration_seconds": 0.45454545454545453,
+    "use": "Race neck/head/body timing; normalized head/neck reference for three-beat Canter, which retains its own footfall schedule."
+  },
+  "walking": {
+    "sha256": "ea5504e5290839b9589a1abd7d8d3a127405b82f146a87ec4d5e8b92f31ad09a",
+    "size": [
+      176,
+      144
+    ],
+    "fps": 100,
+    "frames": 130,
+    "duration_seconds": 1.3,
+    "view": "oblique front; source camera unknown; approximate projected comparison only"
+  },
+  "original_paid_12_sheet": "Not present in this workspace. Never represented as viewed. The 12-panel running comparison is sampled from the owner-confirmed15-frame video and labeled as such; full15 comparison also retained.",
+  "source_rasters_and_movies_distributed": false,
+  "distributed_owner_reference": "Derived contours and derived control-point annotations only, as requested.",
+  "no_paid_generation_calls": true
+}

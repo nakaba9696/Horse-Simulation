@@ -1,0 +1,26 @@
+{
+  "versions": {
+    "v7": {
+      "glb_sha256": "985091d66c7caeadd3d151c3b8f8e274399b9b2c96ec0507e7a8266fdc3052ea",
+      "import_file_sha256": "f8d27fe75c746042a4c727d2ba4dbe6eed5eeeac1be6dfb4f53d1649031f571b",
+      "fps": 240,
+      "optimizer": false,
+      "compression": false
+    },
+    "v8": {
+      "glb_sha256": "2a0be31f6bfb5382a192b6ba4477fadb99f1ca3368d23fabbc467abe1923a798",
+      "import_file_sha256": "f25c327101815a934656265f7926eb481babc0e9553087f6ed07c9445cc386fe",
+      "fps": 240,
+      "optimizer": false,
+      "compression": false
+    },
+    "v9": {
+      "glb_sha256": "50f8c9d320b6cb72a19a258f237d8589446b1d18b27af18b69cc77fac61dc125",
+      "import_file_sha256": "6409b9c7de16cf8d86c34b2bee7b9d3cef52c2215ff36360b359905176a88f6e",
+      "fps": 240,
+      "optimizer": false,
+      "compression": false
+    }
+  },
+  "note": "v8 inherited default30fps detected in pre-delivery audit; recaptured its191 comparison+40 reference frames at common240/nooptimizer. v9 geometry and reviewed v9 images unchanged. Both reviewers rechecked updated comparisons; final image-conversion hashes map current set."
+}

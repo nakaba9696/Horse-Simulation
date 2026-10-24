@@ -1,0 +1,72 @@
+{
+  "source_glb_sha256": "50f8c9d320b6cb72a19a258f237d8589446b1d18b27af18b69cc77fac61dc125",
+  "clips": {
+    "RaceGallop_Loop": {
+      "duration": 0.45,
+      "max_v8_hoof_centroid_difference_m": 0.0050886239169969285,
+      "minimum_hoof_m": 0.002079187403433025,
+      "airborne_fraction": 0.2,
+      "withers_peak_to_peak_m": 0.19849830865859985,
+      "loop_difference_model": 0.0,
+      "feet_byte_identity_claimed": false
+    },
+    "Stand_Loop": {
+      "duration": 3.0,
+      "max_v8_hoof_centroid_difference_m": 1.860169314982692e-06,
+      "minimum_hoof_m": 0.002079778537154198,
+      "airborne_fraction": 0.0,
+      "withers_peak_to_peak_m": 0.0025999665260314944,
+      "loop_difference_model": 0.0,
+      "feet_byte_identity_claimed": false
+    },
+    "Walk_Loop": {
+      "duration": 1.2,
+      "max_v8_hoof_centroid_difference_m": 0.00010737339247543842,
+      "minimum_hoof_m": 0.002079303632490337,
+      "airborne_fraction": 0.0,
+      "withers_peak_to_peak_m": 0.007799899578094483,
+      "loop_difference_model": 0.0,
+      "feet_byte_identity_claimed": false
+    },
+    "Trot_Loop": {
+      "duration": 0.7208333333333333,
+      "max_v8_hoof_centroid_difference_m": 0.0003122381190032106,
+      "minimum_hoof_m": 0.002079129288904369,
+      "airborne_fraction": 0.0,
+      "withers_peak_to_peak_m": 0.044763374328613284,
+      "loop_difference_model": 0.0,
+      "feet_byte_identity_claimed": false
+    },
+    "Canter_Loop": {
+      "duration": 0.6,
+      "max_v8_hoof_centroid_difference_m": 0.0004465011990831138,
+      "minimum_hoof_m": 0.002079206774942577,
+      "airborne_fraction": 0.2,
+      "withers_peak_to_peak_m": 0.0739608108997345,
+      "loop_difference_model": 0.0,
+      "feet_byte_identity_claimed": false
+    }
+  },
+  "stand_top_line_m": 0.6894535192354394,
+  "race_mean_poll_m": 1.7361564408511054,
+  "walk_summary_differences_from_v8": {
+    "head_pitch_world_degrees_peak_to_peak": -0.007441821148781003,
+    "trunk_pitch_world_degrees_peak_to_peak": 0.0,
+    "neck_pitch_world_degrees_peak_to_peak": -0.00611305551499175,
+    "head_center_height_m_peak_to_peak": 0.0017060511998936434,
+    "upper_lip_height_m_peak_to_peak": 0.0025990217596034704,
+    "poll_height_m_peak_to_peak": 7.0788166961488486e-06,
+    "withers_height_m_peak_to_peak": 8.407546448818692e-05,
+    "top_line_m": 0.012632603423605726,
+    "lower_line_chord_m": -0.039278969984226,
+    "head_length_m": -0.05632469462029632,
+    "head_to_top_line": -0.10869217908210649,
+    "top_to_lower_line_chord": 0.49707337977213495
+  },
+  "poll_height_range_m": 0.38725553878250163,
+  "contact_validation_method": "Finite differences of final GLB hoof skin vertex centroids while both adjacent samples are scheduled stance; includes xyz. Skin centroid can move from hoof deformation; not individual contact-patch static friction.",
+  "contact_comparison": "Each leg RMS <= v8 + 0.15m/s; identical centroid trajectories are not claimed. Intentional trunk pitch changes upper limb poses while world hoof IK targets stay fixed.",
+  "sockets": "Six names and rest anchor contract retained; animated transforms are regenerated for the intentional trunk and head motion and separately checked in Godot for all five clips.",
+  "numeric_contracts": "PASS mechanical contracts only; retired V8 neck/head limits not gates",
+  "visual_approval": "Separate independent actual-image review required; numerical tests do not approve anatomy/appearance."
+}

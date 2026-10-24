@@ -1,0 +1,53 @@
+{
+  "source_glb_sha256": "50f8c9d320b6cb72a19a258f237d8589446b1d18b27af18b69cc77fac61dc125",
+  "speed_mps": 16.0,
+  "reference_scale": 2.6,
+  "playback": 1.0285714285714287,
+  "method": "Finite differences of final GLB hoof skin vertex centroids while both adjacent samples are scheduled stance; includes xyz. Skin centroid can move from hoof deformation; not individual contact-patch static friction.",
+  "legs": {
+    "(0, 'Left')": {
+      "samples": 47,
+      "rms_world_centroid_slip_mps": 0.7160720639318556,
+      "max_world_centroid_slip_mps": 3.645898024156834,
+      "interior_excluding_one_baked_key_from_contact_edges": {
+        "margin_normalized_cycle": 0.009259259259259259,
+        "samples": 43,
+        "rms_mps": 0.0001798381279604634,
+        "max_mps": 0.0003444126672782488
+      }
+    },
+    "(0, 'Right')": {
+      "samples": 47,
+      "rms_world_centroid_slip_mps": 0.7539647758716065,
+      "max_world_centroid_slip_mps": 4.642327322371314,
+      "interior_excluding_one_baked_key_from_contact_edges": {
+        "margin_normalized_cycle": 0.009259259259259259,
+        "samples": 43,
+        "rms_mps": 0.00013239953841521877,
+        "max_mps": 0.000293186732594819
+      }
+    },
+    "(1, 'Left')": {
+      "samples": 47,
+      "rms_world_centroid_slip_mps": 0.5816152200879279,
+      "max_world_centroid_slip_mps": 3.7595232672268457,
+      "interior_excluding_one_baked_key_from_contact_edges": {
+        "margin_normalized_cycle": 0.009259259259259259,
+        "samples": 42,
+        "rms_mps": 0.00010452188688819426,
+        "max_mps": 0.0002518177965263247
+      }
+    },
+    "(1, 'Right')": {
+      "samples": 47,
+      "rms_world_centroid_slip_mps": 0.3227538043199552,
+      "max_world_centroid_slip_mps": 2.2126884737045396,
+      "interior_excluding_one_baked_key_from_contact_edges": {
+        "margin_normalized_cycle": 0.009259259259259259,
+        "samples": 42,
+        "rms_mps": 0.00010980388203874093,
+        "max_mps": 0.0002939560572045023
+      }
+    }
+  }
+}

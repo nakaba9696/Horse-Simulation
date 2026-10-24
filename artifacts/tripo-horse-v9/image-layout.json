@@ -1,0 +1,9 @@
+{
+  "standalone_total": 133,
+  "PNG": 105,
+  "lossless_WebP_neck_closeups": 28,
+  "comparison": 578,
+  "reference_render": 80,
+  "conversion_RGBA_exact": true,
+  "manifest_original_names": "Godot capture manifest preserves original PNG names; image-conversion-validation maps those neck closeups to WebP. Re-render and media tooling generates PNG again."
+}

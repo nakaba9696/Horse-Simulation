@@ -1,0 +1,906 @@
+{
+  "date": "2026-10-25 Asia/Tokyo",
+  "glb_sha256": "50f8c9d320b6cb72a19a258f237d8589446b1d18b27af18b69cc77fac61dc125",
+  "verdict": "standalone_render_pass_with_scope_limits",
+  "all_578_individual_originals_viewed": false,
+  "viewed": [
+    {
+      "file": "comparison/final/v9-side-28.jpg",
+      "sha256": "b0efd051ad158604471011926b0ea99c026a82b3915bb2dff9256ce2056bc849",
+      "view": "sheet"
+    },
+    {
+      "file": "comparison/final/v9-oblique-28.jpg",
+      "sha256": "1bad8943b951ad556020fd61e780af47dfb384e16a320e180307d04e5d603359",
+      "view": "sheet"
+    },
+    {
+      "file": "comparison/final/v9-front-28.jpg",
+      "sha256": "6492eb0155b3c479f52581fea3d48d9fa09b2f5c3e134a0888e4e07b927b5c69",
+      "view": "sheet"
+    },
+    {
+      "file": "comparison/final/v9-back-28.jpg",
+      "sha256": "7a099c5d760f8bc7e2b627d5f83baecd2ad2bc42aa2ce5f0b1feaa649673801a",
+      "view": "sheet"
+    },
+    {
+      "file": "comparison/final/v9-reverse-oblique-28.jpg",
+      "sha256": "f7856fdceb659a253f4921c52e0e7d9a9ed09c8d504ab07695a742de9b0330e7",
+      "view": "sheet"
+    },
+    {
+      "file": "comparison/final/v9-reverse-neck.jpg",
+      "sha256": "be687b573f027b6c0de362b5aaa6d34943c3d4bb3dc547ce81e956a9b16a7db9",
+      "view": "sheet"
+    },
+    {
+      "file": "comparison/final/v9-coats.jpg",
+      "sha256": "8a6d225fa7f5f1e9f576eab0918b1af83080d52afb4bc326d7d6c6191d2bcd10",
+      "view": "sheet"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-009.png",
+      "sha256": "056d31aa779275c51c9b4971e69023563e8dd2830cb68e874195f0daedb8cbf8",
+      "view": "individual_original"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-012.png",
+      "sha256": "d06db6e0e7a2fa461b6bd4cc69ca11392366f3c93cd3efb8921868d871d8aebe",
+      "view": "individual_original"
+    },
+    {
+      "file": "comparison/final/v9-walk-neck-004.png",
+      "sha256": "8ee50fec60fe4438c7f03a19fe1303fe3f2f675177821d12a63c2fc363437b01",
+      "view": "individual_original"
+    },
+    {
+      "file": "comparison/final/v9-race-side-000.png",
+      "sha256": "20565230f8427730bffdfac414259d211eeb505fcf48ffdca4aeee9e57c53861",
+      "view": "individual_original"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-007.png",
+      "sha256": "502906cf8d66377f5de025fc973bc78cd1dabb62b737bf9e9139d4a22199e1f8",
+      "view": "individual_original"
+    },
+    {
+      "file": "comparison/final/v9-race-face-000.png",
+      "sha256": "dbc91d7685807bc342912c854f72d2e97ed9723a3150a4201b61a9adcf7e7e81",
+      "view": "individual_original"
+    },
+    {
+      "file": "review/final-contact-sheets/walk-reference.jpg",
+      "sha256": "40b3f3814fb6fb9ff624d054abe1c0fee715c222017a6c353970e71f7f61ea61",
+      "view": "sheet"
+    },
+    {
+      "file": "review/final-contact-sheets/ground.jpg",
+      "sha256": "fdf7f11e9ba35b089173e05440ca6da02ba45c83a160aff05d9a2db7e4e46957",
+      "view": "sheet"
+    },
+    {
+      "file": "review/final-contact-sheets/canter-side.jpg",
+      "sha256": "6f29485ee7a8f142ddcee3ed74cec6583bd6d0692d5ddb53716d3944fc59e194",
+      "view": "sheet"
+    },
+    {
+      "file": "review/final-contact-sheets/race-neck.jpg",
+      "sha256": "6883bdb9b948ce6ac74ee4ab94b81acbe060cfe9e6560f20e988919e40103dc7",
+      "view": "sheet"
+    },
+    {
+      "file": "review/final-contact-sheets/trot-side.jpg",
+      "sha256": "f0abe5167a82574d5519325ba6137fcf852321d17dc7b68ec14bf1a80ea2ad46",
+      "view": "sheet"
+    },
+    {
+      "file": "review/final-contact-sheets/stand-side.jpg",
+      "sha256": "c74801da7d3e1d7fa3551b0e65587b83eea659f72c21978dbc38060e7ba3a2ba",
+      "view": "sheet"
+    },
+    {
+      "file": "review/final-contact-sheets/canter-reference.jpg",
+      "sha256": "0f939609d41e8501d2feb5d3a837464fe7e3cca4fe0b17eab8bbb539a8ead3d3",
+      "view": "sheet"
+    },
+    {
+      "file": "review/final-contact-sheets/walk-side.jpg",
+      "sha256": "85edbe317c60561856dbabd36f54cafc35a142f33494ca56ff97ce365af8fd5c",
+      "view": "sheet"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-sheet-00.jpg",
+      "sha256": "124172700f92d9b60dea9296cdf507038ef1d70ae1297835a736e70e97ad81d7",
+      "view": "sheet"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-sheet-08.jpg",
+      "sha256": "90f1fc788078463a06146f393e9c6cf4fe25faa85a32af5daf8f177d4392caa6",
+      "view": "sheet"
+    },
+    {
+      "file": "reference-contours/final/v9-video-derived-twelve.jpg",
+      "sha256": "5c15125b8160d78fe326a8871ba5a8bdbb0d9b5ed11d2f0b98c163c78ac756ec",
+      "view": "sheet"
+    },
+    {
+      "file": "reference-contours/final/v9-phase-sensitivity-00.jpg",
+      "sha256": "5239a96ec539b3d644d03c1f65146f6277700d4260ca2791f8085fe41a77de0b",
+      "view": "sheet"
+    },
+    {
+      "file": "reference-contours/final/v9-phase-sensitivity-07.jpg",
+      "sha256": "a08b497222e75eb1d2f756f2dea46b809262aa4c0388db083f401ea5bd64ef61",
+      "view": "sheet"
+    },
+    {
+      "file": "reference-contours/final/v9-stand-pd-outline.png",
+      "sha256": "739ce60ef0ffe08aa9d8284e4e1bb5dc5eb7e8761107f68bb88f5dbc8fb1b118",
+      "view": "individual_original"
+    },
+    {
+      "file": "comparison/final/compare-side.jpg",
+      "sha256": "99b9eae5571c233c7b5d3e0d62ba83e9acaefcd193fe3d0db9b28ed326c91ee4",
+      "view": "sheet",
+      "baseline_import": "240fps/nooptimizer"
+    },
+    {
+      "file": "comparison/final/compare-neck.jpg",
+      "sha256": "c6f182e034213964dbebd43d7717f94ad5df548287522e0c31e10054bc621ad7",
+      "view": "sheet",
+      "baseline_import": "240fps/nooptimizer"
+    },
+    {
+      "file": "comparison/final/compare-stand.jpg",
+      "sha256": "acd120418fe6dc1aaf08f09eb9fff1c0e25fab2e0d9b8185517b3f3df90abb4e",
+      "view": "sheet",
+      "baseline_import": "240fps/nooptimizer"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-sheet-00.jpg",
+      "sha256": "d8bc61754f08b0323b3afd4bac471ab411295fb491c30c8e4260b7de935c81d3",
+      "view": "sheet",
+      "baseline_import": "240fps/nooptimizer"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-sheet-08.jpg",
+      "sha256": "fb6abe15a9fcc44779ffda39ae61a30b3cc57d6d724b1a4921f2c70af846e61a",
+      "view": "sheet",
+      "baseline_import": "240fps/nooptimizer"
+    },
+    {
+      "file": "reference-contours/final/v8-video-derived-twelve.jpg",
+      "sha256": "200087f9a581dcfa6b829841ba5912b3263b301f93f47c7e6c1f41350d9fbc34",
+      "view": "sheet",
+      "baseline_import": "240fps/nooptimizer"
+    },
+    {
+      "file": "review/final-contact-sheets/v8-ground-240.jpg",
+      "sha256": "37ee5b74f87da8cc83e3dc11f73dddd1d021be9bb6ebdf4b77eae591c10667b5",
+      "view": "sheet",
+      "baseline_import": "240fps/nooptimizer"
+    }
+  ],
+  "sheet_sources": [
+    {
+      "file": "comparison/final/v9-race-neck-000.png",
+      "sha256": "a229c12086b2966e9c391ece0e95eef5f9c3fc4c15ebf77d241b1fc576c0f4a1",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-001.png",
+      "sha256": "3563477fa1eaae701065b32d048b57d3881b4da1b7420894b1b013960650d66c",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-002.png",
+      "sha256": "2b0205212f321890fee71355742fe6f1f1a0b72e91a0fb2b691fd6da6731d5d6",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-003.png",
+      "sha256": "40c4cdf3f4843bdc529517f095f6e2302bf391b4c1d4f1d5cd31de32d18d4ad5",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-004.png",
+      "sha256": "a353dfffda029ef3df723d5c712cdf23763f4138eab0d749840f6b8e5f3b6e4c",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-005.png",
+      "sha256": "7126c8597da07f962cddd83b2f3351a9ad8983cfaf99900e89d96d3ea7b3bace",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-006.png",
+      "sha256": "9deb4c43dc112a63540462b7fd72c14d3177156af0144544841acfa421ecd8e7",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-007.png",
+      "sha256": "8bcda1599eecd0c0c24259c693f5ce0e1b83cc799aff189327e34cad0997e4e4",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-008.png",
+      "sha256": "e9d8c4987feb3eb16360a9cff29df69d0a772056ad63fb1ab44a830b2aff2dfe",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-009.png",
+      "sha256": "056d31aa779275c51c9b4971e69023563e8dd2830cb68e874195f0daedb8cbf8",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-010.png",
+      "sha256": "0683eca9a909ed4c358533709024232eeab4ce66b6e5932ed8481c17aef0f4e2",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-011.png",
+      "sha256": "6d1c5b7beef28cc240b5bc8a20f85f35c07173fd910bebc3782b3c5827b7f0c1",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-012.png",
+      "sha256": "d06db6e0e7a2fa461b6bd4cc69ca11392366f3c93cd3efb8921868d871d8aebe",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-013.png",
+      "sha256": "9e37657ce860364ecb6f09c2de7c9432cb9d5013eceaee55d6476e5803700539",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-014.png",
+      "sha256": "9d4f6843b14ffb90bc0801288d0ad46b3a0c40ad4394b8134928dfe804cd5396",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-015.png",
+      "sha256": "8bdd5c8238c64ce684abf65ccfac13ef6be90137822b38826aa10cf43dc2c2b6",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-016.png",
+      "sha256": "d0c1003d3d8344ef167f2b73df17ce91adfe93dad643510b4ef484c6357a75c4",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-017.png",
+      "sha256": "c99651801c63b444589d299684bc824bbce0b7a809606a5f379e72b2982ac22e",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-018.png",
+      "sha256": "d3d654fa24dbc2a8eea8ed7a90804ddf0bf1952597bb30728844c72aacaf66d8",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-019.png",
+      "sha256": "2646e60d3c72894b6e4ec1bb175384be1f6128dd74c878c2fae960d6e31f2653",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-020.png",
+      "sha256": "f9b26c4f10b1fa42fe235ab9807fe44179d49ded52845cffd5cb0352d5ece97c",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-021.png",
+      "sha256": "332d4d00e2fa600d53fbd268e59b9fd48a5b7e697320baed830f80a3a7ac6b39",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-022.png",
+      "sha256": "1eeaf907eb9fa876f2f3461dab5cc3960e4769b269d98467bedb08aca58d11c1",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-023.png",
+      "sha256": "8055f6968c3bb18bb7fa35823ca85141bf3de903cb144465acb65b4c759002b4",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-024.png",
+      "sha256": "8edb9f0cda20ae6076eb8ab57c0da2d5ef36170f033104f073b9bce9d68171ef",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-025.png",
+      "sha256": "771f5b4709fed631efc40d6e987379d3cf5904e60c99af7379b486417987db43",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-026.png",
+      "sha256": "bcd59b05a271ad10808c4d9170220cc8241094919491dd6e3056462dd2b3a8b2",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-race-neck-027.png",
+      "sha256": "c0ddd4efa24848dad0ac25dbece4d97e3d606d3d0dd1e6b0d38961e2041d661f",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-000.png",
+      "sha256": "92151db3aa592bc8ede98294d68bea7d03662f31a4c016fb50c6a80ac2f2f736",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-001.png",
+      "sha256": "06f9d2bcb5f051bba09d4f2e1892de0446fb13cfcfebdaf660952dab4be390f2",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-002.png",
+      "sha256": "2c8ae5fed49e49ac664cab58c313ebeae0d8bcb0b2f8f736a18b2a2f402583a5",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-003.png",
+      "sha256": "fc5140ddf665756f24d10bedcf9a3e5e4a33dd5db1c7b007e78c50e5b7ca6ffd",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-004.png",
+      "sha256": "f44de6a22f7c6a0dfd2fbd8e84c4c5c7870fb7165f7417f0f7dd267b0f38a902",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-005.png",
+      "sha256": "3ab68e2736fa9e3b786bc5bb72373e3029533c1c3c3096893dcec4dae21483ae",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-006.png",
+      "sha256": "207afe6727e6ae164111d4882cb4a76d80668e6eb4499a8030444612640a6949",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-007.png",
+      "sha256": "ff09fbed5a77bfc8072d1a872bcbafb84d5c3f004a54a3de221c357132e040fa",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-008.png",
+      "sha256": "9d94cd489502cbbf52e1119a632d306212cb0d1ada5218e70316cdc9971260ba",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-009.png",
+      "sha256": "49e0cdf41db6c0fd8afba92ef11fa4d7b395800a129910013dd4d24695fdbc3e",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-010.png",
+      "sha256": "b3a4e8786fc1f12a88a34544c73c4f8e196de1a976da84ccb01471fb09504c23",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-011.png",
+      "sha256": "02d134528551faae7223c086d891742117023bdd87764bcdb944db575b6da912",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-012.png",
+      "sha256": "58f4428f56250721b0bc52c1f9087ae278fc876e10a23ef4bea43378c8e25b0c",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-013.png",
+      "sha256": "7f86b869b6369db07ef16139354d40c815baaeb07f32191ed7e256ad1d7445fa",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-014.png",
+      "sha256": "391787b36d8565da2bfdb18d7d994665bd5597516e64bf078edc4082d894bf4c",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-stand-side-015.png",
+      "sha256": "5e87cf14cffb31940abfa610e27a8f2106612252f510f7c46d3d24b70d784ed4",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-000.png",
+      "sha256": "e1dbb022e939f14b1f085a5c7a8e54cba4fa5fac31ade90abcc4400887b0adf1",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-001.png",
+      "sha256": "7352a90e9f298e02a65263b62aaa6a0f4b6c03c3e2984f793b862dcb9596bfdd",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-002.png",
+      "sha256": "32e25b3d4f73c6534be78e1e2422cdedfcb43fca04dd301484fbfff8e80755ee",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-003.png",
+      "sha256": "f748b9de74c52adae5c81976263f746e7f48d0e5e8bc4a101c32d9e039944c2e",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-004.png",
+      "sha256": "3bdcc7fd9bfe23369e3525a89b70ddf9e19851b6cae117ed1cc5a34da81746d4",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-005.png",
+      "sha256": "37cf95fe0227150b2b30f7a53d3e6c523bddf11e31ffc8ea41f9dc2d8652407b",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-006.png",
+      "sha256": "18e62f4188648bb916e8159cee550ed710fffeb65a8a5dab6f22c9fc6e004f26",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-007.png",
+      "sha256": "502906cf8d66377f5de025fc973bc78cd1dabb62b737bf9e9139d4a22199e1f8",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-008.png",
+      "sha256": "28e68bd326537427316e08e2e793c8f95d8d46ec73c45880615a438766b81c91",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-009.png",
+      "sha256": "3659b7e6702c9a4c6bdf0140552878104d9843eb60e818691aae6c066141d9bb",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-010.png",
+      "sha256": "0128d3f692b51c900d94a4f87ff38ab3087612300686658c4dd33081d838dd83",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-011.png",
+      "sha256": "88a377ff2a03db1424fd15d215e5a794e51a9614f4d067649ea8aea2d696f483",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-012.png",
+      "sha256": "3b58dcbcc1bd37e64a95cefdb0bc9f2968a905bba46dda2b13c0faf778882bf2",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-013.png",
+      "sha256": "a4c0f3cec4d8428f435f70eb24854fcd513d8dc668924ae40b4ee0d27df2909b",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-014.png",
+      "sha256": "92cb029c572b0129f5b1c3a94d16d76e495a9e7facca1b589d9354ebb8e51f47",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-walk-side-015.png",
+      "sha256": "29a2fe066775babba1305d0bcc379c328a2f660478cdde466b5c8824b5f35c21",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-000.png",
+      "sha256": "f65fbf5db91626cd8cb634bef8730fda05b5a5225dab3c35c7024b8941e5487f",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-001.png",
+      "sha256": "a4da8a4591ddd2595a4b2c7140b02d4ef3a5c1e65ad86da0522f67c12be33b98",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-002.png",
+      "sha256": "00af0aedeed7caf9abe75e9d4d498ce0e3e07c65b2f37c37c885557675f631b2",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-003.png",
+      "sha256": "dd5c1214c754e0122b3f9b984b704d4f92908eb6905fb725fa2d3cd964e98aed",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-004.png",
+      "sha256": "5f129fd9b9746decf38730da66c77a5719c0224b4b634d082d97f3639c1cf7a8",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-005.png",
+      "sha256": "69ec4731defac5d86bb7969dcb117c9aa89847bd7545b499ffe9642ee4677f89",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-006.png",
+      "sha256": "07ab263e91b46cb060a5eddd9fe96dc57c2e8192648d5431f7f41bbbc2f13770",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-007.png",
+      "sha256": "ce1e8b182fceb390bb35bd76935efa7fc8b245a05492ff17811657da221997fe",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-008.png",
+      "sha256": "1ce15f5a5162b1801be92839e976970f543da879aa6fd2255aa65a048d60673a",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-009.png",
+      "sha256": "ca3247aed4dcb95d6a7ce65eb6c67248f50ddf617ad0bd1f68563d1379409645",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-010.png",
+      "sha256": "98488f36effc511c79133e7e2968465580d5770e6a84f19b4f3944d97e27e36b",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-011.png",
+      "sha256": "c8d025c5464dc3cace7c34987e4371810cee990cc736c6026ffa267a0b9b0b4e",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-012.png",
+      "sha256": "59e8b8855a9eee684b3055e6b5bcbda40be2fcd15b4ebf1844ce26451cef79be",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-013.png",
+      "sha256": "e7d089d72914531a137f0e8cf47bc57771813d9b3a1f2e00388d3e9981ac8556",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-014.png",
+      "sha256": "2ee22a81f3fc8696ea9e7b7f017e419053e8a6490387f4b7cd8e66e315f7df90",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-trot-side-015.png",
+      "sha256": "95e480e953cd0af929c1ed0ccdc8c37f0f44257e0c04d342244ef4ee642c4e7a",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-000.png",
+      "sha256": "cb67f761e2dc4d0f30cb24ab605dcf538ec03aab59aac1f3a4820bcd84b37df1",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-001.png",
+      "sha256": "8ade5ebea72c64be2d413d5cf15a82795c4e0299d479b0f2a8fbf1674bcc7f5f",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-002.png",
+      "sha256": "08a552ad970552155063ab0570dc9cee7da6789a18e743eeb7fbebd251aa92c6",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-003.png",
+      "sha256": "6bba832d2daeaf7111c69dfa2f8fe2aaed08bff18fd46c0226e231d70906b89c",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-004.png",
+      "sha256": "a7919c26777820e43a1b13558bc0322a5545d18c21e77ceba46f662ec15bc4f6",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-005.png",
+      "sha256": "b189593823ec158bd5f9888d7625aeffd03247f4933edddfbdb0c4ad70b8e426",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-006.png",
+      "sha256": "d52260ffcc37e7f3c99cfd2f972329464e4635f7aeb19756170ede46a8680ca1",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-007.png",
+      "sha256": "4f67bbd949eb944f0049bb48706f7b340bf7564e18a25378488a3b129c6ccc27",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-008.png",
+      "sha256": "7c48ac1d4f4426efb3616623242b045b3cec6274ab5e41b4f9b471338f0a0031",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-009.png",
+      "sha256": "aa6c07f506be3f096285ac6206e57d80969d844163296cd45db23643e85261d9",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-010.png",
+      "sha256": "91e18cdd95377564254680a2f19a812c0b5ebb62afc52cf8c5d5b66e5c3ee58d",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-011.png",
+      "sha256": "f15972dbec386e3e45f1af1a74e5f62e585f781dd3d3d56e2e4e2a546fa77476",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-012.png",
+      "sha256": "a0b955062f919b6d375a9b0db0599c8c73d8e7ea43c610daa9533fd1491f66ba",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-013.png",
+      "sha256": "4a0bcc0e4d6c881ae7daed95c1a8349959582c64335ea581b9631a1cc9e41435",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-014.png",
+      "sha256": "deb8ce30db9b130ecf6027642838220c3cccdff29cdc6ecdc8eb0b20c36a4ee1",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "comparison/final/v9-canter-side-015.png",
+      "sha256": "dba0111d6f34e4e65ea087f9ba4557fefcaa8622acd1597a44b172e9ce180897",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-01.png",
+      "sha256": "1a519cf25762532016b36e9de1fb76f7461f42e3d298bffffd9953acb46e0fc0",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-02.png",
+      "sha256": "98b0bf06a2bd16be2cfd1ed81040d4528dc66a8d8b90795ef548f47b77e48f3a",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-03.png",
+      "sha256": "191b7db905ff5e06df9a9e988904a144c315607d72246930f8ef3434c1cb1929",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-04.png",
+      "sha256": "9ae6386aabbb3509d29fbfd421f09681d5ab99372fbfabad5252dbf4cefdcd7e",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-05.png",
+      "sha256": "ca13e5f6aac1da02f1fafded997a57379b073b079ee130cbc32372065686f3ed",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-06.png",
+      "sha256": "16fcef6e7644bb2bccbc2100aff7c4e9eed60dadb74391ab45587e185aa89bfc",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-07.png",
+      "sha256": "bd4a9329f00b99cafcd0e11326167d37ed1c8337d159e5c3f11cc339f07aad0b",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-08.png",
+      "sha256": "9bea1f25b6ca4a55b26a941e6f2d94732d1079c87c29a6e4c09842e9f1826984",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-09.png",
+      "sha256": "96d93af6896d733edf53a8ac0c64bf3199ad22625d0a9a8c7f0a73e3f1cddddf",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-10.png",
+      "sha256": "b3b9696b607caba5284ac7bdb98c96d9879096e5a2fbaeedb674433c260f8109",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-11.png",
+      "sha256": "6aebcd46ad77b41c07d860d873f6072ff61a4b7c78e264224ca49428b8d023eb",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-12.png",
+      "sha256": "8490a5bfb3483fd81a2e0ea497d99854934726531eb6aa84dc86eb1b3f3014fc",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-13.png",
+      "sha256": "ef99eba981afa60bb1be7c3cada08f92cb710f90643e890e61f9b81dacd7ef51",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-14.png",
+      "sha256": "8e45de4136d640050e3e2f31b623c37db71fea0947536065599507e4c35e4d77",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-run-ground-15.png",
+      "sha256": "e26500588d92786a1323da4ccf071d0c80c668ac98ecd6cf49ba8a2cc55ccee9",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-walk-oblique-00.png",
+      "sha256": "49ab0396def17a312f92db771d07184f404d3cde4269828e021ae6aba6aae3d3",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-walk-oblique-01.png",
+      "sha256": "9e243fe5a512c1eb889d09d8c53549fbbd09ec84f77652e418753881a6bfe653",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-walk-oblique-02.png",
+      "sha256": "00d3be544292aef09d07f828d7b61165bfbb91685a63f26142b9723d7669f4a2",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-walk-oblique-03.png",
+      "sha256": "c3e32b5ef6e52b70b0c97f83a4598709fcf74c171b8aef3b594f913288950040",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-walk-oblique-04.png",
+      "sha256": "148dc02bcc866f20900407ff7d94b934cefafa26d429c99aeefce4d267f758e1",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-walk-oblique-05.png",
+      "sha256": "ce368fb3fff9340afc594b5af4ec73cd78ee68e151e0503f0046861e29ab0814",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-walk-oblique-06.png",
+      "sha256": "6a999b2cc51037e0629ef7da11d1126eb84156f0d9b0014c30cc548da4ed871c",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-walk-oblique-07.png",
+      "sha256": "5188723c610fa9914a444d4a9ff8f419d27007f93ca59fea63adb3b250983d98",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-canter-guidance-00.png",
+      "sha256": "5c9969771b2648090ccabe76e7172acce23b0a814a5efbfad690f5bee9b2436a",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-canter-guidance-01.png",
+      "sha256": "dd75f4ca122d7ab3e5dc839077f3e23aaf1ab2eb9dff57b1c42df6a4b90fbca0",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-canter-guidance-02.png",
+      "sha256": "0b968005c6a341403017f577abeef174102d3c5cdf65e837cdf488f18bb90874",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-canter-guidance-03.png",
+      "sha256": "81b70d2432d4043d490ba4efc8772d282d6fb3acc790624c043a83265b39cc55",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-canter-guidance-04.png",
+      "sha256": "3915758baaa7d18641f5ab3663e3f6d693385702880cd799f50cccc66c40ca2c",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-canter-guidance-05.png",
+      "sha256": "6b679804aca629331d2cb33da04ab9b271e060156cc218dcd74ee89b9f043256",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-canter-guidance-06.png",
+      "sha256": "ccaca7cbf5831c57e81e4662d7b03f95302208a94a73c29b1831a7186284b7b0",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v9-owner-canter-guidance-07.png",
+      "sha256": "4e1f446471b598896ae8a3ceb00f7213d40518af24d57ee172f899d942bf5347",
+      "view": "sheet_source_not_individually_viewed"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-01.png",
+      "sha256": "4e53b6bf2c972098f56e7e44f577f9247f14e0827d1bb0d6a323453303bbd09b",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-02.png",
+      "sha256": "57daab9cd57093e53c323da06ff8cb0cdb2e48b1ce47d22758cd1987fe8f1b27",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-03.png",
+      "sha256": "7a0aafcb176c1ce0d4361518439e78e10c77b0add7a104ccb6882a7d6845d6b8",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-04.png",
+      "sha256": "c682a69c2e602a68f470fb40ff9d75a35078ebd7555a8e8cea58efedd53d7cf4",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-05.png",
+      "sha256": "e4bfa48ea5a7573d76cc5d1c0b01499cd4db811a491fe48de0df63206e5744cc",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-06.png",
+      "sha256": "1f64e582e314b05afdeee356b1a82a2a8d5f4ff23996ffa77d6899965c8a6043",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-07.png",
+      "sha256": "eeefb232e91d09e5731590523dee77bdb6e915d97163dc93b7d23acdfa226ff1",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-08.png",
+      "sha256": "1fd5523d6301e5aca8edebff181ff642cabebe28d062eda4dc61f413f47389a5",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-09.png",
+      "sha256": "d5ed30a38402701b010bf73f209eee163c16ebb5af269c4f55f6f5d7c5eb9ccd",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-10.png",
+      "sha256": "b9f8c72941034d2a836ddb541bd5015e3bfb3e171e3791f78e86d65af72b67c8",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-11.png",
+      "sha256": "a3cbd2fd966031141982d06f4dd619a4686e4bfd01f31cb52c2826b3d7fff404",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-12.png",
+      "sha256": "a5aefc195b82bfa0bb89d7b6b7588c615879a7ed7ce7a76b2bf7a5846102679e",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-13.png",
+      "sha256": "b475e818210a5b5db0974087eb72f4213d76709d3c4d6563ea7282a1b1d795e9",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-14.png",
+      "sha256": "ec0c437dc37c60272f526ac30baed24d216d17e33d2ca89521695b7284168255",
+      "view": "v8-ground-240 sheet source, not individual original"
+    },
+    {
+      "file": "reference-contours/final/v8-owner-run-ground-15.png",
+      "sha256": "6060b9c35ca622a9bb789c98db8755fde17b42343af0869c553a7f5ccb3e649d",
+      "view": "v8-ground-240 sheet source, not individual original"
+    }
+  ],
+  "contact_claim": "full-support RMS .32-.75m/s; inner ~.0001m/s; NOT zero slip",
+  "unverified": [
+    "hidden surfaces",
+    "real-time playback",
+    "game rider/LOD/transitions/shadows",
+    "dedicated owner Stand/Canter reference",
+    "original paid12 artwork"
+  ],
+  "superseded_history": [
+    {
+      "file": "comparison/final/compare-markers.jpg",
+      "sha256": "13cbb5a538fa98e673c8e2e5b755a63e2b42d4f8bd9d089bd7464ded938f865f",
+      "view": "sheet",
+      "status": "superseded_pre_v8_import_fix_not_current"
+    },
+    {
+      "file": "reference-contours/final/v8-video-derived-twelve.jpg",
+      "sha256": "0773512fc393a59ecfcb1efd5fdd378fd3cbe323098140082f5ac578edcadcea",
+      "view": "sheet",
+      "status": "superseded_pre_v8_import_fix_not_current"
+    }
+  ],
+  "baseline_import_recheck": {
+    "version": "v8",
+    "settings": "240fps/nooptimizer, matched v7/v9",
+    "actual_review": "compare-side/neck/Stand + all15owner-run + all15ground(sheet) + video12",
+    "conclusion": "unchanged limited pass",
+    "v9_glb_and_images": "unchanged"
+  }
+}
