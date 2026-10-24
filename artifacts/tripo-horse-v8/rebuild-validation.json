@@ -1,0 +1,16 @@
+{
+  "source_glb_sha256": "2a0be31f6bfb5382a192b6ba4477fadb99f1ca3368d23fabbc467abe1923a798",
+  "clean_rebuilt_glb_sha256": "2a0be31f6bfb5382a192b6ba4477fadb99f1ca3368d23fabbc467abe1923a798",
+  "byte_identical": true,
+  "inputs": "Only bundled tools, frozen v7-rest.blend, source-rigged.glb, v4-socket-rest.json, build-info.json, muzzle-fusion.json, baseline/, anatomy v6/v7; no generated output copied.",
+  "blender": "4.3.2",
+  "runtime_python": "3.12",
+  "all_stages_success": true,
+  "input_sha256": {
+    "v7-rest.blend": "3c7111fdc4ffebccf8cd330edf701f08e47c808881ae7786891800fa252d266c",
+    "source-rigged.glb": "9bc9f86371b366be89036182da406c24dbc864b36f603d18f378462bf8ff262d",
+    "v4-socket-rest.json": "bafb69fdec365ee5177127e397627d9de13cb898be201dfa3b3902c314d747a2",
+    "build-info.json": "bcaa7e3cc02eb23ec1f41590d432747cdbe3324958594de994fe33d9aceb452c",
+    "muzzle-fusion.json": "efde71de7a940d2ba67b5d3c34cffc5bcbd0c72d14b194833f6f60b70d144c90"
+  }
+}

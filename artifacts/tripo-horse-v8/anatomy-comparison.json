@@ -1,0 +1,490 @@
+{
+  "source_glb_sha256": "2a0be31f6bfb5382a192b6ba4477fadb99f1ca3368d23fabbc467abe1923a798",
+  "reference_scale": 2.6,
+  "method": "Five fixed nearest-surface barycentric landmarks on base skin, same seed offsets from version-specific poll and withers. Head is poll to upper lip surface point. Top line is a 33-point sagittal upper-surface polyline; lower line is throatlatch to neck-shoulder junction chord, explicitly not a traced underside arc. Added mane/face relief excluded. World pitch uses evaluated skin head direction and anatomical Spine_0 to Spine_7 trunk axis. Rest and source metadata included for audit; this measurement is not an anatomical ground truth.",
+  "versions": {
+    "v6": {
+      "Stand_Loop": {
+        "initial": {
+          "head_pitch_world_degrees_peak_to_peak": 6.35068282406337e-07,
+          "trunk_pitch_world_degrees_peak_to_peak": 3.093267047482584e-05,
+          "neck_pitch_world_degrees_peak_to_peak": 6.49106475947292e-05,
+          "head_center_height_m_peak_to_peak": 0.0025999967473708807,
+          "upper_lip_height_m_peak_to_peak": 0.002599991199678575,
+          "poll_height_m_peak_to_peak": 0.0026000022950634083,
+          "withers_height_m_peak_to_peak": 0.002599467665318267,
+          "top_line_m": 0.6929567987488161,
+          "lower_line_chord_m": 0.3984214265708772,
+          "head_length_m": 0.5636223358837601,
+          "head_to_top_line": 0.8133585483271414,
+          "top_to_lower_line_chord": 1.7392558545682093
+        },
+        "all_phase": {
+          "top_line_m": {
+            "mean": 0.6929569673018527,
+            "min": 0.6929567027844072,
+            "max": 0.6929572104409983
+          },
+          "lower_line_chord_m": {
+            "mean": 0.39842151030408957,
+            "min": 0.3984212938379159,
+            "max": 0.3984216794341313
+          },
+          "head_length_m": {
+            "mean": 0.5636223404690154,
+            "min": 0.5636223358837601,
+            "max": 0.5636223450532742
+          },
+          "head_to_top_line": {
+            "mean": 0.8133583571049173,
+            "min": 0.8133580763982423,
+            "max": 0.8133586712549346
+          },
+          "top_to_lower_line_chord": {
+            "mean": 1.7392559120941367,
+            "min": 1.7392556714744425,
+            "max": 1.7392562305387258
+          },
+          "poll_height_m": {
+            "mean": 2.0808361871899157,
+            "min": 2.0795360940264476,
+            "max": 2.082136096321511
+          },
+          "neck_pitch_world_degrees": {
+            "mean": 40.24396090038556,
+            "min": 40.24393059708327,
+            "max": 40.243995507730865
+          }
+        }
+      },
+      "RaceGallop_Loop": {
+        "initial": {
+          "head_pitch_world_degrees_peak_to_peak": 11.006735064350451,
+          "trunk_pitch_world_degrees_peak_to_peak": 1.5996029296514132,
+          "neck_pitch_world_degrees_peak_to_peak": 10.87246883953938,
+          "head_center_height_m_peak_to_peak": 0.30741507497490805,
+          "upper_lip_height_m_peak_to_peak": 0.32910554211966314,
+          "poll_height_m_peak_to_peak": 0.2863037436625373,
+          "withers_height_m_peak_to_peak": 0.14909207400685331,
+          "top_line_m": 0.7582791369913311,
+          "lower_line_chord_m": 0.4339910649114427,
+          "head_length_m": 0.5655203026748251,
+          "head_to_top_line": 0.7457943586825736,
+          "top_to_lower_line_chord": 1.747222923002022
+        },
+        "all_phase": {
+          "top_line_m": {
+            "mean": 0.7437493337702767,
+            "min": 0.7176841650491217,
+            "max": 0.7828579260281933
+          },
+          "lower_line_chord_m": {
+            "mean": 0.41719329955570655,
+            "min": 0.39570822379768844,
+            "max": 0.4484874469935532
+          },
+          "head_length_m": {
+            "mean": 0.565732957882773,
+            "min": 0.5651882164454298,
+            "max": 0.5660903414300981
+          },
+          "head_to_top_line": {
+            "mean": 0.7609774198252691,
+            "min": 0.7219550286894273,
+            "max": 0.7887736263365267
+          },
+          "top_to_lower_line_chord": {
+            "mean": 1.7832814144584275,
+            "min": 1.7411188089089753,
+            "max": 1.8160383718112576
+          },
+          "poll_height_m": {
+            "mean": 1.7517743339798653,
+            "min": 1.6106411985017002,
+            "max": 1.8969449421642375
+          },
+          "neck_pitch_world_degrees": {
+            "mean": 25.927414515608465,
+            "min": 20.890764927978534,
+            "max": 31.763233767517914
+          }
+        }
+      },
+      "Walk_Loop": {
+        "initial": {
+          "head_pitch_world_degrees_peak_to_peak": 9.288446255682722,
+          "trunk_pitch_world_degrees_peak_to_peak": 4.07608968817641e-05,
+          "neck_pitch_world_degrees_peak_to_peak": 7.072761215010452,
+          "head_center_height_m_peak_to_peak": 0.0900788848303522,
+          "upper_lip_height_m_peak_to_peak": 0.11605906830330359,
+          "poll_height_m_peak_to_peak": 0.06409870135740081,
+          "withers_height_m_peak_to_peak": 0.007688851819710241,
+          "top_line_m": 0.7279480715419826,
+          "lower_line_chord_m": 0.4082795039583968,
+          "head_length_m": 0.564175306442427,
+          "head_to_top_line": 0.7750213627839655,
+          "top_to_lower_line_chord": 1.7829650141246367
+        },
+        "all_phase": {
+          "top_line_m": {
+            "mean": 0.7228678498929397,
+            "min": 0.7107692323875715,
+            "max": 0.7353780171517587
+          },
+          "lower_line_chord_m": {
+            "mean": 0.4115825114663289,
+            "min": 0.4082795039583968,
+            "max": 0.4148291232665794
+          },
+          "head_length_m": {
+            "mean": 0.5639966395632651,
+            "min": 0.563690965226958,
+            "max": 0.5642952053181896
+          },
+          "head_to_top_line": {
+            "mean": 0.7803306423794121,
+            "min": 0.7673497905332207,
+            "max": 0.7930778777148066
+          },
+          "top_to_lower_line_chord": {
+            "mean": 1.7564348263314211,
+            "min": 1.7179531906444188,
+            "max": 1.7965760033919806
+          },
+          "poll_height_m": {
+            "mean": 1.9449733754613874,
+            "min": 1.912378631304015,
+            "max": 1.9764773326614158
+          },
+          "neck_pitch_world_degrees": {
+            "mean": 36.226731915677505,
+            "min": 32.70610463940852,
+            "max": 39.778865854418974
+          }
+        }
+      }
+    },
+    "v7": {
+      "Stand_Loop": {
+        "initial": {
+          "head_pitch_world_degrees_peak_to_peak": 0.9939857355449888,
+          "trunk_pitch_world_degrees_peak_to_peak": 3.093267047482584e-05,
+          "neck_pitch_world_degrees_peak_to_peak": 0.5910662981098938,
+          "head_center_height_m_peak_to_peak": 0.007518268250629845,
+          "upper_lip_height_m_peak_to_peak": 0.004743867305417204,
+          "poll_height_m_peak_to_peak": 0.010292669195842041,
+          "withers_height_m_peak_to_peak": 0.0026090772927347405,
+          "top_line_m": 0.7392613327696204,
+          "lower_line_chord_m": 0.3616314396866152,
+          "head_length_m": 0.5632724711825983,
+          "head_to_top_line": 0.7619395824103432,
+          "top_to_lower_line_chord": 2.0442396640354445
+        },
+        "all_phase": {
+          "top_line_m": {
+            "mean": 0.7392827899993942,
+            "min": 0.7361186455023576,
+            "max": 0.742475880603891
+          },
+          "lower_line_chord_m": {
+            "mean": 0.3615620996812129,
+            "min": 0.3605958756618528,
+            "max": 0.36253147792054513
+          },
+          "head_length_m": {
+            "mean": 0.5632691907760856,
+            "min": 0.5632243292622257,
+            "max": 0.5633136707066608
+          },
+          "head_to_top_line": {
+            "mean": 0.7619202007111894,
+            "min": 0.7585759268087314,
+            "max": 0.7652484747512848
+          },
+          "top_to_lower_line_chord": {
+            "mean": 2.04468665348341,
+            "min": 2.0413788322358406,
+            "max": 2.04804965112062
+          },
+          "poll_height_m": {
+            "mean": 2.1024520688765325,
+            "min": 2.0973155097785177,
+            "max": 2.1076081789743597
+          },
+          "neck_pitch_world_degrees": {
+            "mean": 39.35706888503229,
+            "min": 39.061542551034954,
+            "max": 39.65260884914485
+          }
+        }
+      },
+      "RaceGallop_Loop": {
+        "initial": {
+          "head_pitch_world_degrees_peak_to_peak": 9.920266006090984,
+          "trunk_pitch_world_degrees_peak_to_peak": 9.997280491088596,
+          "neck_pitch_world_degrees_peak_to_peak": 11.794130023803099,
+          "head_center_height_m_peak_to_peak": 0.25766308367885227,
+          "upper_lip_height_m_peak_to_peak": 0.23900293873762712,
+          "poll_height_m_peak_to_peak": 0.2775697176590368,
+          "withers_height_m_peak_to_peak": 0.1493805951874767,
+          "top_line_m": 0.6829655513464782,
+          "lower_line_chord_m": 0.3464910657609483,
+          "head_length_m": 0.566468422503656,
+          "head_to_top_line": 0.829424590137605,
+          "top_to_lower_line_chord": 1.9710913753189554
+        },
+        "all_phase": {
+          "top_line_m": {
+            "mean": 0.6673502355415328,
+            "min": 0.6374733764413442,
+            "max": 0.7026747882120646
+          },
+          "lower_line_chord_m": {
+            "mean": 0.3382376901371613,
+            "min": 0.3307101407390529,
+            "max": 0.35946791355401003
+          },
+          "head_length_m": {
+            "mean": 0.5668960394987923,
+            "min": 0.5660351758818506,
+            "max": 0.5672518193659242
+          },
+          "head_to_top_line": {
+            "mean": 0.8499802631468938,
+            "min": 0.8055531610105974,
+            "max": 0.8895184442062944
+          },
+          "top_to_lower_line_chord": {
+            "mean": 1.973402628304242,
+            "min": 1.908212856304016,
+            "max": 2.031963104405922
+          },
+          "poll_height_m": {
+            "mean": 1.8148348506759118,
+            "min": 1.6762185055995582,
+            "max": 1.953788223258595
+          },
+          "neck_pitch_world_degrees": {
+            "mean": 35.68948699931005,
+            "min": 30.09109228632184,
+            "max": 41.88522231012494
+          }
+        }
+      },
+      "Walk_Loop": {
+        "initial": {
+          "head_pitch_world_degrees_peak_to_peak": 7.813641357925633,
+          "trunk_pitch_world_degrees_peak_to_peak": 4.07608968817641e-05,
+          "neck_pitch_world_degrees_peak_to_peak": 5.870058364516328,
+          "head_center_height_m_peak_to_peak": 0.04940947624750369,
+          "upper_lip_height_m_peak_to_peak": 0.033850106051562356,
+          "poll_height_m_peak_to_peak": 0.06655837231975892,
+          "withers_height_m_peak_to_peak": 0.008226117352530649,
+          "top_line_m": 0.6130110547324107,
+          "lower_line_chord_m": 0.2548025574635047,
+          "head_length_m": 0.5666819432852647,
+          "head_to_top_line": 0.9244236933584021,
+          "top_to_lower_line_chord": 2.4058277155252337
+        },
+        "all_phase": {
+          "top_line_m": {
+            "mean": 0.6129564586686083,
+            "min": 0.6120293463195432,
+            "max": 0.6142390286846316
+          },
+          "lower_line_chord_m": {
+            "mean": 0.25332388698572217,
+            "min": 0.25096126878919156,
+            "max": 0.2555516627001228
+          },
+          "head_length_m": {
+            "mean": 0.5666006061199447,
+            "min": 0.5664033623803424,
+            "max": 0.5667883774038603
+          },
+          "head_to_top_line": {
+            "mean": 0.9243743051318616,
+            "min": 0.9227488522698338,
+            "max": 0.9256818480454277
+          },
+          "top_to_lower_line_chord": {
+            "mean": 2.4197425181729266,
+            "min": 2.4033025158482357,
+            "max": 2.441870958236488
+          },
+          "poll_height_m": {
+            "mean": 1.4990063808694372,
+            "min": 1.4657028935992473,
+            "max": 1.5322612659190062
+          },
+          "neck_pitch_world_degrees": {
+            "mean": -1.6833593718591868,
+            "min": -4.619196015066137,
+            "max": 1.2508623494501903
+          }
+        }
+      }
+    },
+    "v8": {
+      "Stand_Loop": {
+        "initial": {
+          "head_pitch_world_degrees_peak_to_peak": 0.9940099608347452,
+          "trunk_pitch_world_degrees_peak_to_peak": 3.093267047482584e-05,
+          "neck_pitch_world_degrees_peak_to_peak": 0.5877442616248025,
+          "head_center_height_m_peak_to_peak": 0.004959521565119918,
+          "upper_lip_height_m_peak_to_peak": 0.002230700225654303,
+          "poll_height_m_peak_to_peak": 0.0077223120133211864,
+          "withers_height_m_peak_to_peak": 0.0026090259043527464,
+          "top_line_m": 0.594794012272667,
+          "lower_line_chord_m": 0.3115325731965119,
+          "head_length_m": 0.5639667922982562,
+          "head_to_top_line": 0.9481716033814427,
+          "top_to_lower_line_chord": 1.9092514345120386
+        },
+        "all_phase": {
+          "top_line_m": {
+            "mean": 0.5948113656584131,
+            "min": 0.5928823078917794,
+            "max": 0.5967603546349294
+          },
+          "lower_line_chord_m": {
+            "mean": 0.3114718455291242,
+            "min": 0.3108629498361502,
+            "max": 0.31208125496318545
+          },
+          "head_length_m": {
+            "mean": 0.5639661077830823,
+            "min": 0.5639397263101211,
+            "max": 0.5639920125587786
+          },
+          "head_to_top_line": {
+            "mean": 0.9481478999234909,
+            "min": 0.9450019960778285,
+            "max": 0.951271449749055
+          },
+          "top_to_lower_line_chord": {
+            "mean": 1.9096769975442054,
+            "min": 1.9071880104540513,
+            "max": 1.9122331838286404
+          },
+          "poll_height_m": {
+            "mean": 1.9473318531565234,
+            "min": 1.9434750945721877,
+            "max": 1.9511974065855089
+          },
+          "neck_pitch_world_degrees": {
+            "mean": 31.916421227662397,
+            "min": 31.6225018873608,
+            "max": 32.210246148985604
+          }
+        }
+      },
+      "RaceGallop_Loop": {
+        "initial": {
+          "head_pitch_world_degrees_peak_to_peak": 9.923106033707974,
+          "trunk_pitch_world_degrees_peak_to_peak": 9.997280491088596,
+          "neck_pitch_world_degrees_peak_to_peak": 12.537835615364862,
+          "head_center_height_m_peak_to_peak": 0.23758692100042667,
+          "upper_lip_height_m_peak_to_peak": 0.2192763847767334,
+          "poll_height_m_peak_to_peak": 0.2567650796849279,
+          "withers_height_m_peak_to_peak": 0.14928459889303425,
+          "top_line_m": 0.4718098373178645,
+          "lower_line_chord_m": 0.28663424591519593,
+          "head_length_m": 0.5667847448226424,
+          "head_to_top_line": 1.2012991251829115,
+          "top_to_lower_line_chord": 1.6460344290383744
+        },
+        "all_phase": {
+          "top_line_m": {
+            "mean": 0.4529045207442845,
+            "min": 0.4156108333696677,
+            "max": 0.4962101530329403
+          },
+          "lower_line_chord_m": {
+            "mean": 0.27907159601903275,
+            "min": 0.2717779020358256,
+            "max": 0.30038304706953767
+          },
+          "head_length_m": {
+            "mean": 0.5670001672217283,
+            "min": 0.5663855437874459,
+            "max": 0.5673820674264888
+          },
+          "head_to_top_line": {
+            "mean": 1.2543926368341667,
+            "min": 1.1414805340375476,
+            "max": 1.363960050349694
+          },
+          "top_to_lower_line_chord": {
+            "mean": 1.62294866266122,
+            "min": 1.5193351693213322,
+            "max": 1.69799319137855
+          },
+          "poll_height_m": {
+            "mean": 1.6984015954250442,
+            "min": 1.5718076170339954,
+            "max": 1.8285726967189233
+          },
+          "neck_pitch_world_degrees": {
+            "mean": 37.28856336153151,
+            "min": 31.46453648876747,
+            "max": 44.002372104132334
+          }
+        }
+      },
+      "Walk_Loop": {
+        "initial": {
+          "head_pitch_world_degrees_peak_to_peak": 7.813641357925633,
+          "trunk_pitch_world_degrees_peak_to_peak": 4.07608968817641e-05,
+          "neck_pitch_world_degrees_peak_to_peak": 5.870058364516328,
+          "head_center_height_m_peak_to_peak": 0.04940947624750369,
+          "upper_lip_height_m_peak_to_peak": 0.033850106051562356,
+          "poll_height_m_peak_to_peak": 0.06655837231975892,
+          "withers_height_m_peak_to_peak": 0.008226117352530649,
+          "top_line_m": 0.6130110547324107,
+          "lower_line_chord_m": 0.2548025574635047,
+          "head_length_m": 0.5666819432852647,
+          "head_to_top_line": 0.9244236933584021,
+          "top_to_lower_line_chord": 2.4058277155252337
+        },
+        "all_phase": {
+          "top_line_m": {
+            "mean": 0.6129564586686083,
+            "min": 0.6120293463195432,
+            "max": 0.6142390286846316
+          },
+          "lower_line_chord_m": {
+            "mean": 0.25332388698572217,
+            "min": 0.25096126878919156,
+            "max": 0.2555516627001228
+          },
+          "head_length_m": {
+            "mean": 0.5666006061199447,
+            "min": 0.5664033623803424,
+            "max": 0.5667883774038603
+          },
+          "head_to_top_line": {
+            "mean": 0.9243743051318616,
+            "min": 0.9227488522698338,
+            "max": 0.9256818480454277
+          },
+          "top_to_lower_line_chord": {
+            "mean": 2.4197425181729266,
+            "min": 2.4033025158482357,
+            "max": 2.441870958236488
+          },
+          "poll_height_m": {
+            "mean": 1.4990063808694372,
+            "min": 1.4657028935992473,
+            "max": 1.5322612659190062
+          },
+          "neck_pitch_world_degrees": {
+            "mean": -1.6833593718591868,
+            "min": -4.619196015066137,
+            "max": 1.2508623494501903
+          }
+        }
+      }
+    }
+  }
+}

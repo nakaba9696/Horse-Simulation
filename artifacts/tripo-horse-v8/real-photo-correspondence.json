@@ -1,0 +1,56 @@
+{
+  "photo_source": "Wellcome Collection uwc8xuuu, Muybridge Animal Locomotion plate626,1887, PDM",
+  "standing_source": "Ridgeway1905 fig129 p415, archive.org origininfluenceo00ridgrich, NOT_IN_COPYRIGHT US",
+  "photo_transforms": "declared rectangular crops, 90-degree page rotation for standing photo; historical gallop crops mirrored horizontally; uniform contain-fit. No anisotropic scaling or retouching.",
+  "comparison_scope": "Visual support/gather/extension phase correspondence only. Photo speed and exact elapsed interval not known; this is not synchronized motion-capture validation. Selection wraps photo 15 -> 1; full16 plate included for audit.",
+  "pairs": [
+    {
+      "photo_number": 3,
+      "model_frame": 0,
+      "model_time_seconds": 0.0,
+      "phase_description": "hind support / gathering"
+    },
+    {
+      "photo_number": 5,
+      "model_frame": 4,
+      "model_time_seconds": 0.06666666666666667,
+      "phase_description": "gather -> reach"
+    },
+    {
+      "photo_number": 7,
+      "model_frame": 7,
+      "model_time_seconds": 0.11666666666666667,
+      "phase_description": "fore reach / support"
+    },
+    {
+      "photo_number": 9,
+      "model_frame": 11,
+      "model_time_seconds": 0.18333333333333332,
+      "phase_description": "fore support / rear extension"
+    },
+    {
+      "photo_number": 11,
+      "model_frame": 14,
+      "model_time_seconds": 0.23333333333333334,
+      "phase_description": "late fore support"
+    },
+    {
+      "photo_number": 13,
+      "model_frame": 18,
+      "model_time_seconds": 0.3,
+      "phase_description": "release / gathering"
+    },
+    {
+      "photo_number": 15,
+      "model_frame": 21,
+      "model_time_seconds": 0.35,
+      "phase_description": "gathered flight"
+    },
+    {
+      "photo_number": 1,
+      "model_frame": 25,
+      "model_time_seconds": 0.4166666666666667,
+      "phase_description": "rear reach / next support"
+    }
+  ]
+}

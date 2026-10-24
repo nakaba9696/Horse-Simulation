@@ -1,0 +1,13 @@
+{
+  "source_glb_sha256": "2a0be31f6bfb5382a192b6ba4477fadb99f1ca3368d23fabbc467abe1923a798",
+  "v7_base_glb_sha256": "985091d66c7caeadd3d151c3b8f8e274399b9b2c96ec0507e7a8266fdc3052ea",
+  "frozen_neutral_mesh_source": "v7-rest.blend",
+  "frozen_rest_sha256": "3c7111fdc4ffebccf8cd330edf701f08e47c808881ae7786891800fa252d266c",
+  "v7_rest_sha256": "3c7111fdc4ffebccf8cd330edf701f08e47c808881ae7786891800fa252d266c",
+  "rest_bytes_unchanged": true,
+  "shader_bytes_unchanged": true,
+  "shader_sha256": "29104e4602e3e21e8ee514a316ff47e3de33f50f85f1a0a480ea170593e2743a",
+  "two_named_morph_contracts_verified": "godot-validation.json",
+  "gait_foot_and_walk_comparison": "regression-validation.json",
+  "note": "Generated GLB entire file is different from v7 because Stand/Race animation changes; neutral input and shader identity do not imply all posed surfaces or image pixels identical."
+}

@@ -1,0 +1,52 @@
+{
+  "source_glb_sha256": "2a0be31f6bfb5382a192b6ba4477fadb99f1ca3368d23fabbc467abe1923a798",
+  "method": "Unmodified game proto/tripo_horse/measure.gd at source commit b8a831e9a1463172cd58a3b5291d078066993629, isolated git archive copy, 16m/s, scale2.6,216frames. Game upper line is skin landmark chord, not Codex33point surface polyline.",
+  "asset_override": "v8 final GLB temporarily replaced only isolated proto v7 GLB. Log label remains v7; actual asset SHA is above. Game code not edited. Original asset restored. CPU/whole game acceptance not claimed.",
+  "versions": {
+    "v6": {
+      "original_log_label": "v6",
+      "raw_metric_lines": [
+        "v6: 1完歩 7.00m・1秒 2.29 完歩・うなじ 平均 1.70m（1.56〜1.84・幅 0.278）・き甲の上下 0.148m・鞍 1.32〜1.46m（幅 0.149）・4本とも浮く 19.4%・前後の蹄の開き 2.68m・1本の振れ 1.40m・接地中の滑り 0.47m/秒・蹄の最も低い点 -0.000m・浮く割合（いちばん低い蹄が 0/3/5cm より上）99%/18%/16%・首の傾き 21.2〜32.0°・頭と首の角度 104.7〜109.5°・首の水平の長さ 0.610m（骨 0.590m）・首の弦 0.681m・頭の長さ 0.552m・三角形 19168・骨 54・体の長さ（立ち姿の形）2.50m",
+        "v6: 走り 頭の中心（うなじと鼻先の皮の点の中点）の上下 0.304m・首の上の線（弦）0.681m・頭 0.552m・頭÷首 0.811・胴のピッチの幅 1.60°（3.8〜5.4）・頭のピッチの幅 11.16°（-51.5〜-40.3）／立ち姿 首の上の線 0.629m・頭 0.539m・頭÷首 0.856・首の傾き 40.4°・うなじの高さ 2.07m／常歩 うなじ−き甲 0.446m・うなじの上下 0.052m・1周期のうなずき 2.0 回"
+      ],
+      "poll_mean_m": 1.7,
+      "poll_range_m": 0.278,
+      "race_neck_upper_chord_m": 0.681,
+      "head_length_m": 0.552,
+      "stand_neck_upper_chord_m": 0.629,
+      "head_center_range_m": 0.304,
+      "neck_angle_min_deg": 21.2,
+      "neck_angle_max_deg": 32.0
+    },
+    "v7": {
+      "original_log_label": "v7",
+      "raw_metric_lines": [
+        "v7: 1完歩 7.00m・1秒 2.29 完歩・うなじ 平均 1.83m（1.69〜1.97・幅 0.279）・き甲の上下 0.148m・鞍 1.34〜1.49m（幅 0.152）・4本とも浮く 19.4%・前後の蹄の開き 2.68m・1本の振れ 1.40m・接地中の滑り 0.47m/秒・蹄の最も低い点 0.001m・浮く割合（いちばん低い蹄が 0/3/5cm より上）100%/18%/16%・首の傾き 29.9〜40.1°・頭と首の角度 85.7〜104.4°・首の水平の長さ 0.526m（骨 0.534m）・首の弦 0.638m・頭の長さ 0.561m・三角形 19168・骨 54・体の長さ（立ち姿の形）2.42m",
+        "v7: 走り 頭の中心（うなじと鼻先の皮の点の中点）の上下 0.256m・首の上の線（弦）0.638m・頭 0.561m・頭÷首 0.879・胴のピッチの幅 10.00°（-0.4〜9.6）・頭のピッチの幅 9.96°（-55.1〜-45.1）／立ち姿 首の上の線 0.715m・頭 0.561m・頭÷首 0.784・首の傾き 38.4°・うなじの高さ 2.13m／常歩 うなじ−き甲 0.064m・うなじの上下 0.068m・1周期のうなずき 2.0 回"
+      ],
+      "poll_mean_m": 1.83,
+      "poll_range_m": 0.279,
+      "race_neck_upper_chord_m": 0.638,
+      "head_length_m": 0.561,
+      "stand_neck_upper_chord_m": 0.715,
+      "head_center_range_m": 0.256,
+      "neck_angle_min_deg": 29.9,
+      "neck_angle_max_deg": 40.1
+    },
+    "v8": {
+      "original_log_label": "v7",
+      "raw_metric_lines": [
+        "v7: 1完歩 7.00m・1秒 2.29 完歩・うなじ 平均 1.71m（1.59〜1.84・幅 0.258）・き甲の上下 0.148m・鞍 1.34〜1.49m（幅 0.152）・4本とも浮く 19.4%・前後の蹄の開き 2.68m・1本の振れ 1.40m・接地中の滑り 0.47m/秒・蹄の最も低い点 0.001m・浮く割合（いちばん低い蹄が 0/3/5cm より上）100%/18%/16%・首の傾き 30.4〜40.5°・頭と首の角度 85.5〜103.8°・首の水平の長さ 0.337m（骨 0.348m）・首の弦 0.408m・頭の長さ 0.561m・三角形 19168・骨 54・体の長さ（立ち姿の形）2.42m",
+        "v7: 走り 頭の中心（うなじと鼻先の皮の点の中点）の上下 0.236m・首の上の線（弦）0.408m・頭 0.561m・頭÷首 1.375・胴のピッチの幅 10.00°（-0.4〜9.6）・頭のピッチの幅 9.96°（-55.1〜-45.1）／立ち姿 首の上の線 0.563m・頭 0.561m・頭÷首 0.996・首の傾き 31.2°・うなじの高さ 1.97m／常歩 うなじ−き甲 0.064m・うなじの上下 0.068m・1周期のうなずき 2.0 回"
+      ],
+      "poll_mean_m": 1.71,
+      "poll_range_m": 0.258,
+      "race_neck_upper_chord_m": 0.408,
+      "head_length_m": 0.561,
+      "stand_neck_upper_chord_m": 0.563,
+      "head_center_range_m": 0.236,
+      "neck_angle_min_deg": 30.4,
+      "neck_angle_max_deg": 40.5
+    }
+  }
+}
