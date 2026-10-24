@@ -1,22 +1,22 @@
 # ホーム（管理画面。docs/UI.md「ホーム」）
 # 1. 今週することの札：「レースへ（n鞍に騎乗）」か「次の週へ」。金で大きく、最初のカーソル
 # 2. 帯：騎手名・所属・評判／暦・リーディング・今年の勝ち・資金
-# 3. コマンドの札：番組表・馬の店・セーブ・タイトルへ（よく使うものほど左）
+# 3. 行き先（厩舎・番組表・馬の店・牧場・オーナー・データ・その他）は下のメニュー（UiNav。どの管理画面にも出る）。ホームのコマンドの札は外した（持ち主の指摘 2026-10-24）
 # 部品の絵（UiSkin）と背景 bg_home で描く（持ち主の指摘 2026-10-21「競馬のゲームなのでそれっぽいUIにしたい　ボタンとか色々」）。並びは前のまま
 # 4. 右：騎乗依頼（オーナーの顔・ひと言・レースと時期・依頼の馬・見送る）→ 12月のグランドフェスティバルの招待 → 今週の騎乗 → ニュース。左下：お手馬
 extends UiScreen
 
 var b_main: Button
-var cmd: Array[Button] = []
 var right: VBoxContainer
 var left: VBoxContainer
 var lcol: VBoxContainer   # 左の列（今週することの札 → お手馬 → 予約・G1）
+var n_rows := 0           # 左のお手馬の行の数（下の予約・G1・今週の重賞を、y 872 までに入る分だけ出す）
 
 func hint() -> String:
 	return "決定で今週のレースへ。お手馬の行で厩舎（番組表・引退）"
 
 func on_back() -> void:
-	pass   # ホームがいちばん上（タイトルへはコマンドの札から）
+	pass   # ホームがいちばん上（タイトルへは下のメニューのその他から）
 
 func build() -> void:
 	backdrop("bg_home.png", 0.72)
@@ -38,9 +38,8 @@ func build() -> void:
 	_build_stable()
 	_build_right()
 
-# ---- 今週すること・暦の札・コマンドの札 ----
+# ---- 今週すること・暦の札 ----
 func _build_hero() -> void:
-	cmd.clear()
 	var G = HSWorld.G
 	var pb := UiScreen.panel_box(false, 12, true)
 	var p: PanelContainer = pb[0]
@@ -97,20 +96,6 @@ func _build_hero() -> void:
 	sl.clip_text = true
 	sl.custom_minimum_size.x = 780
 	mv.add_child(sl)
-	# コマンドの札
-	var ch := HBoxContainer.new()
-	ch.add_theme_constant_override("separation", 8 if HSText.is_en() else 12)
-	v.add_child(ch)
-	for c in [["番組表", "program", "calendar"], ["厩舎", "stable", "stable"], ["馬の店", "shop", "shop"], ["牧場", "breed", "farm"], ["データ", "data", "data"], ["オーナー", "owners", "owner"], ["セーブ", "save", "horseshoe"], ["設定", "settings", "settings"], ["タイトルへ", "title", "back"]]:
-		var b := UiScreen.button(HSText.short(c[0]), false, 0, 52, 15 if HSText.is_en() else 16, true)
-		UiSkin.button_icon(b, c[2], 20 if HSText.is_en() else 22)
-		UiScreen.compact(b, 6 if HSText.is_en() else 10)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var key: String = c[1]
-		b.set_meta("cmd", key)
-		b.pressed.connect(func(): _cmd(key))
-		ch.add_child(b)
-		cmd.append(b)
 
 func _main() -> void:
 	if UiFlow.in_week and UiFlow.current() != null:
@@ -121,31 +106,6 @@ func _main() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	go(UiFlow.begin_week())
-
-func _cmd(key: String) -> void:
-	for b in cmd:
-		if b.has_focus(): UiFlow.focus["home"] = b.get_meta("cmd", "")
-	match key:
-		"program":
-			var st := HSWorld.mine("stable") + HSWorld.mine("farm")
-			if st.is_empty():
-				toast("お手馬がいません。馬の店で買えます", "bad")
-				return
-			if UiFlow.program_id == "" or HSWorld.horse(UiFlow.program_id) == null:
-				UiFlow.program_id = st[0].id
-			go("program")
-		"shop", "stable", "breed", "data", "owners":
-			if key == "breed": UiFlow.farm_back = "home"
-			go(key)
-		"settings":
-			UiFlow.settings_back = "home"
-			go("settings")
-		"save":
-			UiFlow.save()
-			toast(HSText.t("セーブした（%s）") % UiFlow.date_label(), "good")
-		"title":
-			UiFlow.save()
-			go("title")
 
 # ---- お手馬（左下） ----
 # 馬の状態は疲労の段階（調子は無い：持ち主の決定 2026-10-20）
@@ -178,6 +138,7 @@ func _build_stable() -> void:
 	hm.add_theme_constant_override("margin_right", 40)
 	hm.add_child(head)
 	left.add_child(hm)
+	n_rows = mini(own.size(), 10)
 	for h in own.slice(0, 10):
 		var rb := UiScreen.row_button(46, false, true)
 		var b: Button = rb[0]
@@ -233,8 +194,10 @@ func _build_stable() -> void:
 	_build_lower()
 
 # 予約（近い順）・これからのG1（8週先まで）を左右に
+# 中身は y 872 まで（下のメニューの上。docs/UI.md「下のメニュー」）：お手馬の行（50px）が多いほど、下の札を減らす
 func _build_lower() -> void:
 	var G = HSWorld.G
+	if n_rows > 7: return
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 16)
 	left.add_child(hb)
@@ -278,10 +241,11 @@ func _build_lower() -> void:
 	b.add_child(pb[0])
 	# 今週の重賞（お手馬が少ないときに空く下半分を、今週の様子で埋める）
 	var gr: Array = HSWorld.week_races().filter(func(r): return r.get("graded") and r.get("region") in ["JRA", "海外"])
-	if gr.size() and HSWorld.mine("stable").size() + HSWorld.mine("farm").size() < 7:
+	var room := 5 - maxi(0, n_rows - 3) * 2   # 今週の重賞の行（お手馬が3頭までなら5行）
+	if gr.size() and room > 0:
 		left.add_child(UiScreen.section("今週の重賞", "%d" % gr.size(), true))
 		var pw := _card(3)
-		for r in gr.slice(0, 5):
+		for r in gr.slice(0, room):
 			var row := HBoxContainer.new()
 			row.add_theme_constant_override("separation", 8)
 			row.add_child(UiTheme.class_chip(HSRaces.grade_badge(r), true, 11))
@@ -309,15 +273,21 @@ func _build_right() -> void:
 			right.add_child(_note_panel(HSText.t("まだ騎乗依頼をくれるオーナーはいない。オーナーのジャンルのレースで勝つと出会いの点がたまる（%s）") % HSOwners.POINT_TEXT))
 		else:
 			right.add_child(_note_panel("いま来ている騎乗依頼はない。ミッションのレースが近づくと届く（予定はオーナーの画面）"))
-	for o in offers.slice(0, 3):
+	# 依頼の札は近い2件まで（ほかはオーナーの画面）。下の今週の騎乗・ニュースは y 872 までに入る分だけ
+	var room := 256.0 + (2 - mini(offers.size(), 2)) * 167.0 - (70.0 if offers.is_empty() else 0.0)
+	for o in offers.slice(0, 2):
 		var c = _offer_card(o)
 		if c: right.add_child(c)
 	var pend := HSSeason.dc_pending_list()
 	if pend.size():
 		right.add_child(_gf_card(pend))
+		room -= 124.0
 	var rc = _reach_card()
-	if rc: right.add_child(rc)
+	if rc:
+		right.add_child(rc)
+		room -= rc.get_meta("h", 90.0)
 	var rides := HSJockey.my_rides()
+	room -= 44.0 * maxi(1, rides.size())
 	right.add_child(UiScreen.section("今週の騎乗", HSText.t("%d鞍") % rides.size(), true))
 	if rides.is_empty():
 		right.add_child(_note_panel("なし"))
@@ -335,10 +305,12 @@ func _build_right() -> void:
 		var rs = UiSkin.row(false, 44, Vector4(48, 6, 50, 6), 0.8)   # 今週の騎乗は表の行の絵
 		(pb[0] as PanelContainer).add_theme_stylebox_override("panel", rs if rs != null else UiTheme.box(UiTheme.SURFACE, UiTheme.LINE, 1, 10, Vector4(14, 7, 14, 7)))
 		right.add_child(pb[0])
+	var nn := mini(5, int(room / 23.0))
+	if nn < 1: return
 	right.add_child(UiScreen.section("ニュース", "", true))
 	var nb := _card(3)
 	var G = HSWorld.G
-	for nw in G.news.slice(0, 5):
+	for nw in G.news.slice(0, nn):
 		var l := UiTheme.label("%s　%s" % [HSText.week_label(nw.m, nw.w), HSText.tx(String(nw.text))], 13, UiTheme.GOLD_BRIGHT if nw.get("kind") in ["g1", "good"] else UiTheme.MUTED)
 		l.autowrap_mode = TextServer.AUTOWRAP_OFF
 		l.clip_text = true
@@ -480,6 +452,7 @@ func _reach_card() -> Variant:
 		var ll := UiTheme.label(String(l), 14)
 		ll.clip_text = true
 		v.add_child(ll)
+	p.set_meta("h", 40.0 + 23.0 * mini(lines.size(), 3))
 	return p
 
 # 依頼を受けた・断ったあとは画面を組み直す（今週の騎乗と主な操作の札が変わる）
@@ -499,12 +472,10 @@ func _rebuild(msg := "") -> void:
 		toast(msg, "good")
 
 func focus_first() -> void:
-	var key := String(UiFlow.focus.get("home", ""))
-	for b in cmd:
-		if b.get_meta("cmd", "") == key and is_instance_valid(b):
-			b.grab_focus()
-			return
 	if b_main and not b_main.disabled:
 		b_main.grab_focus()
-	elif cmd.size():
-		cmd[0].grab_focus()
+	elif left:
+		for c in left.get_children():
+			if c is Button:
+				(c as Button).grab_focus()
+				return

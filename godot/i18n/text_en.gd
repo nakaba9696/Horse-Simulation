@@ -206,6 +206,11 @@ const T := {
 	"セーブ": "Save",
 	"設定": "Settings",
 	"タイトルへ": "Title",
+	# 下のメニュー（ui/nav.gd）
+	"ホーム": "Home",
+	"その他": "More",
+	"行き先": "Go to",
+	"1〜8": "1-8",
 	"パドック": "Paddock",
 	"ゲートイン": "Gate In",
 	"重賞の勝ち鞍": "Graded Wins",

@@ -7,6 +7,10 @@ extends Control
 
 const PAD_X := 24.0
 const TOP := 104.0           # 帯の下
+# 下のメニューのある画面の場所の取り決め（docs/UI.md「下のメニュー」。並行の仕事のため固定）：
+# 中身は TOP〜BOTTOM（スクロールしない）・キーの案内の行は KEYS_Y〜UiNav.Y・下のメニューは UiNav.Y〜1000
+const BOTTOM := 872.0
+const KEYS_Y := 880.0
 
 var pad := false
 var keybar: PanelContainer
@@ -24,6 +28,8 @@ var _modal_focus: Control = null
 var _modal_locked: Array = []    # 小窓の間、カーソルが乗らないようにした後ろの札 [札, 前の focus_mode]
 var _toast: PanelContainer
 var _toast_until := 0.0
+var nav_bar: UiNav = null        # 下のメニュー（nav() が "" でない画面）
+var _trig := {}                  # LT・RT を押している間（軸の揺れで何度も移らない）
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -127,11 +133,20 @@ func keys() -> Array: return [["↑↓←→", "十字", "選ぶ"], ["Enter", "A
 func hint() -> String: return ""
 func on_back() -> void: pass
 func on_tab(_d: int) -> void: pass
+# 下のメニュー：光らせる札の鍵（UiFlow.NAV）。"" なら出さない。既定は UiFlow.NAV_ON（画面ごとに1行）
+func nav() -> String: return String(UiFlow.NAV_ON.get(UiFlow.scene_key(scene_file_path), ""))
+
+# 中身の下の端（下のメニューのある画面は BOTTOM、無い画面は前のまま操作の案内の上）
+func bottom() -> float:
+	return BOTTOM if nav() != "" else 1000.0 - 56.0
 
 # ---- 画面の移り（暗くしてから） ----
+var went := ""   # 最後に go した画面（テストが見る）
+
 func go(name: String) -> void:
 	if shots.size() > 0:
 		return
+	went = name
 	var tw := create_tween()
 	tw.tween_property(fade, "color:a", 1.0, 0.16)
 	tw.tween_callback(func(): UiFlow.go(get_tree(), name))
@@ -648,20 +663,25 @@ func toast(text: String, kind := "") -> void:
 	_toast.add_child(UiTheme.label(text, 15, UiTheme.IVORY))
 	_toast.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_toast.position.y = -96
+	_toast.position.y = -96 if nav_bar == null else KEYS_Y - 1000.0 - 56.0
 	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_toast)
 	_toast_until = clock + 2.2
 
 # ---- 操作の案内（右下。左に選んでいる札のひと言） ----
 func _build_keybar() -> void:
+	var nk := nav()
+	nav_bar = null
+	if nk != "":
+		nav_bar = UiNav.make(nk, nav_pick)
+		add_child(nav_bar)
 	kb_holder = HBoxContainer.new()
 	kb_holder.add_theme_constant_override("separation", 14)
 	kb_holder.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	kb_holder.offset_left = PAD_X
 	kb_holder.offset_right = -PAD_X
-	kb_holder.offset_top = -44
-	kb_holder.offset_bottom = -12
+	kb_holder.offset_top = -44 if nav_bar == null else KEYS_Y - 1000.0
+	kb_holder.offset_bottom = -12 if nav_bar == null else UiNav.Y - 1000.0
 	kb_holder.alignment = BoxContainer.ALIGNMENT_END
 	kb_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(kb_holder)
@@ -670,13 +690,17 @@ func _build_keybar() -> void:
 	kb_hint.clip_text = true
 	kb_hint.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	kb_holder.add_child(kb_hint)
-	keybar = UiTheme.keybar(keys(), pad)
+	keybar = UiTheme.keybar(all_keys(), pad)
 	kb_holder.add_child(keybar)
+
+# 操作の案内：画面のキーに、下のメニューの開き方（1〜8・LT/RT）を足す
+func all_keys() -> Array:
+	return keys() + ([["1〜8", "LT/RT", "行き先"]] if nav_bar != null else [])
 
 func refresh_keybar() -> void:
 	if keybar:
 		keybar.queue_free()
-		keybar = UiTheme.keybar(keys(), pad)
+		keybar = UiTheme.keybar(all_keys(), pad)
 		kb_holder.add_child(keybar)
 	if kb_hint:
 		kb_hint.text = HSText.auto(hint())
@@ -684,7 +708,7 @@ func refresh_keybar() -> void:
 # ---- 入りの動き（中身が下から 0.24 秒・帯は 0.34 秒） ----
 func enter_anim() -> void:
 	for c in get_children():
-		if c == band or (c is Control and c != fade and c != kb_holder and (c as Control).mouse_filter != Control.MOUSE_FILTER_IGNORE):
+		if c == band or (c is Control and c != fade and c != kb_holder and c != nav_bar and (c as Control).mouse_filter != Control.MOUSE_FILTER_IGNORE):
 			var ctl := c as Control
 			ctl.modulate.a = 0.0
 			var tw := create_tween().set_parallel(true)
@@ -711,6 +735,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 			on_back()
 		get_viewport().set_input_as_handled()
 		return
+	if nav_bar != null and _modal == null and _nav_input(ev):
+		get_viewport().set_input_as_handled()
+		return
 	var d := 0
 	if ev is InputEventKey and ev.pressed and not ev.echo:
 		if ev.keycode in [KEY_Q, KEY_PAGEUP]: d = -1
@@ -721,6 +748,86 @@ func _unhandled_input(ev: InputEvent) -> void:
 	if d != 0:
 		on_tab(d)
 		get_viewport().set_input_as_handled()
+
+# ---- 下のメニュー（docs/UI.md 4「選ぶ操作」）：キーボードの 1〜8 でその札、パッドの LT・RT で前・次の行き先 ----
+func _nav_input(ev: InputEvent) -> bool:
+	if ev is InputEventKey and ev.pressed and not ev.echo:
+		var k: int = ev.keycode
+		var i := -1
+		if k >= KEY_1 and k <= KEY_9: i = k - KEY_1
+		elif k >= KEY_KP_1 and k <= KEY_KP_9: i = k - KEY_KP_1
+		if i >= 0 and i < UiFlow.NAV.size():
+			nav_pick(String(UiFlow.NAV[i][0]))
+			return true
+	elif ev is InputEventJoypadMotion and int(ev.axis) in [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]:
+		var ax := int(ev.axis)
+		if ev.axis_value > 0.6 and not _trig.get(ax, false):
+			_trig[ax] = true
+			nav_step(-1 if ax == JOY_AXIS_TRIGGER_LEFT else 1)
+			return true
+		if ev.axis_value < 0.3: _trig[ax] = false
+	return false
+
+# 札を押した（その画面へ）。いまいる画面の札は何もしない。その他は小窓
+func nav_pick(key: String) -> void:
+	if _modal != null or nav_bar == null: return
+	if key == nav_bar.cur and key != "more": return
+	if key == "more":
+		open_more()
+		return
+	var why := UiFlow.nav_prepare(key)
+	if why != "":
+		toast(why, "bad")
+		return
+	nav_leave()
+	go(key)
+
+# 前・次の行き先（移れない行き先は飛ばす）
+func nav_step(d: int) -> void:
+	if _modal != null or nav_bar == null: return
+	for k in nav_bar.step_key(d):
+		if UiFlow.nav_prepare(k) == "":
+			nav_leave()
+			go(k)
+			return
+
+# 下のメニューで画面を離れる前（継いだ画面がカーソルの記憶などを残す）
+func nav_leave() -> void: pass
+
+# その他（セーブ・設定・タイトルへ）の小窓。カーソルはセーブから
+func open_more() -> void:
+	var pb := UiScreen.panel_box(true, 12)
+	var p: PanelContainer = pb[0]
+	var v: VBoxContainer = pb[1]
+	p.custom_minimum_size = Vector2(420, 0)
+	v.add_child(UiTheme.title("その他", 20))
+	var first: Button = null
+	for it in [["セーブ", "save", "horseshoe"], ["設定", "settings", "settings"], ["タイトルへ", "title", "back"]]:
+		var b := UiScreen.button(String(it[0]), false, 0, 52, 17, true)
+		UiSkin.button_icon(b, String(it[2]), 22)
+		var key: String = it[1]
+		b.pressed.connect(func(): _more(key))
+		v.add_child(b)
+		if first == null: first = b
+	var no := UiScreen.button("もどる", false, 0, 44, 15)
+	no.pressed.connect(close_modal)
+	v.add_child(no)
+	open_modal(p, first)
+
+func _more(key: String) -> void:
+	close_modal()
+	match key:
+		"save":
+			UiFlow.save()
+			toast(HSText.t("セーブした（%s）") % UiFlow.date_label(), "good")
+		"settings":
+			var me := UiFlow.scene_key(scene_file_path)
+			if me != "settings": UiFlow.settings_back = me if me != "" else "home"   # 設定からはもどる先を変えない
+			go("settings")   # 設定からはこの画面へもどるので、nav_leave（画面の記憶を消す）はしない
+		"title":
+			UiFlow.save()
+			nav_leave()
+			go("title")
 
 func _process(delta: float) -> void:
 	if shots.size() > 0:

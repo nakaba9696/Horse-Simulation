@@ -364,7 +364,7 @@ static func band(h := 76.0) -> UiBand:
 # glyphs＝押すボタンの印（UiGlyph。いま使っている入力で字が替わる）で出す。騎乗の計器の案内は前の札のまま（false）
 static func keybar(items: Array, pad := false, glyphs := true) -> PanelContainer:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", box(Color(SUNK.r, SUNK.g, SUNK.b, 0.86), LINE_STRONG, 1, 999, Vector4(16, 5, 16, 6)))
+	p.add_theme_stylebox_override("panel", box(Color(SUNK.r, SUNK.g, SUNK.b, 0.86), LINE_STRONG, 1, 999, Vector4(16, 4, 16, 4)))   # 高さ 32px（下のメニューの上の行 y 880〜912 に入る）
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 14)
 	p.add_child(h)

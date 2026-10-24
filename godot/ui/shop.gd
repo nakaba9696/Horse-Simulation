@@ -57,7 +57,7 @@ func build() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
 	scroll.position = Vector2(PAD_X, 212)
-	scroll.size = Vector2(1180, 1000 - 212 - 56)
+	scroll.size = Vector2(1180, bottom() - 212)
 	add_child(scroll)
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)
@@ -66,7 +66,7 @@ func build() -> void:
 	scroll.add_child(list)
 	var pb := UiScreen.panel_box(true, 8)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X + 1180 + 20, TOP + 4)
-	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 1180 - 20, 820)
+	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 1180 - 20, bottom() - TOP - 4)
 	add_child(pb[0])
 	pv = pb[1]
 	_load_items()
@@ -227,7 +227,9 @@ func _unhandled_input(ev: InputEvent) -> void:
 func _preview(i: int) -> void:
 	sel = maxi(0, i)
 	for c in pv.get_children():
-		if c != portrait: c.queue_free()
+		if c != portrait:
+			pv.remove_child(c)   # すぐ外す（消える前の札で板が伸び、下のメニューにかからないように）
+			c.queue_free()
 	b_buy = null
 	if i < 0 or i >= shown.size():
 		pv.add_child(UiTheme.label("馬を選ぶと、ここに能力が出ます", 14, UiTheme.MUTED))

@@ -37,7 +37,7 @@ func build() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
 	scroll.position = Vector2(PAD_X, TOP + 66)
-	scroll.size = Vector2(1600 - PAD_X * 2, 1000 - TOP - 66 - 56)
+	scroll.size = Vector2(1600 - PAD_X * 2, bottom() - TOP - 66)
 	add_child(scroll)
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)

@@ -24,6 +24,46 @@ const SCENES := {
 	"settings": "res://scenes/settings.tscn",
 }
 
+# 下のメニューの行き先（docs/UI.md「下のメニュー」。持ち主の指摘 2026-10-24「常に基本メニューは画面下部に表示して」）
+# [鍵, 札の名前, アイコン]。鍵は SCENES の画面の名前（"more" はその他の小窓：セーブ・設定・タイトルへ）。よく使うものほど左
+const NAV := [["home", "ホーム", "saddle"], ["stable", "厩舎", "stable"], ["program", "番組表", "calendar"], ["shop", "馬の店", "shop"],
+	["breed", "牧場", "farm"], ["owners", "オーナー", "owner"], ["data", "データ", "data"], ["more", "その他", "settings"]]
+
+# 下のメニューを出す画面（1画面1行）：画面の名前 → 光らせる札の鍵（並びに無い鍵なら、どの札も光らせない）。
+# ここに無い画面（タイトル・出走表・騎乗・週の結果）には出さない。画面の側で UiScreen.nav() を書けば、そちらが先
+const NAV_ON := {
+	"home": "home",
+	"stable": "stable",
+	"horse": "stable",
+	"program": "program",
+	"shop": "shop",
+	"breed": "breed",
+	"owners": "owners",
+	"data": "data",
+	"gf": "gf",
+	"settings": "more",   # ホームから開いたときだけ（settings.gd の nav）
+}
+
+# 下のメニューから行き先へ移る前の用意（もどる先・番組表で見る馬）。移れないときは理由の文を返す（移れるなら ""）
+static func nav_prepare(key: String) -> String:
+	match key:
+		"program":
+			var st := HSWorld.mine("stable") + HSWorld.mine("farm")
+			if st.is_empty():
+				return "お手馬がいません。馬の店で買えます"
+			if program_id == "" or HSWorld.horse(program_id) == null:
+				program_id = st[0].id
+			program_back = "home"
+		"breed":
+			farm_back = "home"
+	return ""
+
+# 画面のファイル（res://scenes/xxx.tscn）から SCENES の名前を引く。無ければ ""
+static func scene_key(path: String) -> String:
+	for k in SCENES:
+		if SCENES[k] == path: return k
+	return ""
+
 static var rides: Array = []        # 今週自分が乗るレース [{card, runner}]
 static var ride_i := 0              # いま何鞍目か
 static var played := {}             # { raceKey: HSSim.finish の結果 }（自分で乗ったレース）

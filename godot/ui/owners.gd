@@ -4,7 +4,7 @@
 # 決まりは HSOwners（of・mission・ask・claim・wear）を呼ぶだけ
 extends UiScreen
 
-const ROW_H := 98.0
+const ROW_H := 90.0
 
 var rows: Array[Button] = []
 var ids: Array = []
@@ -25,7 +25,7 @@ func build() -> void:
 	v.custom_minimum_size = Vector2(760, 0)
 	v.add_theme_constant_override("separation", 5)
 	add_child(v)
-	UiScreen.back_under(v)
+	UiScreen.back_under(v, null, 14)   # 台を広めに（行の周りが写真にかからない）
 	for o in HSOwners.LIST():
 		var st := HSOwners.of(String(o.id))
 		var rb := UiScreen.row_button(ROW_H, st.stage >= 2)
@@ -39,7 +39,7 @@ func build() -> void:
 		who.add_theme_constant_override("separation", 8)
 		if not st.known:
 			# まだ会っていないオーナー：顔と名前を伏せ、ジャンルと出会いのヒント・出会いの点だけ
-			hb.add_child(UiScreen.owner_q_face(72, 88))
+			hb.add_child(UiScreen.owner_q_face(64, 80))
 			who.add_child(UiTheme.label("まだ会っていないオーナー", 17, UiTheme.MUTED))
 			who.add_child(UiScreen.owner_sign_chip(o, 12))
 			who.add_child(UiTheme.label(HSText.t("出会いの点 %s") % _pips(String(o.id)), 13, UiTheme.GOLD))
@@ -49,7 +49,7 @@ func build() -> void:
 			hl.custom_minimum_size.x = 100
 			cv.add_child(hl)
 		else:
-			hb.add_child(_face(String(o.id), "smile" if st.stage >= 2 else "base", 72, 88))
+			hb.add_child(_face(String(o.id), "smile" if st.stage >= 2 else "base", 64, 80))
 			who.add_child(UiTheme.label(HSText.owner_line(String(o.name)), 17))
 			who.add_child(UiScreen.owner_sign_chip(o, 12))
 			who.add_child(UiTheme.chip(HSText.t(HSOwners.stage_label(String(o.id))), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
@@ -66,7 +66,7 @@ func build() -> void:
 		ids.append(String(o.id))
 	var pb := UiScreen.panel_box(true, 6)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X + 760 + 20, TOP + 4)
-	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 760 - 20, 830)
+	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 760 - 20, bottom() - TOP - 4)
 	add_child(pb[0])
 	pv = pb[1]
 	_preview(0)
@@ -116,7 +116,9 @@ func _gauge(oid: String, w: float) -> VBoxContainer:
 
 func _preview(i: int) -> void:
 	sel = i
-	for c in pv.get_children(): c.queue_free()
+	for c in pv.get_children():
+		pv.remove_child(c)   # すぐ外す（消える前の札で板が伸びないように）
+		c.queue_free()
 	var oid: String = ids[i]
 	var o = HSOwners.by(oid)
 	var st := HSOwners.of(oid)

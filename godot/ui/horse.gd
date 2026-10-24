@@ -35,6 +35,9 @@ func hint() -> String:
 	if hall_mode: return "殿堂入りした馬の記録（読むだけ）"
 	return "お手馬の中身。番組表で次走を決める"
 
+func nav() -> String: return "data" if UiFlow.hall_id != "" else "stable"   # 殿堂から開いたらデータの札を光らせる
+func nav_leave() -> void: UiFlow.hall_id = ""
+
 func keys() -> Array:
 	if hall_mode: return [["↑↓←→", "十字", "選ぶ"], ["Enter", "A", "決定"], ["Q/E", "LB/RB", "切り替え"], ["Esc", "B", "もどる"]]
 	return [["↑↓←→", "十字", "選ぶ"], ["Enter", "A", "決定"], ["Q/E", "LB/RB", "切り替え"], ["Y", "Y", "番組表"], ["Esc", "B", "もどる"]]
@@ -100,7 +103,7 @@ func build() -> void:
 	var pbr := UiScreen.panel_box(false, 0)
 	var rp: PanelContainer = pbr[0]
 	rp.position = Vector2(PAD_X + LEFT_W + 20, TOP + 66)
-	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, 1000 - TOP - 66 - 60)
+	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, bottom() - 4 - TOP - 66)
 	rp.size = rp.custom_minimum_size
 	add_child(rp)
 	scroll = ScrollContainer.new()
@@ -167,7 +170,7 @@ func _build_hall(args: PackedStringArray) -> void:
 	var pb := UiScreen.panel_box(true, 8)
 	var p: PanelContainer = pb[0]
 	p.position = Vector2(PAD_X, TOP + 4)
-	p.custom_minimum_size = Vector2(LEFT_W, 1000 - TOP - 4 - 60)
+	p.custom_minimum_size = Vector2(LEFT_W, bottom() - 4 - TOP - 4)
 	add_child(p)
 	var v: VBoxContainer = pb[1]
 	portrait = UiHorsePortrait.new()
@@ -198,7 +201,7 @@ func _build_hall(args: PackedStringArray) -> void:
 	var pbr := UiScreen.panel_box(false, 0)
 	var rp: PanelContainer = pbr[0]
 	rp.position = Vector2(PAD_X + LEFT_W + 20, TOP + 66)
-	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, 1000 - TOP - 66 - 60)
+	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, bottom() - 4 - TOP - 66)
 	rp.size = rp.custom_minimum_size
 	add_child(rp)
 	scroll = ScrollContainer.new()
@@ -256,7 +259,7 @@ func _build_left() -> void:
 	var pb := UiScreen.panel_box(true, 8)
 	var p: PanelContainer = pb[0]
 	p.position = Vector2(PAD_X, TOP + 4)
-	p.custom_minimum_size = Vector2(LEFT_W, 1000 - TOP - 4 - 60)
+	p.custom_minimum_size = Vector2(LEFT_W, bottom() - 4 - TOP - 4)
 	add_child(p)
 	var v: VBoxContainer = pb[1]
 	portrait = UiHorsePortrait.new()

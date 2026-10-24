@@ -34,6 +34,7 @@ var listen := {}                       # 割り当てを待っている { a, kin
 var _pad_node: UiPad
 
 func needs_world() -> bool: return false
+func nav() -> String: return "more" if UiFlow.settings_back != "title" and UiFlow.active() else ""   # 下のメニューはホームから開いたときだけ
 
 func hint() -> String:
 	if not listen.is_empty(): return "割り当てるキー（パッドのボタン）を押す"
@@ -70,7 +71,7 @@ func build() -> void:
 	UiScreen.back_under(list_v)
 	# 下の札：初めの設定に戻す・もどる（金）
 	var bh := HBoxContainer.new()
-	bh.position = Vector2(PAD_X, 1000 - 56 - 70)
+	bh.position = Vector2(PAD_X, bottom() - 70)
 	bh.custom_minimum_size = Vector2(LIST_W, 0)
 	bh.add_theme_constant_override("separation", 12)
 	add_child(bh)
@@ -84,7 +85,7 @@ func build() -> void:
 	# 右の見本
 	var pb := UiScreen.panel_box(true, 10)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X + LIST_W + 20, TOP + 4)
-	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - LIST_W - 20, 1000 - TOP - 4 - 70)
+	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - LIST_W - 20, bottom() + 56 - TOP - 4 - 70)
 	add_child(pb[0])
 	pv = pb[1]
 	_fill()
