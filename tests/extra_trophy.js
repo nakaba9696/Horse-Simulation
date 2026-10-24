@@ -236,7 +236,7 @@ module.exports = function (check, assert, HS) {
     for (let k = 1; k <= 6; k++) assert(TR.money({ tier: k }) === MONEY[k], `難しさ${k}のお金 ${TR.money({ tier: k })}`);
     const s1 = U.money(TR.money({ tier: 1 })), s6 = U.money(TR.money({ tier: 6 }));
     // 難しさ（ここに書いたもの。GF は6つとも4）
-    const TIER = { arc2: 5, au3: 2, dwc2: 5, eu3: 5, eumile: 4, ev2: 4, fr3: 2, frf3: 2, ftriple: 2, gs_jd: 3, jd3: 1, triple: 3, uk3: 4, us3: 4, usf3: 2, gs_tiara: 4 };
+    const TIER = { arc2: 5, au3: 2, dwc2: 5, eu3: 5, eumile: 4, ev2: 4, fr3: 2, frf3: 2, ftriple: 2, gs_jd: 3, jd3: 1, triple: 3, uk3: 4, us3: 4, usf3: 2, gs_tiara: 4, gs_jp: 4, gs_au: 4 };
     for (const [id, k] of Object.entries(TIER)) assert(TR.BY[id].tier === k, `${TR.BY[id].label}の難しさ ${TR.BY[id].tier}`);
     const gfs = TR.LIST.filter(t => t.kind === 'gf');
     assert(gfs.length === 6 && gfs.every(t => t.tier === 4), `GF の難しさ ${gfs.map(t => t.tier)}`);
