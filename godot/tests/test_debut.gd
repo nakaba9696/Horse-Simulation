@@ -68,7 +68,8 @@ func run(t) -> void:
 		if not by_age.has(a): by_age[a] = []
 		by_age[a].append(HSWorld.histByName[h.name])
 	for a in HSEraless.AGES: t.eq(_tiers(by_age.get(a, [])), "15,60,105,120", "debut: 始めの世界の%d歳" % a)
-	for y in 3:
+	# 2年分（週を進めないと引退する馬が出ず、70.0以上の帯は3年目に足りなくなる。JS の tests/extra_debut.js と同じ）
+	for y in 2:
 		var fresh := _crop_fresh()
 		t.eq(_tiers(fresh), "15,60,105,120", "debut: %d年のデビュー" % G.year)
 		t.ok(not fresh.any(func(d): return HSEraless.is_hidden(d)), "debut: %d年のデビューに隠し馬" % G.year)
@@ -108,7 +109,8 @@ func run(t) -> void:
 	var race: Dictionary = cal["チャンピオンズ＆チャターC"].duplicate()
 	race.year = G.year
 	var rw := "ロマンチックウォリアー"
-	var appear := func() -> Array: return HSSpecial.pending(h, race).map(func(x): return x.d.name)
+	# 出てこられる馬の全部（出てくるのはこの中からランダムに1頭。持ち主の決定 2026-10-24）
+	var appear := func() -> Array: return HSSpecial.candidates(h, race).map(func(x): return x.d.name)
 	t.ok(appear.call().has(rw), "debut: 香港三冠のリーチで隠し馬が出てこない（%s）" % [appear.call()])
 
 	# ---- 前のセーブ：1989年からの隠し馬がもうデビューしている ----

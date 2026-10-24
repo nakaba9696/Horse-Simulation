@@ -34,7 +34,7 @@ module.exports = function (check, assert, HS) {
     for (const d of top) { const x = SP.byName(d.name); assert(x && x.groups.length === 1 && ['gf', 'gfall'].includes(x.groups[0]), `${d.name}のグループ（${x && x.groups}）`); }
     assert(SP.members(SP.BY.gfall).map(d => d.name).join() === 'キンチェム', 'GF を全部勝ったあとに出る名馬');
     // 伝説級から外れた名馬は、ほかの条件のグループで出てくる
-    const moved = { 'バーラム': 't:uk3', 'オーモンド': 't:immortal', 'サイテーション': 't:us3', 'ウォーアドミラル': 't:us3', 'カウントフリート': 't:wonder', 'ネアルコ': 'unbeaten', 'ドミノ': 'unbeaten' }; // t: はトロフィーの隠し馬（data/trophy_horses.js）
+    const moved = { 'バーラム': 't:uk3', 'オーモンド': 't:uk3', 'サイテーション': 't:us3', 'ウォーアドミラル': 't:us3', 'カウントフリート': 't:us3', 'ネアルコ': 'unbeaten', 'ドミノ': 'unbeaten' }; // t: はトロフィーの隠し馬（data/trophy_horses.js）
     for (const [n, gid] of Object.entries(moved)) { const x = SP.byName(n); assert(x && !SP.isTop(x.d) && x.groups.join() === gid, `${n}の行き先（${x && x.groups}）`); }
     for (const n of ['ブリガディアジェラード', 'アレフランス', 'プティトエトワール', 'ダリア', 'プリティーポリー', 'サンチャリオット']) assert(!SP.isTop(SP.data(n)), `${n}が伝説級`);
     return T.GF_CATS.map(c => `${c.label}：${c.course}${c.surface}${c.dist}（${T.gfLegends(c.id).map(d => d.name).join('・')}）`).join('／');

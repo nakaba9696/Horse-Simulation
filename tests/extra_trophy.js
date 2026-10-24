@@ -241,8 +241,8 @@ module.exports = function (check, assert, HS) {
     const gfs = TR.LIST.filter(t => t.kind === 'gf');
     assert(gfs.length === 6 && gfs.every(t => t.tier === 4), `GF の難しさ ${gfs.map(t => t.tier)}`);
     // 無敗のときだけの馬・いつでもの馬
-    const UNB = { triple: ['シンボリルドルフ', 'シンザン'], uk3: ['バーラム'], us3: ['ウォーアドミラル', 'シアトルスルー'], eu3: ['シーバード'], ftriple: ['テスコガビー'],
-      ukf3: ['プリティーポリー'], arc2: ['リボー'], immortal: ['オーモンド'] }; // パーソナルエンスンはインモータルロードの無敗のときから米国牝馬三冠（いつでも）へ（持ち主の決定 2026-10-20）
+    const UNB = { triple: ['シンボリルドルフ', 'シンザン'], uk3: ['バーラム', 'オーモンド'], us3: ['ウォーアドミラル', 'シアトルスルー'], eu3: ['シーバード'], ftriple: ['テスコガビー'],
+      ukf3: ['プリティーポリー'], arc2: ['リボー'] }; // オーモンドはインモータルロードから英国三冠へ（持ち主の決定 2026-10-24） // パーソナルエンスンはインモータルロードの無敗のときから米国牝馬三冠（いつでも）へ（持ち主の決定 2026-10-20）
     const whenOf = {}; for (const [id, xs] of Object.entries(D.trophyHorses)) for (const x of xs) whenOf[x.name] = x.when || 'any';
     for (const [id, ns] of Object.entries(UNB)) for (const n of ns) assert((D.trophyHorses[id] || []).some(x => x.name === n && x.when === 'unbeaten'), `${n}（${id}）が無敗のときの馬でない`);
     const unbN = Object.values(UNB).reduce((a, b) => a.concat(b), []);
@@ -250,11 +250,12 @@ module.exports = function (check, assert, HS) {
     assert(whenOf['ファリス'] === 'any' && whenOf['サンオーイ'] === 'any', 'ファリス・サンオーイはいつでも');
     // 外した馬・動かした馬
     const all = n => Object.keys(D.trophyHorses).filter(id => D.trophyHorses[id].some(x => x.name === n));
-    for (const [n, id] of [['カーバイン', 'gs_au'], ['ロベルト', 'gs_eu'], ['ロイヤルパレス', 'gs_turf'], ['ギャロレット', 'gs_us'], ['トムフール', 'gs_us']]) {
-      assert(!all(n).length, `${n}が隠し馬に残る`);
+    // トムフール（アメリカン GS）とカーバイン（ワールドステイヤー GS に）は戻した（持ち主の決定 2026-10-24）
+    for (const [n, id] of [['カーバイン', 'gs_au'], ['ロベルト', 'gs_eu'], ['ロイヤルパレス', 'gs_turf'], ['ギャロレット', 'gs_us']]) {
+      if (n !== 'カーバイン') assert(!all(n).length, `${n}が隠し馬に残る`);
       assert(!SP.members(SP.BY['t:' + id] || { id: 'x' }).some(d => d.name === n), `${n}がトロフィーのグループにいる`);
     }
-    assert(SP.members(SP.BY['t:gs_us']).every(d => SP.isModern(d)), 'アメリカン GS に1989年より前の隠し馬が残る'); // いまは1989年からの2頭（持ち主の決定 2026-10-24）
+    assert(all('トムフール').join() === 'gs_us' && all('カーバイン').join() === 'gs_stayer', 'トムフール・カーバインが戻っていない');
     assert(all('ジョンヘンリー').join() === 'bc2' && SP.byName('ジョンヘンリー').groups.join() === 't:bc2', 'ジョンヘンリーがクラウンオブブリーダーズにいない');
     assert(all('テンポイント').join() === 'gs_jp' && SP.byName('テンポイント').groups.join() === 't:gs_jp', 'テンポイントがジャパン GS にいない');
     assert(all('シアトルスルー').join() === 'us3' && SP.byName('シアトルスルー').groups.join() === 't:us3', 'シアトルスルーが米国三冠にいない');
@@ -321,7 +322,9 @@ module.exports = function (check, assert, HS) {
       if (mixed.includes(id)) assert(xs.every(x => x.surf === '芝' || x.surf === 'ダ') && xs.some(x => x.surf === '芝') && xs.some(x => x.surf === 'ダ' && !x.when), `${id} の芝・ダートの分け ${xs.map(x => x.name + (x.surf || '?'))}`);
       else assert(xs.every(x => !x.surf), `${id} に馬場の分けがある`);
     }
-    for (const [n, id] of [['ヴェイグリーノーブル', 'legend'], ['スペクタキュラービッド', 'immortal']]) assert(SP.byName(n).groups.join() === 't:' + id, `${n}のグループ ${SP.byName(n).groups}`);
+    // ホールオブフェイム・ワンダーホース・インモータルロードは隠し馬なし（持ち主の決定 2026-10-24）。いた馬は別のトロフィーへ
+    assert(['legend', 'wonder', 'immortal'].every(id => !SP.BY['t:' + id]), 'ホールオブフェイム・ワンダーホース・インモータルロードに隠し馬がいる');
+    for (const [n, id] of [['ヴェイグリーノーブル', 'gs_wturf'], ['スペクタキュラービッド', 'us3'], ['セクレタリアト', 'dwc2'], ['フランケル', 'gs_eu'], ['ゼニヤッタ', 'bc2']]) assert(SP.byName(n).groups.join() === 't:' + id, `${n}のグループ ${SP.byName(n).groups}`);
     // データのまま：その場限りの馬の能力は、史実馬のデータから作った馬と同じ。データ（史実馬の値）も変えない
     let n = 0;
     for (const t of TR.LIST) {
@@ -359,8 +362,7 @@ module.exports = function (check, assert, HS) {
       hh.owner = 'AI';
       return { surface: race.surface, ns };
     };
-    const cases = [['bc2', 'BCクラシック'], ['bc2', 'BCターフ'], ['legend', '凱旋門賞', ['ドバイワールドカップ']], ['legend', 'ドバイワールドカップ', ['凱旋門賞']],
-      ['immortal', 'フェブラリーステークス'], ['immortal', '有馬記念'], ['wonder', 'フェブラリーステークス'], ['wonder', '有馬記念']];
+    const cases = [['bc2', 'BCクラシック'], ['bc2', 'BCターフ']]; // ホールオブフェイム・ワンダーホース・インモータルロードは隠し馬なし（持ち主の決定 2026-10-24）
     const seen = [];
     for (const [id, fin, prev] of cases) {
       const { surface, ns } = reachOn(id, fin, prev);
@@ -412,7 +414,7 @@ module.exports = function (check, assert, HS) {
     const kk = Object.assign({}, m.get('菊花賞'), { year: G.year });
     const seen = new Map();
     for (let i = 0; i < 60; i++) {
-      const h = myHorse(G, '牡'); h.starts = 3; h.wins = 2;
+      const h = myHorse(G, '牡'); h.starts = 2; h.wins = 2; // 無敗：シンボリルドルフ・シンザンも候補に入る
       for (const n of ['皐月賞', '日本ダービー']) winIt(h, m.get(n), G.year);
       const ps = SP.pending(h, kk).filter(x => x.g.id === 't:triple').map(x => x.d.name);
       assert(ps.length === 1, `日本三冠のリーチで ${ps.length} 頭`);

@@ -159,7 +159,7 @@ module.exports = function (check, assert, HS) {
       assert(d, `${name}が馬のデータにいない`);
       assert((D.profiles || []).some(p => HS.normName(p.name) === HS.normName(name)), `${name}の名鑑が無い`);
       const special = HS.Eraless.isLegend(d);
-      if (special) assert(SP.byName(name), `${name}がスペシャルホースのグループに入らない`);
+      if (special && name !== 'フォルリ') assert(SP.byName(name), `${name}がスペシャルホースのグループに入らない`); // フォルリは外した（持ち主の決定 2026-10-24）
       const h = special ? SP.horse(d, { age: '3+', year: 2030 }) : H.fromHistoric(d, 'uq:' + name);
       const of = K.of(h);
       assert(of[0] === u.id && of.filter(K.isUnique).length === 1, `${name}の能力 ${of.join(',')}`);

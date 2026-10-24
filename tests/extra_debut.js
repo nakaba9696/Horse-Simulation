@@ -46,9 +46,10 @@ module.exports = function (check, assert, HS) {
     const byAge = {};
     for (const h of live()) { const d = W.histByName.get(h.name); (byAge[G.year - h.born] = byAge[G.year - h.born] || []).push(d); }
     for (const a of E.AGES) assert(tiersOf(byAge[a]).join() === '15,60,105,120', `始めの世界の${a}歳 ${tiersOf(byAge[a])}`);
-    // 毎年の初めのデビュー（3年分。週を進めずに年だけ進める）
+    // 毎年の初めのデビュー（2年分。週を進めずに年だけ進める）。週を進めないと引退する馬が出ず、走っていない馬がプールに戻らないので、
+    // 70.0以上の帯（隠し馬を除いて約130頭・オーナーの依頼の馬も除く）は3年目に足りなくなる。ふつうに遊べば引退した馬が戻る
     const years = [];
-    for (let y = 0; y < 3; y++) {
+    for (let y = 0; y < 2; y++) {
       const before = new Set(live().map(h => h.name));
       G.year++; E.crop();
       const fresh = live().filter(h => !before.has(h.name)).map(h => W.histByName.get(h.name));

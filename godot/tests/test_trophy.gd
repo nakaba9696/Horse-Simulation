@@ -22,9 +22,9 @@ func run(t) -> void:
 	t.ok(HSSpecial.when_ok(g, cb, win) and HSSpecial.when_ok(g, cb, lost), "いつでも：ミスターシービー")
 	t.ok(HSSpecial.members(HSSpecial.by_id()["t:us3"]).any(func(d): return d.name == "シアトルスルー"), "シアトルスルーは米国三冠")
 	t.ok(HSSpecial.members(HSSpecial.by_id()["t:bc2"]).any(func(d): return d.name == "ジョンヘンリー"), "ジョンヘンリーはクラウンオブブリーダーズ")
-	t.ok(not HSSpecial.members(HSSpecial.by_id()["t:legend"]).any(func(d): return d.name == "ジョンヘンリー"), "ジョンヘンリーはホールオブフェイムにいない")
+	t.ok(not HSSpecial.by_id().has("t:legend") and not HSSpecial.by_id().has("t:wonder") and not HSSpecial.by_id().has("t:immortal"), "ホールオブフェイム・ワンダーホース・インモータルロードは隠し馬なし（持ち主の決定 2026-10-24）")
 	t.ok(HSSpecial.members(HSSpecial.by_id()["t:gs_jp"]).any(func(d): return d.name == "テンポイント"), "テンポイントはジャパン GS")
-	t.ok(HSSpecial.members(HSSpecial.by_id()["t:gs_us"]).all(func(d): return HSSpecial.is_modern(d)), "アメリカン GS の隠し馬は1989年からの馬だけ")
+	t.ok(HSSpecial.members(HSSpecial.by_id()["t:gs_us"]).any(func(d): return d.name == "トムフール"), "アメリカン GS にトムフールを戻した（持ち主の決定 2026-10-24）")
 	# リーチで出てくるのはランダムに1頭（持ち主の決定 2026-10-24）：JS の SP.pickOne と同じ式。同じ馬・同じレース・同じ年なら同じ馬
 	var ds: Array = HSSpecial.members(g)
 	var kk := { year = 2030.0, short = "菊花賞", sex = "" }
@@ -36,7 +36,7 @@ func run(t) -> void:
 	t.ok(seen.size() >= 3, "馬が替わればばらける（%d頭）" % seen.size())
 	var fds: Array = HSSpecial.members(HSSpecial.by_id()["t:ftriple"])
 	t.ok(HSSpecial.pick_one(ds + fds, { id = "h1" }, g, { year = 2030.0, short = "オークス", sex = "牝" })[0].sex == "牝", "牝馬限定のレースは牝馬から")
-	for n in ["カーバイン", "ロベルト", "ロイヤルパレス", "ギャロレット", "トムフール"]:
+	for n in ["ロベルト", "ロイヤルパレス", "ギャロレット"]:   # トムフール・カーバインは戻した（持ち主の決定 2026-10-24）
 		var x = HSSpecial.list().filter(func(e): return e.name == n)
 		t.ok(x.is_empty() or not String(x[0].groups[0]).begins_with("t:"), "%s はトロフィーの隠し馬でない" % n)
 	# 隠し馬はデータのままの能力で出てくる（底上げしない。持ち主の決定 2026-10-20「これ言ってないんだけど　こんな仕様やめてね」）
@@ -59,11 +59,12 @@ func run(t) -> void:
 		t.ok(HSSpecial.by_id().has(gid) and HSSpecial.members(HSSpecial.by_id()[gid]).any(func(d): return d.name == n), "%s は歴代の%s馬" % [n, want[n]])
 	t.ok(HSSpecial.members(HSSpecial.by_id()["r:BCターフ"]).size() > 0, "歴代の BCターフ馬は空でない")
 	for d in HSSpecial.pool():
+		if d.name == "フォルリ": continue   # 外した（持ち主の決定 2026-10-24）
 		t.ok(HSSpecial.list().any(func(e): return e.name == d.name), "%s はどれかのグループに入る" % d.name)
 	# 隠し馬とスペシャルホースの強さ・出方（持ち主の決定 2026-10-20。JS の tests/run.js と同じ）：馬・馬場・総合力・出る組
-	var want2 := [["テツノカチドキ", "dirt", 65, "local"], ["オールアロング", "turf", 72, "r:凱旋門賞"], ["スペクタキュラービッド", "dirt", 76, "t:immortal"],
+	var want2 := [["テツノカチドキ", "dirt", 65, "t:gs_jd"], ["オールアロング", "turf", 72, "t:gs_tiara"], ["スペクタキュラービッド", "dirt", 76, "t:us3"],
 		["パーソナルエンスン", "dirt", 76, "t:usf3"], ["ロッキータイガー", "dirt", 64, "t:gs_jd"], ["タマモクロス", "turf", 73, "t:gs_jp"],
-		["ミエスク", "turf", 76, "t:gs_mile"], ["ドクターフェイガー", "dirt", 78, "t:gs_sprint"], ["ヴェイグリーノーブル", "turf", 74, "t:legend"]]
+		["ミエスク", "turf", 76, "t:gs_mile"], ["ドクターフェイガー", "dirt", 77, "t:gs_us"], ["ヴェイグリーノーブル", "turf", 74, "t:gs_wturf"]]
 	for w in want2:
 		var f: Dictionary = HSSeason.fh_peak(HSHorse.from_historic(HSSpecial.data(w[0]), "x"))
 		t.eq(int(f[w[1]]), w[2], "%s の総合力" % w[0])
