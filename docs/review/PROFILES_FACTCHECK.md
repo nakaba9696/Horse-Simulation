@@ -95,7 +95,7 @@
 | シービスケット | text | 第1回のハリウッドゴールドカップを133ポンドを背負って勝ち | 第1回（1938年）の勝ちは確か。133ポンドは同年4月のベイメドウズハンデキャップの斤量とする出典があり、ゴールドカップの斤量は確かめられない | 直さない（保留） | https://en.wikipedia.org/wiki/Hollywood_Gold_Cup ・ https://vault.si.com/vault/1972/09/25/the-afternoon-the-biscuit-ate-an-admiral |
 | バヤルド | text | アスコットのニューステークスでデビューして1馬身半差で勝った | デビュー勝ちは確か。着差は出典に無い | 直さない（保留） | https://en.wikipedia.org/wiki/Bayardo_(horse) |
 | ザフライングダッチマン | text | 8か月ぶりの出走となったダービーステークス | ダービーが3歳初戦だったことは確か。8か月の間隔は出典に無い | 直さない（保留） | https://en.wikipedia.org/wiki/The_Flying_Dutchman_(horse) |
-| ザフライングダッチマン | text | この年も7戦7勝 | en.wikipedia は公式の1849年の出走を6戦6勝（不戦勝1つは記録から外す）とする。数え方の違い | 直さない（保留） | https://en.wikipedia.org/wiki/The_Flying_Dutchman_(horse) |
+| ザフライングダッチマン | text | この年も7戦7勝 | en.wikipedia は公式の1849年の出走を6戦6勝（不戦勝1つは記録から外す）とする。数え方の違い | 直した（持ち主の決定 2026-10-24「7戦7勝（うち1つは不戦勝）」）：この年も7戦7勝で、うち1つは不戦勝だった。通算の16戦15勝（5＋7＋3＋1）はそのまま | https://en.wikipedia.org/wiki/The_Flying_Dutchman_(horse) |
 | トムフール | text | ネイティヴダンサーとの対戦は相手の故障で実現しなかった | 出典で確かめられない | 直さない（保留） | https://en.wikipedia.org/wiki/Tom_Fool_(horse) |
 | ヴェイグリーノーブル | text | サンドウィッチステークスを12馬身差で勝った／直線の手前で進路をふさがれながら／鞍上が替わった | アスコットの2歳戦を12馬身差で勝ったことは確か。レース名・オブザーヴァーGCでの進路の不利・乗り替わりは出典で確かめられない（凱旋門賞の1番人気・3馬身差・サンクルー大賞3着は確か） | 直さない（保留） | https://horseracinghof.com/notable-heroes/vaguely-noble/ ・ https://vault.si.com/vault/1968/10/14/the-racing-doctor-made-the-right-prognosis |
 | ダリア | text | 6歳の1976年までG1を10勝し | 出典に G1 の勝ち数が無い | 直さない（保留） | https://en.wikipedia.org/wiki/Dahlia_(horse) |
@@ -104,9 +104,9 @@
 | ドミノ | text（2歳の賞金） | 170,790ドル | 出典によって 170,790ドル／170,890ドルと食い違う | 直さない（保留） | https://www.teamvalor.com/Library/Domino.pdf ・ https://www.americasbestracing.net/the-sport/2023-underappreciated-horse-racing-stars-19th-century-ben-brush-domino-and-henry-navarre |
 | カーバイン | text（デビュー戦） | 1887年11月にクライストチャーチの5ハロン戦でデビューし、出遅れながら勝った | 出典が見つからない（2歳で5戦全勝は合う） | 直さない（保留） | https://en.wikipedia.org/wiki/Carbine_(horse) |
 | カーバイン | text（1890年の時計） | 3分28秒2のレコード | 出典は 3:28.25（3分28秒1/4）。端数の書き方の違い | 直さない（保留） | https://en.wikipedia.org/wiki/1890_Melbourne_Cup |
-| ラウンドテーブル | text（デビュー） | 1956年2月にデビュー | 出典に日付なし（2歳時10戦5勝は合う） | 直さない（保留） | https://www.americasbestracing.net/the-sport/2020-round-table-champion-the-turf |
-| ラウンドテーブル | text（4歳時） | 年明けから7連勝…20戦14勝 | 出典に連勝数・年の成績なし（サンタアニタH・年度代表馬は合う） | 直さない（保留） | https://en.wikipedia.org/wiki/Round_Table_(horse) |
-| ラウンドテーブル | text（5歳時） | ワシントンバースデーハンデキャップで右前脚を傷めて16着 | このレースで前脚を傷めたのは合うが、着順の出典なし。右前はその前の裂蹄で、このレースで傷めたのは「もう一方の前脚」とする記事もある | 直さない（保留） | https://drf.uky.edu/catalog/1950s/drf1959050101/drf1959050101_7_3 （検索の抜粋） |
+| ラウンドテーブル | text（デビュー） | 1956年2月にデビュー | 出典に日付なし（2歳時10戦5勝は合う） | 合っていた（持ち主の確かめ 2026-10-24。https://ahonoora.com/round_table.html は 1956年2月24日ハイアリアパーク） | https://www.americasbestracing.net/the-sport/2020-round-table-champion-the-turf |
+| ラウンドテーブル | text（4歳時） | 年明けから7連勝…20戦14勝 | 出典に連勝数・年の成績なし（サンタアニタH・年度代表馬は合う） | 合っていた（https://ahonoora.com/round_table.html の成績表で1958年は20戦14勝・年明けから7連勝） | https://en.wikipedia.org/wiki/Round_Table_(horse) |
+| ラウンドテーブル | text（5歳時） | ワシントンバースデーハンデキャップで右前脚を傷めて16着 | このレースで前脚を傷めたのは合うが、着順の出典なし。右前はその前の裂蹄で、このレースで傷めたのは「もう一方の前脚」とする記事もある | 直した（2026-10-24）：16着は合っていた（https://ahonoora.com/round_table.html）。傷めた脚は出典が食い違うので「前脚」に。「復帰後は14戦9勝」は誤り（14戦9勝は1959年の全体。en.wikipedia も同じ）→「6月に復帰してからマンハッタンハンデキャップなどを勝ち、この年は14戦9勝だった」 | https://drf.uky.edu/catalog/1950s/drf1959050101/drf1959050101_7_3 （検索の抜粋） |
 | メルド | text（咳・仔の順番・1000ギニーの展開・フリーハンデ） | 8月に咳の病気／5番目の仔シャーロットタウン ほか | 出典が見つからない | 直さない（保留） | https://en.wikipedia.org/wiki/Meld_(horse) |
 | プティトエトワール | text（2歳の休養の理由・オークスの時計） | 歩様の乱れで夏の終わりから休んだ／英ダービーより速かった | 出典に記述なし | 直さない（保留） | https://en.wikipedia.org/wiki/Petite_Etoile |
 | コリン | text（2歳の相手） | フェアプレイ、ケルト、キングジェームズらを退けて | フェアプレイは合う。ケルト（同じ厩舎）・キングジェームズと走った出典は見つからない | 直さない（保留） | https://en.wikipedia.org/wiki/Colin_(horse) |
@@ -115,7 +115,7 @@
 | スウヰイスー | text（桜花賞の時計） | 1分38秒3 | 記録は「1.38.3/5」（5分の1秒の書き方なら1分38秒6）。ja.wikipedia は1分38秒3 | 直さない（保留） | https://www.ne.jp/asahi/nagi/aflo/grade_race/oka_sho.html |
 | スウヰイスー | text（相手の馬） | レダ、クインナルビーらを抑えて／タカハタを破って | 出典が見つからない | 直さない（保留） | https://ja.wikipedia.org/wiki/スウヰイスー |
 | フォーエバーヤング | text（エクリプス賞の部門） | エクリプス賞最優秀古牡馬 | エクリプス賞最優秀ダート古牡馬（Older Dirt Male）か | 直さない（ja.wikipedia の本文は「最優秀ダート古牡馬」、冒頭の表は「最優秀古牡馬」で食い違う） | https://ja.wikipedia.org/wiki/フォーエバーヤング_(競走馬) |
-| カランダガン | record | 17戦10勝 | 19戦10勝か | 直さない（en.wikipedia の成績表は 2026年10月17日の英チャンピオンS まで19戦10勝、同ページの infobox は 18戦、ja.wikipedia は17戦10勝で、出典が食い違う。名鑑の本文は2026年のキングジョージ2着まで書いており、そこまでで18戦） | https://en.wikipedia.org/wiki/Calandagan ・ https://ja.wikipedia.org/wiki/カランダガン |
+| カランダガン | record | 17戦10勝 | 19戦10勝か | 直した（持ち主の決定 2026-10-24）：19戦10勝。本文に2026年の英チャンピオンステークス2着を足した | https://en.wikipedia.org/wiki/Calandagan ・ https://ja.wikipedia.org/wiki/カランダガン |
 | ダイワスカーレット | text | 2023年まで仔を産んだ | 2023年の暮れに繁殖を退いた | 直さない（ja.wikipedia では最後に生まれた仔は2021年のグランスカーレット、2022年は死産、繁殖引退は2023年12月31日。2023年に仔を産んだ記録は見当たらない） | https://ja.wikipedia.org/wiki/ダイワスカーレット |
 | サクラローレル | text（年齢の表記） | デビューは4歳（当時の表記）の1月までずれ込んだ | 満年齢なら「3歳の1月」（1994年1月6日） | 直さない（「当時の表記」と断ってあるので誤りではない。満年齢にそろえるなら直す） | https://ja.wikipedia.org/wiki/サクラローレル |
 | ファビラスラフイン | text | コースレコードに並ぶタイムで勝った | ja.wikipedia は「当時のコースレコードにコンマ1秒迫るタイム（1分58秒1）」 | 直さない（出典が1つだけ。直すなら「コースレコードに0秒1差のタイムで勝った」） | https://ja.wikipedia.org/wiki/ファビラスラフイン |
