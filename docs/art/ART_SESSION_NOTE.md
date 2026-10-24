@@ -239,3 +239,7 @@
 
 ## 2026-10-24 持ち主：ひなたは 3 に決定（23 回目）
 - **hinata**：20 案の **3**（`docs/art/candidates/hinata_r4/3.png`・seed 24003：赤毛の二本の三つ編み・黄色のリボン・そばかす・緑のセーター）に決定。これを基本の絵（`hinata_base.png`）にして、同じ服・同じ向きで顔と手だけ変えた表情を作る：base・smile・joy・sad・anger・コミカル 3 種。今ある `hinata_*.png`（前のデザイン）は全部置き換える。`style.json` だけ。後ろ髪・耳・目のまわりの透過を、マゼンタの地で拡大して確かめてから push。
+
+## 2026-10-24 持ち主の選び（24 回目）
+- **takenouchi**：sad（涙なし）は OK。竹之内は済み（base・smile・joy・sad・anger・comic1・comic2）。
+- **hinata**：3 から作った 8 枚は印なし＝いらない。持ち主「6 の子は？ なんか香港の子っぽい」→ 3 で作った絵は日本の田舎の娘に見えないので、**20 案の 6**（`docs/art/candidates/hinata_r4/6.png`：麦わら帽子とひまわり・明るい茶色のボブ・垂れ目・緑のチェックのシャツ）を基本の絵にして作り直す：base・smile・joy・sad・anger・コミカル 3 種。今の `hinata_*.png`（3 の絵）は全部置き換える。`style.json` だけ。透過はマゼンタの地で拡大して確かめてから push。
