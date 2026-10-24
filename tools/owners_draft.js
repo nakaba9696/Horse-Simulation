@@ -24,7 +24,7 @@ const SCENES2 = { meet: '出会い', m1: 'OP のミッションをやり終え�
 // ミッションのレースの説明（格・競馬場・距離・条件・時期）
 const raceNote = (O, name) => {
   const d = O.raceData(name); if (!d) return name;
-  const age = { 2: '2歳', 3: '3歳', '3+': '3歳以上', '4+': '4歳以上' }[d.age] || '';
+  const age = { 2: '2歳', '2+': '2歳以上', 3: '3歳', '3+': '3歳以上', '4+': '4歳以上' }[d.age] || '';
   const where = d.region === '海外' ? `${d.course}（${d.country || '海外'}）` : d.region === '地方' ? `${d.course}（地方）` : d.course;
   return `${d.grade || (d.listed ? 'L' : 'OP')}・${where} ${d.surface === 'ダ' ? 'ダート' : '芝'}${d.dist}m・${age}${d.sex === '牝' ? '牝馬' : ''}・${d.month}月${d.week}週`;
 };

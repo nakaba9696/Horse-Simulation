@@ -455,7 +455,7 @@ static func _fit_r(k: String, r: Dictionary) -> float:
 		"local": return 1.0 if r.get("region") == "地方" else 0.0
 		"classic": return 1.0 if (r.get("age") == "3" and r.get("graded")) else 0.0
 		"young": return 1.0 if r.get("age") == "2" else 0.0
-		"veteran": return 1.0 if (r.get("age") == "3+" or r.get("age") == "4+" or r.get("age") == "4") else 0.0
+		"veteran": return 1.0 if (r.get("age") == "2+" or r.get("age") == "3+" or r.get("age") == "4+" or r.get("age") == "4") else 0.0
 		"usa": return 1.0 if (r.get("region") == "海外" and r.get("country") == "米") else 0.0
 		"europe": return 1.0 if (r.get("region") == "海外" and EU.has(r.get("country"))) else 0.0
 		"aus": return 1.0 if (r.get("region") == "海外" and AUS.has(r.get("country"))) else 0.0

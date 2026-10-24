@@ -107,11 +107,11 @@ static func ground(seed: float, year: float, month: float, week: float, course: 
 
 static func label(r: Dictionary) -> String:
 	return r.short if r.get("short") else r.name
-# 1984年より前の日本には格付けが無いので「重賞」と出す
+# 1984年より前の日本には格付けが無いので「重賞」と出す。地方は Jpn と出すが、国際格付けの印（intlGrade）があれば G のまま
 static func grade_badge(r: Dictionary) -> String:
 	if r.get("grade"):
 		if r.get("region") == "JRA" and r.get("year") and r.year < 1984: return "重賞"
-		if r.get("region") == "地方": return "Jpn1" if r.grade == "G1" else r.grade.replace("G", "Jpn")
+		if r.get("region") == "地方" and not r.get("intlGrade"): return "Jpn1" if r.grade == "G1" else r.grade.replace("G", "Jpn")
 		return r.grade
 	if r.get("cls") == "OP": return "L" if r.get("listed") else "OP"
 	return ""

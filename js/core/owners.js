@@ -365,7 +365,7 @@
     sprint: r => r.dist <= 1400 ? 1 : 0, mile: r => r.dist > 1400 && r.dist <= 1800 ? 1 : 0, long: r => r.dist >= 2400 ? 1 : 0,
     dirt: r => r.surface === 'ダ' ? 1 : 0, turf: r => r.surface === '芝' ? 1 : 0, filly: r => r.sex === '牝' ? 1 : 0,
     overseas: r => r.region === '海外' ? 1 : 0, foreign: r => r.region === '海外' ? 1 : 0, local: r => r.region === '地方' ? 1 : 0,
-    classic: r => r.age === '3' && r.graded ? 1 : 0, young: r => r.age === '2' ? 1 : 0, veteran: r => r.age === '3+' || r.age === '4+' || r.age === '4' ? 1 : 0,
+    classic: r => r.age === '3' && r.graded ? 1 : 0, young: r => r.age === '2' ? 1 : 0, veteran: r => r.age === '2+' || r.age === '3+' || r.age === '4+' || r.age === '4' ? 1 : 0,
     usa: r => r.region === '海外' && r.country === '米' ? 1 : 0, europe: r => r.region === '海外' && EU.includes(r.country) ? 1 : 0,
     aus: r => r.region === '海外' && AUS.includes(r.country) ? 1 : 0,
   };

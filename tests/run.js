@@ -30,7 +30,7 @@ check('races: 項目の値', () => {
     assert(['G1', 'G2', 'G3'].includes(r.grade), `grade ${r.name}`);
     assert(['JRA', '地方', '海外'].includes(r.region), `region ${r.name}`);
     assert(r.month >= 1 && r.month <= 12 && r.week >= 1 && r.week <= 4, `日付 ${r.name}`);
-    assert(['2', '3', '3+', '4', '4+'].includes(r.age), `age ${r.name}`);
+    assert(['2', '2+', '3', '3+', '4', '4+'].includes(r.age), `age ${r.name}`);
     assert(r.dist >= 800 && r.dist <= 4000, `dist ${r.name}`);
     assert(r.from <= (r.to || 9999), `from/to ${r.name}`);
   }
@@ -1455,6 +1455,7 @@ require('./extra_owners.js')(check, assert, HS); // 馬主と騎乗依頼
 require('./extra_audio.js')(check, assert, HS); // BGM の曲の書式と長さ
 require('./extra_rumble.js')(check, assert, HS); // コントローラーの振動
 require('./extra_balance.js')(check, assert, HS); // 立ち回りの噛み合い・競り合いの気合
+require('./extra_racefix.js')(check, assert, HS); // 番組の保留の直し（週の決め方・2歳以上・東京大賞典・ゴールデンフリースS・海外の賞金）
 require('./extra_collision.js')(check, assert, HS); // 当たり判定（重ならない・何もない所で止まらない・押さないと横へ動かない）と、競り合いは根性で粘る
 require('./extra_beat.js')(check, assert, HS); // 拍子（しごく手が馬の1完歩に合うと少し得）・ゲートを出たあとの隊列
 require('./extra_ui.js')(check, assert, HS); // 画面の仕組み：並べ替え・絞り込み・番組表と予約

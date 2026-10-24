@@ -91,8 +91,8 @@
   };
 
   R.label = r => r.short || r.name;
-  // 1984年より前の日本には格付けが無いので「重賞」と出す
-  R.gradeBadge = r => r.grade ? (r.region === 'JRA' && r.year && r.year < 1984 ? '重賞' : r.region === '地方' ? (r.grade === 'G1' ? 'Jpn1' : r.grade.replace('G', 'Jpn')) : r.grade) : (r.cls === 'OP' ? (r.listed ? 'L' : 'OP') : '');
+  // 1984年より前の日本には格付けが無いので「重賞」と出す。地方は Jpn と出すが、国際格付けの印（intlGrade）があれば G のまま
+  R.gradeBadge = r => r.grade ? (r.region === 'JRA' && r.year && r.year < 1984 ? '重賞' : r.region === '地方' && !r.intlGrade ? (r.grade === 'G1' ? 'Jpn1' : r.grade.replace('G', 'Jpn')) : r.grade) : (r.cls === 'OP' ? (r.listed ? 'L' : 'OP') : '');
   R.maxField = function (race) {
     if (race.region === '海外') return 14;
     if (race.region === '地方') return race.course === '大井' ? 16 : 14;

@@ -119,6 +119,10 @@
     'ブリーダーズカップジュヴェナイルターフ': 'Breeders\' Cup Juvenile Turf', 'ブリーダーズカップジュヴェナイルフィリーズターフ': 'Breeders\' Cup Juvenile Fillies Turf',
     'ブリーダーズカップジュヴェナイルターフスプリント': 'Breeders\' Cup Juvenile Turf Sprint', 'ブリーダーズカップフィリー＆メアスプリント': 'Breeders\' Cup Filly & Mare Sprint',
     'ブリーダーズカップターフスプリント': 'Breeders\' Cup Turf Sprint',
+    // 米国の名の知れた G1（A8・2026-10-24）
+    'スティーブンフォスターステークス': 'Stephen Foster Stakes', 'パーソナルエンスンステークス': 'Personal Ensign Stakes', 'ベルモントダービー': 'Belmont Derby', 'ベルモントオークス': 'Belmont Oaks',
+    'ダイアナステークス': 'Diana Stakes', 'マンハッタンステークス': 'Manhattan Stakes', 'テストステークス': 'Test Stakes', 'シャンペンステークス（米）': 'Champagne Stakes (USA)',
+    'フリゼットステークス': 'Frizette Stakes', 'ペガサスワールドカップターフ': 'Pegasus World Cup Turf',
     // 史実の勝ち鞍の記録のためのレース（data/hist_races.js）
     'クイーンズランドダービー': 'Queensland Derby', 'VRCセントレジャー': 'VRC St Leger', 'AJCセントレジャー': 'AJC St Leger', 'ブリスベンカップ': 'Brisbane Cup',
     'チャールズウィッティンガムメモリアルハンデキャップ': 'Charles Whittingham Memorial Handicap', 'サンイシドロ大賞': 'Gran Premio San Isidro', 'ホアキンSデアンチョレナ大賞': 'Gran Premio Joaquín S. de Anchorena',
