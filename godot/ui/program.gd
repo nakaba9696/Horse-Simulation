@@ -58,6 +58,7 @@ func build() -> void:
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 2)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiScreen.back_under(scroll, list)
 	scroll.add_child(list)
 	_fill(false)
 
@@ -182,8 +183,8 @@ func _seg(label: String, key: String, opts: Array) -> HBoxContainer:
 		b.custom_minimum_size = Vector2(0, 30)
 		b.add_theme_font_size_override("font_size", 13)
 		if String(opt[key]) == String(o[0]):
-			# 選んだ札は金の縁と金の字だけ（主な操作の金と見分ける）
-			b.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.SURFACE_3, UiTheme.GOLD, 1, 999, Vector4(12, 4, 12, 4)))
+			# 選んだ札は明るい革に金の縁と金の字（主な操作の金の面と見分ける。docs/UI.md「色の役目」の「選んだ物」）
+			b.add_theme_stylebox_override("normal", UiTheme.box(UiTheme.ACT_HI, UiTheme.GOLD, 1, 999, Vector4(12, 4, 12, 4)))
 			b.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT)
 		else:
 			b.add_theme_stylebox_override("normal", UiTheme.box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 999, Vector4(12, 4, 12, 4)))
@@ -272,7 +273,7 @@ func _act_chip(text: String, gold: bool, solid := false) -> PanelContainer:
 		sb = UiTheme.box(UiTheme.GOLD_FACE[1], UiTheme.GOLD_DIM, 1, UiTheme.R_BUTTON, Vector4(14, 3, 14, 4))
 		sb.border_width_bottom = 3
 	else:
-		sb = UiTheme.box(UiTheme.SURFACE_2, UiTheme.LINE_GOLD if gold else UiTheme.LINE_STRONG, 1, UiTheme.R_BUTTON, Vector4(14, 3, 14, 4))
+		sb = UiTheme.box(UiTheme.ACT, UiTheme.GOLD_BRIGHT if gold else UiTheme.ACT_EDGE, 1, UiTheme.R_BUTTON, Vector4(14, 3, 14, 4))   # 行の操作の札は押せる物の形（革の面・金の縁）
 		sb.border_width_bottom = 3
 	p.add_theme_stylebox_override("panel", sb)
 	p.add_child(UiTheme.label(text, 14, UiTheme.ON_GOLD if solid else (UiTheme.GOLD_BRIGHT if gold else UiTheme.IVORY), HORIZONTAL_ALIGNMENT_CENTER))

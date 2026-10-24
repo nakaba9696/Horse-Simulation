@@ -7,9 +7,22 @@ class_name UiTheme
 extends RefCounted
 
 # ---- 色（役目ごと。直書きしない） ----
+# 色の役目の決まり（docs/UI.md「色の役目」。持ち主の指摘 2026-10-24「背景も牧場で緑なのにボタンも緑でわかりにくい」）：
+#   地（写真＋幕）＜ 面（読む板。墨の緑）＜ 押せる物（革の面・金の縁・下の影）＜ 選んだ物（明るい革・金の光）＜ 主な操作（金の面）
+#   押せる物は背景の写真と同じ色の仲間（緑）にしない。明るさの差（面と 2.0 倍以上）と金の縁（周りと 3.0 倍以上）と下の影で浮かせる
+#   比べ方は WCAG のコントラスト比（contrast）。確かめは godot/tests/test_contrast.gd と、撮った絵で測る --contrast（UiScreen）
 const BG := Color("07140d")              # 地
 const BG_LIGHT := Color("134a30")        # 地の上の光
-const SURFACE := Color(0.051, 0.129, 0.090, 0.84)   # 板 #0d2117（84%）
+const INK := Color("0a1712")             # 面：読む板・小窓・札の地（墨の緑。写真をほとんど透かさない）
+const SURFACE := Color(0.039, 0.090, 0.071, 0.93)   # 面（INK の 93%）
+const ACT := Color("5c4a2c")             # 押せる物の面（鞍の革。普通のボタン・押せる行・選んでいないつまみ）
+const ACT_HI := Color("75603a")          # 乗せた・選んでいる押せる物の面（明るい革）
+const ACT_DOWN := Color("463821")        # 押した面（暗い革）
+const ACT_EDGE := Color("b8913e")        # 押せる物の縁（金。普通のボタンは四方 2px・下に厚みの影）
+const DANGER := Color("7a2a24")          # 危ない操作（売る・引退・消す）の面（赤い革）
+const DANGER_EDGE := Color("c0584c")     # 危ない操作の縁
+const ROW := Color("22362d")             # 表の押せる行の地（面より一段明るい。表は面か濃い幕の上に置く）
+const ROW_HI := Color("2d473b")          # 乗せた行
 const SURFACE_2 := Color("12291d")       # ボタン・カード
 const SURFACE_3 := Color("183627")       # 乗せたときの行
 const SUNK := Color("091a11")            # 溝
@@ -90,6 +103,20 @@ static func num_font() -> Font:
 		_num = fv
 	return _num
 
+# ---- 明るさとコントラスト比（WCAG 2。色の役目の物差し） ----
+# 相対輝度（0〜1）。a＜1 の色は、下の色 under に重ねた色で測る
+static func lum(c: Color, under := BG) -> float:
+	var m := Color(lerpf(under.r, c.r, c.a), lerpf(under.g, c.g, c.a), lerpf(under.b, c.b, c.a))
+	var f := func(v: float) -> float: return v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4)
+	return 0.2126 * f.call(m.r) + 0.7152 * f.call(m.g) + 0.0722 * f.call(m.b)
+
+# コントラスト比（1〜21。明るいほう＋0.05 ÷ 暗いほう＋0.05）
+static func contrast_l(l1: float, l2: float) -> float:
+	return (maxf(l1, l2) + 0.05) / (minf(l1, l2) + 0.05)
+
+static func contrast(a: Color, b: Color, under := BG) -> float:
+	return contrast_l(lum(a, under), lum(b, under))
+
 static func box(bg: Color, border := Color(0, 0, 0, 0), bw := 0, radius := R_CHIP, pad := Vector4(16, 10, 16, 10)) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
@@ -103,12 +130,29 @@ static func box(bg: Color, border := Color(0, 0, 0, 0), bw := 0, radius := R_CHI
 	sb.anti_aliasing = true
 	return sb
 
-# 板：写真が透ける深緑に、髪の毛の線の縁と影
-static func panel(alpha := 0.84, radius := R_PANEL) -> StyleBoxFlat:
-	var sb := box(Color(GREEN.r, GREEN.g, GREEN.b, alpha), LINE_STRONG, 1, radius, Vector4(18, 14, 18, 14))
+# 板（面）：墨の緑に、髪の毛の線の縁と影。写真はほとんど透かさない（93% より薄くしない。押せる物との明るさの差を保つ）
+static func panel(alpha := 0.93, radius := R_PANEL) -> StyleBoxFlat:
+	var sb := box(Color(INK.r, INK.g, INK.b, maxf(alpha, SURFACE.a)), LINE_STRONG, 1, radius, Vector4(18, 14, 18, 14))
 	sb.shadow_color = SHADOW
 	sb.shadow_size = 12
 	sb.shadow_offset = Vector2(0, 4)
+	return sb
+
+# 面の台：写真の上に押せる物（行・ボタン）を並べるとき、その下に敷く墨の緑の板（縁は髪の毛の線・柔らかい影）
+# 押せる物を写真の上に直に置かない（docs/UI.md「色の役目」。写真の明るい所でも、押せる物と周りの明るさの差が保てる）
+static func backing(pad := Vector4(8, 8, 8, 8)) -> StyleBoxFlat:
+	var sb := box(Color(INK.r, INK.g, INK.b, 0.9), LINE_STRONG, 1, R_PANEL, pad)
+	sb.shadow_color = Color(0, 0, 0, 0.45)
+	sb.shadow_size = 14
+	return sb
+
+# 面の台を中身の外側に描く形（中身の並びはそのまま。台は四方へ grow px はみ出す）
+static func backing_around(grow := 8.0) -> StyleBoxFlat:
+	var sb := backing(Vector4(0, 0, 0, 0))
+	sb.expand_margin_left = grow
+	sb.expand_margin_right = grow
+	sb.expand_margin_top = grow
+	sb.expand_margin_bottom = grow
 	return sb
 
 # 金の縁の板（右の見本など）
@@ -145,12 +189,20 @@ static func get_theme() -> Theme:
 	t.set_color("font_color", "Label", IVORY)
 	t.set_stylebox("panel", "PanelContainer", panel())
 	t.set_stylebox("panel", "Panel", panel())
-	# 普通のボタン
-	var nb := _btn(SURFACE_2, LINE_STRONG, Color(0, 0, 0, 0.55))
+	# 普通のボタン（押せる物）：革の面・金の縁・下に暗い革の厚みと影（docs/UI.md「色の役目」）
+	# 縁は金で四方 2px（StyleBoxFlat の縁は1色なので、厚みは下にずらした濃い影で出す）
+	var nb := _btn(ACT, ACT_EDGE, ACT_EDGE)
+	for i in 2:
+		var sx: StyleBoxFlat = nb[i]
+		sx.set_border_width_all(2)
+		sx.shadow_color = Color(0, 0, 0, 0.7)
+		sx.shadow_size = 2
+		sx.shadow_offset = Vector2(0, 4 - i * 2)
+	(nb[1] as StyleBoxFlat).bg_color = ACT_DOWN
 	var hv := (nb[0] as StyleBoxFlat).duplicate() as StyleBoxFlat
-	hv.bg_color = SURFACE_3
+	hv.bg_color = ACT_HI
 	var fo := hv.duplicate() as StyleBoxFlat
-	fo.border_color = GOLD
+	fo.border_color = GOLD_BRIGHT
 	fo.set_border_width_all(2)
 	fo.border_width_bottom = 4
 	# 選んでいる札は金の光で囲む（パッドで遊ぶときの手がかり。docs/UI.md 4「選んでいる札は3つの手がかり」）
@@ -227,6 +279,7 @@ static func chip(text: String, bg := SURFACE_3, fg := IVORY, size := 14, w := 0.
 	p.add_theme_stylebox_override("panel", box(bg, Color(0, 0, 0, 0.25), 1, R_CHIP, Vector4(9, 2, 9, 3)))
 	var l := label(text, size, fg, HORIZONTAL_ALIGNMENT_CENTER)
 	p.add_child(l)
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER   # 行の高さいっぱいに伸ばさない（押せる札と見分ける。押せない小さな札）
 	if w > 0.0:
 		p.custom_minimum_size.x = w
 	return p
@@ -278,20 +331,24 @@ static func grade_chip(grade: String, size := 15) -> PanelContainer:
 static func surface_chip(surface: String, dist: int, size := 16) -> PanelContainer:
 	return chip("%s %dm" % [HSText.surface(surface), dist], TURF if surface == "芝" else DIRT, Color.WHITE, size)
 
-# 表の行の地：板の色・上に髪の毛の線。選ぶと金を 16% 混ぜ、上下と左に金の線。自分の物は左の金の線が常に光る
-static func row_box(_i: int, selected := false, mine := false) -> StyleBoxFlat:
-	var c := Color(GREEN.r, GREEN.g, GREEN.b, 0.84)
-	var sb := box(c, LINE, 0, 10, Vector4(10, 0, 12, 0))
+# 表の行の地。act＝押せる行（面より一段明るい地・上に明るい線・下に影）、false＝読むだけの行（面の色・髪の毛の線。押せる形をしていない）
+# 選ぶと明るい革に金を混ぜた面・四方に金の線と左の太い金の線（docs/UI.md「色の役目」の「選んだ物」）。自分の物は左の金の線が常に光る
+static func row_box(_i: int, selected := false, mine := false, act := true) -> StyleBoxFlat:
+	var c := Color(ROW.r, ROW.g, ROW.b, 0.96) if act else Color(INK.r, INK.g, INK.b, 0.9)
+	var sb := box(c, LINE_STRONG if act else LINE, 0, 10, Vector4(10, 0, 12, 0))
 	sb.border_width_top = 1
+	if act:
+		sb.shadow_color = Color(0, 0, 0, 0.55)
+		sb.shadow_size = 1
+		sb.shadow_offset = Vector2(0, 2)
 	if selected:
-		sb.bg_color = Color(GREEN.r, GREEN.g, GREEN.b, 0.9).lerp(GOLD, 0.16)
-		sb.border_color = LINE_GOLD
-		sb.border_width_top = 1
-		sb.border_width_bottom = 1
-		sb.border_width_left = 3
-		sb.border_color = GOLD
-		sb.shadow_color = Color(GOLD.r, GOLD.g, GOLD.b, 0.28)
+		sb.bg_color = ACT_HI.lerp(GOLD, 0.12)
+		sb.set_border_width_all(1)
+		sb.border_width_left = 4
+		sb.border_color = GOLD_BRIGHT
+		sb.shadow_color = Color(GOLD.r, GOLD.g, GOLD.b, 0.32)
 		sb.shadow_size = 6
+		sb.shadow_offset = Vector2.ZERO
 	elif mine:
 		sb.border_width_left = 3
 		sb.border_color = GOLD

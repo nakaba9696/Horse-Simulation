@@ -271,6 +271,29 @@ static func section(text: String, note := "", art := false) -> Control:
 		h.add_child(UiTheme.label(note, 13, UiTheme.MUTED))
 	return h
 
+# 面の台を target（表の ScrollContainer・行の並び）の後ろに敷く。押せる行を写真の上に直に置かない（docs/UI.md「色の役目」）
+# fit を渡すと、台の高さは fit（表の中身）の高さまで（短い表の下に空の台を伸ばさない）。target・fit の大きさが変わると付いていく
+static func back_under(target: Control, fit: Control = null, grow := 8.0) -> Panel:
+	var bk := Panel.new()
+	bk.add_theme_stylebox_override("panel", UiTheme.backing_around(grow))
+	bk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var par := target.get_parent()
+	par.add_child(bk)
+	par.move_child(bk, target.get_index())
+	var sync := func() -> void:
+		var h := target.size.y
+		if fit != null:
+			h = minf(h, fit.size.y) if h > 1.0 else fit.size.y
+		bk.position = target.position
+		bk.size = Vector2(target.size.x, h)
+		bk.visible = h > 1.0
+	target.resized.connect(sync)
+	target.item_rect_changed.connect(sync)
+	if fit != null:
+		fit.resized.connect(sync)
+	sync.call()
+	return bk
+
 # 板（写真が透ける深緑）に縦の並びを入れて返す。art＝部品の絵の札（panel_card。gold なら金の縁が光る札）
 static func panel_box(gold := false, sep := 8, art := false) -> Array:
 	var p := PanelContainer.new()
@@ -287,13 +310,14 @@ static func row_button(h := 40.0, mine := false, art := false) -> Array:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(0, h)
 	b.focus_mode = Control.FOCUS_ALL
+	b.set_meta("ui_row", true)   # 表の行（色の役目の物差しで行として測る）
 	var inset := 12.0
 	if art and UiSkin.row_button(b, h, mine, Vector4(0, 0, 0, 0), 0.8):
 		inset = 40.0
 	else:
 		b.add_theme_stylebox_override("normal", UiTheme.row_box(0, false, mine))
 		var hov := UiTheme.row_box(0, false, mine)
-		hov.bg_color = Color(UiTheme.SURFACE_3.r, UiTheme.SURFACE_3.g, UiTheme.SURFACE_3.b, 0.92)
+		hov.bg_color = UiTheme.ROW_HI
 		b.add_theme_stylebox_override("hover", hov)
 		for st in ["focus", "pressed", "hover_pressed"]:
 			b.add_theme_stylebox_override(st, UiTheme.row_box(0, true, mine))
@@ -599,14 +623,16 @@ func owner_scene(q: Dictionary, on_done := Callable()) -> void:
 		create_tween().tween_property(labs[i], "modulate:a", 1.0, 0.3).set_delay(0.15 + i * 0.35)
 
 # 危ない操作（引退・放す・消す）のボタン：暗い赤
+# 危ない操作（売る・引退・消す）：赤い革の面・赤い縁（押せる物の形はほかのボタンと同じ。docs/UI.md「色の役目」）
 static func danger_button(text: String, w := 180.0, h := 48.0, fs := 17) -> Button:
 	var b := UiScreen.button(text, false, w, h, fs)
-	var n := UiTheme.box(Color("5a1f1c"), Color("8a3a33"), 1, UiTheme.R_BUTTON, Vector4(20, 9, 20, 11))
-	n.border_width_bottom = 4
+	var n := UiTheme.box(UiTheme.DANGER, UiTheme.DANGER_EDGE, 2, UiTheme.R_BUTTON, Vector4(20, 9, 20, 11))
+	n.shadow_color = Color(0, 0, 0, 0.7)
+	n.shadow_size = 2
+	n.shadow_offset = Vector2(0, 4)
 	var f := n.duplicate() as StyleBoxFlat
+	f.bg_color = UiTheme.DANGER.lightened(0.12)
 	f.border_color = UiTheme.BAD
-	f.set_border_width_all(2)
-	f.border_width_bottom = 4
 	b.add_theme_stylebox_override("normal", n)
 	b.add_theme_stylebox_override("hover", f)
 	b.add_theme_stylebox_override("focus", f)
@@ -734,7 +760,113 @@ func _capture() -> void:
 			await get_tree().process_frame
 		for k in 3:
 			await RenderingServer.frame_post_draw
-		get_viewport().get_texture().get_image().save_png(out_dir.path_join(String(sh.name) + ".png"))
+		var img := get_viewport().get_texture().get_image()
+		img.save_png(out_dir.path_join(String(sh.name) + ".png"))
+		if OS.get_cmdline_user_args().has("--contrast"):
+			UiScreen.measure_contrast(self, img, out_dir.path_join(String(sh.name) + "_contrast.json"))
 		print("shot ", sh.name)
 	print("done")
 	get_tree().quit()
+
+# ---- 色の役目の物差し（docs/UI.md「色の役目」）：撮った絵で、押せる物（Button）の面と縁が周りから浮いているかを測る ----
+# 面＝ボタンの内側（四方を 30% 削った所）の明るさの中央値、周り＝ボタンの外 4〜12px の帯（ほかのボタンの上は除く）の中央値、
+# 縁＝ボタンの内側の端 0〜6px の明るさの上から 5% の値。どれも相対輝度（UiTheme.lum）で、比は WCAG のコントラスト比。
+# 押せる形をしていない物（押せない・透明な地のつまみ）は数えない。結果は path の JSON（1つずつ）と、print の1行（いちばん悪い値）
+const CONTRAST_FACE := 1.6   # ボタン・カーソルのある行：面と周り。これより小さいと「背景と同じに見える」
+const CONTRAST_RIM := 3.0    # ボタン・カーソルのある行：縁と周り（WCAG 1.4.11 の部品の境目）
+const CONTRAST_ROW := 1.25   # 表の行（カーソルの無い行）：面と周り（面の台・濃い幕）。縁は問わない（並ぶ行に金の縁を付けない）
+
+# 表の行か（行の部品の印 ui_row、無ければ横に長い押せる物）
+static func is_row(b: Button) -> bool:
+	return b.has_meta("ui_row") or (b.size.x >= 360.0 and b.size.y <= 110.0 and b.size.x >= b.size.y * 6.0)
+
+static func measure_contrast(root: Node, img: Image, path: String) -> Dictionary:
+	var vp := root.get_viewport()
+	var k := float(img.get_width()) / maxf(1.0, vp.get_visible_rect().size.x)
+	var btns: Array = []
+	var others: Array = []   # 周りから除く札（数えない札も。切れた行・押せない札の上は周りにしない）
+	var modal = root.get("_modal")
+	for n in root.find_children("*", "Button", true, false):
+		var b := n as Button
+		if b.is_visible_in_tree():
+			var gr := b.get_global_rect()
+			others.append([b, Rect2(gr.position * k, gr.size * k)])
+		if not b.is_visible_in_tree() or b.disabled or b.flat or b.size.x < 24 or b.size.y < 16:
+			continue
+		if modal is Control and is_instance_valid(modal) and not (modal as Control).is_ancestor_of(b):
+			continue   # 小窓の後ろ（暗くした札）は数えない
+		var clip := b.get_parent()
+		while clip != null and not (clip is ScrollContainer):
+			clip = clip.get_parent()
+		if clip is ScrollContainer and not (clip as Control).get_global_rect().encloses(b.get_global_rect()):
+			continue   # 表の端で切れている行は数えない
+		var sb := b.get_theme_stylebox("normal")
+		if sb is StyleBoxEmpty or (sb is StyleBoxFlat and (sb as StyleBoxFlat).bg_color.a < 0.05):
+			continue   # 字だけのつまみ（溝の中の選んでいないタブ）
+		var r := b.get_global_rect()
+		r = Rect2(r.position * k, r.size * k)
+		if not Rect2(Vector2.ZERO, Vector2(img.get_width(), img.get_height())).encloses(r.grow(-1)):
+			continue
+		btns.append([b, r])
+	var lm := func(x: int, y: int) -> float: return UiTheme.lum(img.get_pixel(x, y))
+	var med := func(a: Array) -> float:
+		if a.is_empty(): return -1.0
+		a.sort()
+		return float(a[a.size() / 2])
+	var rows: Array = []
+	for e in btns:
+		var b: Button = e[0]
+		var r: Rect2 = e[1]
+		var face: Array = []
+		var ix := r.size.x * 0.3
+		var iy := r.size.y * 0.3
+		for y in range(int(r.position.y + iy), int(r.end.y - iy), 2):
+			for x in range(int(r.position.x + ix), int(r.end.x - ix), 3):
+				face.append(lm.call(x, y))
+		var rim: Array = []
+		for d in 7:
+			for x in range(int(r.position.x) + 6, int(r.end.x) - 6, 3):
+				rim.append(lm.call(x, int(r.position.y) + d)); rim.append(lm.call(x, int(r.end.y) - 1 - d))
+			for y in range(int(r.position.y) + 6, int(r.end.y) - 6, 3):
+				rim.append(lm.call(int(r.position.x) + d, y)); rim.append(lm.call(int(r.end.x) - 1 - d, y))
+		var ring: Array = []
+		for d in range(4, 13, 2):
+			var o := r.grow(float(d))
+			var pts: Array = []
+			for x in range(int(o.position.x), int(o.end.x), 4):
+				pts.append(Vector2(x, o.position.y)); pts.append(Vector2(x, o.end.y))
+			for y in range(int(o.position.y), int(o.end.y), 4):
+				pts.append(Vector2(o.position.x, y)); pts.append(Vector2(o.end.x, y))
+			for p in pts:
+				if p.x < 0 or p.y < 0 or p.x >= img.get_width() or p.y >= img.get_height():
+					continue
+				if others.any(func(o2): return o2[0] != b and (o2[1] as Rect2).grow(2).has_point(p)):
+					continue
+				ring.append(lm.call(int(p.x), int(p.y)))
+		if ring.size() < 12 or face.is_empty():
+			continue
+		rim.sort()
+		var f: float = med.call(face)
+		var g: float = med.call(ring)
+		var e2: float = float(rim[mini(rim.size() - 1, int(rim.size() * 0.95))])
+		var row := is_row(b) and not b.has_focus()
+		var fc := UiTheme.contrast_l(f, g)
+		var rc := UiTheme.contrast_l(e2, g)
+		rows.append({"text": b.text if b.text != "" else String(b.name), "kind": "row" if row else "button", "face": fc, "rim": rc,
+			"ok": (fc >= CONTRAST_ROW) if row else (fc >= CONTRAST_FACE and rc >= CONTRAST_RIM),
+			"focus": b.has_focus(), "rect": [int(r.position.x), int(r.position.y), int(r.size.x), int(r.size.y)]})
+	var worst := {"face": 99.0, "rim": 99.0, "row": 99.0, "n": rows.size(), "bad": 0}
+	for x in rows:
+		if x.kind == "row":
+			worst.row = minf(worst.row, x.face)
+		else:
+			worst.face = minf(worst.face, x.face)
+			worst.rim = minf(worst.rim, x.rim)
+		if not x.ok:
+			worst.bad += 1
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f:
+		var ox: Array = others.map(func(o): var q: Rect2 = o[1]; return [int(q.position.x), int(q.position.y), int(q.size.x), int(q.size.y)])
+		f.store_string(JSON.stringify({"worst": worst, "buttons": rows, "others": ox}, "\t"))
+	print("contrast %s n=%d ボタンの面=%.2f 縁=%.2f 行の面=%.2f 足りない=%d" % [path.get_file().get_basename().trim_suffix("_contrast"), rows.size(), worst.face, worst.rim, worst.row, worst.bad])   # i18n:skip（撮影の道具の出力）
+	return worst

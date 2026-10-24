@@ -25,6 +25,7 @@ func build() -> void:
 	v.custom_minimum_size = Vector2(760, 0)
 	v.add_theme_constant_override("separation", 5)
 	add_child(v)
+	UiScreen.back_under(v)
 	for o in HSOwners.LIST():
 		var st := HSOwners.of(String(o.id))
 		var rb := UiScreen.row_button(ROW_H, st.stage >= 2)

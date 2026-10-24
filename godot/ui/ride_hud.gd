@@ -1062,7 +1062,7 @@ func _fill_board() -> void:
 				info = h
 		var row := PanelContainer.new()
 		var mine := int(r.num) == int(race.horses[src.me].num)
-		row.add_theme_stylebox_override("panel", UiTheme.row_box(k, false, mine))
+		row.add_theme_stylebox_override("panel", UiTheme.row_box(k, false, mine, false))
 		row.custom_minimum_size.y = 46
 		var hb := HBoxContainer.new()
 		hb.add_theme_constant_override("separation", 12)

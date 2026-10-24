@@ -34,11 +34,16 @@ func build() -> void:
 	line.custom_minimum_size = Vector2(420, 2)
 	tv.add_child(line)
 	# メニュー
+	# ボタンは面の台に載せる（草原の写真の上に直に置かない。docs/UI.md「色の役目」）
+	var bk := PanelContainer.new()
+	bk.add_theme_stylebox_override("panel", UiTheme.backing(Vector4(18, 18, 18, 20)))
+	bk.position = Vector2(102, 452)
+	bk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bk)
 	menu = VBoxContainer.new()
-	menu.position = Vector2(120, 470)
 	menu.custom_minimum_size = Vector2(460, 0)
 	menu.add_theme_constant_override("separation", 14)
-	add_child(menu)
+	bk.add_child(menu)
 	var info := UiFlow.save_info()
 	b_cont = UiScreen.button("つづきから", not info.is_empty(), 460, 64, 24)
 	if info.is_empty():
@@ -149,8 +154,7 @@ func _build_new() -> void:
 	b_no = UiScreen.button("やめる", false, 140, 48, 17)
 	b_no.pressed.connect(func(): confirm_box.visible = false; b_start.grab_focus())
 	ch.add_child(b_no)
-	var b_yes := UiScreen.button("消して始める", false, 180, 48, 17)
-	b_yes.add_theme_stylebox_override("normal", UiTheme.box(Color("5a1f1c"), Color("8a3a33"), 1, UiTheme.R_BUTTON, Vector4(20, 9, 20, 11)))
+	var b_yes := UiScreen.danger_button("消して始める", 180, 48, 17)
 	b_yes.pressed.connect(_really_start)
 	ch.add_child(b_yes)
 	cv.add_child(ch)

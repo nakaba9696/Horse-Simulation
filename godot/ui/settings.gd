@@ -67,6 +67,7 @@ func build() -> void:
 	list_v.custom_minimum_size = Vector2(LIST_W, 0)
 	list_v.add_theme_constant_override("separation", 4)
 	add_child(list_v)
+	UiScreen.back_under(list_v)
 	# 下の札：初めの設定に戻す・もどる（金）
 	var bh := HBoxContainer.new()
 	bh.position = Vector2(PAD_X, 1000 - 56 - 70)

@@ -51,6 +51,7 @@ func build() -> void:
 	list_v = VBoxContainer.new()
 	list_v.add_theme_constant_override("separation", 4)
 	list_v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiScreen.back_under(sc, list_v)
 	sc.add_child(list_v)
 	var pb := UiScreen.panel_box(true, 8)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X + 1060 + 20, TOP + 4)

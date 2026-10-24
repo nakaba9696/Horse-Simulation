@@ -10,6 +10,9 @@ const DIR := "res://assets/ui/"
 const ICONS := ["back", "calendar", "crown", "data", "dirt", "farm", "horse", "horseshoe", "laurel", "lock", "money", "owner", "race", "saddle", "settings", "shop", "stable", "star", "trophy", "turf"]
 
 static var enabled := true    # false で絵を使わない（前の形で撮って比べる・テスト）
+# 色の役目で面を塗り替えた絵（godot/assets/ui/role。godot/tools/ui_roles.py が作る。docs/UI.md「色の役目」）を先に使う。
+# false で持ち主のもとの絵（面が緑）に戻す（直す前の形で撮って比べる）
+static var roles := true
 static var _slices = null
 static var _tex := {}         # "名前@倍率" → Texture2D（無ければ null）
 
@@ -41,11 +44,13 @@ static func tex(name: String, scale := 1.0) -> Texture2D:
 	if not enabled:
 		return null
 	scale = clampf(scale, 0.2, 1.0)
-	var key := "%s@%.3f" % [name, scale]
+	var key := "%s@%.3f%s" % [name, scale, "r" if roles else ""]
 	if _tex.has(key):
 		return _tex[key]
 	var t: Texture2D = null
 	var p := DIR + name + ".png"
+	if roles and ResourceLoader.exists(DIR + "role/" + name + ".png"):
+		p = DIR + "role/" + name + ".png"
 	if ResourceLoader.exists(p):
 		t = load(p)
 		if t != null and scale < 0.999:
