@@ -42,6 +42,17 @@ module.exports = function (check, assert, HS) {
     assert(e.pot.mind <= base.pot.mind - 9, `エアシャカールの気性 ${e.pot.mind}（ふつうなら ${base.pot.mind}）`);
   });
 
+  check('abilities: 3回目（世界の名馬列伝集・引退競走馬名鑑で確かめた分）が能力に入っている', () => {
+    const h = n => H.fromHistoric(dataOf(n), 'x');
+    assert(h('サイエダティ').style === '差し' && h('ヘクタープロテクター').style === '先行', '列伝の走り方に合っていない');
+    assert(h('ジャイアンツコーズウェイ').health === 83, '「鉄の馬」の健康');
+    for (const n of ['サンデーサイレンス', 'ニジンスキー', 'メイショウタバル', 'ワカクモ', 'レガシーワールド']) {
+      const base = H.fromHistoric(Object.assign({}, dataOf(n), { pot: Object.assign({}, dataOf(n).pot, { mind: undefined }) }), 'y');
+      assert(h(n).pot.mind <= base.pot.mind - 9, `${n} の気性 ${h(n).pot.mind}（ふつうなら ${base.pot.mind}）`);
+      assert(!h(n).skills.includes('kakari') && !h(n).skills.includes('deokure'), `${n} に癖が付いた（気性だけ下げる）`);
+    }
+  });
+
   check('abilities: 暦に無い史実のレース（data/hist_races.js）で勝った G1 の距離も、距離の幅に入る（2歳戦は除く）', () => {
     const bad = [];
     for (const d of D.historic) for (const w of d.wins || []) {
