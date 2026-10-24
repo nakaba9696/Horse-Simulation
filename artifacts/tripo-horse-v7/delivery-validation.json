@@ -1,0 +1,153 @@
+{
+  "zip_sha256": "b131229193e569bf2f773bcca6749e938ba24e7f2d281176967ae3e72ceb6bbd",
+  "zip_bytes": 101570751,
+  "archive_crc_all_pass": true,
+  "sha256_manifest_entries": 1002,
+  "archive_total_files": 1003,
+  "all_archive_sha256_verified": true,
+  "report_hash_index_verified": true,
+  "fresh_extracted_godot_version": "4.6.3",
+  "fresh_import_pass": true,
+  "fresh_all_five_clips_validation": {
+    "bones": 54,
+    "clips": {
+      "Canter": {
+        "duration": 0.600000023841858,
+        "loop_error": 0.0,
+        "morph": 1.0,
+        "samples": 1920,
+        "tracks": 164,
+        "walk_morph": 0.0
+      },
+      "RaceGallop": {
+        "duration": 0.450000017881393,
+        "loop_error": 0.0,
+        "morph": 1.0,
+        "samples": 1920,
+        "tracks": 164,
+        "walk_morph": 0.0
+      },
+      "Stand": {
+        "duration": 3.0,
+        "loop_error": 0.0,
+        "morph": 0.0,
+        "samples": 1920,
+        "tracks": 164,
+        "walk_morph": 0.0
+      },
+      "Trot": {
+        "duration": 0.720833361148834,
+        "loop_error": 2.10734238947907e-08,
+        "morph": 1.0,
+        "samples": 1920,
+        "tracks": 164,
+        "walk_morph": 0.0
+      },
+      "Walk": {
+        "duration": 1.19999992847443,
+        "loop_error": 0.0,
+        "morph": 0.0,
+        "samples": 1920,
+        "tracks": 164,
+        "walk_morph": 1.0
+      }
+    },
+    "legs": {
+      "0": 9088,
+      "1": 460,
+      "2": 460,
+      "3": 782,
+      "4": 783
+    },
+    "other_socket_tolerance_m": 0.007,
+    "reference_scale": 2.6,
+    "regions": {
+      "0": 6784,
+      "1": 2761,
+      "2": 1353,
+      "3": 356,
+      "4": 45,
+      "5": 116,
+      "6": 120,
+      "7": 38
+    },
+    "seat_tolerance_m": 0.002,
+    "socket_count": 6,
+    "socket_max_angle_error_radians": 0.0009765625,
+    "socket_max_position_error": 7.27653230114811e-07,
+    "socket_position_error_model_by_node": {
+      "Bit_L": 6.95462915700773e-07,
+      "Bit_R": 7.27653230114811e-07,
+      "Saddle": 2.0291950875162e-07,
+      "Stirrup_L": 1.66600045758969e-07,
+      "Stirrup_R": 1.69244657399759e-07,
+      "Withers": 3.93715737345701e-07
+    },
+    "stand_switch_error": 0.0
+  },
+  "fresh_all_five_six_socket_validation": {
+    "Canter": {
+      "max_angle_error_radians": 0.000690533954184502,
+      "position_error_m_by_socket": {
+        "Bit_L": 1.39703371360156e-06,
+        "Bit_R": 1.40346551233961e-06,
+        "Saddle": 3.4422375279064e-07,
+        "Stirrup_L": 3.95369846728499e-07,
+        "Stirrup_R": 3.95577421841153e-07,
+        "Withers": 7.4113530104114e-07
+      },
+      "samples": 37
+    },
+    "RaceGallop": {
+      "max_angle_error_radians": 0.0009765625,
+      "position_error_m_by_socket": {
+        "Bit_L": 1.80820358082201e-06,
+        "Bit_R": 1.89189839829851e-06,
+        "Saddle": 5.27590722754212e-07,
+        "Stirrup_L": 4.33160118973319e-07,
+        "Stirrup_R": 4.40036109239372e-07,
+        "Withers": 1.02366091709882e-06
+      },
+      "samples": 28
+    },
+    "Stand": {
+      "max_angle_error_radians": 0.000690533954184502,
+      "position_error_m_by_socket": {
+        "Bit_L": 0.000140166066557867,
+        "Bit_R": 0.000140071015630383,
+        "Saddle": 3.19652889402278e-07,
+        "Stirrup_L": 4.81178324207576e-07,
+        "Stirrup_R": 6.27708618594625e-07,
+        "Withers": 1.11042273260864e-06
+      },
+      "samples": 181
+    },
+    "Trot": {
+      "max_angle_error_radians": 0.000690533954184502,
+      "position_error_m_by_socket": {
+        "Bit_L": 1.58230968736461e-06,
+        "Bit_R": 1.7328841863673e-06,
+        "Saddle": 4.76462327014815e-07,
+        "Stirrup_L": 6.40506004856434e-07,
+        "Stirrup_R": 6.26287220484301e-07,
+        "Withers": 9.04656309330676e-07
+      },
+      "samples": 44
+    },
+    "Walk": {
+      "max_angle_error_radians": 0.000690533954184502,
+      "position_error_m_by_socket": {
+        "Bit_L": 1.87276010592541e-06,
+        "Bit_R": 1.8729355360847e-06,
+        "Saddle": 4.80683328873965e-07,
+        "Stirrup_L": 3.31162186739675e-07,
+        "Stirrup_R": 4.6692972262008e-07,
+        "Withers": 6.77814250593656e-07
+      },
+      "samples": 73
+    }
+  },
+  "reviewed_glb_sha256": "985091d66c7caeadd3d151c3b8f8e274399b9b2c96ec0507e7a8266fdc3052ea",
+  "game_code_and_data_changed": false,
+  "scope": "Independent asset; game rider/reins, gait transitions, LOD/FPS, human real-time video playback not accepted."
+}

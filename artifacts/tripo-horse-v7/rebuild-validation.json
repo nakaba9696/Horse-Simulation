@@ -1,0 +1,20 @@
+{
+  "delivered_glb_sha256": "985091d66c7caeadd3d151c3b8f8e274399b9b2c96ec0507e7a8266fdc3052ea",
+  "clean_rebuild_glb_sha256": "985091d66c7caeadd3d151c3b8f8e274399b9b2c96ec0507e7a8266fdc3052ea",
+  "byte_identical": true,
+  "all_model_stages_rebuilt_from": "bundled immutable v6-rest.blend, baseline/v6/proportion-design.json, socket contract and tools; no final blend/GLB/cache input",
+  "base_v6_rest_sha256": "b1dab1e9d96533ed5a12dac3f14d290d91d4f60d7fb56c7d54bb40241b7b57aa",
+  "numeric_and_godot_checks_passed": true,
+  "model_tools_sha256": {
+    "proportions.py": "aab7b220d01a01d202d74a78676ceae80d37137d6398a6c8496d614cac826de7",
+    "shape_v6.py": "c3018090a6e117882b5798e6f2159d438136c11f147d21ca4466e8e17b45e61d",
+    "shape_v7.py": "3564403960b0b1fd97abebd8e6ad6ff4f8bc1dff8c75cbfc39a78f0c2dad0a3e",
+    "animate.py": "af51675c609eb3687612293d559519e6fb144eee3a814ae565af1905d5cd2ee3",
+    "geometry.py": "e98d837f9f3d35d2f70a4a8c6078a9eaaa67460603b649b8416687f18b858158",
+    "regions.py": "898fccf5d7eafb77beca6efe5bd0f997f3a26be48804d261565061e24f213e39",
+    "corrective.py": "1658e07925792411292caebf69423bea717a3b6d2a96612e89a3bebc66e4b427",
+    "walk_corrective.py": "7943807dd80046477779d09d1dc19dc44fda85bdd34fe24e026bb9d3d2274a8e",
+    "normals.py": "76619a9dbd73499c51c83291fc5f955625423b617d5bf9465cd8f5c4fa9ae579",
+    "export.py": "be0a081ccfb784e459fa7b09c16b4c689df96eca0555582c6e5f294ad0532a50"
+  }
+}

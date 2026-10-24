@@ -1,0 +1,183 @@
+{
+  "source_glb_sha256": "985091d66c7caeadd3d151c3b8f8e274399b9b2c96ec0507e7a8266fdc3052ea",
+  "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+  "resolution": [
+    1600,
+    1000
+  ],
+  "camera": "full-body side view",
+  "samples": [
+    {
+      "frame": 0,
+      "time_seconds": 0.0,
+      "raw_opposed_pixels": 844,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 1,
+      "time_seconds": 0.016666666666666666,
+      "raw_opposed_pixels": 806,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 2,
+      "time_seconds": 0.03333333333333333,
+      "raw_opposed_pixels": 836,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 3,
+      "time_seconds": 0.05,
+      "raw_opposed_pixels": 763,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 4,
+      "time_seconds": 0.06666666666666667,
+      "raw_opposed_pixels": 556,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 5,
+      "time_seconds": 0.08333333333333333,
+      "raw_opposed_pixels": 594,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 6,
+      "time_seconds": 0.1,
+      "raw_opposed_pixels": 613,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 7,
+      "time_seconds": 0.11666666666666667,
+      "raw_opposed_pixels": 335,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 8,
+      "time_seconds": 0.13333333333333333,
+      "raw_opposed_pixels": 349,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 9,
+      "time_seconds": 0.15,
+      "raw_opposed_pixels": 352,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 10,
+      "time_seconds": 0.16666666666666666,
+      "raw_opposed_pixels": 298,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 11,
+      "time_seconds": 0.18333333333333332,
+      "raw_opposed_pixels": 254,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 12,
+      "time_seconds": 0.2,
+      "raw_opposed_pixels": 264,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 13,
+      "time_seconds": 0.21666666666666667,
+      "raw_opposed_pixels": 275,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 14,
+      "time_seconds": 0.23333333333333334,
+      "raw_opposed_pixels": 265,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 15,
+      "time_seconds": 0.25,
+      "raw_opposed_pixels": 307,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 16,
+      "time_seconds": 0.26666666666666666,
+      "raw_opposed_pixels": 310,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 17,
+      "time_seconds": 0.2833333333333333,
+      "raw_opposed_pixels": 256,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 18,
+      "time_seconds": 0.3,
+      "raw_opposed_pixels": 263,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 19,
+      "time_seconds": 0.31666666666666665,
+      "raw_opposed_pixels": 312,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 20,
+      "time_seconds": 0.3333333333333333,
+      "raw_opposed_pixels": 401,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 21,
+      "time_seconds": 0.35,
+      "raw_opposed_pixels": 395,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 22,
+      "time_seconds": 0.36666666666666664,
+      "raw_opposed_pixels": 388,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 23,
+      "time_seconds": 0.38333333333333336,
+      "raw_opposed_pixels": 264,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 24,
+      "time_seconds": 0.4,
+      "raw_opposed_pixels": 353,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 25,
+      "time_seconds": 0.4166666666666667,
+      "raw_opposed_pixels": 684,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 26,
+      "time_seconds": 0.43333333333333335,
+      "raw_opposed_pixels": 774,
+      "protected_opposed_pixels": 0
+    },
+    {
+      "frame": 27,
+      "time_seconds": 0.45,
+      "raw_opposed_pixels": 844,
+      "protected_opposed_pixels": 0
+    }
+  ],
+  "max_raw_opposed_pixels": 844,
+  "max_protected_opposed_pixels": 0,
+  "scope": "Visible rasterized body pixels at these cameras, not a proof of absence of hidden self-intersection. Audit replaces coat shading with geometric-normal hemisphere diagnostic; no normal map in audit. Production normal map strength is 0.03.",
+  "required_shader": "preview/coat.gdshader geometric hemisphere guard threshold 0.15"
+}
