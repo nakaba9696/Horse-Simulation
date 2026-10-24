@@ -250,12 +250,12 @@ module.exports = function (check, assert, HS) {
     assert(Object.values(whenOf).every(w => w === 'any'), '無敗のときだけの隠し馬が残る');
     // 外した馬・動かした馬
     const all = n => Object.keys(D.trophyHorses).filter(id => D.trophyHorses[id].some(x => x.name === n));
-    // トムフール（アメリカン GS）とカーバイン（ワールドステイヤー GS に）は戻した（持ち主の決定 2026-10-24）
-    for (const [n, id] of [['カーバイン', 'gs_au'], ['ロベルト', 'gs_eu'], ['ロイヤルパレス', 'gs_turf'], ['ギャロレット', 'gs_us']]) {
-      if (n !== 'カーバイン') assert(!all(n).length, `${n}が隠し馬に残る`);
+    // トムフール（アメリカン GS）は戻した。カーバインはオーストラリアン GS へ（持ち主の決定 2026-10-24）
+    for (const [n, id] of [['ロベルト', 'gs_eu'], ['ロイヤルパレス', 'gs_turf'], ['ギャロレット', 'gs_us']]) {
+      assert(!all(n).length, `${n}が隠し馬に残る`);
       assert(!SP.members(SP.BY['t:' + id] || { id: 'x' }).some(d => d.name === n), `${n}がトロフィーのグループにいる`);
     }
-    assert(all('トムフール').join() === 'gs_us' && all('カーバイン').join() === 'gs_stayer', 'トムフール・カーバインが戻っていない');
+    assert(all('トムフール').join() === 'gs_us' && all('カーバイン').join() === 'gs_au', 'トムフール・カーバインが戻っていない');
     assert(all('ジョンヘンリー').join() === 'bc2' && SP.byName('ジョンヘンリー').groups.join() === 't:bc2', 'ジョンヘンリーがクラウンオブブリーダーズにいない');
     assert(all('テンポイント').join() === 'gs_jp' && SP.byName('テンポイント').groups.join() === 't:gs_jp', 'テンポイントがジャパン GS にいない');
     assert(all('シアトルスルー').join() === 'us3' && SP.byName('シアトルスルー').groups.join() === 't:us3', 'シアトルスルーが米国三冠にいない');
