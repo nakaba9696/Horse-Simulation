@@ -131,6 +131,85 @@
   for (const [n, f] of Object.entries(D.styleFix || {})) {
     const h = byName.get(n) || byNorm.get(HS.normName(n)); if (h && f.style) h.style = f.style;
   }
+  // ---- 出典で決めていない能力の散らし（持ち主の指摘 2026-10-25「わからない数値全員66とかじゃなくてある程度ばらけさせてね」
+  // 「重馬場適正以外もちゃんとみんな同じ数値とかにしないでね」）。決まりと幅は docs/BALANCE.md「22. 決めていない能力の散らし」 ----
+  // 馬ごとのずらし（d.spr）を、データの手がかり（父の特徴・父の道悪・国・名鑑の言葉・勝った馬場の格）と馬名の種で決める（Math.random は使わない）。
+  // H.fromHistoric（godot/core/hs_horse.gd の from_historic も同じ）が、手で決めていない値にだけ足す。総合力の元（スピード・スタミナ）には足さない。
+  // Godot へは書き出したデータ（tools/export_godot.js）で届く
+  {
+    const U = HS.U, stal = new Map((D.stallions || []).map(s => [s.name, s]));
+    const extra = D.legendsExtra || [];
+    const all = out.concat(extra), byAll = new Map(all.map(h => [h.name, h]));
+    const mudOf = n => { const f = (D.mudFix || {})[n]; if (f) return f.heavy; const h = byAll.get(n); return h && h.heavy != null ? h.heavy : null; };
+    const traitsOf = n => (stal.get(n) || {}).traits || [];
+    const surfOf = n => (stal.get(n) || byAll.get(n) || {}).surface || null;
+    const EU = ['英', '愛', '仏', '独', '伊'];
+    const raceAt = (w) => { const y = +w.slice(0, 4), n = w.slice(4); return (raceByName.get(n) || []).find(r => active(r, y)) || (D.histRaces || []).find(r => r.name === n && active(r, y)); };
+    const SA = { G1: 100, G2: 95, G3: 90 }; // H.SURF_APT と同じ
+    HS.SPREAD = { heavy: [55, 76], health: [67, 85], offApt: [48, 59], topApt: 90 };
+    for (const h of all) {
+      const rng = k => U.hashRng('spread:' + k + ':' + h.name);
+      const uni = (k, a, b) => rng(k).int(a, b);              // a..b の整数を同じ割合で
+      const half = (k, a, b) => rng(k).int(a * 2, b * 2) / 2; // a..b を 0.5 刻みで
+      const tr = traitsOf(h.sire), text = String(h.text || '') + String(h.note || '');
+      const spr = {};
+      // 重馬場（ふつうの 66 の馬）：55〜76。父・母の父が道悪巧者 ＋4・苦手 −4、父の「パワー」＋2、欧州の馬（柔らかい馬場で走る）＋2
+      if (h.heavy == null) {
+        let v = 66 + uni('heavy', -9, 8);
+        const sm = mudOf(h.sire), dm = mudOf(h.damsire);
+        if ((sm != null && sm >= 86) || (dm != null && dm >= 86)) v += 4;
+        if ((sm != null && sm <= 40) || (dm != null && dm <= 40)) v -= 4;
+        if (tr.includes('パワー')) v += 2;
+        if (EU.includes(h.country)) v += 2;
+        spr.heavy = U.clamp(v, HS.SPREAD.heavy[0], HS.SPREAD.heavy[1]) - 66;
+      }
+      // 健康（戦数の段の値）：−5〜＋5。父の「丈夫」＋2・「体質弱」−3、名鑑の丈夫の言葉 ＋3・故障の言葉 −3。67〜85 に収める（H.fromHistoric）
+      if (h.health == null) {
+        let v = uni('health', -5, 5);
+        if (tr.includes('丈夫')) v += 2;
+        if (tr.includes('体質弱')) v -= 3;
+        if (/丈夫|頑健|頑丈|タフ|鉄の/.test(text)) v += 3;
+        if (/骨折|屈腱炎|脚部不安|故障|裂蹄|靭帯/.test(text)) v -= 3;
+        spr.health = v;
+      }
+      // 切れ（脚質から出す値）：−1・0・＋1 を同じ割合で。父の「瞬発力」・名鑑の切れ味の言葉は −1 を 0 に、父の「持続力」・長く脚を使う言葉は ＋1 を 0 に
+      if (h.kire == null) {
+        let v = uni('kire', -1, 1);
+        if (v < 0 && (tr.includes('瞬発力') || /瞬発|一瞬の脚|切れ味/.test(text))) v = 0;
+        if (v > 0 && (tr.includes('持続力') || /長く(良い|いい)?脚|ロングスパート|まくり|捲|バテな/.test(text))) v = 0;
+        spr.kire = v;
+      }
+      // 根性・気性・坂（強さから出す値）：−3〜＋3 を 0.5 刻みで。父の「底力」根性 ＋1、「気性難」気性 −1.5、「パワー」坂 ＋1
+      const pot = h.pot || {};
+      if (pot.guts == null) spr.guts = half('guts', -3, 3) + (tr.includes('底力') ? 1 : 0);
+      if (pot.mind == null) spr.mind = half('mind', -3, 3) - (tr.includes('気性難') ? 1.5 : 0);
+      if (pot.slope == null) spr.slope = half('slope', -3, 3) + (tr.includes('パワー') ? 1 : 0);
+      // 芝・ダートの適性（H.surfaceApt の値のうち、得意の馬場の 100 と、走っていない馬場の 55 だけ）。画面と出走の目安だけで、能力（総合力）には効かない
+      //   得意の 100：90〜100 を同じ割合で（番組表の「向いている」の段のまま。勝ち鞍の格はもう 100 に入っているので寄せない）
+      //   走っていない 55：48〜59（番組表の「向いていない」の段のまま）。父がその馬場の馬 ＋3・芝ダ ＋1・逆の馬場 −1
+      if (!(pot.dspd != null && pot.dsta != null)) {
+        const ws = (h.wins || []).map(raceAt).filter(Boolean);
+        const best = s => { let b = null; for (const r of ws) if ((r.surface === 'ダ') === (s === 'ダ')) { const v = SA[r.grade] || SA.G3; if (b == null || v > b) b = v; } return b; };
+        const bt = best('芝'), bd = best('ダ');
+        let turf, dirt;
+        if (h.surface === '芝ダ') { turf = bt != null ? bt : 90; dirt = bd != null ? bd : 90; const top = Math.max(turf, dirt); turf += 100 - top; dirt += 100 - top; }
+        else if (h.surface === 'ダ') { dirt = 100; turf = bt != null ? bt - 3 : 55; }
+        else { turf = 100; dirt = bd != null ? bd - 3 : 55; }
+        const ss = surfOf(h.sire);
+        for (const [k, v, s] of [['turf', turf, '芝'], ['dirt', dirt, 'ダ']]) {
+          if (h[k] != null) continue;
+          if (v === 100) {
+            spr[k] = -uni(k, 0, 100 - HS.SPREAD.topApt);
+          } else if (v === 55) {
+            const w = uni(k, -5, 4) + (ss === s ? 3 : ss === '芝ダ' ? 1 : ss ? -1 : 0);
+            spr[k] = U.clamp(55 + w, HS.SPREAD.offApt[0], HS.SPREAD.offApt[1]) - 55;
+          }
+        }
+      }
+      for (const k of Object.keys(spr)) if (!spr[k]) delete spr[k];
+      if (Object.keys(spr).length) h.spr = spr; else delete h.spr;
+    }
+  }
   // ---- 英語の名前（持ち主の決定 2026-10-21「言語は日本語と英語にしたい」。決まりは docs/I18N_DATA.md） ----
   // 馬：データの nameEn（海外の馬の元の名前）→ data/names_en.js（出典で確かめた登録の英語名）→ カナをヘボン式のローマ字に。
   // カナの外来語も綴りを推さずにローマ字にする（スペシャルウィーク＝Supesharuwiku）。確かめた名前は names_en.js に足す

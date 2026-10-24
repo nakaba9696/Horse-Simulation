@@ -251,12 +251,14 @@ static func from_historic(d: Dictionary, id: Variant) -> Dictionary:
 	for x in ws:
 		var g = _geo(x)
 		if g and g.get("slope") == "急": steep += 1
+	# 出典で決めていない値の散らし（js/core/datafix.js が作る馬ごとのずらし d.spr。docs/BALANCE.md「22」）。スピード・スタミナには足さない
+	var spr: Dictionary = d.spr if d.get("spr") is Dictionary else {}
 	var pot := {}
 	pot.spd = r + (3.0 if sprint else 0.0) + (1.0 if st == "逃げ" else 0.0)
 	pot.sta = r + (3.0 if longH else 0.0) - (6.0 if sprint else 0.0)
-	pot.guts = r - 1.0 + guts_adj
-	pot.mind = r - 6.0 + STYLE_MIND[st]
-	pot.slope = r - 5.0 + (3.0 if dirt else 0.0) + (2.0 if steep >= 2 else 0.0)
+	pot.guts = r - 1.0 + guts_adj + float(spr.get("guts", 0.0))
+	pot.mind = r - 6.0 + STYLE_MIND[st] + float(spr.get("mind", 0.0))
+	pot.slope = r - 5.0 + (3.0 if dirt else 0.0) + (2.0 if steep >= 2 else 0.0) + float(spr.get("slope", 0.0))
 	for k in pot: pot[k] = HSU.clamp(pot[k], 30.0, 106.0)
 	if d.get("tier") == "legend":
 		for k in pot: pot[k] = HSU.clamp(pot[k] * LEGEND_MUL, 30.0, 112.0)
@@ -268,7 +270,7 @@ static func from_historic(d: Dictionary, id: Variant) -> Dictionary:
 	elif d.get("temper") != null:
 		pot.mind = (pot.mind + d.temper) / 2.0
 	var growth: String = d.growth if GROWTHS.has(d.get("growth")) else "普通"
-	var kire0: float = { "逃げ": 3.0, "先行": 4.0, "差し": 6.0, "追込": 6.0 }[st] - (1.0 if dirt else 0.0) + (0.0 if sprint else (-1.0 if longH and st != "追込" else 0.0))
+	var kire0: float = { "逃げ": 3.0, "先行": 4.0, "差し": 6.0, "追込": 6.0 }[st] - (1.0 if dirt else 0.0) + (0.0 if sprint else (-1.0 if longH and st != "追込" else 0.0)) + float(spr.get("kire", 0.0))
 	var skills: Array
 	if d.get("skills") is Array:
 		skills = []
@@ -285,13 +287,15 @@ static func from_historic(d: Dictionary, id: Variant) -> Dictionary:
 			if rec.starts >= 40: health += 8.0
 			elif rec.starts >= 25: health += 4.0
 			elif rec.starts <= 8: health -= 4.0
+		# 散らしを足して 67〜85 に収める（手で決めた虚弱の 65 と取り違えない。JS の H.fromHistoric と同じ）
+		health = HSU.clamp(health + float(spr.get("health", 0.0)), 67.0, 85.0)
 	var h := {}
 	h.id = id; h.name = d.name; h.sex = "牡" if d.get("sex") == "セ" else d.get("sex"); h.gelding = d.get("sex") == "セ"; h.born = d.born
 	h.coat = d.coat if COATS.has(d.get("coat")) else pick_coat(rng)
 	h.sire = HSU.or_(d.get("sire"), null); h.dam = HSU.or_(d.get("dam"), null); h.damsire = HSU.or_(d.get("damsire"), null)
 	h.hist = true; h.owner = "AI"; h.loc = "farm"
 	h.pot = pot
-	h.apt = { turf = sa.turf, dirt = sa.dirt, heavy = 90.0 if skills.has("mud") else 66.0 }
+	h.apt = { turf = sa.turf, dirt = sa.dirt, heavy = 90.0 if skills.has("mud") else 66.0 + float(spr.get("heavy", 0.0)) }
 	h.distMin = HSU.or_(d.get("distMin"), 1600.0); h.distMax = HSU.or_(d.get("distMax"), 2400.0)
 	h.style = st; h.kire = HSU.clamp(d.kire if d.get("kire") != null else kire0, 1.0, 8.0)
 	h.growth = growth; h.peakShift = 0.0
@@ -304,7 +308,11 @@ static func from_historic(d: Dictionary, id: Variant) -> Dictionary:
 	for k in ["turf", "dirt", "heavy"]:
 		if d.get(k) != null: h.apt[k] = d[k]
 	if custom and custom.get("dspd") != null and custom.get("dsta") != null: sync_apt(h)
-	else: split_surface(h)
+	else:
+		split_surface(h)
+		# 芝・ダートの適性の散らしは、能力を分けたあとに足す（総合力は動かない。画面と出走の目安だけ）
+		for k in ["turf", "dirt"]:
+			if d.get(k) == null and spr.get(k): h.apt[k] = HSU.clamp(h.apt[k] + float(spr[k]), 20.0, 100.0)
 	if not (custom and custom.get("mind") != null) and (h.skills.has("kakari") or h.skills.has("deokure")): pot.mind = HSU.clamp(pot.mind - 14.0, 20.0, 120.0)
 	if not (d.get("skills") is Array): hist_skills2(d, h)
 	return h

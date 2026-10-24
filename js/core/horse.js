@@ -240,12 +240,14 @@
     const gutsAdj = wr == null ? 0 : U.clamp(Math.round((wr - 0.45) * 12), -3, 5) + (rec.starts >= 5 && rec.wins === rec.starts ? 2 : 0);
     // 坂：急な坂のある競馬場（中山・阪神など）で重賞を2つ以上勝った馬
     const steep = ws.filter(x => { const c = C[x.course]; const g = c && (x.surface === 'ダ' ? c.dirt || c.turf : c.turf || c.dirt); return g && g.slope === '急'; }).length;
+    // 出典で決めていない値の散らし（js/core/datafix.js が作る馬ごとのずらし d.spr。docs/BALANCE.md「22」）。スピード・スタミナには足さない
+    const spr = d.spr || {};
     const pot = {
       spd: r + (sprint ? 3 : 0) + (st === '逃げ' ? 1 : 0),
       sta: r + (longH ? 3 : 0) - (sprint ? 6 : 0),
-      guts: r - 1 + gutsAdj,
-      mind: r - 6 + H.STYLE_MIND[st],
-      slope: r - 5 + (dirt ? 3 : 0) + (steep >= 2 ? 2 : 0),
+      guts: r - 1 + gutsAdj + (spr.guts || 0),
+      mind: r - 6 + H.STYLE_MIND[st] + (spr.mind || 0),
+      slope: r - 5 + (dirt ? 3 : 0) + (steep >= 2 ? 2 : 0) + (spr.slope || 0),
     };
     for (const k of Object.keys(pot)) pot[k] = U.clamp(pot[k], 30, 106);
     // 伝説級（data/legends.js の tier:'legend'。キンチェム・セントサイモンなど）は、史実馬のいちばん上よりもうひとつ強い
@@ -257,18 +259,18 @@
       for (const k of H.STATS) if (custom[k] != null) pot[k] = U.clamp(custom[k], 20, 120);
     } else if (d.temper != null) pot.mind = (pot.mind + d.temper) / 2;
     const growth = H.GROWTHS.includes(d.growth) ? d.growth : '普通';
-    const kire0 = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[st] - (dirt ? 1 : 0) + (sprint ? 0 : longH && st !== '追込' ? -1 : 0);
+    const kire0 = ({ '逃げ': 3, '先行': 4, '差し': 6, '追込': 6 })[st] - (dirt ? 1 : 0) + (sprint ? 0 : longH && st !== '追込' ? -1 : 0) + (spr.kire || 0);
     const skills = Array.isArray(d.skills) ? d.skills.filter(x => H.SKILLS[x]) : H.histSkills(d);
     const sa = H.surfaceApt(d);
-    // 健康：たくさん走った（戦績の数が多い）馬は丈夫
-    const health = d.health != null ? d.health : 75 + (rec ? (rec.starts >= 40 ? 8 : rec.starts >= 25 ? 4 : rec.starts <= 8 ? -4 : 0) : 0);
+    // 健康：たくさん走った（戦績の数が多い）馬は丈夫。散らしを足して 67〜85 に収める（手で決めた虚弱の 65 と取り違えない）
+    const health = d.health != null ? d.health : U.clamp(75 + (rec ? (rec.starts >= 40 ? 8 : rec.starts >= 25 ? 4 : rec.starts <= 8 ? -4 : 0) : 0) + (spr.health || 0), 67, 85);
     const h = {
       id, name: d.name, sex: d.sex === 'セ' ? '牡' : d.sex, gelding: d.sex === 'セ', born: d.born,
       coat: H.COATS.includes(d.coat) ? d.coat : H.pickCoat(rng),
       sire: d.sire || null, dam: d.dam || null, damsire: d.damsire || null,
       hist: true, owner: 'AI', loc: 'farm',
       pot,
-      apt: { turf: sa.turf, dirt: sa.dirt, heavy: skills.includes('mud') ? 90 : 66 },
+      apt: { turf: sa.turf, dirt: sa.dirt, heavy: skills.includes('mud') ? 90 : 66 + (spr.heavy || 0) },
       distMin: d.distMin || 1600, distMax: d.distMax || 2400,
       style: st, kire: U.clamp(d.kire != null ? d.kire : kire0, 1, 8),
       growth, peakShift: 0,
@@ -284,7 +286,11 @@
     for (const k of ['turf', 'dirt', 'heavy']) if (d[k] != null) h.apt[k] = d[k];
     // 芝とダートの能力を分ける（個別に決めた能力に芝・ダートの両方があれば、そのまま使う）
     if (custom && custom.dspd != null && custom.dsta != null) H.syncApt(h);
-    else H.splitSurface(h);
+    else {
+      H.splitSurface(h);
+      // 芝・ダートの適性の散らしは、能力（芝とダートのスピード・スタミナ）を分けたあとに足す（総合力は動かない。画面と出走の目安だけ）
+      for (const k of ['turf', 'dirt']) if (d[k] == null && spr[k]) h.apt[k] = U.clamp(h.apt[k] + spr[k], 20, 100);
+    }
     // 出遅れ癖・掛かり癖のある馬は気性が荒い（気性を個別に決めた馬は除く）
     if (!(custom && custom.mind != null) && (h.skills.includes('kakari') || h.skills.includes('deokure'))) pot.mind = U.clamp(pot.mind - 14, 20, 120);
     if (!Array.isArray(d.skills)) H.histSkills2(d, h);

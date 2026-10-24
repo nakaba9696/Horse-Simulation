@@ -40,7 +40,7 @@ QUICK=1 node tests/run.js  # 自動プレイを短く
 | `data/profiles.js`・`profiles_old.js`・`profiles_1.js`・`profiles_2.js`・`profiles_world.js`・`profiles_world2.js` | 名馬の名鑑（年代・戦績・主な勝鞍・8行ほどの解説。スペシャルホース／日本 1955〜1986年生／1987〜2004年生／2005年生〜／海外／海外の2＝名の知れた馬の書き足し）。出典で確かめた史実だけで、人の名前は書かない。`js/core/datafix.js` が史実馬に合わせ、名馬の解説より優先する | D |
 | `data/historic_jockeys.js` | 史実馬の主戦騎手（手で確かめたもの。ほかは馬のデータの jockey と記録から） | D |
 | `js/core/fictional.js` | 騎手の名前を架空にする（実名 → 架空の名前を一対一で。データの後・datafix の前に読む） | C |
-| `js/core/datafix.js` | 読み込んだ史実馬をまとめる（重複・小さいカナ・勝ち鞍のレース名を暦にそろえる） | C |
+| `js/core/datafix.js` | 読み込んだ史実馬をまとめる（重複・小さいカナ・勝ち鞍のレース名を暦にそろえる）・出典で決めていない能力の散らし（馬ごとのずらし `d.spr`。`docs/BALANCE.md`「22」） | C |
 | `js/core/util.js` | 乱数（種で固定）・書式 | C |
 | `js/core/track.js` | コースの形。`data/layouts.js`（実際の回り・コーナー・高低差）があればその形（`T.forRace`・`T.fromLayout`。高さ `hAt`・勾配 `gAt`）、無ければ直線と半円。模擬の坂・ミニマップ・3D で使う | C |
 | `js/core/horse.js` | 馬の形（能力・脚の切れ・特殊能力）・成長・調教（故障は無し。持ち主の仕様書 2026-10-19） | C |

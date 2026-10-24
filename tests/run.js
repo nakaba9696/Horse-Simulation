@@ -1486,6 +1486,7 @@ require('./extra_i18n_data.js')(check, assert, HS); // データの英語の名�
 require('./extra_drop.js')(check, assert, HS); // ゲームに出さない史実馬（名の知れていない古い海外の G1 1勝馬）
 require('./extra_mainwins.js')(check, assert, HS); // 名鑑の無い海外の馬の史実の主な勝鞍
 require('./extra_abilities.js')(check, assert, HS); // 名馬の総合力の下の能力の洗い出し（直しで総合力が動かない・癖と故障と道悪・一覧の道具）
+require('./extra_spread.js')(check, assert, HS); // 出典で決めていない能力の散らし（固まっていない・手の値と総合力は変わらない）
 require('./extra_placings.js')(check, assert, HS); // G1 の上位着順（一覧と元データの一致・馬の識別・着差の基準・同着・収録の日付）
 require('./extra_godot.js')(check, assert); // Godot 版：データの書き出し・模擬が JS と同じか
 require('./extra_gdview.js')(check, assert); // Godot 版：見た目と操作（操作の割り当て・絵の決まり・模擬の入れ口）
