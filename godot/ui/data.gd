@@ -9,8 +9,10 @@ var tab := 0
 var lead_y := -1.0
 var tab_box: VBoxContainer
 var list: VBoxContainer
-var scroll: ScrollContainer
 var rows: Array[Control] = []
+var page := 0
+var pager_box: HBoxContainer
+var lead_me: Control = null   # リーディングの自分の行
 
 func hint() -> String:
 	return ""
@@ -23,6 +25,7 @@ func on_back() -> void:
 
 func on_tab(d: int) -> void:
 	tab = posmod(tab + d, TABS.size())
+	page = 0
 	_fill()
 
 func build() -> void:
@@ -33,17 +36,20 @@ func build() -> void:
 	tab_box = VBoxContainer.new()
 	tab_box.position = Vector2(PAD_X, TOP + 4)
 	add_child(tab_box)
-	scroll = ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.follow_focus = true
-	scroll.position = Vector2(PAD_X, TOP + 66)
-	scroll.size = Vector2(1600 - PAD_X * 2, 1000 - TOP - 66 - 56)
-	add_child(scroll)
+	# スクロールしない（持ち主の指示 2026-10-24）。表が y 872 に入らないタブはページ送り（←→・端の ↑↓）
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiScreen.back_under(scroll, list)
-	scroll.add_child(list)
+	list.position = Vector2(PAD_X, TOP + 66)
+	list.custom_minimum_size = Vector2(1600 - PAD_X * 2, 0)
+	list.size = list.custom_minimum_size
+	add_child(list)
+	UiFit.hug(list)
+	UiScreen.back_under(list)
+	pager_box = HBoxContainer.new()
+	pager_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	pager_box.position = Vector2(PAD_X, UiFit.BOTTOM - 44)
+	pager_box.size = Vector2(1600 - PAD_X * 2, 40)
+	add_child(pager_box)
 	if OS.get_cmdline_user_args().has("--setup=hall_view"):
 		UiHorseScreen._setup_hall_view()   # 撮影の見本：殿堂入りした馬が1頭いる
 		UiFlow.focus["data_tab"] = "hall"
@@ -59,8 +65,9 @@ func _fill() -> void:
 	for c in tab_box.get_children(): c.queue_free()
 	for c in list.get_children(): c.queue_free()
 	rows.clear()
+	lead_me = null
 	UiFlow.focus["data_tab"] = TABS[tab][0]
-	tab_box.add_child(UiTheme.tabs(TABS.map(func(x): return x[1]), tab, pad, func(k): tab = k; _fill()))
+	tab_box.add_child(UiTheme.tabs(TABS.map(func(x): return x[1]), tab, pad, func(k): tab = k; page = 0; _fill()))
 	match TABS[tab][0]:
 		"me": _me()
 		"special": _special()
@@ -73,8 +80,57 @@ func _fill() -> void:
 		"mounts": _mounts()
 		"replay": _replay()
 		"hist": _hist()
+	_paginate()
 	if kb_hint: kb_hint.text = HSText.auto(_note())
 	focus_first()
+
+# ページに分ける：上から札の高さを足し、y 872（ページ送りの帯の上）を越える所で切る。
+# 続きのページの頭には、直前の節の見出しと列の見出しを残す（隠した札の間に並ぶので、ページの上に来る）
+func _paginate() -> void:
+	for c in pager_box.get_children(): c.queue_free()
+	var kids: Array = list.get_children().filter(func(c): return not c.is_queued_for_deletion())
+	var avail := UiFit.BOTTOM - 52.0 - list.position.y
+	var sep := 4.0
+	var pages: Array = [[]]
+	var y := 0.0
+	var sec: Control = null
+	var head: Control = null
+	for c in kids:
+		var hgt: float = (c as Control).get_combined_minimum_size().y + sep
+		var is_row: bool = rows.has(c)
+		if y + hgt > avail and pages[-1].size() > 0 and is_row:
+			pages.append([])
+			y = 0.0
+			for k in [sec, head]:
+				if k != null:
+					pages[-1].append(k)
+					y += (k as Control).get_combined_minimum_size().y + sep
+		pages[-1].append(c)
+		y += hgt
+		if not is_row:
+			if c is MarginContainer: head = c   # 列の見出し（_head）
+			else:
+				sec = c
+				head = null
+	var np := pages.size()
+	page = clampi(page, 0, np - 1)
+	if TABS[tab][0] == "lead": page = 0   # リーディングは ←→ で年を替える。入る順位まで（あなたの行は残す）
+	for c in kids: (c as Control).visible = pages[page].has(c)
+	var total := rows.size()
+	var shown: Array = rows.filter(func(r): return r.visible)
+	if lead_me != null and is_instance_valid(lead_me) and not lead_me.visible and shown.size():
+		(shown[-1] as Control).visible = false   # リーディングの「あなた」の行は、入らない順位の代わりに残す
+		lead_me.visible = true
+		shown = rows.filter(func(r): return r.visible)
+	rows = shown
+	if np > 1 and TABS[tab][0] != "lead":
+		pager_box.add_child(UiFit.pager(page, np, total, _page))
+		UiFit.page_keys(rows, page, np, _page)
+
+func _page(d: int, to_last: bool) -> void:
+	page += d
+	_fill()
+	if to_last and rows.size(): rows[-1].grab_focus.call_deferred()
 
 func _note() -> String:
 	match TABS[tab][0]:
@@ -117,10 +173,15 @@ func _head(cells: Array) -> void:
 	m.add_child(hb)
 	list.add_child(m)
 
-func _empty(text: String) -> void:
+# 空のとき：「まだ無い」の1行と、何をすると記録が付くかの1行（docs/review/UI_REVIEW.md 2-5）
+func _empty(text: String, how := "") -> void:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.SURFACE, UiTheme.LINE, 1, 10, Vector4(16, 12, 16, 12)))
-	p.add_child(UiTheme.label(text, 15, UiTheme.FAINT))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	p.add_child(v)
+	v.add_child(UiTheme.label(text, 16, UiTheme.MUTED))
+	if how != "": v.add_child(UiTheme.label(how, 14, UiTheme.FAINT))
 	list.add_child(p)
 
 const R := HORIZONTAL_ALIGNMENT_RIGHT
@@ -133,6 +194,11 @@ func _me() -> void:
 	var j = HSJockey.me()
 	var cols := [["年", 0], ["騎乗", 110, UiTheme.MUTED, R], ["1着", 110, UiTheme.MUTED, R], ["2着", 110, UiTheme.MUTED, R], ["3着", 110, UiTheme.MUTED, R], ["勝率", 120, UiTheme.MUTED, R], ["賞金（進上金）", 180, UiTheme.MUTED, R], ["順位", 100, UiTheme.MUTED, R]]
 	list.add_child(UiScreen.section("年ごとの成績"))
+	if float(j.total.rides) <= 0.0:
+		_empty("まだ騎乗の記録が無い", "レースに乗ると、年ごとの成績（騎乗・1〜3着・勝率・賞金・順位）がここに付く")
+		list.add_child(UiScreen.section("重賞の勝ち鞍", HSText.t("%d勝") % j.big.size()))
+		_empty("まだ重賞を勝っていない", "重賞を勝つと、年・格・レース・馬がここに並ぶ")
+		return
 	_head(cols)
 	var ys: Array = j.years.keys()
 	ys.sort_custom(func(a, b): return float(a) > float(b))
@@ -146,7 +212,7 @@ func _me() -> void:
 		[_pct(t.wins, t.rides), 120, UiTheme.IVORY, R], [HSText.money(float(HSU.or_(t.get("prize"), 0.0))), 180, UiTheme.MUTED, R], ["", 100]], true)
 	list.add_child(UiScreen.section("重賞の勝ち鞍", HSText.t("%d勝") % j.big.size()))
 	if j.big.is_empty():
-		_empty("まだ重賞を勝っていません")
+		_empty("まだ重賞を勝っていない", "重賞を勝つと、年・格・レース・馬がここに並ぶ")
 	var big: Array = j.big.duplicate()
 	big.reverse()
 	for b in big.slice(0, 40):
@@ -202,7 +268,7 @@ func _lead() -> void:
 	list.add_child(UiScreen.section(HSText.t("リーディング　%s") % yl(lead_y), HSText.t("←→ で年（%d年分）") % years.size()))
 	var l := HSJockey.leading(lead_y)
 	if l.is_empty():
-		_empty("まだレースがありません")
+		_empty("まだ記録が無い", "週を進めると、その年の騎手の勝ち数の順位が付く")
 		return
 	_head([["順位", 70, UiTheme.MUTED, R], ["騎手", 0], ["1着", 100, UiTheme.MUTED, R], ["2着", 100, UiTheme.MUTED, R], ["3着", 100, UiTheme.MUTED, R], ["騎乗", 100, UiTheme.MUTED, R], ["勝率", 110, UiTheme.MUTED, R]])
 	var top := l.slice(0, 30)
@@ -215,6 +281,7 @@ func _lead() -> void:
 		var b := _row([[str(i + 1), 70, UiTheme.GOLD_BRIGHT if i < 3 else UiTheme.IVORY, R], [HSText.jockey_name(String(x.name)) + HSText.t("（あなた）" if x.me else ""), 0, UiTheme.GOLD_BRIGHT if x.me else UiTheme.IVORY],
 			[str(int(x.wins)), 100, UiTheme.IVORY, R], [str(int(x.w2)), 100, UiTheme.IVORY, R], [str(int(x.w3)), 100, UiTheme.IVORY, R], [str(int(x.rides)), 100, UiTheme.MUTED, R], [_pct(x.wins, x.rides), 110, UiTheme.MUTED, R]], x.me)
 		b.gui_input.connect(func(ev): _lead_key(ev, years, yi))
+		if x.me: lead_me = b
 
 func _lead_key(ev: InputEvent, years: Array, yi: int) -> void:
 	var d := 0
@@ -229,7 +296,7 @@ func _awards() -> void:
 	var aw: Dictionary = HSU.or_(HSWorld.G.records.get("jawards"), {})
 	var me_name: String = HSJockey.me().name
 	if aw.is_empty():
-		_empty("年が明けると、前の年の騎手の表彰が発表されます")
+		_empty("まだ表彰が無い", "年が明けると、前の年の騎手の表彰が発表される")
 		return
 	var ys: Array = aw.keys()
 	ys.sort_custom(func(a, b): return float(a) > float(b))
@@ -243,7 +310,7 @@ func _hall() -> void:
 	var own := HSHall.list()
 	list.add_child(UiScreen.section("殿堂（お手馬）", HSText.t("%d頭") % own.size()))
 	if own.is_empty():
-		_empty(HSText.t("まだいません。トロフィーを%dつ以上手にした馬は、引退すると殿堂入りします") % HSHall.NEED)
+		_empty("まだ殿堂入りした馬はいない", HSText.t("トロフィーを%dつ以上手にした馬は、引退すると殿堂入りする") % HSHall.NEED)
 	for x in own:
 		var tl: Array = x.trophies.map(func(t): return HSText.tx(String(t.label) if t is Dictionary else String(t)))
 		var b := _row([[HSText.horse_name(x), 260, UiTheme.GOLD_BRIGHT], [HSText.t("・").join(tl), 0, UiTheme.IVORY], [HSText.t("%d戦%d勝・G1 %d勝") % [int(HSU.or_(x.get("starts"), 0.0)), int(HSU.or_(x.get("wins"), 0.0)), int(HSU.or_(x.get("g1"), 0.0))], 220, UiTheme.MUTED, R],
@@ -256,7 +323,7 @@ func _hall() -> void:
 	var hall: Array = HSU.or_(HSWorld.G.records.get("hall"), [])
 	list.add_child(UiScreen.section("冠を手にした馬", HSText.t("%d頭") % hall.size()))
 	if hall.is_empty():
-		_empty("まだ冠を手にした馬はいません")
+		_empty("まだ冠を手にした馬はいない", "三冠などの冠を手にすると、ここに残る")
 	for x in hall:
 		_row([[HSText.horse_name(x), 260, UiTheme.GOLD_BRIGHT], [HSText.t("・").join(HSU.or_(x.get("titles"), []).map(func(z): return HSText.tx(String(z)))), 0], [HSText.t("%s に冠") % yl(x.since), 140, UiTheme.MUTED, R]])
 
@@ -264,7 +331,7 @@ func _course() -> void:
 	var rec: Dictionary = HSU.or_(HSWorld.G.records.get("course"), {})
 	list.add_child(UiScreen.section("コースレコード", "%d" % rec.size()))
 	if rec.is_empty():
-		_empty("まだ記録がありません")
+		_empty("まだ記録が無い", "レースが走られると、コースごとのいちばん速いタイムが残る")
 		return
 	var keys := rec.keys()
 	keys.sort()
@@ -281,7 +348,7 @@ func _replay() -> void:
 	var items := UiFlow.replay_list()
 	list.add_child(UiScreen.section("リプレイ", HSText.t("%d本") % items.size()))
 	if items.is_empty():
-		_empty("まだありません。自分で乗ったレースが残ります")
+		_empty("まだリプレイが無い", "自分で乗ったレースが20本まで残る")
 		return
 	for x in items:
 		var pos := int(x.get("pos", 0))
@@ -304,7 +371,7 @@ func _mounts() -> void:
 	var ms: Dictionary = HSU.or_(HSJockey.me().get("mounts"), {})
 	list.add_child(UiScreen.section("乗った馬", HSText.t("%d頭") % ms.size()))
 	if ms.is_empty():
-		_empty("まだ乗っていません")
+		_empty("まだ乗った馬がいない", "レースに乗ると、馬ごとの騎乗・勝ち・最高の着順が付く")
 		return
 	var names := ms.keys()
 	names = HSU.stable_sort(names, func(a, b):
@@ -323,7 +390,7 @@ func _hist() -> void:
 	var hs: Array = HSJockey.me().history
 	list.add_child(UiScreen.section("騎乗の記録", HSText.t("%d鞍") % hs.size()))
 	if hs.is_empty():
-		_empty("まだ騎乗していません")
+		_empty("まだ騎乗の記録が無い", "レースに乗ると、日付・レース・馬・人気・着順が新しい順に並ぶ")
 		return
 	_head([["日付", 170], ["格", 60, UiTheme.MUTED, C], ["レース", 0], ["馬", 260], ["人気", 90, UiTheme.MUTED, R], ["着順", 90, UiTheme.MUTED, R]])
 	for r in hs.slice(0, 80):

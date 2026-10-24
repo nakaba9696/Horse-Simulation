@@ -105,6 +105,7 @@ func build() -> void:
 	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, UiFit.BOTTOM - TOP - 66)
 	rp.size = rp.custom_minimum_size
 	add_child(rp)
+	UiFit.hug(rp)
 	# スクロールしない（持ち主の指示 2026-10-24）。戦績はページ送り、ほかのタブは入らない札を後ろから隠す（UiFit）
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 6)
@@ -201,6 +202,7 @@ func _build_hall(args: PackedStringArray) -> void:
 	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, UiFit.BOTTOM - TOP - 66)
 	rp.size = rp.custom_minimum_size
 	add_child(rp)
+	UiFit.hug(rp)
 	# スクロールしない（持ち主の指示 2026-10-24）。戦績はページ送り、ほかのタブは入らない札を後ろから隠す（UiFit）
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 6)

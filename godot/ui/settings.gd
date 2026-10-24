@@ -63,14 +63,15 @@ func build() -> void:
 	top_box.add_theme_constant_override("separation", 8)
 	add_child(top_box)
 	list_v = VBoxContainer.new()
-	list_v.position = Vector2(PAD_X, 212)
+	list_v.position = Vector2(PAD_X, 172)
 	list_v.custom_minimum_size = Vector2(LIST_W, 0)
 	list_v.add_theme_constant_override("separation", 4)
 	add_child(list_v)
+	UiFit.hug(list_v)
 	UiScreen.back_under(list_v)
 	# 下の札：初めの設定に戻す・もどる（金）
 	var bh := HBoxContainer.new()
-	bh.position = Vector2(PAD_X, 1000 - 56 - 70)
+	bh.position = Vector2(PAD_X, UiFit.BOTTOM - 52)   # 中身は y 872 まで（下はキーの案内と下の固定メニュー。持ち主の指示 2026-10-24）
 	bh.custom_minimum_size = Vector2(LIST_W, 0)
 	bh.add_theme_constant_override("separation", 12)
 	add_child(bh)
@@ -84,7 +85,7 @@ func build() -> void:
 	# 右の見本
 	var pb := UiScreen.panel_box(true, 10)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X + LIST_W + 20, TOP + 4)
-	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - LIST_W - 20, 1000 - TOP - 4 - 70)
+	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - LIST_W - 20, UiFit.BOTTOM - TOP - 4)
 	add_child(pb[0])
 	pv = pb[1]
 	_fill()
@@ -106,6 +107,7 @@ func _fill() -> void:
 	elif rows.size(): rows[sel].grab_focus()
 
 func _fill_general() -> void:
+	list_v.add_theme_constant_override("separation", 4)
 	var c := _cur()
 	for i in ITEMS.size():
 		var it: Array = ITEMS[i]
@@ -250,6 +252,7 @@ func _fill_binds() -> void:
 	hm.add_theme_constant_override("margin_right", 14)
 	hm.add_child(head)
 	list_v.add_child(hm)
+	list_v.add_theme_constant_override("separation", 2)
 	var last_g := ""
 	for p in UiSettings.ACTIONS:
 		var a: String = p[0]
@@ -268,7 +271,7 @@ func _fill_binds() -> void:
 		hb.add_child(nl)
 		for kind in ["key", "pad"]:
 			var txt := UiSettings.key_name(int(c.keys[a])) if kind == "key" else UiSettings.pad_name(String(c.pads[a]))
-			var b := UiScreen.button(txt, false, 200, 38, 16)
+			var b := UiScreen.button(txt, false, 200, 32, 15)
 			b.set_meta("bind", [a, kind])
 			var idx: int = rows.size()
 			b.focus_entered.connect(func(): _preview(idx))

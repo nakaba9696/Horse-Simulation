@@ -33,22 +33,21 @@ func build() -> void:
 	tab_box.position = Vector2(PAD_X, TOP + 4)
 	add_child(tab_box)
 	_host()
+	# 招待の札と順位の表を縦に並べ、y 872 までに収める（スクロールしない。持ち主の指示 2026-10-24）。表は出られる16頭まで
+	var col := VBoxContainer.new()
+	col.position = Vector2(PAD_X, TOP + 66)
+	col.custom_minimum_size = Vector2(1600 - PAD_X * 2, 0)
+	col.size = col.custom_minimum_size
+	col.add_theme_constant_override("separation", 10)
+	add_child(col)
+	UiFit.hug(col)
 	inv_box = VBoxContainer.new()
-	inv_box.position = Vector2(PAD_X, TOP + 66)
-	inv_box.custom_minimum_size = Vector2(1600 - PAD_X * 2, 0)
 	inv_box.add_theme_constant_override("separation", 8)
-	add_child(inv_box)
-	var sc := ScrollContainer.new()
-	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	sc.follow_focus = true
-	sc.position = Vector2(PAD_X, 330)
-	sc.size = Vector2(1600 - PAD_X * 2, 1000 - 330 - 56)
-	add_child(sc)
+	col.add_child(inv_box)
 	list = VBoxContainer.new()
-	list.add_theme_constant_override("separation", 4)
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiScreen.back_under(sc, list)
-	sc.add_child(list)
+	list.add_theme_constant_override("separation", 3)
+	col.add_child(list)
+	UiScreen.back_under(list)
 	_fill()
 
 func _fill() -> void:
@@ -116,13 +115,30 @@ func _fill() -> void:
 		p.add_theme_stylebox_override("panel", UiTheme.box(UiTheme.SURFACE, UiTheme.LINE, 1, 10, Vector4(16, 12, 16, 12)))
 		p.add_child(UiTheme.label("まだ候補がいない", 15, UiTheme.FAINT))
 		list.add_child(p)
-	for x in st.slice(0, 24):
+	# 列の見出し（面の台の中）。同じ理由が続く行は字を薄くする（docs/review/UI_REVIEW.md 2-1）
+	if st.size():
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 10)
+		for c in [["順位", 50, HORIZONTAL_ALIGNMENT_RIGHT], ["馬名", 0, HORIZONTAL_ALIGNMENT_LEFT], ["出られる理由", 300, HORIZONTAL_ALIGNMENT_LEFT], ["ファンの票", 100, HORIZONTAL_ALIGNMENT_RIGHT], ["", 100, HORIZONTAL_ALIGNMENT_CENTER], ["総合力", 50, HORIZONTAL_ALIGNMENT_CENTER]]:
+			var hl := UiTheme.label(String(c[0]), 12, UiTheme.MUTED, c[2])
+			if c[1] > 0: hl.custom_minimum_size.x = c[1]
+			else: hl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			head.add_child(hl)
+		var hm := MarginContainer.new()
+		hm.add_theme_constant_override("margin_left", 12)
+		hm.add_theme_constant_override("margin_right", 12)
+		hm.add_child(head)
+		list.add_child(hm)
+	var prev_why := ""
+	for x in st.slice(0, HSSeason.DC_FIELD):
 		var mine: bool = x.h.get("owner") == "P"
-		var rb := UiScreen.row_button(38, mine)
+		var rb := UiScreen.row_button(30, mine)
 		var b: Button = rb[0]
 		var hb: HBoxContainer = rb[1]
+		var why := HSText.tx(String(x.why))
 		var cells := [[str(int(x.rank)), 50, UiTheme.GOLD_BRIGHT if x.in else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_RIGHT], [HSText.horse_name(x.h), 0, UiTheme.GOLD_BRIGHT if mine else UiTheme.IVORY],
-			[HSText.tx(String(x.why)), 300, UiTheme.MUTED], [HSText.t("%s票") % HSU.num(x.votes) if x.votes > 0 else "－", 100, UiTheme.MUTED, HORIZONTAL_ALIGNMENT_RIGHT], ["出られる" if x.in else "", 100, UiTheme.GOOD, HORIZONTAL_ALIGNMENT_CENTER]]
+			[why, 300, UiTheme.FAINT if why == prev_why else UiTheme.MUTED], [HSText.t("%s票") % HSU.num(x.votes) if x.votes > 0 else "－", 100, UiTheme.MUTED if x.votes > 0 else UiTheme.FAINT, HORIZONTAL_ALIGNMENT_RIGHT], ["出られる" if x.in else "", 100, UiTheme.GOOD, HORIZONTAL_ALIGNMENT_CENTER]]
+		prev_why = why
 		for c in cells:
 			var l := UiTheme.label(String(c[0]), 15, c[2], c[3] if c.size() > 3 else HORIZONTAL_ALIGNMENT_LEFT)
 			if c[1] > 0: l.custom_minimum_size.x = c[1]
@@ -137,6 +153,7 @@ func _fill() -> void:
 		UiScreen.pass_mouse(hb)
 		list.add_child(b)
 		rows.append(b)
+	UiFit.cut(self, rows)   # 招待の札が高いときは、下の行を隠す（16頭のうち入るだけ）
 	focus_first()
 
 # GF を開いている一族の人（data/gfhost.js・HSGFHost）：右上に顔（絵がある人だけ。無ければ色の帯）とひと言（場面で変わる。台詞は下書き）

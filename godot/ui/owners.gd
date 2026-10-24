@@ -4,7 +4,7 @@
 # 決まりは HSOwners（of・mission・ask・claim・wear）を呼ぶだけ
 extends UiScreen
 
-const ROW_H := 98.0
+const ROW_H := 88.0   # 8人が y 104〜872 にスクロール無しで入る高さ（持ち主の指示 2026-10-24）
 
 var rows: Array[Button] = []
 var ids: Array = []
@@ -23,7 +23,7 @@ func build() -> void:
 	var v := VBoxContainer.new()
 	v.position = Vector2(PAD_X, TOP + 4)
 	v.custom_minimum_size = Vector2(760, 0)
-	v.add_theme_constant_override("separation", 5)
+	v.add_theme_constant_override("separation", 4)
 	add_child(v)
 	UiScreen.back_under(v)
 	for o in HSOwners.LIST():
@@ -39,17 +39,18 @@ func build() -> void:
 		who.add_theme_constant_override("separation", 8)
 		if not st.known:
 			# まだ会っていないオーナー：顔と名前を伏せ、ジャンルと出会いのヒント・出会いの点だけ
-			hb.add_child(UiScreen.owner_q_face(72, 88))
+			hb.add_child(UiScreen.owner_q_face(64, 78))
 			who.add_child(UiTheme.label("まだ会っていないオーナー", 17, UiTheme.MUTED))
 			who.add_child(UiScreen.owner_sign_chip(o, 12))
 			who.add_child(UiTheme.label(HSText.t("出会いの点 %s") % _pips(String(o.id)), 13, UiTheme.GOLD))
 			cv.add_child(who)
 			var hl := UiTheme.label(HSText.owner_line(HSOwners.hint(String(o.id))), 14, UiTheme.GOLD_BRIGHT)
 			hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			hl.max_lines_visible = 2
 			hl.custom_minimum_size.x = 100
 			cv.add_child(hl)
 		else:
-			hb.add_child(_face(String(o.id), "smile" if st.stage >= 2 else "base", 72, 88))
+			hb.add_child(_face(String(o.id), "smile" if st.stage >= 2 else "base", 64, 78))
 			who.add_child(UiTheme.label(HSText.owner_line(String(o.name)), 17))
 			who.add_child(UiScreen.owner_sign_chip(o, 12))
 			who.add_child(UiTheme.chip(HSText.t(HSOwners.stage_label(String(o.id))), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 11))
@@ -66,8 +67,9 @@ func build() -> void:
 		ids.append(String(o.id))
 	var pb := UiScreen.panel_box(true, 6)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X + 760 + 20, TOP + 4)
-	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 760 - 20, 830)
+	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 760 - 20, UiFit.BOTTOM - TOP - 4)
 	add_child(pb[0])
+	UiFit.hug(pb[0])   # 見本を組み直したあと、板を元の高さに戻す
 	pv = pb[1]
 	_preview(0)
 
@@ -117,6 +119,10 @@ func _gauge(oid: String, w: float) -> VBoxContainer:
 func _preview(i: int) -> void:
 	sel = i
 	for c in pv.get_children(): c.queue_free()
+	_fill_preview(i)
+	UiFit.cut(self, pv.get_children(), UiFit.BOTTOM - 14)   # 見本の板に入らない札（下のボタン）は隠す
+
+func _fill_preview(i: int) -> void:
 	var oid: String = ids[i]
 	var o = HSOwners.by(oid)
 	var st := HSOwners.of(oid)
@@ -126,7 +132,7 @@ func _preview(i: int) -> void:
 	if not st.known:
 		_preview_locked(o, top)
 		return
-	top.add_child(_face(oid, "joy" if st.stage >= 2 else "smile", 180, 225))
+	top.add_child(_face(oid, "joy" if st.stage >= 2 else "smile", 160, 200))
 	var tv := VBoxContainer.new()
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tv.add_theme_constant_override("separation", 4)
@@ -198,7 +204,7 @@ func _preview(i: int) -> void:
 	if HSOwners.can_wear(oid) and mine.size():
 		pv.add_child(UiScreen.section("勝負服を着せる", "決定で切り替え"))
 		var wear: Dictionary = HSOwners.state().wear
-		for h in mine.slice(0, 3):
+		for h in mine.slice(0, 2):
 			var on: bool = wear.get(h.id) == oid
 			var bw := UiScreen.button(HSText.t("%s：%s") % [HSText.horse_name(h), HSText.t("%sさんの勝負服") % HSText.owner_line(String(o.name)) if on else HSText.t("自分の勝負服")], false, 0, 34, 14)
 			var hid: String = h.id
@@ -211,7 +217,7 @@ func _preview(i: int) -> void:
 
 # まだ会っていないオーナーの右の見本：伏せた顔・ジャンル・出会いのヒント・出会いの点
 func _preview_locked(o: Dictionary, top: HBoxContainer) -> void:
-	top.add_child(UiScreen.owner_q_face(180, 225))
+	top.add_child(UiScreen.owner_q_face(160, 200))
 	var tv := VBoxContainer.new()
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tv.add_theme_constant_override("separation", 8)

@@ -49,11 +49,13 @@ func build() -> void:
 	list_v.custom_minimum_size = Vector2(1060, 0)
 	list_v.size = Vector2(1060, 0)
 	add_child(list_v)
+	UiFit.hug(list_v)
 	UiScreen.back_under(list_v)
 	var pb := UiScreen.panel_box(true, 8)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X + 1060 + 20, TOP + 4)
 	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 1060 - 20, UiFit.BOTTOM - TOP - 4)
 	add_child(pb[0])
+	UiFit.hug(pb[0])   # 見本を組み直したあと、板を元の高さに戻す
 	pv = pb[1]
 	if UiFlow.program_id != "":
 		var h = HSWorld.horse(UiFlow.program_id)
@@ -238,6 +240,7 @@ func _preview(i: int) -> void:
 		rh.add_child(UiTheme.label("　疲労", 13, UiTheme.MUTED))
 		rh.add_child(UiHorseScreen.fatigue_label(h, 15))
 	pv.add_child(rh)
+	var squeezable: Array = []   # 入らないときに隠す札（後ろの札から）
 	var sk := HSSkills.of(h, wi)
 	if sk.size():
 		var fl := HFlowContainer.new()
@@ -246,6 +249,7 @@ func _preview(i: int) -> void:
 		for id in sk.slice(0, 6):
 			fl.add_child(UiTheme.chip(HSText.skill_label(String(id)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY, 12))
 		pv.add_child(fl)
+		squeezable.push_front(fl)
 	var tro := HSHall.trophies_of(h)
 	var tit: Array = HSU.or_(h.get("titles"), [])
 	if tro.size() or tit.size():
@@ -254,6 +258,9 @@ func _preview(i: int) -> void:
 		for x in tro: tl.add_child(UiTheme.chip("🏆 " + HSText.tx(String(x.label)), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 12))
 		for x in tit: tl.add_child(UiTheme.chip(HSText.t("冠 %s") % HSText.tx(String(x)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 12))
 		pv.add_child(tl)
+		squeezable.push_front(tl)
+	# 板が y 872 を越えるときは、トロフィー・特殊能力・血統の行から隠す（全部はお手馬の詳しい画面に）
+	UiFit.squeeze(self, pv.get_parent(), squeezable + [sl])
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pv.add_child(sp)

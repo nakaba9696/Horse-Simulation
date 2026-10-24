@@ -56,15 +56,18 @@ func build() -> void:
 		main.add_child(_ride_card(r))
 	if mine_rides.size() >= 1:
 		main.add_child(_board(mine_rides[0], [10, 10, 5, 3][mini(mine_rides.size(), 3)]))
-	if mine_other.size():
-		main.add_child(UiScreen.section("自分の馬（ほかの騎手）"))
-		for r in mine_other.slice(0, 3):
-			main.add_child(_small_card(r, true))
+	# 主な操作は騎乗の結果のすぐ下（y 872 に入らない札は、後ろから隠す。持ち主の指示 2026-10-24）
 	b_next = UiScreen.button(HSText.t("次の週へ（%s）") % UiFlow.date_label(), true, 520, 68, 24)
 	b_next.pressed.connect(_next)
 	var bh := HBoxContainer.new()
 	bh.add_child(b_next)
 	main.add_child(bh)
+	var cut_from := main.get_child_count()
+	if mine_other.size():
+		main.add_child(UiScreen.section("自分の馬（ほかの騎手）"))
+		for r in mine_other.slice(0, 3):
+			main.add_child(_small_card(r, true))
+	UiFit.cut(self, main.get_children().slice(cut_from))
 	# 右：オーナーのひと言・場面・今週の G1・ニュース
 	if HSOwners.on():
 		var st := HSOwners.state()
@@ -91,6 +94,7 @@ func build() -> void:
 	if n == 0:
 		(nb[1] as VBoxContainer).add_child(UiTheme.label("なし", 14, UiTheme.FAINT))
 	side.add_child(nb[0])
+	UiFit.cut(self, side.get_children())
 
 const MOOD := {"win": "joy", "bigwin": "joy", "good": "smile", "lose": "sad", "decline": "sad"}
 const KICK := {"meet": "新しいオーナーから声がかかった", "job": "騎乗依頼が届いた", "m1": "「OP」の依頼をやり終えた", "m2": "「G3」の依頼をやり終えた", "m3": "「G2」の依頼をやり終えた", "m4": "「G1」の依頼をやり終えた", "m5": "すべての依頼をやり終えた", "award": "名コンビ賞", "wreath": "GF 全制覇の花輪"}

@@ -49,6 +49,7 @@ func build() -> void:
 	if info.is_empty():
 		b_cont.disabled = true
 		b_cont.focus_mode = Control.FOCUS_NONE
+		b_cont.visible = false   # セーブが無いときは出さない（「はじめから」が一番上。docs/review/UI_REVIEW.md 2-7）
 	menu.add_child(b_cont)
 	if not info.is_empty():
 		var il := UiTheme.label(HSText.t("%s　%s　資金 %s") % [info.name, info.label, HSText.money(info.money)], 17, UiTheme.GOLD_BRIGHT)

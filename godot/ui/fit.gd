@@ -53,6 +53,22 @@ static func _shrink_root(c: Control) -> void:
 	if root != null:
 		root.size = root.custom_minimum_size
 
+# 並びのいちばん外の箱（画面に直に置いた VBox）を、中身が減ったら縮める（Control は中身が減っても大きさが戻らない）
+static func hug(c: Control) -> void:
+	c.minimum_size_changed.connect(func(): c.size = Vector2(c.size.x, c.custom_minimum_size.y))
+
+# 板（panel）の下の端が bottom を越えるあいだ、items を前から順に隠す（見本の板の、削ってよい札。下のボタンは残す）
+static func squeeze(owner: Node, panel: Control, items: Array, bottom := BOTTOM) -> void:
+	if not owner.is_inside_tree(): return
+	var tree := owner.get_tree()
+	for i in 3: await tree.process_frame
+	for it in items:
+		if not is_instance_valid(panel) or panel.get_global_rect().end.y <= bottom + 0.5: return
+		if not is_instance_valid(it) or not (it as Control).visible: continue
+		(it as Control).visible = false
+		panel.size = Vector2(panel.size.x, panel.custom_minimum_size.y)
+		for k in 2: await tree.process_frame
+
 # 一画面に入らない札の数（下の端を越えた札）。テストで使う
 static func overflow(root: Control, bottom := BOTTOM) -> Array:
 	var out: Array = []

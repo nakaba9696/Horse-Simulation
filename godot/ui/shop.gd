@@ -60,11 +60,13 @@ func build() -> void:
 	list.custom_minimum_size = Vector2(1180, 0)
 	list.size = Vector2(1180, 0)
 	add_child(list)
+	UiFit.hug(list)
 	UiScreen.back_under(list)
 	var pb := UiScreen.panel_box(true, 8)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X + 1180 + 20, TOP + 4)
 	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 1180 - 20, UiFit.BOTTOM - TOP - 4)
 	add_child(pb[0])
+	UiFit.hug(pb[0])   # 見本を組み直したあと、板を元の高さに戻す
 	pv = pb[1]
 	_load_items()
 	_fill()
@@ -296,6 +298,7 @@ func _preview(i: int) -> void:
 		for id in sk:
 			fl.add_child(UiTheme.chip(HSText.skill_label(String(id)), UiTheme.SURFACE_3, UiTheme.IVORY, 12))
 		pv.add_child(fl)
+		UiFit.squeeze(self, pv.get_parent(), [fl, sl])   # 板が y 872 を越えるときは、特殊能力・血統の行から隠す（全部は詳しい小窓に）
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pv.add_child(sp)
