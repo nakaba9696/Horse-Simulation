@@ -1,0 +1,15 @@
+{
+ "prompt": "(Inuboshi:1.2),miyanogi_jiji,Anan Shokudow,yutokamizu,ikezawa shin, masterpiece, best quality, good quality, amazing quality, very aesthetic, absurdres, newest, blue archive, no halo, 1girl, (adult woman:1.4), (mature face:1.1), 22 years old, rural ranch girl, (tanned skin:1.4), (very short pixie cut black hair:1.4), (athletic:1.4), (green coveralls tied at waist:1.3), (yellow tank top:1.3), (towel around neck:1.1), sporty grin, solo, upper body, portrait, (head size about one third of image width:1.2), looking at viewer, simple background, (green background:1.3), (chroma key:1.1), character focus",
+ "negative_prompt": "long neck,long body,(missing arms:1.2),extra arms,(mutated hands:1.2),extra legs,(bad hands:1.2),poorly drawn hands,(malformed hands:1.2),missing limb,floating limbs,disconnected limbs,extra fingers,bad fingers,liquid fingers,poorly drawn fingers,missing fingers,extra digit,fewer digits,ugly face,deformed eyes,partial face,partial head,worst quality,low quality,bad quality,bad anatomy,bad feet,displeasing,unfinished,missing,artistic error,[abstract],lowres,jpeg artifacts,scan,chromatic aberration,signature,username,watermark,(text:1.2),extra digits,stamp,date,logo,(signature:1.1),(username:1.1),(logo:1.1),error,fewer,extra,twins, multiple girls, multiple boys, 2girls, 2boys, 3girls, 3boys, multiple views, group, crowd, background characters, other characters, reference sheet, split screen, cropped, out of frame, nsfw, nude, nudity, topless, nipples, bare chest, cleavage, underwear, lingerie, swimsuit, revealing clothes, see-through, halo, (child:1.6), (loli:1.6), (makeup:1.2), (cleavage:1.6), (revealing clothes:1.6), (old:1.4), (animal ears:1.7), (green hair:1.6), (glasses:1.5), (maid:1.6), (blonde ponytail:1.5), (light blue hair:1.5), (hair bun:1.2), (dress:1.2), (multiple girls:1.6), (multiple views:1.8), (reference sheet:1.7), (character sheet:1.7), (chibi:1.7), (bird:1.7), (animal:1.6), (creature:1.6), (mascot:1.6), white background, text, scenery",
+ "seed": 24003,
+ "steps": 24,
+ "cfg_scale": 5.5,
+ "sampler_name": "Euler a",
+ "scheduler": "Automatic",
+ "width": 1024,
+ "height": 1024,
+ "override_settings": {
+  "sd_model_checkpoint": "waiIllustriousSDXL_v140.safetensors [bdb59bac77]"
+ },
+ "override_settings_restore_afterwards": true
+}
