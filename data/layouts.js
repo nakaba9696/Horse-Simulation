@@ -447,7 +447,7 @@
     },
     'ベルモント': {
       turf: [
-        { id: '外', lap: 2120, straight: 334.4, use: [1600, 2200, 2400],
+        { id: '外', lap: 2120, straight: 334.4, use: [1600, 2000, 2200, 2400],
           segs: [['S', 334.4], ['C', 165.2, 165.2, 180, 3], ['S', 541], ['C', 165.2, 165.2, 180, 1], ['S', 206.7]],
           elev: [[0, 0], [2120, 0]],
           src: ['https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://en.wikipedia.org/wiki/Belmont_Park', 'https://www.jairs.jp/contents/courses/us.html'],
@@ -484,7 +484,7 @@
     },
     'サラトガ': {
       turf: [
-        { id: '外', lap: 1609, straight: 342.7, use: [2400],
+        { id: '外', lap: 1609, straight: 342.7, use: [1800, 1900, 2400],
           segs: [['S', 342.7], ['C', 115.8, 115.8, 180, 3], ['S', 440.6], ['C', 115.8, 115.8, 180, 1], ['S', 97.9]],
           elev: [[0, 0], [1609, 0]],
           src: ['https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://en.wikipedia.org/wiki/Saratoga_Race_Course', 'https://www.jairs.jp/contents/courses/us.html'],
@@ -510,7 +510,7 @@
     },
     'アケダクト': {
       turf: [
-        { id: '外', lap: 1609, straight: 352.2, use: [1600, 2400],
+        { id: '外', lap: 1609, straight: 352.2, use: [1600, 1900, 2400],
           segs: [['S', 352.2], ['C', 112, 112, 180, 3], ['S', 452.8], ['C', 112, 112, 180, 1], ['S', 100.6]],
           elev: [[0, 0], [1609, 0]],
           src: ['https://en.wikipedia.org/wiki/Aqueduct_Racetrack', 'https://www.jairs.jp/contents/courses/us.html', 'https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf'],
@@ -579,7 +579,7 @@
     },
     'ガルフストリームパーク': {
       turf: [
-        { id: '周回', lap: 1609, straight: 273.7, use: [1600, 2200, 2400],
+        { id: '周回', lap: 1609, straight: 273.7, use: [1600, 1800, 1900, 2200, 2400],
           segs: [['S', 273.7], ['C', 111.3, 111.3, 180, 3], ['S', 454.9], ['C', 111.3, 111.3, 180, 1], ['S', 181.2]],
           elev: [[0, 0], [1609, 0]],
           src: ['https://www.drf.com/sites/default/files/US%20Track%20Dimensions%20List%20-%20May%202015.pdf', 'https://en.wikipedia.org/wiki/Gulfstream_Park'],

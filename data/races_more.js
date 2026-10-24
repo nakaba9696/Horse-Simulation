@@ -182,6 +182,43 @@
     { name: 'ブリーダーズカップジュヴェナイルターフスプリント', short: 'BCジュヴェナイルターフスプリント', grade: 'G1', region: '海外', country: '米', course: 'デルマー', surface: '芝', dist: 1000, month: 11, week: 1, age: '2', weight: '馬齢', prize: 5000, prizeBy: {2025: 7800}, from: 2024, to: 2025, note: '2022年からG1' },
     { name: 'ブリーダーズカップフィリー＆メアスプリント', short: 'BCフィリー＆メアスプリント', grade: 'G1', region: '海外', country: '米', course: 'デルマー', surface: 'ダ', dist: 1400, month: 11, week: 1, age: '3+', sex: '牝', weight: '定量', prize: 5000, prizeBy: {2025: 7800}, from: 2024, to: 2025 },
   );
+  // ---- 米国の名の知れた G1（持ち主の決定 2026-10-24「A8　米国の名の知れた G1 の抜けを足す　有名なのだけでいい」。docs/review/RACE_SELECT_FINDINGS.md の #9・D13）----
+  // 週は2025年の施行日から（1〜7日＝1週…22日〜＝4週）。賞金は2025年の総賞金に NYRA の1着の割合（55%）を掛けた概算（総賞金を確かめていないものは uncertain）。2024・2025年はベルモントパークの建て替えで、ニューヨークのレースがサラトガ・アケダクトで行われた
+  add.push(
+    // スティーブンフォスターS（チャーチルダウンズ・ダ9ハロン・3歳以上）：2002年 G1・2019年 G2・2023年 G1。2023年はエリスパーク（コースのデータが無いので持たない）。2025年は6月28日（en.wikipedia「Stephen Foster Stakes」）
+    { name: 'スティーブンフォスターステークス', short: 'スティーブンフォスターS', grade: 'G1', region: '海外', country: '米', course: 'チャーチルダウンズ', surface: 'ダ', dist: 1800, month: 6, week: 4, age: '3+', weight: '定量', prize: 6000, from: 2015, to: 2018, uncertain: true },
+    { name: 'スティーブンフォスターステークス', short: 'スティーブンフォスターS', grade: 'G2', region: '海外', country: '米', course: 'チャーチルダウンズ', surface: 'ダ', dist: 1800, month: 6, week: 4, age: '3+', weight: '定量', prize: 6000, from: 2019, to: 2022, uncertain: true },
+    { name: 'スティーブンフォスターステークス', short: 'スティーブンフォスターS', grade: 'G1', region: '海外', country: '米', course: 'チャーチルダウンズ', surface: 'ダ', dist: 1800, month: 6, week: 4, age: '3+', weight: '定量', prize: 6000, from: 2024, to: 9999, uncertain: true },
+    // パーソナルエンスンS（サラトガ・ダ9ハロン・3歳以上牝）：2025年は8月23日・総賞金 $500,000（NYRA の2025年サラトガの番組・en.wikipedia「Personal Ensign Stakes」）
+    { name: 'パーソナルエンスンステークス', short: 'パーソナルエンスンS', grade: 'G1', region: '海外', country: '米', course: 'サラトガ', surface: 'ダ', dist: 1800, month: 8, week: 4, age: '3+', sex: '牝', weight: '定量', prize: 4100, from: FAMOUS_FROM, to: 9999 },
+    // ベルモントダービー（芝・3歳）：2015〜2023年はベルモントパークの10ハロン、2024年はアケダクトの1 3/16マイル、2025年はサラトガの9ハロン（7月4日。en.wikipedia「Belmont Derby」・NYRA・Brisnet）
+    { name: 'ベルモントダービー', short: 'ベルモントダービー', grade: 'G1', region: '海外', country: '米', course: 'ベルモント', surface: '芝', dist: 2000, month: 7, week: 1, age: '3', weight: '定量', prize: 6000, from: FAMOUS_FROM, to: 2023, uncertain: true },
+    { name: 'ベルモントダービー', short: 'ベルモントダービー', grade: 'G1', region: '海外', country: '米', course: 'アケダクト', surface: '芝', dist: 1900, month: 7, week: 1, age: '3', weight: '定量', prize: 6000, from: 2024, to: 2024, uncertain: true },
+    { name: 'ベルモントダービー', short: 'ベルモントダービー', grade: 'G1', region: '海外', country: '米', course: 'サラトガ', surface: '芝', dist: 1800, month: 7, week: 1, age: '3', weight: '定量', prize: 6000, from: 2025, to: 9999, uncertain: true },
+    // ベルモントオークス（芝・3歳牝）：ベルモントダービーと同じ移り変わり（2024年アケダクト 1 3/16マイル・2025年サラトガ 9ハロン・7月5日。en.wikipedia「Belmont Oaks」）
+    { name: 'ベルモントオークス', short: 'ベルモントオークス', grade: 'G1', region: '海外', country: '米', course: 'ベルモント', surface: '芝', dist: 2000, month: 7, week: 1, age: '3', sex: '牝', weight: '定量', prize: 5000, from: FAMOUS_FROM, to: 2023, uncertain: true },
+    { name: 'ベルモントオークス', short: 'ベルモントオークス', grade: 'G1', region: '海外', country: '米', course: 'アケダクト', surface: '芝', dist: 1900, month: 7, week: 1, age: '3', sex: '牝', weight: '定量', prize: 5000, from: 2024, to: 2024, uncertain: true },
+    { name: 'ベルモントオークス', short: 'ベルモントオークス', grade: 'G1', region: '海外', country: '米', course: 'サラトガ', surface: '芝', dist: 1800, month: 7, week: 1, age: '3', sex: '牝', weight: '定量', prize: 5000, from: 2025, to: 9999, uncertain: true },
+    // ダイアナS（サラトガ・芝9ハロン・3歳以上牝）：2003年から G1。2025年は7月12日・総賞金 $500,000（NYRA の2025年サラトガの番組・en.wikipedia「Diana Stakes」）
+    { name: 'ダイアナステークス', short: 'ダイアナS', grade: 'G1', region: '海外', country: '米', course: 'サラトガ', surface: '芝', dist: 1800, month: 7, week: 2, age: '3+', sex: '牝', weight: '定量', prize: 4100, from: FAMOUS_FROM, to: 9999 },
+    // マンハッタンS（芝・4歳以上）：2015〜2023年はベルモントパークの10ハロン、2024年はサラトガの1 3/16マイル、2025年はサラトガの9ハロン（6月8日。en.wikipedia「Manhattan Stakes」・NYRA の出走表・Juddmonte）
+    { name: 'マンハッタンステークス', short: 'マンハッタンS', grade: 'G1', region: '海外', country: '米', course: 'ベルモント', surface: '芝', dist: 2000, month: 6, week: 2, age: '4+', weight: '定量', prize: 5000, from: FAMOUS_FROM, to: 2023, uncertain: true },
+    { name: 'マンハッタンステークス', short: 'マンハッタンS', grade: 'G1', region: '海外', country: '米', course: 'サラトガ', surface: '芝', dist: 1900, month: 6, week: 2, age: '4+', weight: '定量', prize: 5000, from: 2024, to: 2024, uncertain: true },
+    { name: 'マンハッタンステークス', short: 'マンハッタンS', grade: 'G1', region: '海外', country: '米', course: 'サラトガ', surface: '芝', dist: 1800, month: 6, week: 2, age: '4+', weight: '定量', prize: 5000, from: 2025, to: 9999, uncertain: true },
+    // テストS（サラトガ・ダ7ハロン・3歳牝）：2025年は8月2日・総賞金 $500,000（NYRA の2025年サラトガの番組・en.wikipedia「Test Stakes」）
+    { name: 'テストステークス', short: 'テストS', grade: 'G1', region: '海外', country: '米', course: 'サラトガ', surface: 'ダ', dist: 1400, month: 8, week: 1, age: '3', sex: '牝', weight: '定量', prize: 4100, from: FAMOUS_FROM, to: 9999 },
+    // シャンペンS（米。ダ1マイル・2歳）：ベルモントパーク、2023〜2025年はアケダクト（Belmont at the Big A。2025年は10月4日。en.wikipedia「Champagne Stakes (United States)」・Kentucky Bred 2023）。豪州のシャンペンSと分けて（米）を付ける
+    { name: 'シャンペンステークス（米）', short: 'シャンペンS（米）', grade: 'G1', region: '海外', country: '米', course: 'ベルモント', surface: 'ダ', dist: 1600, month: 10, week: 1, age: '2', weight: '定量', prize: 4100, from: FAMOUS_FROM, to: 2022, uncertain: true },
+    { name: 'シャンペンステークス（米）', short: 'シャンペンS（米）', grade: 'G1', region: '海外', country: '米', course: 'アケダクト', surface: 'ダ', dist: 1600, month: 10, week: 1, age: '2', weight: '定量', prize: 4100, from: 2023, to: 2025, uncertain: true },
+    { name: 'シャンペンステークス（米）', short: 'シャンペンS（米）', grade: 'G1', region: '海外', country: '米', course: 'ベルモント', surface: 'ダ', dist: 1600, month: 10, week: 1, age: '2', weight: '定量', prize: 4100, from: 2026, to: 9999, uncertain: true },
+    // フリゼットS（ダ1マイル・2歳牝）：シャンペンSと同じ日・同じ競馬場。総賞金 $400,000（en.wikipedia「Frizette Stakes」）
+    { name: 'フリゼットステークス', short: 'フリゼットS', grade: 'G1', region: '海外', country: '米', course: 'ベルモント', surface: 'ダ', dist: 1600, month: 10, week: 1, age: '2', sex: '牝', weight: '定量', prize: 3300, from: FAMOUS_FROM, to: 2022, uncertain: true },
+    { name: 'フリゼットステークス', short: 'フリゼットS', grade: 'G1', region: '海外', country: '米', course: 'アケダクト', surface: 'ダ', dist: 1600, month: 10, week: 1, age: '2', sex: '牝', weight: '定量', prize: 3300, from: 2023, to: 2025, uncertain: true },
+    { name: 'フリゼットステークス', short: 'フリゼットS', grade: 'G1', region: '海外', country: '米', course: 'ベルモント', surface: 'ダ', dist: 1600, month: 10, week: 1, age: '2', sex: '牝', weight: '定量', prize: 3300, from: 2026, to: 9999, uncertain: true },
+    // ペガサスワールドカップターフ（ガルフストリームパーク・芝・4歳以上）：G1 は1999年から（前の名はガルフストリームパークターフハンデキャップ）。この名は2019年から。2019〜2021年は1 3/16マイル、2022年から9ハロン。2025年は1月25日・総賞金 $928,400（en.wikipedia「Pegasus World Cup Turf」）
+    { name: 'ペガサスワールドカップターフ', short: 'ペガサスWCターフ', grade: 'G1', region: '海外', country: '米', course: 'ガルフストリームパーク', surface: '芝', dist: 1900, month: 1, week: 4, age: '4+', weight: '定量', prize: 7700, from: 2019, to: 2021, uncertain: true },
+    { name: 'ペガサスワールドカップターフ', short: 'ペガサスWCターフ', grade: 'G1', region: '海外', country: '米', course: 'ガルフストリームパーク', surface: '芝', dist: 1800, month: 1, week: 4, age: '4+', weight: '定量', prize: 7700, from: 2022, to: 9999, uncertain: true },
+  );
   // ブリーダーズカップターフスプリント（2012年からG1）：開催地は BC マイルと同じ。距離は開催地の芝コースで変わる（デルマーは5ハロン＝1000m）
   const BCTS_DIST = { 'デルマー': 1000, 'キーンランド': 1100, 'サンタアニタ': 1300, 'チャーチルダウンズ': 1000 };
   for (const r of HS.DATA.races.filter(x => x.name === 'ブリーダーズカップマイル' && (x.to || 9999) >= 2012)) {
