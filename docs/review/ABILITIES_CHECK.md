@@ -136,3 +136,68 @@
 - 記録から作った名の知れた海外の馬の脚質（引きのまま 507頭。`abilities.csv` の「脚質の出どころ」が「自動（引き）」）。
 - 名鑑・解説の無い名馬の気性・癖・道悪（世間の評判で明らかなもの）。
 - 根性・気性・坂がほぼ強さで決まる作りそのもの（勝負根性で知られる馬・坂巧者の扱い）。
+
+## 5. 2回目：Codex のレビューを受けて（2026-10-25）
+
+Codex のレビュー（枝 `codex/abilities-review` の `docs/review/codex/ABILITIES_REVIEW.md`）が挙げた候補を、外の出典を開いて1頭ずつ確かめた。確かめられたものだけ直した（直す前の値は `data/horse_fix.js` の `was`）。
+
+**総合力は1頭も動いていない。** 確かめ方：直す前と後で、史実馬・スペシャルホース・伝説級の全 7,255頭の画面の総合力（芝・ダート）を書き出して比べた（動いたのは下の表の能力だけ）。`tests/extra_abilities.js` も、`was` の馬ごとに直す前と後の総合力が同じことを確かめる。逃げが付く・外れる馬と距離の上が広がった馬は、スピード・スタミナを直す前の値に止めた。
+
+### 5-1. 距離の根の直し
+
+読み込みの距離の広げ（`js/core/datafix.js`。勝った G1 の距離を幅に入れる）が、遊ぶ番組（`data/races*.js`）だけを見ていて、暦にその年の形が無い史実のレース（`data/hist_races.js`）の G1 を見ていなかった。`H.winRaces` と同じ引き方にした。Godot は書き出したデータ（広げたあとの幅）を読むので、Godot 側に直す所は無い。一覧の道具（`tools/review_abilities.js`）の距離の見どころも同じ引き方にした。
+
+これで動いたのは次の4頭だけ（全馬で比べた）。ヒカルタカイの1966年の全日本三才優駿（満2歳の戦）は 2歳戦なので `age: '2'` を付けて数えない（距離の下 2000m のまま）。
+
+| 馬 | 距離 | 直した値 | 出典 |
+|---|---|---|---|
+| テツノカチドキ | 1800〜2200m | 1800〜3000m | 1984年・1987年の東京大賞典は大井3000m（https://ja.wikipedia.org/wiki/東京大賞典 の歴代の勝ち馬） |
+| ハツシバオー | 1600〜2400m | 1600〜3000m | 1978年の東京大賞典は大井3000m（同上） |
+| サンオーイ | 1600〜2400m | 1600〜3000m | 1983年の東京大賞典は大井3000m（同上） |
+| ファーラップ | 1600〜3200m | 1600〜3600m | 1930年の AJC プレートは 2¼マイル（https://en.wikipedia.org/wiki/Queen_Elizabeth_Stakes_(ATC) の「1929–1933 - 2+1⁄4 miles (~3600 metres)」と勝ち馬「1930 - Phar Lap」） |
+
+### 5-2. 直したもの
+
+| 馬 | 能力 | 前 | 後 | 理由 | 出典 |
+|---|---|---|---|---|---|
+| カブトシロー | 脚質 | 先行 | 追込（気性は前の 70 のまま・切れ 6・出遅れ癖はそのまま） | 1967年の天皇賞（春）「いつものように最後方から一気に追い込み」、天皇賞（秋）「スタートは例によって出遅れた。そのまま最後方から」、有馬記念「いつものように後方をゆっくりと進み」 | https://ja.wikipedia.org/wiki/カブトシロー |
+| キズナ | 健康 | 75 | 65 | 2014年の天皇賞（春）で骨折して宝塚記念・凱旋門賞を断念、2015年に右前繋部浅屈腱炎で引退 | https://ja.wikipedia.org/wiki/キズナ_(競走馬) |
+| メジロパーマー | 健康 | 79 | 65 | 3歳の冬に骨折、1990年の函館記念のあと「再び骨折」、1994年に右前脚の屈腱炎で引退 | https://ja.wikipedia.org/wiki/メジロパーマー |
+| ミホノブルボン | 健康 | 71 | 65 | 菊花賞のあと右後肢跛行、1993年1月に右後脚脛骨骨膜炎、4月に右後脚第3中足骨を骨折し、復帰できずに引退 | https://ja.wikipedia.org/wiki/ミホノブルボン |
+| ファインモーション | 癖・気性 | 癖なし・88.6 | 掛かり癖・74.6（癖の分） | 2002年の有馬記念「スタンド前で行きたがって逃げる形」「この有馬記念を境にそれがレースに悪影響を及ぼすことが増えくる」。2002年のエリザベス女王杯「スタートで折り合いを欠いた」、2004年の安田記念・マイルCS は制御できなかった（15戦の8戦目からの後半の話だが、4戦以上で馬の特徴として書かれている）。名鑑の「2004年は折り合いを欠くレースが増えた」も出典に合わせて直した | https://jra-van.jp/fun/memorial/1999110187.html ・ https://ja.wikipedia.org/wiki/ファインモーション |
+| テイエムオペラオー | 道悪 | 66 | 90（道悪○） | 2000年の天皇賞（秋）は重（稍重ではない）で勝った。「テイエムオペラオーは重馬場巧者であり」 | https://www.jbis.or.jp/horse/0000302080/record/ ・ https://ja.wikipedia.org/wiki/テイエムオペラオー |
+| エグザジャレイター | 道悪 | 66 | 90（道悪○） | 2016年のサンタアニタダービー（Sloppy）を6馬身1/4差、プリークネスS・ハスケル招待（どちらも Sloppy）も勝った。「slop-loving Exaggerator」 | https://en.wikipedia.org/wiki/Exaggerator_(horse) ・ https://www.kentuckyderby.com/horses/news/exaggerator-splashes-to-haskell-victory-nyquist-fourth/ |
+| アデイブ | 道悪 | 66 | 90（道悪○） | 2020年のクイーンエリザベスS（豪。Heavy 8）を2.8馬身差、英チャンピオンS（Soft, Heavy in places）を2馬身1/4差。「aptitude for racing on soft ground」 | https://en.wikipedia.org/wiki/Addeybb ・ https://www.breednet.com.au/news/9944/addeybb-simply-brilliant-in-queen-elizabeth ・ https://www.sportinglife.com/racing/news/addeybb-proves-champion/185480 |
+| トゥルーシャン | 道悪 | 66 | 90（道悪○） | 調教師「He can only go where there is a bit of soft in the ground. Even good ground is too quick for him」。馬場が硬いとしてアスコットゴールドCを回避（Soft の勝ちだけでなく、道悪を得意とする記述で決めた） | https://en.wikipedia.org/wiki/Trueshan ・ https://racing365.com/news/2023/05/02/trueshan-back-at-ascot-with-something-to-prove/ ・ https://france-galop.com/en/content/qatar-cadran-british-champ-trueshan-crowned-native-france |
+
+**脚質（記録から作った海外の名馬。引きのままだった馬）**：Codex の15頭のうち12頭が出典と違っていた。切れと気性は脚質から出し直される（決まりどおり）。
+
+| 馬 | 前 | 後 | 理由 | 出典 |
+|---|---|---|---|---|
+| カリフォルニアメモリー | 先行 | 差し | 2011年の香港ゴールドC・沙田トロフィー「settled at the rear」、QEII カップ「Held up at the tail of the field」、2012年の香港C「restrained to race in midfield」。1角はおおむね9番手前後 | https://racing.hkjc.com/racing/information/English/Horse/Horse.aspx?HorseNo=CL135&Option=1 （通過順位）・香港ジョッキークラブの走りの寸評 |
+| ミリタリーアタック | 逃げ | 先行 | 2013年の香港ゴールドC「grab box seat」、QEII カップは5番手、2014年の香港ゴールドC「settling behind leader」。ハナは1戦だけ | https://racing.hkjc.com/racing/information/English/Horse/Horse.aspx?HorseNo=CN175&Option=1 |
+| ヴァジラバド | 先行 | 追込 | 2016年のドバイゴールドC「he would be at the back」、2017年「He likes to come from the back」、2018年のアスコットゴールドC「Held up towards rear」。切れは 6 になる（調教師「a really big turn of foot」で、長く脚を使う記述は無い） | https://en.wikipedia.org/wiki/Vazirabad_(horse) ・ https://sportinglife.com/racing/news/repeat-cup-win-for-vazirabad/48881 |
+| カリフォルニアスパングル | 先行 | 逃げ | ほぼ全走で1角先頭。2022年の香港マイル「Led on the rail」、2023年のチャンピオンズマイル「Broke well from a wide draw to lead」 | https://racing.hkjc.com/racing/information/English/Horse/Horse.aspx?HorseNo=E314&Option=1 |
+| ハイフィールドプリンセス | 差し | 先行 | 2022年のナンソープS「Chased leaders」、フライングファイブS「Prominent」、2023年のキングズスタンドS「Tracked leaders」 | https://www.sportinglife.com/racing/profiles/horse/977280 |
+| ビーチパトロール | 追込 | 先行 | 2017年のアーリントンミリオン「raced in second place」、ジョーハーシュターフクラシックも2番手、2016年のセクレタリアトSは逃げ馬の直後 | https://www.americasbestracing.net/races/2017-arlington-million-xxxv-s ・ https://www.americasbestracing.net/races/2017-joe-hirsch-turf-classic-s |
+| インエクセス | 差し | 逃げ | 「usually ran his fields off their legs from the start」「In Excess was a front-running horse」 | https://www.americanclassicpedigrees.com/in-excess-ire.html ・ https://en.wikipedia.org/wiki/In_Excess_(horse) |
+| エルヴェディヤ | 先行 | 差し | 2015年の仏1000ギニー「raced at the rear of the field」、コロネーションS「restrained … in the early stages」、2016年のクイーンアンS「Held up」 | https://en.wikipedia.org/wiki/Ervedya ・ https://www.sportinglife.com/racing/profiles/horse/226136 |
+| シックスパーフェクションズ | 先行 | 追込 | 2003年のBCマイル「near the back of the pack」、英1000ギニーは残り2ハロンで全馬が前、愛1000ギニー「Held up in rear early」（2歳のマルセルブサック賞は11頭の5番手で、差しとの境） | https://www.thoroughbreddailynews.com/pdf/tdn/2003/tdn031026.pdf ・ tdn030505.pdf ・ tdn030526.pdf |
+| ゴールデンライラック | 追込 | 先行 | 2011年の仏1000ギニーは逃げ馬のすぐ後ろ、グロット賞は7頭の4番手、2012年のイスパーン賞は逃げたシリュスデゼーグルの直後 | https://www.bloodhorse.com/horse-racing/articles/63042/golden-lilac-blooms-in-french-1000-guineas ・ https://www.rte.ie/sport/racing/2012/0527/322566-lilac-pips-cirrus-to-gold-in-france/ |
+| ブルーローズセン | 差し | 先行 | 2023年の仏1000ギニーは逃げ馬の直後、仏オークスは逃げ馬に「quickly shadowed」、オペラ賞も前の馬の後ろ | https://france-galop.com/en/content/eu1m-diane-longines-blue-rose-cen-supreme-french-oaks ・ https://france-galop.com/en/content/eu500000-prix-de-lopera-longines-gr1-blue-rose-cen-back-business |
+| フォールンエンジェル | 差し | 先行 | 2023年のモイグレアスタッドS「Tracked leader」、2024年の英1000ギニー「Tracked leaders」、愛1000ギニー・2025年のサンチャリオットSはハナ（番手8戦・逃げ7戦。差しの形は無い） | https://www.sportinglife.com/racing/profiles/horse/1103830 |
+
+### 5-3. 直さなかったもの（未確認のまま・決められない・確かめて維持）
+
+| 馬 | 能力 | いまの値 | 案 | 直さなかった理由 | 出典 |
+|---|---|---|---|---|---|
+| センダワール | 脚質 | 差し | 先行 | 確かめたら差しで合っていた：1999年の仏2000ギニー「towards the middle of the field」、セントジェームズパレスS「Settled in midfield」、ムーラン賞は5番手 | https://www.thoroughbreddailynews.com/pdf/tdn/1999/tdn990517.pdf ・ tdn990616.pdf ・ tdn990906.pdf |
+| ヘクタープロテクター | 脚質 | 追込 | 先行 | **未確認のまま**。開けた出典に序盤の位置の記述が無い | https://en.wikipedia.org/wiki/Hector_Protector |
+| サイエダティ | 脚質 | 逃げ | 差し | **決められない**。2歳のチェヴァリーパークSは逃げ、1993年の英1000ギニーは逃げ馬の後ろ、1995年のサセックスSは後方と、年で走り方が違う | https://en.wikipedia.org/wiki/Sayyedati |
+| カリフォルニアメモリー | 切れ | 5（差しの自動） | 6 | いつもの脚を言った文が無い（1走ごとの寸評に残り350m前後の加速があるだけ）。脚質の自動の値のまま | 香港ジョッキークラブの走りの寸評 |
+| エイシンヒカリ | 道悪 | 66 | 90 | **決められない**。2016年のイスパーン賞は Collant（柔らかい）で10馬身差だが、同じ年のプリンスオブウェールズS（Soft）で最下位、「荒れた馬場は不利とされ」。道悪巧者と書いた出典は無い | https://en.wikipedia.org/wiki/A_Shin_Hikari ・ https://ja.wikipedia.org/wiki/エイシンヒカリ |
+| サンデーサイレンス | 道悪 | 66 | 90 | **決められない**。1989年のケンタッキーダービーは Muddy で勝ったが、出典は勝因をイージーゴアの道悪の苦手に帰していて、サンデーサイレンス自身を道悪巧者とも苦手とも書いていない（Muddy の勝ちだけで機械的に決めない） | https://en.wikipedia.org/wiki/1989_Kentucky_Derby ・ https://www.theracingbiz.com/2019/05/12/preakness-memories-sunday-silence-unwanted-unlucky-champ/ |
+| ダンスパートナー | 癖 | 癖なし | 出遅れ癖 | 確かめて維持。デビューから桜花賞までの4戦は出遅れたが、「オークスではこの出遅れ癖が解消され」。その後の13戦に出遅れの記述は無く、通過順位も中団から後ろの差し・追込の形（出遅れかどうかは位置だけでは分からない）。直ったあとの方が長いので全年齢の癖にしない | https://ja.wikipedia.org/wiki/ダンスパートナー ・ netkeiba の成績（https://db.netkeiba.com/horse/1992109549/） |
+| スイープトウショウ | 癖 | 出遅れ癖 | ― | 確かめて維持。ゲート入りの悪さとは別に、新馬戦・ファンタジーS・紅梅S・チューリップ賞・ローズS・秋華賞・2004年のエリザベス女王杯などで「出遅れ」が続いた | https://ja.wikipedia.org/wiki/スイープトウショウ |
+| ヴァジラバド | 切れ | 3 → 6 | 3 のまま（Codex） | Codex は「長く脚を使う持続力型なら 3」としたが、出典は「a really big turn of foot」「withering late run」で、長く脚を使う記述は無い。脚質の自動の値（6）にした | 上の脚質の出典 |
+| キングヘイロー・サンデーサイレンス（気性）・ニジンスキー・メイショウタバル・ワカクモ・レガシーワールド・サイレンススズカ・ミホノブルボン（道悪）・ジャイアンツコーズウェイ（健康）・テイエムオペラオー（根性）・ミホノブルボン（坂）・ヒシミラクル（切れ） | ― | ― | ― | Codex も維持か保留の案。今回は出典を開いていない（1回目の判断のまま） | ― |
