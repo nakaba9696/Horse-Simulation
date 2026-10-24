@@ -19,7 +19,7 @@
 {"cat":"gs","id":"gs_mile","label":"ワールドマイル GS","kind":"set","races":["安田記念","BCマイル","ジャックルマロワ賞","サセックスS"],"same":true,"tier":5,"focus":["spd","mind"],"note":"安田記念・BCマイル・ジャックルマロワ賞・サセックスSを同じ年に"},
 {"cat":"gs","id":"gs_turf","label":"ターフロイヤル GS","kind":"set","races":["ドバイシーマクラシック","エクリプスS","キングジョージ","凱旋門賞"],"same":true,"tier":5,"focus":["spd","sta"],"note":"ドバイシーマクラシック・エクリプスS・キングジョージ・凱旋門賞を同じ年に"},
 {"cat":"gs","id":"gs_wturf","label":"ワールドターフ GS","kind":"set","races":["キングジョージ","凱旋門賞","BCターフ","ジャパンC"],"same":true,"tier":5,"focus":["spd","sta"],"note":"キングジョージ・凱旋門賞・BCターフ・ジャパンCを同じ年に"},
-{"cat":"gs","id":"gs_stayer","label":"ワールドステイヤー GS","kind":"set","races":["天皇賞・春","アスコットGC","グッドウッドC","メルボルンカップ"],"same":true,"tier":5,"focus":["sta","guts"],"note":"天皇賞・春・ゴールドカップ（アスコット）・グッドウッドカップ・メルボルンカップを同じ年に"},
+{"cat":"gs","id":"gs_stayer","label":"ワールドステイヤー GS","kind":"set","races":["天皇賞・春","アスコットGC","グッドウッドC","メルボルンカップ"],"same":true,"tier":4,"focus":["sta","guts"],"note":"天皇賞・春・ゴールドカップ（アスコット）・グッドウッドカップ・メルボルンカップを同じ年に"},
 {"cat":"gs","id":"gs_dirt","label":"ワールドダート GS","kind":"set","races":["サウジカップ","ドバイワールドカップ","ペガサスWC","BCクラシック"],"same":true,"tier":5,"focus":["dspd","dsta"],"note":"サウジカップ・ドバイワールドカップ・ペガサスワールドカップ・BCクラシックを同じ年に"},
 {"cat":"gs","id":"gs_tiara","label":"ワールドティアラ GS","kind":"set","races":["ヴィクトリアマイル","ナッソーS","ヴェルメイユ賞","BCフィリー＆メアターフ"],"same":true,"tier":4,"focus":["spd","mind"],"note":"ヴィクトリアマイル・ナッソーS・ヴェルメイユ賞・BCフィリー＆メアターフを同じ年に"},
 {"cat":"gs","id":"gs_eu","label":"ヨーロピアン GS","kind":"set","races":["プリンスオブウェールズS","英インターナショナルS","愛チャンピオンS","英チャンピオンS"],"same":true,"tier":4,"focus":["spd","sta"],"note":"プリンスオブウェールズS・インターナショナルS・愛チャンピオンS・英チャンピオンSを同じ年に"},
