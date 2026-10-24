@@ -34,20 +34,21 @@ func build() -> void:
 	add_child(tab_box)
 	_host()
 	# 招待の札と順位の表を縦に並べ、y 872 までに収める（スクロールしない。持ち主の指示 2026-10-24）。表は出られる16頭まで
-	var col := VBoxContainer.new()
-	col.position = Vector2(PAD_X, TOP + 66)
-	col.custom_minimum_size = Vector2(1600 - PAD_X * 2, 0)
-	col.size = col.custom_minimum_size
-	col.add_theme_constant_override("separation", 10)
-	add_child(col)
-	UiFit.hug(col)
 	inv_box = VBoxContainer.new()
+	inv_box.position = Vector2(PAD_X, TOP + 66)
+	inv_box.custom_minimum_size = Vector2(1600 - PAD_X * 2, 0)
 	inv_box.add_theme_constant_override("separation", 8)
-	col.add_child(inv_box)
+	add_child(inv_box)
+	UiFit.hug(inv_box)
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 3)
-	col.add_child(list)
+	list.custom_minimum_size = Vector2(1600 - PAD_X * 2, 0)
+	add_child(list)
+	UiFit.hug(list)
 	UiScreen.back_under(list)
+	# 表は招待の札のすぐ下（招待の札の高さは、招待が届いたかで変わる）
+	inv_box.resized.connect(func(): list.position = Vector2(PAD_X, inv_box.position.y + inv_box.size.y + 10))
+	list.position = Vector2(PAD_X, TOP + 66 + 120)
 	_fill()
 
 func _fill() -> void:
@@ -132,7 +133,7 @@ func _fill() -> void:
 	var prev_why := ""
 	for x in st.slice(0, HSSeason.DC_FIELD):
 		var mine: bool = x.h.get("owner") == "P"
-		var rb := UiScreen.row_button(30, mine)
+		var rb := UiScreen.row_button(28, mine)
 		var b: Button = rb[0]
 		var hb: HBoxContainer = rb[1]
 		var why := HSText.tx(String(x.why))
