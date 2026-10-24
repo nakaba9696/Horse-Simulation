@@ -190,6 +190,12 @@ HS.DATA.legendsExtra = [
  // 出典：https://ja.wikipedia.org/wiki/グラディアトゥール
  // 出典：https://en.wikipedia.org/wiki/Gladiateur
  { name:'グラディアトゥール', tier:'legend', gf:'classic', nameEn:'Gladiateur', country:'英', born:1862, sex:'牡', coat:'黒鹿毛', sire:'モナルク', dam:'ミスグラディエーター', damsire:'グラディエーター', rating:96, surface:'芝', distMin:1600, distMax:4000, style:'追込', growth:'普通', retire:1866, wins:['1865英2000ギニー','1865英ダービー','1865パリ大賞','1865英セントレジャー','1865ロワイヤルオーク賞','1866アスコットゴールドカップ'], note:'19戦16勝。フランス生産で英国で調教。フランス産馬として初めての英三冠。ロワイヤルオーク賞は当時プランスアンペリアル大賞', uncertain:true },
+ // 英国で初めての三冠馬（2000ギニー・ダービー・セントレジャーを勝った最初の馬。のちにさかのぼって三冠と数えた）。1886年の Sporting Times の投票で19世紀の名馬の2位（持ち主の指示 2026-10-25）。
+ // 通算は en.wikipedia の10戦9勝（ja.wikipedia は11戦10勝）。2戦は単走（walkover）。表記は ja.wikipedia の「ウェストオーストラリアン」。母 Mowerina のカナ（モウリナ）は ja.wikipedia。
+ // style は推定（ダービーは中団、セントレジャーは後方から抜け出した）。distMin は推定（2歳の夏の6ハロンの試走から）、distMax はアスコットゴールドカップ（当時2.5マイル）
+ // 出典：https://ja.wikipedia.org/wiki/ウェストオーストラリアン_(競走馬)
+ // 出典：https://en.wikipedia.org/wiki/West_Australian_(horse)
+ { name:'ウェストオーストラリアン', nameEn:'West Australian', country:'英', born:1850, sex:'牡', coat:'鹿毛', sire:'メルボルン', dam:'モウリナ', damsire:'タッチストン', rating:94, surface:'芝', distMin:1200, distMax:4000, style:'差し', growth:'普通', retire:1854, wins:['1853英2000ギニー','1853英ダービー','1853英セントレジャー','1854アスコットゴールドカップ'], note:'10戦9勝（2戦は単走）。英国で初めての三冠馬', uncertain:true },
  // distMin は推定（2歳時のジュライステークスの当時の距離を確かめられなかった）。style も推定（マッチレースで後ろから差した記録から）
  // 出典：https://ja.wikipedia.org/wiki/ザフライングダッチマン
  // 出典：https://en.wikipedia.org/wiki/The_Flying_Dutchman_(horse)
