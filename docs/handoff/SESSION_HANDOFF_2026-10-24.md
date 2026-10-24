@@ -7,7 +7,10 @@
 2. **C++ の模擬が JS とずれている所を直す**（下の「落ちているテスト」）。直るまで、ほかの変更を push しない。
 3. `QUICK=1 node tests/run.js`（Godot は `/home/user/godot-bin/godot` に 4.7.2 を置くと一緒に回る。C++ の .so が無ければ `docs/GODOT.md` の手順で作る）が全部通ったら push。
 
-## 落ちているテスト（前のセッションで直せなかった）
+## 落ちているテスト（前のセッションで直せなかった → 2026-10-24 に解決。枝 `claude/cpp-golden-fix`）
+- **原因：C++ の .so が古かった。** 手元の .so（10月22日に作ったもの）が、いまの `godot/native/src` より前の版だった。`sh godot/native/build.sh` で作り直すと、`race parallel` は C++・GDScript とも全部通った（2030 passed, 0 failed）。C++ のコードも答え（golden）も直していない。
+- ついでに `tests/extra_gf.js` の答えの古さを直した（ウォーアドミラルの行き先を `t:us3` → `t:gs_us`。データは持ち主の決定 2026-10-24 のとおりアメリカン GS に移っていた）。
+- 以下は前のセッションの記録。
 - `sh godot/tests/run.sh race parallel` の C++（native）の側で、「東京芝1800m 良 1972年 16頭」が JS の答え（`godot/tests/golden/races.json`）とずれる。GDScript の側は通る。parallel も 13件ずれる。
   - このコミットの前（e4b0738）では通っていた。そのあと変えたのは、データ（`data/horse_fix.js` の総合力・`data/trophy_horses.js`・名鑑と固有の技の文）と `godot/core/hs_eraless.gd`（倒した隠し馬をデビューに選ぶ）だけで、模擬のコードは変えていない。
   - 書き出したデータ（godot/data）を e4b0738 のものに戻すと、今度は答えを作り直した「札幌ダ2000m 1971年」がずれる（こちらは当然）。1972年のレースは、その状態でも落ちるかを確かめていない。
