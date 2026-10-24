@@ -5,9 +5,9 @@ module.exports = function (check, assert, HS) {
   // 勝ち鞍が、その年の暦か史実の勝ち鞍の記録のためのレース（data/hist_races.js）に結びつく
   const linked = (d, w) => H.winRaces({ wins: [w] }).length === 1 && (d.wins || []).includes(w);
 
-  check('holes: 名鑑を書いた8頭は、条件にぴったりのトロフィーの隠し馬で、ほかのグループには入らない（B9）', () => {
+  check('holes: 名鑑を書いた8頭のうち隠し馬に残る6頭は（ポーニーズ・シュヴィーは外した。持ち主の決定 2026-10-24）、条件にぴったりのトロフィーの隠し馬で、ほかのグループには入らない（B9）', () => {
     HS.U.ERA = HS.Eraless.ERA;
-    const want = { 'ポーニーズ': 'oaks3', 'シュヴィー': 'usf3', 'イヴァンジカ': 'frf3', 'スリートロイカス': 'frf3', 'ミセスペニー': 'frf3', 'ルモス': 'gs_stayer', 'アードロス': 'gs_stayer', 'ストロベリーロード': 'au3' };
+    const want = { 'イヴァンジカ': 'frf3', 'スリートロイカス': 'frf3', 'ミセスペニー': 'frf3', 'ルモス': 'gs_stayer', 'アードロス': 'gs_stayer', 'ストロベリーロード': 'au3' };
     const bad = [];
     for (const [n, t] of Object.entries(want)) {
       const x = SP.byName(n);
