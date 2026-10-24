@@ -253,7 +253,8 @@ static func list() -> Array:
 static func reach(h: Dictionary, g: Dictionary, race: Dictionary) -> bool:
 	return h.get("owner") == "P" and (g.finals == null or g.finals.has(race.get("short"))) and legs(g, h, race)
 # 出てこられるか：ふつうはまだ店に並んでいない名馬だけ。伝説級（again）は、自分のお手馬（引退していない）になっていなければ何度でも
-# 1989年からの隠し馬（is_modern）は、その年に世界で走っている（入厩・牧場の）ときは出さない（同じ馬が2頭にならないように）
+# 隠し馬は毎年のデビューにも始めの世界にも選ばない（HSEraless.is_hidden。持ち主の決定 2026-10-24）。ただ前のセーブでは、
+# 1989年からの隠し馬（is_modern）がもうデビューしていたり店で買われていたりするので、世界で走っている（入厩・牧場の）間は出さない（同じ馬が2頭にならないように）
 # オーナーの依頼の馬にしたスペシャルホース（ハイセイコー・メジロティターン）：まだやり終えていないミッションの馬と、いま世界で走っている依頼の馬は出てこない（js/core/owners.js が SP.canAppear を包むのと同じ）
 static func can_appear(g: Dictionary, d: Dictionary, un: Array) -> bool:
 	if HSWorld.G.get("mode") == "jockey" and (HSOwners.reserved().has(d.name) or (HSOwners.mission_owner(String(d.name)) != null and HSEraless.active_names().has(d.name))): return false
