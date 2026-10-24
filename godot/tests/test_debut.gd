@@ -32,6 +32,7 @@ func _crop_fresh() -> Array:
 
 func run(t) -> void:
 	var t0 := Time.get_ticks_msec()
+	var era0 = HSU.ERA   # 世界の設定（年代なし）は、あとのテスト（模擬の一致）に残さない
 	# ---- 隠し馬は基本プールにいない ----
 	var hid := _hidden_names()
 	t.ok(hid.size() > 50, "debut: 隠し馬の数 %d" % hid.size())
@@ -125,3 +126,4 @@ func run(t) -> void:
 	t.ok(appear.call().has(rw), "debut: 引退したあとも隠し馬で出てこない")
 	t.ok(not HSEraless.pick(100000, HSRng.new(3.0)).any(func(d): return d.name == rw), "debut: 引退した隠し馬がデビューに選ばれる")
 	print("    debut: プール %s 頭・%d ミリ秒" % [_tiers(HSEraless.pool()), Time.get_ticks_msec() - t0])
+	HSU.ERA = era0
