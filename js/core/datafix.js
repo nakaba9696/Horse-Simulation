@@ -74,7 +74,8 @@
   // distMin〜distMax の外なら、幅をその距離まで広げる。2歳の G1 は数えない（若いときだけの距離で幅を広げない）。
   // データの値は書き換えず、読み込んだあとの遊びの値だけ。Godot へはこのあとの HS.DATA（tools/export_godot.js）で届く
   {
-    const raceAt = (w) => { const y = +w.slice(0, 4); return (raceByName.get(w.slice(4)) || []).find(r => active(r, y)); };
+    // 暦にその年の形が無ければ、史実の勝ち鞍の記録のためのレース（data/hist_races.js。遊ぶ番組には出ない。H.winRaces と同じ引き方）
+    const raceAt = (w) => { const y = +w.slice(0, 4), n = w.slice(4); return (raceByName.get(n) || []).find(r => active(r, y)) || (D.histRaces || []).find(r => r.name === n && active(r, y)); };
     const widen = h => {
       let lo = h.distMin || 1600, hi = h.distMax || 2400;
       for (const w of h.wins || []) {

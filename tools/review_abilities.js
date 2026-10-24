@@ -40,6 +40,8 @@ function build() {
   const fix = D.horseFix || {}, mud = D.mudFix || {}, styleFix = D.styleFix || {};
   const r1 = v => v == null ? '' : Math.round(v * 10) / 10;
   const raceAt = w => { const y = +w.slice(0, 4), n = w.slice(4); return (D.races || []).find(r => r.name === n && r.from <= y && y <= (r.to || 9999)); };
+  // 暦に無い年の勝ち鞍は、史実の勝ち鞍の記録のためのレース（data/hist_races.js。読み込みの距離の広げもこちらを見る）
+  const histAt = w => { const y = +w.slice(0, 4), n = w.slice(4); return (D.histRaces || []).find(r => r.name === n && r.from <= y && y <= (r.to || 9999)); };
   const g1 = d => (d.wins || []).map(raceAt).filter(r => r && r.grade === 'G1');
   const rows = [];
   for (const n of names) {
@@ -71,8 +73,8 @@ function build() {
     if (cue.includes('逃げ') && !cue.includes('追込') && h.style !== '逃げ' && h.style !== '先行') look.push('逃げの言葉があるのに' + h.style);
     if (cue.includes('追込') && !cue.includes('逃げ') && (h.style === '逃げ' || h.style === '先行')) look.push('追込の言葉があるのに' + h.style);
     if (src.style === '自動（引き）' && (ws.length >= 2 || profile.has(n))) look.push('脚質が引きのまま');
-    // 距離：勝った重賞（2歳戦を除く）の距離が、得意な距離の幅から 400m 以上外れている（G1 は読み込みで幅に入るので、G2・G3 で外れる馬）
-    const ds = (d.wins || []).map(raceAt).filter(r => r && r.dist && r.age !== '2' && /^G[123]$/.test(r.grade)).map(r => r.dist);
+    // 距離：勝った重賞（2歳戦を除く。暦に無ければ data/hist_races.js）の距離が、得意な距離の幅から 400m 以上外れている（G1 は読み込みで幅に入るので、G2・G3 で外れる馬）
+    const ds = (d.wins || []).map(w => raceAt(w) || histAt(w)).filter(r => r && r.dist && r.age !== '2' && /^G[123]$/.test(r.grade)).map(r => r.dist);
     if (ds.length && Math.max(...ds) - h.distMax >= 400) look.push(`勝った重賞（${Math.max(...ds)}m）が距離の幅より長い`);
     if (ds.length && h.distMin - Math.min(...ds) >= 400) look.push(`勝った重賞（${Math.min(...ds)}m）が距離の幅より短い`);
     const kind = trophyOf.has(n) ? (special.has(n) ? 'スペシャル＋隠し馬' : '隠し馬') : special.has(n) ? 'スペシャルホース' : '史実馬（毎年デビュー）';
