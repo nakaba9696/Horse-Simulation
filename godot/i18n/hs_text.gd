@@ -383,7 +383,7 @@ static func mission(o, k: int) -> String:
 	return tx(s) if k < HSOwners.JOBS else owner_line(s)
 
 # 出られる年齢と性の条件（「3歳以上牝」→「3yo+ Fillies」）。r は age・sex のあるレースの辞書
-const AGE_COND := {"2": "2歳", "3": "3歳", "3+": "3歳以上", "4": "4歳", "4+": "4歳以上"}
+const AGE_COND := {"2": "2歳", "2+": "2歳以上", "3": "3歳", "3+": "3歳以上", "4": "4歳", "4+": "4歳以上"}
 static func age_cond(r: Dictionary) -> String:
 	var s := String(AGE_COND.get(String(HSU.or_(r.get("age"), "")), ""))
 	var f: bool = r.get("sex") == "牝"

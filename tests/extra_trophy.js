@@ -34,7 +34,7 @@ module.exports = function (check, assert, HS) {
   };
   const cal = () => { const m = new Map(); for (const r of R.gradedYear(W.get().year)) if (!m.has(r.short)) m.set(r.short, r); return m; };
   const winIt = (h, r, y) => { h.gradedWins.push({ y, race: r.name, short: r.short, grade: r.grade, region: r.region }); return TR.onWin(h, Object.assign({}, r, { year: y })); };
-  const fitAge = (r, a) => r.age === '2' ? a === 2 : r.age === '3' ? a === 3 : r.age === '3+' ? a >= 3 : a >= 4;
+  const fitAge = (r, a) => r.age === '2' ? a === 2 : r.age === '2+' ? a >= 2 : r.age === '3' ? a === 3 : r.age === '3+' ? a >= 3 : a >= 4;
 
   check('trophy: 仕様書の表のトロフィーが全部ある（名前・条件のレース・難しいほど高いお金）', () => {
     const labels = TR.LIST.map(t => t.label);
