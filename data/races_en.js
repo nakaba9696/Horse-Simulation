@@ -169,7 +169,7 @@
     'ソーンドンマイル': "Thorndon Mile",
     'レヴィンクラシック': "Levin Classic",
     'ニュージーランドサラブレッドブリーダーズステークス': "New Zealand Thoroughbred Breeders' Stakes",
-    'レイルウェイステークス': "Railway Stakes",
+    'ARCレイルウェイステークス': "ARC Railway Stakes",
     'モアステークス': "Moir Stakes",
     'チャンピオンズスプリント': "Champions Sprint",
     'テレグラフハンデキャップ': "Telegraph Handicap",

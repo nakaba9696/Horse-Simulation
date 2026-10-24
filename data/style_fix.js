@@ -9,5 +9,23 @@
   const HS = globalThis.HS = globalThis.HS || {}; HS.DATA = HS.DATA || {};
   HS.DATA.styleFix = {
     'ラヴァマン': { style: '先行', why: '2005年のパシフィッククラシックは先頭で運び、2006年のウィッティンガムは楽に先手、ハリウッドGC は「好むより後ろ」から（en.wikipedia「Lava Man」）' },
+    'ティズザロウ': { style: '先行', why: '引きの追込から先行に（2020年のベルモントS・トラヴァーズSは逃げ馬の数馬身後ろ。en.wikipedia「Tiz the Law」）（能力の洗い出し E2・2026-10-24）' },
+    'マキシマムセキュリティ': { style: '逃げ', why: '引きの先行から逃げに（2019年のフロリダダービー・シガーマイル、2020年のパシフィッククラシックでハナ。en.wikipedia「Maximum Security (horse)」）（能力の洗い出し E2・2026-10-24）' },
+    'フィアースネス': { style: '先行', why: '引きの追込から先行に（2023年のBCジュヴェナイルは2番手、2024年のフロリダダービーはハナ、トラヴァーズSは4番手。en.wikipedia「Fierceness」・americasbestracing.net）（能力の洗い出し E2・2026-10-24）' },
+    'エイベルタズマン': { style: '追込', why: '引きの先行から追込に（2017年のケンタッキーオークスは最後方から差し切り、エイコーンSも向こう正面で最後方。本文に「her normal closing kick」。en.wikipedia「Abel Tasman (horse)」）（能力の洗い出し E2・2026-10-24）' },
+    'プリンセスオブシルマー': { style: '差し', why: '引きの逃げから差しに（2013年のケンタッキーオークスは直線入口で4番手から、CCAオークスは最後方に控える。en.wikipedia「Princess of Sylmar」）（能力の洗い出し E2・2026-10-24）' },
+    'ホワイトアバリオ': { style: '先行', why: '引きの逃げから先行に（2023年のホイットニーS・BCクラシックは逃げ馬の直後。en.wikipedia「White Abarrio」）（能力の洗い出し E2・2026-10-24）' },
+    'ミッドナイトリュート': { style: '追込', why: '引きの逃げから追込に（2007年のBCスプリントは最後方から差し切り。2008年は「no early speed at all」。en.wikipedia「Midnight Lute」・thoroughbreddailynews.com）（能力の洗い出し E2・2026-10-24）' },
+    'シスターチャーリー': { style: '差し', why: '引きの先行から差しに（2018年のダイアナS・BCフィリー＆メアターフは中団から差す。en.wikipedia「Sistercharlie」）（能力の洗い出し E2・2026-10-24）' },
+    'ジオポンティ': { style: '差し', why: '引きの先行から差しに（2009年のアーリントンミリオンは後方から3角で進出、2010年のシャドウェルターフマイルは5番手に控える。brisnet.com・gulfnews.com）（能力の洗い出し E2・2026-10-24）' },
+    'マルシャンドール': { style: '差し', why: '引きの逃げから差しに（2006年のモーリスドゲスト賞は後ろから、2008年のジュライCはゴール前で差し切り。equidia.fr・canalturf.com。差しか追込かは出典で決めきれない）（能力の洗い出し E2・2026-10-24）' },
+    'ローレンス': { style: '逃げ', why: '引きの差しから逃げに（2017年のフィリーズマイル、2018年のメイトロンS・サンチャリオットSでハナ。en.wikipedia「Laurens (horse)」）（能力の洗い出し E2・2026-10-24）' },
+    'ドゥーナデン': { style: '追込', why: '引きの先行・自在から追込に（2011年のメルボルンCは後方から外を差し切り、2012年のコーフィールドCは最後方に控える。horseracing.com.au・en.wikipedia「Dunaden」）（能力の洗い出し E2・2026-10-24）' },
+    'アトラクション': { style: '逃げ', why: '引きの差しから逃げに（2004年の英1000ギニーは早めにハナ、愛1000ギニーは「leading from the start as usual」。en.wikipedia「Attraction (horse)」）（能力の洗い出し E2・2026-10-24）' },
+    'スーパーインポーズ': { style: '追込', why: '引きの先行から追込に（最後方からの競馬が「preferred racing style」。1990年のドンカスターH・エプソムHは4角でしんがり近くから。en.wikipedia「Super Impose」）（能力の洗い出し E2・2026-10-24）' },
+    'トローラーマン': { style: '逃げ', why: '引きの差し・自在から逃げに（2022年のエボアは一頭だけ離して逃げ、2025年のゴールドCもハナから7馬身差。racingpost.com・skysports.com）（能力の洗い出し E2・2026-10-24）' },
+    'リブチェスター': { style: '先行', why: '引きの差しから先行に（2017年のロッキンジSはハナ、クイーンアンS・ムーラン賞は前の集団。en.wikipedia「Ribchester (horse)」）（能力の洗い出し E2・2026-10-24）' },
+    'マラサート': { style: '差し', why: '引きの追込から差しに（2021年のケンタッキーオークスは5番手、2022年のスピンスターSは4番手。en.wikipedia「Malathaat」）（能力の洗い出し E2・2026-10-24）' },
+    'ノータブルスピーチ': { style: '差し', why: '引きの逃げから差しに（2024年の英2000ギニーは後方から差し切り、サセックスSは前の2頭の後ろで待つ。sportingpost.co.za・racing365.com）（能力の洗い出し E2・2026-10-24）' },
   };
 })();
