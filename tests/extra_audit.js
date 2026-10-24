@@ -6,7 +6,7 @@ module.exports = function (check, assert, HS) {
     for (const [n, f] of Object.entries(D.horseFix || {})) {
       const d = all.get(n);
       assert(d, `data/horse_fix.js の ${n} がデータに無い`);
-      for (const k of Object.keys(f)) assert(HS.FIX_KEYS.includes(k) || k === 'why', `${n} の ${k} は書けない値（史実は変えない）`);
+      for (const k of Object.keys(f)) assert(HS.FIX_KEYS.includes(k) || k === 'why' || k === 'was', `${n} の ${k} は書けない値（史実は変えない）`); // was：能力の洗い出し（E2）で直す前の値（tests/extra_abilities.js で総合力が動かないことを確かめる）
       for (const k of HS.FIX_KEYS) if (f[k] != null && k !== 'pot') assert(JSON.stringify(d[k]) === JSON.stringify(f[k]), `${n} の ${k} がデータに入っていない`);
       if (f.pot) for (const [k, v] of Object.entries(f.pot)) assert(d.pot && d.pot[k] === v, `${n} の pot.${k} がデータに入っていない`);
     }
