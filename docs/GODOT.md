@@ -139,6 +139,7 @@ sh godot/native/build.sh      # godot-cpp（版を固定）を取り、Linux 向
 - 要るもの：python3・scons（`pip install scons`）・g++。godot-cpp は `get_godot_cpp.sh` が `godot/native/godot-cpp` に取る（10.0.0-stable・コミット 507ed9d。api_version 4.7）。リポジトリには入れない。
 - できるもの：`godot/native/bin/libhsnative.linux.template_debug.x86_64.so`・`libhsnative.windows.template_release.x86_64.dll`・`hs_native.gdextension`（作ったものだけを書く。無ければ Godot は GDScript の模擬を使う）。`bin/` はリポジトリに入れない。作ったあと Godot の `--import`（`run.sh` がやる）で読み込みの一覧に入る。
 - 初めは godot-cpp の作りで 10 分ほど（4 コア）、そのあと模擬だけなら 20 秒ほど。
+- `bin/` はリポジトリに入れないので、手元の .so はいつ作ったものか分からない。**一致テスト（`run.sh race parallel`）が C++ の側だけずれたら、まず `build.sh` で作り直す**（2026-10-24：10月22日の古い .so で「東京芝1800m 1972年」と parallel がずれ、作り直しで通った）。
 - **Windows（Steam の主な売り先）向け**：Linux で mingw のクロスで作る。`apt-get install g++-mingw-w64-x86-64-posix` のあと `scons platform=windows use_mingw=yes target=template_release`（`build.sh` がやる）。できた DLL は KERNEL32・msvcrt だけを使う（ほかの DLL は要らない）。Windows の機械では動かしていないので、Windows で初めて開いたときに `HSSim.kind_of` が "native" になるかと、一致テスト（`run.sh`）を確かめる。
   - 手元で作れないときは GitHub Actions の Windows（windows-latest・MSVC）で `scons platform=windows target=template_release` でも作れる。Actions を足すときは、使う Actions をコミットの SHA で固定し、`pull_request_target` は使わない（CLAUDE.md）。MSVC は `/fp:precise /fp:contract-` で作る（SConstruct が付ける）。
 - 書き出し（配る版）は `target=template_release`。エディタで開くときは debug の版を読む（片方しか無ければ両方に同じものを書く）。
