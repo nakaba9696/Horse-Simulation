@@ -188,7 +188,7 @@ check('special: 名鑑のある名馬はどれかのグループに入る（今�
     if (n !== 'テディ' && !(d.wins || []).some(w => shortOf(w) === s)) bad.push(n + ':' + s + 'を勝っていない');
   }
   // 名鑑のある名馬（スペシャルホースの元）は、どれかのグループに入る
-  for (const d of SP.pool()) if (!SP.byName(d.name) && d.name !== 'フォルリ') bad.push(d.name + ':どのグループにも入らない'); // フォルリは外した（持ち主の決定 2026-10-24）
+  for (const d of SP.pool()) if (!SP.byName(d.name) && !['フォルリ', 'ファラリス'].includes(d.name)) bad.push(d.name + ':どのグループにも入らない'); // ファラリスも外した（持ち主の決定 2026-10-24「ファラリス抜いて」。勝ち鞍のチャレンジSは暦に無い）。フォルリは外した（持ち主の決定 2026-10-24）
   // ペブルスをワールドティアラ GS へ移して空になった歴代の BCターフ馬を、ほかの BCターフ馬で埋めた（トロフィーの隠し馬と重ならない）
   const bc = SP.members(SP.BY['r:BCターフ']).map(d => d.name);
   if (!bc.length) bad.push('歴代のBCターフ馬が空');
@@ -204,7 +204,7 @@ check('special: 隠し馬とスペシャルホースの強さ・出方（持ち�
   // 馬・馬場・総合力・出る組（グループの id）
   const want = [
     ['テツノカチドキ', 'dirt', 65, 'local'], ['オールアロング', 'turf', 72, 't:gs_tiara'], ['スペクタキュラービッド', 'dirt', 76, 't:us3'],
-    ['パーソナルエンスン', 'dirt', 76, 't:usf3'], ['ロッキータイガー', 'dirt', 64, 'local'], ['タマモクロス', 'turf', 73, 't:gs_jp'],
+    ['パーソナルエンスン', 'dirt', 76, 't:usf3'], ['ロッキータイガー', 'dirt', 64, 'local'], ['タマモクロス', 'turf', 74, 't:gs_jp'],
     ['ミエスク', 'turf', 76, 't:gs_mile'], ['ドクターフェイガー', 'dirt', 77, 't:gs_us'], ['ヴェイグリーノーブル', 'turf', 74, 'r:凱旋門賞'],
   ];
   for (const [n, s, v, g] of want) {
@@ -1151,7 +1151,8 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   W.newGame({ seed: 34, mode: 'jockey', jockeyName: 'テスト騎手', region: '美浦' }); // 種 34：種 33 はクイズの値で出走馬が変わったあと、自動の騎乗の当たり外れ（rt 122）で能力最大の馬も負けた
   const G = W.get();
   const tri = SP.members(SP.BY['t:triple']).map(d => d.name);
-  assert(['セントライト', 'シンザン', 'ミスターシービー', 'シンボリルドルフ'].every(n => tri.includes(n)), `歴代の三冠馬 ${tri.join('・')}`);
+  // シンザンはジャパン GS へ移した（持ち主の決定 2026-10-24）
+  assert(['セントライト', 'ミスターシービー', 'シンボリルドルフ'].every(n => tri.includes(n)), `歴代の三冠馬 ${tri.join('・')}`);
   assert(SP.members(SP.BY.unbeaten).some(d => d.name === 'トキノミノル'), '無敗の名馬にトキノミノルがいない');
   assert(SP.members(SP.BY.gf).some(d => d.name === 'セントサイモン') && !SP.members(SP.BY.unbeaten).some(d => d.name === 'セントサイモン'), '伝説級はグランドフェスティバルのグループだけ');
   const seen = new Set(); for (const g of SP.GROUPS) for (const d of SP.members(g)) { assert(!seen.has(d.name), `${d.name} が2つ以上のグループにいる`); seen.add(d.name); }

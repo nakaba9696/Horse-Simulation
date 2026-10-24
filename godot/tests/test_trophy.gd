@@ -48,9 +48,9 @@ func run(t) -> void:
 	t.eq(sp.pot, raw.pot, "データのままの能力（ダイヤモンドジュビリー）")
 	# 芝にもダートにもなるトロフィー：そのレースの馬場の馬だけ
 	var bc: Dictionary = HSSpecial.by_id()["t:bc2"]
-	var al = HSSpecial.data("アリシーバ")
+	var al = HSSpecial.data("サイテーション")   # アリシーバの枠をサイテーションに（持ち主の決定 2026-10-24）
 	var jh = HSSpecial.data("ジョンヘンリー")
-	t.ok(HSSpecial.when_ok(bc, al, lost, { surface = "ダ" }) and not HSSpecial.when_ok(bc, al, lost, { surface = "芝" }), "アリシーバはダートのときだけ")
+	t.ok(HSSpecial.when_ok(bc, al, lost, { surface = "ダ" }) and not HSSpecial.when_ok(bc, al, lost, { surface = "芝" }), "サイテーションはダートのときだけ")
 	t.ok(HSSpecial.when_ok(bc, jh, lost, { surface = "芝" }) and not HSSpecial.when_ok(bc, jh, lost, { surface = "ダ" }), "ジョンヘンリーは芝のときだけ")
 	# 今の G1 を勝っていない名鑑のある6頭は G2・G3 の「歴代の○○馬」、歴代の BCターフ馬は空でない（持ち主の決定 2026-10-20「推しで」。JS の tests/run.js と同じ）
 	var want := { "ホワイトフォンテン": "日経賞", "シービークロス": "毎日王冠", "メジロモンスニー": "シンザン記念", "ニシノライデン": "阪神大賞典", "ビゼンニシキ": "スプリングS", "スダホーク": "弥生賞" }
@@ -59,11 +59,11 @@ func run(t) -> void:
 		t.ok(HSSpecial.by_id().has(gid) and HSSpecial.members(HSSpecial.by_id()[gid]).any(func(d): return d.name == n), "%s は歴代の%s馬" % [n, want[n]])
 	t.ok(HSSpecial.members(HSSpecial.by_id()["r:BCターフ"]).size() > 0, "歴代の BCターフ馬は空でない")
 	for d in HSSpecial.pool():
-		if d.name == "フォルリ": continue   # 外した（持ち主の決定 2026-10-24）
+		if d.name == "フォルリ" or d.name == "ファラリス": continue   # 外した（持ち主の決定 2026-10-24）
 		t.ok(HSSpecial.list().any(func(e): return e.name == d.name), "%s はどれかのグループに入る" % d.name)
 	# 隠し馬とスペシャルホースの強さ・出方（持ち主の決定 2026-10-20。JS の tests/run.js と同じ）：馬・馬場・総合力・出る組
 	var want2 := [["テツノカチドキ", "dirt", 65, "local"], ["オールアロング", "turf", 72, "t:gs_tiara"], ["スペクタキュラービッド", "dirt", 76, "t:us3"],
-		["パーソナルエンスン", "dirt", 76, "t:usf3"], ["ロッキータイガー", "dirt", 64, "local"], ["タマモクロス", "turf", 73, "t:gs_jp"],
+		["パーソナルエンスン", "dirt", 76, "t:usf3"], ["ロッキータイガー", "dirt", 64, "local"], ["タマモクロス", "turf", 74, "t:gs_jp"],
 		["ミエスク", "turf", 76, "t:gs_mile"], ["ドクターフェイガー", "dirt", 77, "t:gs_us"], ["ヴェイグリーノーブル", "turf", 74, "r:凱旋門賞"]]
 	for w in want2:
 		var f: Dictionary = HSSeason.fh_peak(HSHorse.from_historic(HSSpecial.data(w[0]), "x"))

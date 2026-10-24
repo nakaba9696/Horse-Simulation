@@ -196,7 +196,7 @@ module.exports = function (check, assert, HS) {
     const names = lg.map(x => x.horse.name), cands = SP.candidates(h, race).map(x => x.d.name);
     // 日本三冠の名馬は、出てこられる馬（お手馬のシンボリルドルフは出ない）からランダムに1頭（持ち主の決定 2026-10-24）
     assert(names.filter(n => SP.byName(n).groups.includes('t:triple')).length === 1 && !names.includes('シンボリルドルフ'), `出てくる名馬 ${names}`);
-    assert(cands.includes('シンザン') && !cands.includes('シンボリルドルフ'), `出てこられる名馬 ${cands}`);
+    assert(cands.includes('ミスターシービー') && !cands.includes('シンボリルドルフ'), `出てこられる名馬 ${cands}`);
     // 入れ替わり：隠し馬なしで作った出走表と比べる（同じ種）
     const wk = W.prepareWeek(), card = wk.cards.find(c => c.race.key === race.key);
     const base = W.buildField(race, [{ horse: h, mine: true }].concat(card.runners.filter(x => !x.legend && !x.mine && !x.horse.filler).map(x => ({ horse: x.horse }))), wk.wIdx, new U.RNG(card.seed));
