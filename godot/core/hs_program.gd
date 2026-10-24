@@ -87,6 +87,59 @@ static func rows(h: Dictionary, o: Dictionary = {}) -> Array:
 		if ga != gb: return ga > gb
 		if a.fit != b.fit: return a.fit > b.fit
 		return a.race.dist < b.race.dist)
+# ---- 1か月の格子（番組表の画面。docs/UI.md「番組表」：列は週・段は日本の重賞・オープン・欧州・その他） ----
+# 段：jp＝日本の重賞（地方の Jpn・GF も）、op＝日本のオープン（OP・L）、eu＝欧州、ot＝その他の国（米・豪・香港・ドバイなど）
+const BANDS := ["jp", "op", "eu", "ot"]
+static func band_of(race: Dictionary) -> String:
+	if race.get("region") != "海外": return "jp" if race.get("graded") else "op"
+	var c = HSU.or_(race.get("country"), HSData.d().courses.get(race.course, {}).get("country"))
+	return "eu" if HSWorld.zone_of(c) == "EU" else "ot"
+# 予約できる範囲（今週から RESERVE_WEEKS 週）が何か月にまたがるか（今月を 0 として、最後の月の数）
+static func last_month() -> int:
+	var ws := weeks(HSSeason.RESERVE_WEEKS)
+	var a: Dictionary = ws[0]; var z: Dictionary = ws[ws.size() - 1]
+	return int((z.y - a.y) * 12.0 + z.m - a.m)
+# 今月から k か月先の年と月
+static func month_of(k: int) -> Dictionary:
+	var G = HSWorld.G
+	var n := int(G.year) * 12 + int(G.month) - 1 + k
+	return { y = float(floori(n / 12.0)), m = float(posmod(n, 12) + 1) }
+# k か月先の格子。rs は rows(h, o) の結果（画面が1度だけ作って使い回す）
+# 返す：{ y, m, cols: [{ w, i（今週から何週後）, state: "past"（過ぎた週）|"out"（予約できる範囲の外）|"open", bands: { jp: [行…], op, eu, ot } }] }
+# 列は1〜4週。12月の GF の週（5週目）は、いまがその週のときだけ列を足す。段の中の並びは rows の並び（予約・登録 → 格の高い順 → 向きの合う順）
+static func month_grid(rs: Array, k: int) -> Dictionary:
+	var G = HSWorld.G
+	var ym := month_of(k)
+	var ws := weeks(HSSeason.RESERVE_WEEKS)
+	var nw := 5 if k == 0 and G.week > 4 else 4
+	var cols: Array = []
+	for w in range(1, nw + 1):
+		var col := { w = float(w), i = -1, state = "past", bands = {} }
+		for b in BANDS: col.bands[b] = []
+		if k > 0 or float(w) >= G.week:
+			col.state = "out"
+			for wk in ws:
+				if wk.y == ym.y and wk.m == ym.m and wk.w == float(w):
+					col.i = int(wk.i); col.state = "open"
+					break
+		cols.append(col)
+	for r in rs:
+		if r.wk.y != ym.y or r.wk.m != ym.m: continue
+		for col in cols:
+			if col.state == "open" and col.i == int(r.wk.i):
+				col.bands[band_of(r.race)].append(r)
+				break
+	return { y = ym.y, m = ym.m, cols = cols }
+# 1段に入る札が slots 枚のとき、出す札と「ほか n」に回す札。入りきらないときは最後の1枚を「ほか n」にする
+static func fit_band(list: Array, slots: int) -> Array:
+	if list.size() <= slots: return [list, []]
+	var k := maxi(slots - 1, 0)
+	return [list.slice(0, k), list.slice(k)]
+# この月に予約・登録したもの（月の札の印）
+static func month_mine(rs: Array, k: int) -> bool:
+	var ym := month_of(k)
+	return rs.any(func(r): return r.state != null and r.wk.y == ym.y and r.wk.m == ym.m)
+
 # 予約するレースを、鍵（年-月-週-…）から探す
 static func find(key: Variant) -> Variant:
 	var re := RegEx.create_from_string("^(\\d+)-(\\d+)-(\\d+)-")
