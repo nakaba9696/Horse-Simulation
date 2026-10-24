@@ -2,6 +2,7 @@
 # - 画面：ウィンドウかフルスクリーン・解像度（1280×720〜2560×1440）。ウィンドウではその大きさ、フルスクリーンでは 3D を描く細かさをその高さに合わせる
 # - 音量：全体（Master）・BGM・効果音（SE）を 0〜100。BGM と SE のバスが無ければ作る（音を鳴らす係はこのバスに流す）
 # - 振動：入り切り（ViewRideInput.level）
+# - 画面の動き：ふつうか減らす（motion＝"full"｜"less"。UiFx が見る。減らすと押した返り・知らせ・めくれ・画面の入りで位置と大きさを動かさず、色と光だけで返す）
 # - 言語：日本語か英語（HSText.lang。docs/I18N.md）。ファイルに無ければ（初めての起動）OS の言語で決める（日本語なら日本語、ほかは英語）。
 #   撮影（--out=）と headless で言語の欄が無いときは日本語。-- --lang=en|ja で替えられる（英語の画面を撮るとき）
 # - 割り当て：騎乗の操作（しごく・引く・進路・ムチ・持ち替え・左右を見る・視点・一時停止）と、決める・もどる。1つの操作にキー1つとパッド1つ。
@@ -39,6 +40,7 @@ static func defaults() -> Dictionary:
 		"mode": "window", "res": Vector2i(1600, 1000),
 		"vol_master": 80, "vol_bgm": 80, "vol_se": 80,
 		"vibration": true,
+		"motion": "full",
 		"lang": first_lang(),
 		"keys": default_keys(), "pads": default_pads(),
 	}
@@ -74,6 +76,7 @@ static func load_file() -> void:
 	for k in ["vol_master", "vol_bgm", "vol_se"]:
 		cur[k] = clampi(int(cf.get_value("audio", k, cur[k])), 0, 100)
 	cur.vibration = bool(cf.get_value("input", "vibration", true))
+	cur.motion = "less" if String(cf.get_value("display", "motion", "full")) == "less" else "full"
 	var lg := String(cf.get_value("general", "lang", ""))
 	if lg in HSText.LANGS: cur.lang = lg
 	for a in default_keys():
@@ -87,6 +90,7 @@ static func save_file() -> bool:
 	cf.set_value("meta", "version", 1)
 	cf.set_value("display", "mode", cur.mode)
 	cf.set_value("display", "res", cur.res)
+	cf.set_value("display", "motion", String(cur.get("motion", "full")))
 	for k in ["vol_master", "vol_bgm", "vol_se"]:
 		cf.set_value("audio", k, int(cur[k]))
 	cf.set_value("input", "vibration", bool(cur.vibration))

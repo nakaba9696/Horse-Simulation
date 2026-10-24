@@ -422,6 +422,7 @@ func open_detail(i: int) -> void:
 	bh.add_child(no)
 	detail_buy = UiScreen.button("買う", true, 200, 56, 22)
 	detail_buy.disabled = over or full
+	detail_buy.set_meta("why", "資金が足りない" if over else "お手馬がいっぱい（引退させると空く）")
 	detail_buy.pressed.connect(func(): ask_buy(i))
 	bh.add_child(detail_buy)
 	root.add_child(bh)

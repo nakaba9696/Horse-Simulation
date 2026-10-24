@@ -1037,6 +1037,26 @@ const T := {
 	"%s、1着でゴールイン！": "%s wins!",
 	"%sと%s、並んでゴール！ 写真判定……%sがハナ差で制した！": "%s and %s hit the line together! Photo… %s by a nose!",
 	"%s、圧勝！ %s馬身突き放してゴール！": "%s romps home! Wins by %s lengths!",
+	# 次週と押した返り（UiWeek・UiFx。2026-10-24）
+	"母を選ぶ": "Pick a dam",
+	"父を選ぶ": "Pick a sire",
+	"資金が尽きた。はじめからやり直せる（タイトルへ）": "Out of funds. You can start over from the title screen",
+	"%sを終えた・知らせ %d件": "%s done · %d notices",
+	"知らせ": "Notices",
+	"%sの知らせ %d件": "%s · %d notices",
+	"もう頼んだ（来月の店に並ぶ）": "Already asked (arrives in next month's market)",
+	"画面の動き": "Screen motion",
+	"押した返り・知らせ・暦のめくれ・画面の入り。減らすと動かさず、色と光だけで返す": "Button presses, notices, the calendar flip and screen entry. Reduced: no movement, only color and light",
+	"減らす": "Reduced",
+	"セーブが無い（はじめから）": "No save data (start a new game)",
+	"資金 %s%s%s": "Funds %s%s%s",
+	"：%s（%s）": ": %s (%s)",
+	"%s：%s%s": "%s: %s%s",
+	"トロフィー「%s」を手にした（%s）": "Won the trophy \"%s\" (%s)",
+	"芝 %d→%d": "Turf %d→%d",
+	"ダ %d→%d": "Dirt %d→%d",
+	"%sの疲れが抜けた（%s）": "%s has recovered (%s)",
+	"成長：%s": "Growth: %s",
 }
 
 # 狭い所（ホームのコマンドの札など）に出す短い形。HSText.short で引く（無ければ T）

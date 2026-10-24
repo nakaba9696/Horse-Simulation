@@ -48,6 +48,7 @@ func build() -> void:
 	b_cont = UiScreen.button("つづきから", not info.is_empty(), 460, 64, 24)
 	if info.is_empty():
 		b_cont.disabled = true
+		b_cont.set_meta("why", "セーブが無い（はじめから）")
 		b_cont.focus_mode = Control.FOCUS_NONE
 	menu.add_child(b_cont)
 	if not info.is_empty():

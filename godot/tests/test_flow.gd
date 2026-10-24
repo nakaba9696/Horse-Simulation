@@ -87,7 +87,8 @@ func run(t) -> void:
 			nxt = UiFlow.ride_done(res)
 			rode += 1
 			k += 1
-		t.eq(nxt, "result", "flow: 騎乗のあとは週の結果")
+		# 騎乗のあとは週の結果。騎乗の無い週は週の結果へ移らず、ホームのまま週が進む（持ち主の指摘 2026-10-24）
+		t.eq(nxt, "result" if k > 0 else "home", "flow: 騎乗のあとは週の結果・騎乗の無い週はホーム（%d週目）" % wk)
 		t.ok(UiFlow.report != null and HSWorld.w_idx() == w0 + 1, "flow: 週が1つ進む（%d週目）" % wk)
 		for r in UiFlow.report.races:
 			if r.get("ride"):

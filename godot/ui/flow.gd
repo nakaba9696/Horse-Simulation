@@ -105,6 +105,7 @@ static func new_game(name: String, region: String, seed := -1.0) -> void:
 	save()
 
 static func _reset_week() -> void:
+	UiWeek.reset()
 	rides = []
 	ride_i = 0
 	played = {}
@@ -251,8 +252,9 @@ static func money_label(v = null) -> String:
 	return HSText.money(float(HSWorld.G.player.money if v == null else v))
 
 # ---------- 週の流れ ----------
-# 「レースへ」：今週の騎乗の列を作る。乗るレースが無ければそのまま週を締める
-static func begin_week() -> String:
+# 「レースへ」：今週の騎乗の列を作る。乗るレースが無ければ、週の結果の画面へ移らずホームのまま週を進める（UiWeek。持ち主の指摘 2026-10-24）
+# async：週の締めを別の thread で回す（ホームの次週。UiWeek.start）。テスト・道具は同じ thread で最後まで（UiWeek.run）
+static func begin_week(async := false) -> String:
 	rides = HSJockey.my_rides()
 	ride_i = 0
 	played = {}
@@ -260,7 +262,11 @@ static func begin_week() -> String:
 	money0 = float(HSWorld.G.player.money)
 	mark_news()
 	in_week = true
-	return "card" if rides.size() > 0 else close_week()
+	if rides.size() > 0:
+		return "card"
+	if async: UiWeek.start()
+	else: UiWeek.run()
+	return "home"
 
 static func current() -> Variant:
 	return rides[ride_i] if in_week and ride_i < rides.size() else null

@@ -186,6 +186,7 @@ func _preview(i: int) -> void:
 		var asked: bool = a != null and a.oid == oid
 		var ba := UiScreen.button((HSText.t("%d月の店に頼んだ") % int(a.m)) if asked else "来月の店に、好みの馬を頼む", not asked, 420, 40, 15)
 		ba.disabled = asked
+		ba.set_meta("why", "もう頼んだ（来月の店に並ぶ）")
 		ba.pressed.connect(func():
 			var err = HSOwners.ask(oid)
 			if err: toast(HSText.tx(String(err)), "bad"); return

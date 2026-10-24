@@ -1,5 +1,5 @@
 # 設定の画面（タイトルとホームのメニューから開く）。中身の読み書きと効かせ方は UiSettings（ui/settings_store.gd）
-# タブ（Q/E・LB/RB）：画面と音（言語・表示・解像度・全体・BGM・効果音の音量・振動）／操作の割り当て（騎乗の操作と、決める・もどる。キーとパッド）
+# タブ（Q/E・LB/RB）：画面と音（言語・表示・解像度・全体・BGM・効果音の音量・振動・画面の動き）／操作の割り当て（騎乗の操作と、決める・もどる。キーとパッド）
 # 画面と音：行を上下で選び、左右（十字←→）で値を替える。決定でも次の値へ。替えるとすぐ効き、すぐ書く（user://settings.cfg。セーブとは別）
 # 割り当て：キーかパッドの札で決定 → 押したキー（パッドのボタン・LT/RT）にする。ほかの操作と同じなら入れ替える。5 秒で待つのをやめる
 # 下：初めの設定に戻す（確かめは「やめる」から）・もどる（金）
@@ -12,6 +12,7 @@ const ITEMS := [
 	["lang", "choice", "言語", "画面の文の言語（Language）。替えるとすぐ切り替わる。初めての起動は PC の言語に合わせる"],
 	["mode", "choice", "画面の表示", "フルスクリーンは画面いっぱい。ウィンドウは解像度の大きさ"],
 	["res", "choice", "解像度", "ウィンドウの大きさ。フルスクリーンでは 3D を描く細かさをこの高さに合わせる（低いほど軽い）"],
+	["motion", "choice", "画面の動き", "押した返り・知らせ・暦のめくれ・画面の入り。減らすと動かさず、色と光だけで返す"],
 	["vol_master", "volume", "全体の音量", "すべての音の大きさ"],
 	["vol_bgm", "volume", "BGM", "曲の大きさ"],
 	["vol_se", "volume", "効果音", "蹄・ムチ・ゲート・歓声などの音の大きさ"],
@@ -115,7 +116,7 @@ func _fill_general() -> void:
 			sm.add_theme_constant_override("margin_top", 6 if i > 0 else 0)
 			sm.add_child(UiScreen.section(String(SECTIONS[k])))
 			list_v.add_child(sm)
-		var rb := UiScreen.row_button(60, false)
+		var rb := UiScreen.row_button(52, false)   # 8行（画面の動きを足した）でも中身の欄（y 872 まで）に収まる高さ
 		var b: Button = rb[0]
 		var hb: HBoxContainer = rb[1]
 		var nl := UiTheme.label(String(it[2]), 18)
@@ -185,6 +186,7 @@ func _value_text(k: String) -> String:
 		"mode": return HSText.t("フルスクリーン" if c.mode == "full" else "ウィンドウ")
 		"res": return UiSettings.res_label(c.res)
 		"vibration": return HSText.t("入" if c.vibration else "切")
+		"motion": return HSText.t("減らす" if c.get("motion") == "less" else "ふつう")
 	return str(int(c[k]))
 
 func _row_input(ev: InputEvent, b: Button, idx: int) -> void:
@@ -209,6 +211,7 @@ func _change(idx: int, d: int, wrap := false) -> void:
 			if shots.is_empty(): UiFlow.go(get_tree(), "settings")
 			return
 		"mode": UiSettings.set_value("mode", "window" if c.mode == "full" else "full")
+		"motion": UiSettings.set_value("motion", "full" if c.get("motion") == "less" else "less")
 		"vibration":
 			UiSettings.set_value("vibration", not c.vibration)
 			if c.vibration: ViewRideInput.play(180, 0.6, 0.6)   # 入れたら一度だけ震えて知らせる

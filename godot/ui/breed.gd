@@ -185,6 +185,7 @@ func _mid(ps, pd, keep_name: String) -> void:
 	elif not HSSeason.can_buy(): why = "お手馬がいっぱい（厩舎で引退させると空く）"
 	b_make = UiScreen.button("オリジナルホースを作る", true, 0, 64, 22, true)
 	b_make.disabled = not (ps and pd) or why != ""
+	b_make.set_meta("why", why if why != "" else ("母を選ぶ" if ps else "父を選ぶ"))   # 押せないときに押したら理由を出す（UiScreen）
 	b_make.pressed.connect(_make)
 	mid_box.add_child(b_make)
 	if why != "":

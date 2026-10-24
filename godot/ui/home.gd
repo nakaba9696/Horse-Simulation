@@ -3,7 +3,10 @@
 # 2. 帯：騎手名・所属・評判／暦・リーディング・今年の勝ち・資金
 # 3. コマンドの札：番組表・馬の店・セーブ・タイトルへ（よく使うものほど左）
 # 部品の絵（UiSkin）と背景 bg_home で描く（持ち主の指摘 2026-10-21「競馬のゲームなのでそれっぽいUIにしたい　ボタンとか色々」）。並びは前のまま
-# 4. 右：騎乗依頼（オーナーの顔・ひと言・レースと時期・依頼の馬・見送る）→ 12月のグランドフェスティバルの招待 → 今週の騎乗 → ニュース。左下：お手馬
+# 4. 右：騎乗依頼（オーナーの顔・ひと言・レースと時期・依頼の馬・見送る）→ 12月のグランドフェスティバルの招待 → 今週の騎乗 → 知らせ（ニュース）。左下：お手馬
+# 次週（騎乗の無い週）：週の結果の画面へ移らず、ここで週を進める（UiWeek。持ち主の指摘 2026-10-24）。押すと暦の札を畳み、週の締めが終わったら
+# 新しい週で開いて光らせる。帯の暦・資金も変わった所が光り、その週の知らせ（資金・成長・依頼・ニュース）は知らせの欄に光って入る。
+# 締めている間に押した次週は数えておき、終わったら続けて進める（騎乗のある週・オーナーの場面・GF の招待で止まり、0.35 秒は押しても進まない）
 extends UiScreen
 
 var b_main: Button
@@ -11,6 +14,11 @@ var cmd: Array[Button] = []
 var right: VBoxContainer
 var left: VBoxContainer
 var lcol: VBoxContainer   # 左の列（今週することの札 → お手馬 → 予約・G1）
+var cal: PanelContainer   # 暦の札（金の面）
+var cal_v: VBoxContainer  # 暦の札の中身（年目・月・週。めくれる所）
+var _guard := 0.0         # 連打で止まった週（騎乗のある週など）を、すぐ次の押しで進めない時刻
+var _chain := false       # 続けて次の週へ進めるところ（暦の札は開かずに畳み直す）
+const GUARD := 0.35
 
 func hint() -> String:
 	return "決定で今週のレースへ。お手馬の行で厩舎（番組表・引退）"
@@ -37,6 +45,11 @@ func build() -> void:
 	_build_hero()
 	_build_stable()
 	_build_right()
+	if UiWeek.flipped and not UiWeek.busy():
+		# 週が変わった：暦の札を新しい週で開いて光らせる（続けて進めるときは畳み直すので開かない）
+		UiWeek.flipped = false
+		if not _chain:
+			UiFx.unfold.call_deferred(cal_v, cal)
 
 # ---- 今週すること・暦の札・コマンドの札 ----
 func _build_hero() -> void:
@@ -50,7 +63,7 @@ func _build_hero() -> void:
 	h.add_theme_constant_override("separation", 22)
 	v.add_child(h)
 	# 暦の札（金の面）
-	var cal := PanelContainer.new()
+	cal = PanelContainer.new()
 	var sb = UiSkin.box("btn_main_normal", Vector4(10, 6, 10, 8))   # 金の面の札（部品の絵）
 	if sb == null:
 		sb = UiTheme.box(UiTheme.GOLD_FACE[1], UiTheme.GOLD_FACE[0], 2, UiTheme.R_PANEL, Vector4(10, 6, 10, 8))
@@ -61,9 +74,18 @@ func _build_hero() -> void:
 	cal.add_theme_stylebox_override("panel", sb)
 	cal.custom_minimum_size = Vector2(132, 124)
 	var cv := VBoxContainer.new()
+	cal_v = cv
 	cv.add_theme_constant_override("separation", -8)
 	cv.alignment = BoxContainer.ALIGNMENT_CENTER
-	cal.add_child(cv)
+	# 中身は入れ物の外の Control に置く（めくれる大きさを入れ物が戻さないように）
+	var hold := Control.new()
+	hold.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cal.add_child(hold)
+	cv.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cv.pivot_offset = Vector2(56, 55)
+	hold.add_child(cv)
+	if UiWeek.flipped and not UiWeek.busy() and not UiFx.less():
+		cv.scale = Vector2(1, 0)   # 新しい週で開く（build のあとで）
 	cv.add_child(UiTheme.label(HSText.year_n(UiFlow.year_n()), 15, UiTheme.ON_GOLD, HORIZONTAL_ALIGNMENT_CENTER))
 	var mm := UiTheme.title(HSText.month(G.month), 46, UiTheme.ON_GOLD)
 	mm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -88,12 +110,17 @@ func _build_hero() -> void:
 	b_main = UiScreen.button(txt, true, 600, 76, 28, true)
 	b_main.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b_main.disabled = G.get("gameOver") != null
+	b_main.set_meta("why", "資金が尽きた。はじめからやり直せる（タイトルへ）")
 	b_main.pressed.connect(_main)
 	mv.add_child(b_main)
 	var names := PackedStringArray()
 	for r in rides:
 		names.append(HSText.t("%s（%s）") % [HSText.race_label(r.card.race), HSText.horse_name(r.runner.horse)])
 	var sl := UiTheme.label(HSText.t("・").join(names) if names.size() else "今週は乗るレースがありません。番組表で出走を決めるか、依頼を受けましょう", 14, UiTheme.MUTED)
+	if names.is_empty() and UiWeek.last.size() and not UiWeek.busy():
+		# 進めたばかりの週のまとめ（くわしくは右の知らせ）
+		sl.text = HSText.t("%sを終えた・知らせ %d件") % [String(UiWeek.last[0].date), UiWeek.last.size()]
+		sl.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT)
 	sl.clip_text = true
 	sl.custom_minimum_size.x = 780
 	mv.add_child(sl)
@@ -116,13 +143,47 @@ func _main() -> void:
 	if UiFlow.in_week and UiFlow.current() != null:
 		go("card")
 		return
-	b_main.disabled = true
-	b_main.text = HSText.t("週を進めている…")
-	await get_tree().process_frame
-	await get_tree().process_frame
-	go(UiFlow.begin_week())
+	if UiWeek.busy():
+		UiWeek.queued += 1   # 締めている間の次週は数えておき、終わったら続けて進める
+		return
+	if clock < _guard:
+		UiFx.deny(b_main)   # 止まった週（騎乗のある週など）を、連打の続きで進めない
+		return
+	var nxt := UiFlow.begin_week(true)
+	if nxt != "home":
+		go(nxt)
+		return
+	UiFx.fold(cal_v)   # 暦の札を畳む（締め終わったら新しい週で開く）
+
+func _process(delta: float) -> void:
+	super(delta)
+	if UiWeek.busy() and UiWeek.poll():
+		_week_done()
+
+# 次週の締めを回している間に、ほかの札（見送る・知らせの行）で世界を変えるときは、締め終わって組み直してから
+func _settle() -> void:
+	if not UiWeek.busy(): return
+	UiWeek.wait()
+	_week_done()
+
+# 週を締め終わった：その場で組み直し（画面は移らない）、続けて押されていれば次の週へ
+func _week_done() -> void:
+	var stop := UiWeek.stop_here()
+	_chain = UiWeek.queued > 0 and not stop
+	UiWeek.queued = maxi(0, UiWeek.queued - 1) if _chain else 0
+	var had := b_main == null or b_main.has_focus() or get_viewport().gui_get_focus_owner() == null
+	_rebuild_now()
+	if had and b_main and not b_main.disabled: b_main.grab_focus()
+	else: focus_first()
+	if _chain:
+		UiFlow.begin_week(true)
+		UiFx.fold(cal_v)
+	elif stop:
+		_guard = clock + GUARD
+		if HSJockey.my_rides().size() > 0 or HSWorld.G.get("gameOver"): UiFx.ring(b_main)
 
 func _cmd(key: String) -> void:
+	_settle()   # セーブ・番組表などは世界を読むので、次週の締めが終わってから
 	for b in cmd:
 		if b.has_focus(): UiFlow.focus["home"] = b.get_meta("cmd", "")
 	match key:
@@ -335,17 +396,85 @@ func _build_right() -> void:
 		var rs = UiSkin.row(false, 44, Vector4(48, 6, 50, 6), 0.8)   # 今週の騎乗は表の行の絵
 		(pb[0] as PanelContainer).add_theme_stylebox_override("panel", rs if rs != null else UiTheme.box(UiTheme.SURFACE, UiTheme.LINE, 1, 10, Vector4(14, 7, 14, 7)))
 		right.add_child(pb[0])
-	right.add_child(UiScreen.section("ニュース", "", true))
-	var nb := _card(3)
+	_build_notes()
+
+# ---- 知らせ（ニュースの欄）：次週で進めた週の知らせ（UiWeek.notes。資金・成長・依頼・ニュース）を上に、残りはニュース ----
+# 進めたばかりの週の知らせは金の字と左の金の印で、上から 40ms ずつずれて入る。オーナーの場面・見せ場の知らせは押すと開く
+const NOTE_LINES := 5
+func _build_notes() -> void:
 	var G = HSWorld.G
-	for nw in G.news.slice(0, 5):
-		var l := UiTheme.label("%s　%s" % [HSText.week_label(nw.m, nw.w), HSText.tx(String(nw.text))], 13, UiTheme.GOLD_BRIGHT if nw.get("kind") in ["g1", "good"] else UiTheme.MUTED)
-		l.autowrap_mode = TextServer.AUTOWRAP_OFF
-		l.clip_text = true
-		l.custom_minimum_size.x = 100
-		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		(nb[1] as VBoxContainer).add_child(l)
+	var fresh: Array = UiWeek.last if UiWeek.last.size() and UiWeek.notes.size() and is_same(UiWeek.notes[0], UiWeek.last[0]) else []
+	right.add_child(UiScreen.section("知らせ", HSText.t("%sの知らせ %d件") % [String(fresh[0].date), fresh.size()] if fresh.size() else "", true))
+	var nb := _card(2)
+	var v: VBoxContainer = nb[1]
+	var seen := {}
+	var lines: Array = []
+	for x in UiWeek.notes:
+		if lines.size() >= NOTE_LINES: break
+		seen[String(x.text)] = true
+		lines.append({"date": String(x.date), "text": String(x.text), "kind": String(x.kind), "note": x, "fresh": fresh.has(x)})
+	for nw in G.news:
+		if lines.size() >= NOTE_LINES: break
+		var tx := HSText.tx(String(nw.text))
+		if seen.has(tx): continue
+		lines.append({"date": HSText.week_label(nw.m, nw.w), "text": tx, "kind": String(nw.get("kind", "")), "note": null, "fresh": false})
+	var k := 0
+	for ln in lines:
+		var row := _note_row(ln)
+		v.add_child(row)
+		if ln.fresh and not UiFx.less():
+			row.modulate.a = 0.0
+			var tw := row.create_tween()
+			tw.tween_interval(0.12 + 0.04 * k)
+			tw.tween_property(row, "modulate:a", 1.0, 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			k += 1
+	if lines.is_empty():
+		v.add_child(UiTheme.label("なし", 13, UiTheme.FAINT))
 	right.add_child(nb[0])
+
+func _note_row(ln: Dictionary) -> Control:
+	var col := UiTheme.MUTED
+	if ln.fresh: col = UiTheme.GOLD_BRIGHT if ln.kind in ["g1", "good", "win", "owner"] else UiTheme.IVORY
+	elif ln.kind in ["g1", "good"]: col = UiTheme.GOLD_BRIGHT
+	if ln.kind in ["warn"] and ln.fresh: col = UiTheme.WARN
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	var bar := ColorRect.new()   # 進めたばかりの週の知らせの印
+	bar.custom_minimum_size = Vector2(3, 16)
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar.color = UiTheme.GOLD if ln.fresh else Color(0, 0, 0, 0)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(bar)
+	h.add_child(UiTheme.label(String(ln.date), 13, UiTheme.MUTED))
+	var n = ln.note
+	if n != null and (n.get("scene") != null or n.get("moment") != null):
+		var b := UiScreen.button("▶ " + String(ln.text), false, 0, 28, 13)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.clip_text = true
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.add_theme_color_override("font_color", UiTheme.GOLD_BRIGHT)
+		b.pressed.connect(func(): _open_note(n))
+		h.add_child(b)
+		return h
+	var l := UiTheme.label(String(ln.text), 13, col)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	l.clip_text = true
+	l.custom_minimum_size.x = 100
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(l)
+	return h
+
+# 知らせの行から、オーナーの場面・見せ場を開く（見たら知らせの行は押せない形に戻る）
+func _open_note(n: Dictionary) -> void:
+	_settle()
+	var done := func():
+		n.erase("scene")
+		n.erase("moment")
+		_rebuild()
+	if n.get("scene") != null:
+		owner_scene(n.scene, done)
+	elif n.get("moment") != null:
+		celebrate(String(n.moment[0]), String(n.moment[1]), String(n.moment[2]), done)
 
 # 部品の絵の札（panel_card を低い札に合うよう縮めたもの）に縦の並び。絵が無ければ前の板
 func _card(sep := 3, h := 96.0) -> Array:
@@ -423,8 +552,11 @@ func _offer_card(o: Dictionary) -> Variant:
 	var hl := HBoxContainer.new()
 	hl.add_theme_constant_override("separation", 8)
 	hl.add_child(UiTheme.label(HSText.horse_name(h), 15, UiTheme.GOLD_BRIGHT))
-	hl.add_child(UiTheme.label("%s%s" % [HSText.sex_age(h, int(float(o.y) - float(h.born))), HSText.t("・%d番人気") % int(x.pop) if x and x.get("pop") else ""], 13, UiTheme.MUTED))
-	hl.add_child(UiScreen.spacer())
+	var sa := UiTheme.label("%s%s" % [HSText.sex_age(h, int(float(o.y) - float(h.born))), HSText.t("・%d番人気") % int(x.pop) if x and x.get("pop") else ""], 13, UiTheme.MUTED)
+	sa.clip_text = true   # 受けた依頼の札（「依頼の馬に乗る」の札が並ぶ）で、右の列が横へはみ出さないように
+	sa.custom_minimum_size.x = 40
+	sa.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hl.add_child(sa)
 	var bh := HBoxContainer.new()
 	hl.add_child(bh)
 	v.add_child(hl)
@@ -440,6 +572,7 @@ func _offer_card(o: Dictionary) -> Variant:
 	var oid: String = o.oid
 	var bd := UiScreen.button("自分の馬に乗る" if clash else "見送る（来年）", false, 160 if clash else 140, 36, 14, true)
 	bd.pressed.connect(func():
+		_settle()
 		var line2 := HSOwners.line(oid, "decline", float(o.line), {"horse": h.name, "race": HSRaces.label(race)}, {"race": race, "horse": h})
 		var err = HSOwners.decline(oid)
 		if err: toast(HSText.tx(String(err)), "bad")
@@ -487,6 +620,17 @@ func _rebuild(msg := "") -> void:
 	for c in get_children():
 		c.queue_free()
 	await get_tree().process_frame
+	_rebuild_now()
+	focus_first()
+	if msg != "":
+		toast(msg, "good")
+
+# その場で組み直す（入りの動きは無し。帯の数は前と変わった所だけ光る。UiScreen.make_band）
+func _rebuild_now() -> void:
+	for c in get_children():
+		if c.is_queued_for_deletion(): continue
+		remove_child(c)
+		c.queue_free()
 	build()
 	_build_keybar()
 	fade = ColorRect.new()
@@ -494,9 +638,6 @@ func _rebuild(msg := "") -> void:
 	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(fade)
-	focus_first()
-	if msg != "":
-		toast(msg, "good")
 
 func focus_first() -> void:
 	var key := String(UiFlow.focus.get("home", ""))

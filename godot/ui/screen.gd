@@ -32,6 +32,7 @@ func _ready() -> void:
 	UiSettings.boot()        # 設定（画面の大きさ・音量・振動・割り当て。user://settings.cfg）を1回だけ読んで効かせる
 	add_child(UiPad.new())   # パッドの A・B・十字キーの押しっぱなし・左スティック（ui/pad.gd）
 	_parse_args()
+	get_tree().node_added.connect(_on_node_added)   # 押した返り（UiFx.press）をこの画面のボタン全部に付ける
 	if needs_world() and not UiFlow.active():
 		if demo >= 0:
 			if demo_week():
@@ -132,6 +133,7 @@ func on_tab(_d: int) -> void: pass
 func go(name: String) -> void:
 	if shots.size() > 0:
 		return
+	UiWeek.wait()   # 次週の締めを回している間に移るときは、締め終わってから（次の画面が世界を触る）
 	var tw := create_tween()
 	tw.tween_property(fade, "color:a", 1.0, 0.16)
 	tw.tween_callback(func(): UiFlow.go(get_tree(), name))
@@ -178,7 +180,9 @@ void fragment() {
 
 # ---- 見出しの帯：金の丸の印・明朝の画面名・注記・右に帯の数 ----
 # icon（UiSkin のアイコンの名前）を渡すと、部品の絵の帯（band_title）と丸い札に金の線画のアイコン。絵が無ければ前の形（金の丸に mark の字）
+var _money_prev := NAN
 func make_band(mark: String, title: String, sub: String, stats: Array, icon := "") -> UiBand:
+	_money_prev = _money_last
 	band = UiTheme.band(76)
 	if icon != "":
 		band.art = UiSkin.band(76)
@@ -223,9 +227,32 @@ func make_band(mark: String, title: String, sub: String, stats: Array, icon := "
 	chips.add_theme_constant_override("separation", 10)
 	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	h.add_child(chips)
+	var now := {}
 	for s in stats:
-		chips.add_child(stat(String(s[0]), String(s[1]), String(s[2]) if s.size() > 2 else ""))
+		var chip := stat(String(s[0]), String(s[1]), String(s[2]) if s.size() > 2 else "")
+		chips.add_child(chip)
+		now[String(s[0])] = String(s[1])
+		# 帯を組み直したとき、前と値が変わった数（資金・暦・お手馬の数など）を光らせる。資金は増減の札も
+		if _stats_last.has(String(s[0])) and _stats_last[String(s[0])] != String(s[1]):
+			_tick_stat.call_deferred(chip, String(s[2]) if s.size() > 2 else "")
+	_stats_last = now
+	if HSWorld.G != null: _money_last = float(HSWorld.G.player.money)
 	return band
+
+var _stats_last := {}      # 帯の数の前の値（見出し → 字）
+var _money_last := NAN     # 帯を組んだときの資金（増減の札）
+
+func _tick_stat(chip: PanelContainer, kind: String) -> void:
+	await get_tree().process_frame   # 並びが決まってから（光の縁は札の位置と大きさに合わせる）
+	if not is_instance_valid(chip): return
+	var vl: Label = chip.get_child(0).get_child(1)
+	if kind == "money" and HSWorld.G != null and not is_nan(_money_prev):
+		var d := float(HSWorld.G.player.money) - _money_prev
+		if d != 0.0:
+			UiFx.tick(vl, d > 0.0, HSText.money(absf(d)))
+			return
+	UiFx.tick(vl, true)
+	UiFx.ring(chip)
 
 # 帯の数（黒 28% の札。上に見出し、下に値。資金は金・注意は橙）
 static func stat(head: String, val: String, kind := "") -> PanelContainer:
@@ -638,20 +665,33 @@ static func danger_button(text: String, w := 180.0, h := 48.0, fs := 17) -> Butt
 	b.add_theme_stylebox_override("focus", f)
 	return b
 
-# ---- トースト（押した結果のひと言。下の真ん中に 2.2 秒） ----
-func toast(text: String, kind := "") -> void:
-	if _toast:
-		_toast.queue_free()
-	_toast = PanelContainer.new()
-	var col := UiTheme.BAD if kind == "bad" else (UiTheme.GOOD if kind == "good" else UiTheme.GOLD)
-	_toast.add_theme_stylebox_override("panel", UiTheme.box(Color(UiTheme.SUNK.r, UiTheme.SUNK.g, UiTheme.SUNK.b, 0.95), col, 1, 999, Vector4(22, 8, 22, 9)))
-	_toast.add_child(UiTheme.label(text, 15, UiTheme.IVORY))
-	_toast.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_toast.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_toast.position.y = -96
-	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_toast)
-	_toast_until = clock + 2.2
+# ---- 知らせ（押した結果のひと言。UiFx.notice：下の真ん中に、字の数で読める間） ----
+# 変わった所も返す：target（無ければいまカーソルのある札）を、うまくいけば金の縁で光らせ、だめなら赤い縁で揺らす
+func toast(text: String, kind := "", target: Control = null) -> void:
+	_toast = UiFx.notice(self, text, kind)
+	_toast_until = clock + UiFx.hold_time(text) + UiFx.NOTE_IN + UiFx.NOTE_OUT
+	_toast_mark.call_deferred(kind, target)
+
+func _toast_mark(kind: String, target: Control) -> void:
+	await get_tree().process_frame   # 組み直した札の並びが決まってから
+	var c: Control = target if target != null and is_instance_valid(target) else get_viewport().gui_get_focus_owner()
+	if c == null or not is_instance_valid(c) or not is_ancestor_of(c): return
+	if kind == "bad": UiFx.deny(c)
+	elif kind == "good": UiFx.ring(c)
+
+# ---- 押した返り：この画面に入ったボタンに付ける。押せない札（disabled）に理由（meta "why"）があれば、押したとき理由を出す ----
+func _on_node_added(n: Node) -> void:
+	if not (n is BaseButton) or not is_ancestor_of(n): return
+	var b := n as BaseButton
+	if b.has_meta("_fx"): return
+	b.set_meta("_fx", true)
+	b.button_down.connect(func(): UiFx.press(b))
+	b.gui_input.connect(func(ev: InputEvent):
+		if not b.disabled or not b.has_meta("why"): return
+		var hit: bool = (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT) or ev.is_action_pressed("ui_accept")
+		if hit:
+			toast(HSText.tx(String(b.get_meta("why"))), "bad", b)
+			b.accept_event())
 
 # ---- 操作の案内（右下。左に選んでいる札のひと言） ----
 func _build_keybar() -> void:
@@ -689,7 +729,7 @@ func enter_anim() -> void:
 			ctl.modulate.a = 0.0
 			var tw := create_tween().set_parallel(true)
 			tw.tween_property(ctl, "modulate:a", 1.0, 0.34 if c == band else 0.24)
-			if c != band:
+			if c != band and not UiFx.less():   # 動きを減らす設定では、位置を動かさず濃さだけ
 				var y0 := ctl.position.y
 				ctl.position.y = y0 + 14.0
 				tw.tween_property(ctl, "position:y", y0, 0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -730,7 +770,7 @@ func _process(delta: float) -> void:
 
 func _tick() -> void:
 	if _toast and clock > _toast_until:
-		_toast.queue_free()
+		if is_instance_valid(_toast): _toast.queue_free()
 		_toast = null
 
 # ---- 撮影 ----
