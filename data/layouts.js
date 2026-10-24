@@ -767,7 +767,7 @@
     },
     'ランドウィック': {
       turf: [
-        { id: '周回', lap: 2224, straight: 410, use: [1200, 1400, 1600, 2000, 2400, 3200],
+        { id: '周回', lap: 2224, straight: 410, use: [1200, 1400, 1600, 2000, 2400, 2800, 3200],
           segs: [['S', 410], ['C', 120, 120, 90, 3], ['S', 205], ['C', 120, 120, 90, 3], ['S', 530], ['C', 120, 120, 90, 1], ['S', 205], ['C', 120, 120, 90, 1], ['S', 120]],
           elev: [[0, 1], [400, 0], [1900, 0], [2224, 1]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/australia/randwick.html', 'https://www.jairs.jp/contents/courses/au.html', 'https://en.wikipedia.org/wiki/Randwick_Racecourse'],
@@ -946,6 +946,11 @@
           elev: [[0, 0], [820, 4], [1100, 8], [1450, 6], [2000, 2], [2600, 3], [3200, 1]],
           src: ['https://www.jra.go.jp/keiba/overseas/country/gbr/goodwood.html', 'https://en.wikipedia.org/wiki/Goodwood_Cup'],
           note: 'グッドウッドカップ（約3219m）。ループを回ってからトップベンドの回りと同じ直線へ。ループの前の形と高さは出典に無い', approx: true },
+        { id: '旧カップコース', lap: 4000, straight: 820, open: true, use: [4000],
+          segs: [['S', 820], ['C', 100, 100, 135, 3], ['S', 350], ['C', 110, 110, 135, 2], ['S', 335.2], ['C', 200, 200, 90, 1], ['S', 1685.8]],
+          elev: [[0, 0], [820, 4], [1100, 8], [1450, 6], [2000, 2], [2600, 3], [4000, 1]],
+          src: ['https://en.wikipedia.org/wiki/Goodwood_Cup', 'https://www.galopp-sieger.de/galoppsieger/sieger?rennkz=EGoCup&backlink=1'],
+          note: '1990年までのグッドウッドカップ（2マイル5ハロン＝約4225m。暦はゲームの上限の4000m）。カップコースより長くループを回る。ループの形は出典に無いので、カップコースの最初の直線を延ばした仮の形', approx: true },
       ],
     },
     'ニューベリー': {

@@ -1456,6 +1456,7 @@ require('./extra_audio.js')(check, assert, HS); // BGM の曲の書式と長さ
 require('./extra_rumble.js')(check, assert, HS); // コントローラーの振動
 require('./extra_balance.js')(check, assert, HS); // 立ち回りの噛み合い・競り合いの気合
 require('./extra_racefix.js')(check, assert, HS); // 番組の保留の直し（週の決め方・2歳以上・東京大賞典・ゴールデンフリースS・海外の賞金）
+require('./extra_holes.js')(check, assert, HS); // 隠し馬の名鑑（B9）とデータの穴（B10）
 require('./extra_collision.js')(check, assert, HS); // 当たり判定（重ならない・何もない所で止まらない・押さないと横へ動かない）と、競り合いは根性で粘る
 require('./extra_beat.js')(check, assert, HS); // 拍子（しごく手が馬の1完歩に合うと少し得）・ゲートを出たあとの隊列
 require('./extra_ui.js')(check, assert, HS); // 画面の仕組み：並べ替え・絞り込み・番組表と予約

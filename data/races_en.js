@@ -130,5 +130,7 @@
     'ミレイディハンデキャップ': 'Milady Handicap', 'ヴァニティハンデキャップ': 'Vanity Handicap', 'ラフィアンハンデキャップ': 'Ruffian Handicap',
     'ハリウッドスターレットステークス': 'Hollywood Starlet Stakes', 'サンタアニタオークス': 'Santa Anita Oaks', 'マザーグースステークス': 'Mother Goose Stakes',
     'ハスケル招待ハンデキャップ': 'Haskell Invitational Handicap', 'ガゼルハンデキャップ': 'Gazelle Handicap', 'ベルデイムステークス': 'Beldame Stakes',
+    'AJCプレート': 'AJC Plate', 'カンタベリーギニー': 'Canterbury Guineas',
+    '全日本三才優駿': 'Zen-Nippon Sansai Yushun', '東京王冠賞': 'Tokyo Okan Sho', '大井記念': 'Oi Kinen',
   };
 })();

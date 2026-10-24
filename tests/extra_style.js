@@ -24,7 +24,7 @@ module.exports = function (check, assert, HS) {
   check('style: 史実の勝ち鞍の記録のためのレースは番組に出ず、勝ち鞍の格と馬場に効く', () => {
     const hr = D.histRaces || [];
     assert(hr.length > 0, '表が空');
-    const used = new Set(); for (const d of D.historic) for (const w of d.wins || []) used.add(w);
+    const used = new Set(); for (const d of D.historic.concat(D.legendsExtra || [])) for (const w of d.wins || []) used.add(w); // 史実馬のデータより古い名馬（data/legends.js）の勝ちも
     for (const r of hr) {
       assert((r.to || 9999) < (U.ERA || 2025) && r.from <= r.to, `${r.name} が番組の年に入る`);
       assert(['G1', 'G2', 'G3'].includes(r.grade) && ['芝', 'ダ'].includes(r.surface) && r.dist >= 800 && r.month >= 1 && r.month <= 12, `${r.name} の項目`);
