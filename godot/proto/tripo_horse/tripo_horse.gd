@@ -3,16 +3,17 @@
 # v4（v3 に 4本とも浮く走り・立ち姿 Stand・常歩 Walk・騎手の点 Saddle・頭絡）と
 # v5（v4 の首と肩を作り直し・速歩 Trot・駈歩 Canter・毛色のシェーダの補正）と
 # v6（v5 の首を長く細く・頭を小さく・首と頭を振る・たてがみを細い房に・目と鼻先の黒を小さく）と
-# v7（首の付け根を太く喉へ細く・走りで胴を揺らして頭を止め気味に・常歩で頭を低くうなずく・常歩の首の補正・正面の鼻の穴と口）と、いまの馬（ViewHorse）を切り替え・並べて見る
+# v7（首の付け根を太く喉へ細く・走りで胴を揺らして頭を止め気味に・常歩で頭を低くうなずく・常歩の首の補正・正面の鼻の穴と口）と
+# v8（v7 の立ち姿と走りの首を短く・走りの頭を低く）と、いまの馬（ViewHorse）を切り替え・並べて見る
 # ゲームの場面・メニューからは呼ばない。本採用は持ち主が実画面で比べてから決める（2026-10-22）
 #   開く：sh godot/tools/run_scene.sh res://proto/tripo_horse/tripo_horse.tscn
-#   撮る：… -- --out=DIR --ver=v7|v6|v5|v4|v3|v2 --view=side|rear|front|feet|neck|face --lay=solo|pair|trio|trio4|trio5|trio6|trio7|quad|quad6|quad7 --v=16 --mode=slip|cadence --t=秒 --seq=枚数 --dt=秒
+#   撮る：… -- --out=DIR --ver=v8|v7|v6|v5|v4|v3|v2 --view=side|rear|front|feet|neck|face --lay=solo|pair|trio|trio4|trio5|trio6|trio7|trio8|quad|quad6|quad7|quad8 --v=16 --mode=slip|cadence --t=秒 --seq=枚数 --dt=秒
 #             --coat=bay|chestnut|grey --socks=1 --face=1 --regions=1 --jockey=1 --tag=名前 --shots=キー:値,…/…（1回の起動で何枚も）
-#             --neckof=v3|v4|v5|v6|v7|old（--view=neck・face で寄る馬）
+#             --neckof=v3|v4|v5|v6|v7|v8|old（--view=neck・face で寄る馬）
 #             --view=face は正面の顔の寄り（--neckof の馬。並べたときは --lay の馬を左右に寄せて並べる）
-#             速さで歩き方が替わる（v4：0.3 m/秒より遅いと立ち姿・5.5 m/秒より遅いと常歩。v5〜v7：立ち姿 0.3・常歩 2.4・速歩 5.5・駈歩 11 より遅いとき。tripo_model.gd の GAIT_V）
-#             --jockey=1 は v4〜v7 にも騎手を乗せる
-#   操作：1 横・2 斜め後ろ・3 正面・4 足元・5 首と肩の寄り・6 正面の顔の寄り／V v2〜v7／C 並べ方（1頭・いまの馬と・v2/v3/いまの馬・v3/v4/いまの馬・v4/v5/いまの馬・v5/v6/いまの馬・v6/v7/いまの馬・4頭・v4/v5/v6/いまの馬・v5/v6/v7/いまの馬）／↑↓ 速さ／M 再生の合わせ方
+#             速さで歩き方が替わる（v4：0.3 m/秒より遅いと立ち姿・5.5 m/秒より遅いと常歩。v5〜v8：立ち姿 0.3・常歩 2.4・速歩 5.5・駈歩 11 より遅いとき。tripo_model.gd の GAIT_V）
+#             --jockey=1 は v4〜v8 にも騎手を乗せる
+#   操作：1 横・2 斜め後ろ・3 正面・4 足元・5 首と肩の寄り・6 正面の顔の寄り／V v2〜v8／C 並べ方（1頭・いまの馬と・v2/v3/いまの馬・v3/v4/いまの馬・v4/v5/いまの馬・v5/v6/いまの馬・v6/v7/いまの馬・v7/v8/いまの馬・4頭・v4/v5/v6/いまの馬・v5/v6/v7/いまの馬・v6/v7/v8/いまの馬）／↑↓ 速さ／M 再生の合わせ方
 #         K 毛色（鹿毛・栗毛・芦毛）／W 白い脚／F 顔の白徴／R 領域の表示／J いまの馬の騎手／Space 止める
 #
 # 向き：元の GLB は Y-up・前 -X・馬の左 +Z。ゲームの馬（ViewHorse）は前 +Z・左 +X なので、GLB の根を Y のまわりに +90° 回す（骨は回さない。tripo_model.gd）
@@ -28,7 +29,7 @@ const GAP_FACE := 1.3                       # 正面の顔の寄りで並べる�
 const LOOP_Z := 400.0                       # この長さごとに位置を巻き戻す（カメラも一緒なので見えない）
 const SPEEDS := [0.0, 1.6, 4.0, 8.0, 12.0, 15.56, 16.0, 18.0]
 const VIEWS := {"side": "横", "rear": "斜め後ろ", "front": "正面", "feet": "足元", "neck": "首と肩の寄り", "face": "正面の顔の寄り"}
-const VERS := ["v2", "v3", "v4", "v5", "v6", "v7"]
+const VERS := ["v2", "v3", "v4", "v5", "v6", "v7", "v8"]
 const COATS := {"bay": ["鹿毛", 4.0], "chestnut": ["栗毛", 4.0], "grey": ["芦毛", 7.0]}
 const COAT_NAME := {"bay": "鹿毛", "chestnut": "栗毛", "grey": "芦毛"}
 const SOCKS := [0.24, 0.16, 0.34, 0.46]     # 白い脚を試すときの長さ（m。左前・右前・左後・右後）
@@ -36,7 +37,7 @@ const SOCKS := [0.24, 0.16, 0.34, 0.46]     # 白い脚を試すときの長さ�
 var rig: Node3D               # 試作の馬の親（移動する。いま見ている版）
 var tri := {}                 # 版 → 試作の馬（tripo_model.gd）
 var tri_rig := {}             # 版 → 親
-var ver := "v7"               # いま見ている版
+var ver := "v8"               # いま見ている版
 var old: ViewHorse            # いまの馬（比べる）
 var old_rig: Node3D
 var race_info: Dictionary
@@ -45,13 +46,13 @@ var hud: Label
 var v := 16.0                 # 移動の速さ（m/秒）
 var mode := "slip"            # slip＝蹄が滑らない（距離÷試作の完歩）／cadence＝いまの馬と同じ完歩の数（距離÷7.2m）
 var view := "side"
-var lay := "solo"             # solo＝試作1頭／pair＝試作といまの馬／trio＝v2・v3・いまの馬／trio4＝v3・v4・いまの馬／trio5＝v4・v5・いまの馬／trio6＝v5・v6・いまの馬／trio7＝v6・v7・いまの馬／quad6＝v4・v5・v6・いまの馬／quad7＝v5・v6・v7・いまの馬／quad＝v2・v3・v4・いまの馬
+var lay := "solo"             # solo＝試作1頭／pair＝試作といまの馬／trio＝v2・v3・いまの馬／trio4＝v3・v4・いまの馬／trio5＝v4・v5・いまの馬／trio6＝v5・v6・いまの馬／trio7＝v6・v7・いまの馬／trio8＝v7・v8・いまの馬／quad6＝v4・v5・v6・いまの馬／quad7＝v5・v6・v7・いまの馬／quad8＝v6・v7・v8・いまの馬／quad＝v2・v3・v4・いまの馬
 var coat := "bay"
 var socks := false
 var face := false
 var regions := false
 var paused := false
-var neck_of := ""             # 首と肩の寄り・顔の寄りで見る馬（v2〜v7・old。空はいま見ている版）
+var neck_of := ""             # 首と肩の寄り・顔の寄りで見る馬（v2〜v8・old。空はいま見ている版）
 var t := 0.0                  # 経った時間（秒）
 var dist := 0.0               # 走った距離（m）
 
@@ -224,7 +225,7 @@ func build_old(with_jockey: bool) -> void:
 
 # 騎手・鞍・ゼッケンを出すか（馬の形どうしを比べるときは消す）
 func set_jockey(on: bool) -> void:
-	for vv in ["v4", "v5", "v6", "v7"]:
+	for vv in ["v4", "v5", "v6", "v7", "v8"]:
 		if not tri.has(vv):
 			continue
 		var m = tri[vv]
@@ -260,6 +261,8 @@ func slots() -> Dictionary:
 		"trio6": return {"v5": -1, "v6": 0, "old": 1}
 		"trio7": return {"v6": -1, "v7": 0, "old": 1}
 		"quad7": return {"v5": -1, "v6": 0, "v7": 1, "old": 2}
+		"trio8": return {"v7": -1, "v8": 0, "old": 1}
+		"quad8": return {"v6": -1, "v7": 0, "v8": 1, "old": 2}
 		"quad6": return {"v4": -1, "v5": 0, "v6": 1, "old": 2}
 		"quad": return {"v2": -1, "v3": 0, "v4": 1, "old": 2}
 		"pair": return {ver: 0, "old": 1}
@@ -273,7 +276,7 @@ func phase_of(vv: String) -> float:
 	var L: float = STRIDE_OLD if mode == "cadence" else tri[vv].stride_m()
 	return dist / L
 
-# 歩き方（v4〜v7。ほかは走りだけ。境は tripo_model.gd の GAIT_V）
+# 歩き方（v4〜v8。ほかは走りだけ。境は tripo_model.gd の GAIT_V）
 func gait_of(vv: String) -> String:
 	return tri[vv].gait_for(v)
 
@@ -371,7 +374,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		KEY_5: view = "neck"
 		KEY_6: view = "face"
 		KEY_V: ver = VERS[(VERS.find(ver) + 1) % VERS.size()]
-		KEY_C: lay = {"solo": "pair", "pair": "trio", "trio": "trio4", "trio4": "trio5", "trio5": "trio6", "trio6": "trio7", "trio7": "quad6", "quad6": "quad7", "quad7": "quad", "quad": "solo"}[lay]
+		KEY_C: lay = {"solo": "pair", "pair": "trio", "trio": "trio4", "trio4": "trio5", "trio5": "trio6", "trio6": "trio7", "trio7": "trio8", "trio8": "quad6", "quad6": "quad7", "quad7": "quad8", "quad8": "quad", "quad": "solo"}[lay]
 		KEY_J: set_jockey(not old.jockey.visible)
 		KEY_K: coat = {"bay": "chestnut", "chestnut": "grey", "grey": "bay"}[coat]
 		KEY_W: socks = not socks
@@ -414,7 +417,7 @@ func update_hud() -> void:
 		return
 	var m = tri[ver]
 	var r := anim_rate()
-	var lays := {"solo": "試作だけ", "pair": "左から 試作 %s・いまの馬" % ver, "trio": "左から v2・v3・いまの馬", "trio4": "左から v3・v4・いまの馬", "trio5": "左から v4・v5・いまの馬", "trio6": "左から v5・v6・いまの馬", "trio7": "左から v6・v7・いまの馬", "quad6": "左から v4・v5・v6・いまの馬", "quad7": "左から v5・v6・v7・いまの馬", "quad": "左から v2・v3・v4・いまの馬"}
+	var lays := {"solo": "試作だけ", "pair": "左から 試作 %s・いまの馬" % ver, "trio": "左から v2・v3・いまの馬", "trio4": "左から v3・v4・いまの馬", "trio5": "左から v4・v5・いまの馬", "trio6": "左から v5・v6・いまの馬", "trio7": "左から v6・v7・いまの馬", "trio8": "左から v7・v8・いまの馬", "quad6": "左から v4・v5・v6・いまの馬", "quad7": "左から v5・v6・v7・いまの馬", "quad8": "左から v6・v7・v8・いまの馬", "quad": "左から v2・v3・v4・いまの馬"}
 	hud.text = "馬モデル試作 %s（Tripo の形・骨 %d 本・%s %.2f 秒）  倍率 %.1f・1完歩 %.2f m\n視点：%s　［1］横 ［2］斜め後ろ ［3］正面 ［4］足元　［V］版　［C］並べ方：%s\n速さ %.2f m/秒 ［↑↓］　再生の合わせ方 ［M］：%s　再生 ×%.2f・1秒に %.2f 完歩\n毛色 ［K］：%s　［W］白い脚：%s　［F］顔の白徴：%s　［R］領域：%s" % [
 		ver, m.skel.get_bone_count(), m.clip_of(gait_of(ver)) if m.has_gaits() else m.clip, m.cycle_of(gait_of(ver)) if m.has_gaits() else m.cycle(), m.S, m.stride_m(), VIEWS.get(view, view), lays[lay],
 		v, "接地（蹄が滑らない）" if mode == "slip" else "完歩の数（いまの馬と同じ 7.2m）", r, r / (m.cycle_of(gait_of(ver)) if m.has_gaits() else m.cycle()),

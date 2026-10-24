@@ -1,4 +1,4 @@
-# 馬モデル試作の比べの数を測る（v4〜v7・いまの馬を同じ物差しで。速さ 16 m/秒・倍率 2.6）
+# 馬モデル試作の比べの数を測る（v4〜v8・いまの馬を同じ物差しで。速さ 16 m/秒・倍率 2.6）
 #   godot --headless --path godot -s res://proto/tripo_horse/measure.gd [-- --cpu=0]
 # 形の数：試作の場面（tripo_horse.gd）で 3 頭を同じ距離だけ走らせ、1/240 秒ごとに
 #   蹄（試作は UV2 の領域 3 と脚の番号、いまの馬は指と趾の骨が主な頂点）を CPU で皮に写して、
@@ -16,7 +16,7 @@
 #   引き継ぎの anatomy-comparison.json（首の上の線は き甲→うなじの皮の 33 点の線の長さ・頭はうなじ→上唇）とは点と測り方が違うので、数そのものは合わない（並べる版どうしの比べの目安）
 # 胴と頭のピッチ（v7 の依頼の物差し）：胴＝背の骨（試作は Spine_0→Spine_7、いまの馬は腰の骨→首の付け根の骨）の向きの水平からの角、
 #   頭＝うなじ→鼻先の皮の点の向きの水平からの角。1周期の幅（最大−最小）を出す。引き継ぎは胴を Spine_0→Spine_7、頭を皮の点で測る（同じ考え）
-# 補正のブレンドシェイプ（RaceNeckCorrective・v7 の WalkNeckCorrective）は、どちらも今の値を掛けて皮を写す
+# 補正のブレンドシェイプ（RaceNeckCorrective・v7 と v8 の WalkNeckCorrective）は、どちらも今の値を掛けて皮を写す
 # 1コマの CPU：レース画面（scenes/race.tscn。16 頭）を 20 秒まで進め、advance(1/60) を 180 回まわした時間（描く所は含まない）
 extends SceneTree
 
@@ -33,12 +33,12 @@ func _initialize() -> void:
 	var sc = load("res://proto/tripo_horse/tripo_horse.tscn").instantiate()
 	root.add_child(sc)
 	await process_frame
-	sc.lay = "quad7"
+	sc.lay = "quad8"
 	sc.v = 16.0
 	sc.mode = "slip"
 	sc.refresh()
 	var subj := {}
-	for vv in ["v4", "v5", "v6", "v7"]:
+	for vv in ["v4", "v5", "v6", "v7", "v8"]:
 		subj[vv] = tripo_subject(sc.tri[vv])
 	subj["old"] = old_subject(sc.old)
 	var t := 0.0
@@ -130,7 +130,7 @@ func _initialize() -> void:
 			st[0], st[1], st[1] / maxf(1e-6, st[0]), st[2], st[3], walk[k][0], walk[k][1], walk[k][2]])
 	sc.free()
 	if do_cpu:
-		for pv in ["", "v6", "v6-nojockey", "v7", "v7-nojockey"]:
+		for pv in ["", "v6", "v6-nojockey", "v7", "v7-nojockey", "v8", "v8-nojockey"]:
 			cpu(pv)
 	quit()
 

@@ -1,4 +1,6 @@
-# 馬モデル試作 v2〜v7（godot/proto/tripo_horse/。ゲームからは呼ばない独立した場面と、レース画面の見比べの差し替え --proto-horse=v3〜v7）
+# 馬モデル試作 v2〜v8（godot/proto/tripo_horse/。ゲームからは呼ばない独立した場面と、レース画面の見比べの差し替え --proto-horse=v3〜v8）
+# - v8：v7 と同じ確かめ（骨・5つのクリップ・首の補正 2 つ・完歩・三角形・import の設定・UV2・COLOR_0・LOD・毛色は v7/coat.gdshader・騎手）に、
+#        取付点 6 つが v8 の attachment-tracks.json に合う（Bit は v7 と混ぜない）・立ち姿の首が v7 より短い・走りのうなじが v7 より低い・レース画面で v8 に替わる
 # - v7：v6 の約束（骨 54 本・5つのクリップの長さとループ・RaceNeckCorrective の値・完歩・速さで歩き方を選ぶ・き甲の上下・うなじの上下）が変わらない・三角形 19,168（v6）まで
 #        首の補正を名前で 2 つ（WalkNeckCorrective は常歩だけ 1。形を動かし、歩き方の切り替えで混ざり、立ち姿で両方 0）・走ると胴のピッチが 5° より大きく揺れる
 #        取り込み：.import を読み直して設定を確かめ、240 コマ・圧縮なし・UV2・COLOR_0（頭の座標）・法線の絵（強さ 0.03）・LOD が残る
@@ -654,6 +656,229 @@ func run(t) -> void:
 		var fwd7: Vector3 = m7.rider_hold.global_basis.z.normalized()
 		t.ok(m7.rider != null and (m7.rider_hold.global_transform * m7._seat0).distance_to(m7.socket_xf("Saddle").origin) < 1e-3 and fwd7.dot(m7.global_basis.z.normalized()) > 0.98 and m7.rider_hold.global_basis.y.normalized().y > 0.95,
 			"tripo v7: %s で騎手の鞍の上面が Saddle に重なり、前（+Z）・上（+Y）を向く（%s）" % [gg, str(fwd7)])
+	# ---- v8 ----
+	var m8 = sc.tri["v8"]
+	var ap8: AnimationPlayer = m8.player
+	t.eq(m8.skel.get_bone_count(), 54, "tripo v8: 骨 54 本")
+	for c in lens5:
+		t.ok(ap8.has_animation(c), "tripo v8: クリップ %s がある" % c)
+		if not ap8.has_animation(c):
+			continue
+		var a8 := ap8.get_animation(c)
+		t.ok(absf(a8.length - float(lens5[c])) < 0.002 and a8.loop_mode == Animation.LOOP_LINEAR, "tripo v8: %s は約 %.3f 秒のループ（%.4f）" % [c, lens5[c], a8.length])
+		var mx8 := 0
+		var comp8 := 0
+		for i in a8.get_track_count():
+			mx8 = maxi(mx8, a8.track_get_key_count(i))
+			if a8.track_is_compressed(i):
+				comp8 += 1
+		t.ok(mx8 >= int(round(a8.length * 240.0)) and comp8 == 0, "tripo v8: %s は 240 コマのキーを間引かず圧縮しない（1本 %d キー・圧縮 %d）" % [c, mx8, comp8])
+		var g8: String = gait5[c]
+		m8.set_motion(g8, 0.0, 0.0)
+		var q8: Array[Vector3] = []
+		for i in m8.skel.get_bone_count():
+			q8.append(m8.skel.get_bone_global_pose(i).origin)
+		var fin8 := true
+		for k in range(1, 49):
+			m8.set_motion(g8, k / 48.0, 0.0)
+			if not m8.bones_finite():
+				fin8 = false
+		var dr8 := 0.0
+		for i in m8.skel.get_bone_count():
+			dr8 = maxf(dr8, m8.skel.get_bone_global_pose(i).origin.distance_to(q8[i]))
+		t.ok(fin8 and dr8 < 1e-3, "tripo v8: %s は 1 周で同じ形に戻り骨が有限（ずれ %s）" % [c, str(dr8)])
+		# 首の補正 2 つ（名前で読む）：RaceNeckCorrective は v6 と同じ値、WalkNeckCorrective は常歩だけ 1
+		m8.set_motion(g8, 0.37, 0.0)
+		var rw: float = TripoModel.MORPH_OF.RaceNeckCorrective[g8]
+		var ww8: float = TripoModel.MORPH_OF.WalkNeckCorrective[g8]
+		t.ok(String(ap8.current_animation) == c and is_equal_approx(m8.morph_value("RaceNeckCorrective"), rw) and is_equal_approx(m8.morph_value("WalkNeckCorrective"), ww8),
+			"tripo v8: %s の首の補正 走り %.0f・常歩 %.0f（%.3f・%.3f）" % [c, rw, ww8, m8.morph_value("RaceNeckCorrective"), m8.morph_value("WalkNeckCorrective")])
+		t.ok(is_equal_approx(rw, float(morph5[c])), "tripo v8: %s の RaceNeckCorrective は v5・v6 と同じ値" % c)
+	t.eq(m8.morph_names().size(), 2, "tripo v8: 首の補正を名前で 2 つ持つ（%s）" % str(m8.morph_names()))
+	var gv8 := []
+	for vv in [0.0, 1.3, 3.9, 7.5, 16.0]:
+		gv8.append(m8.gait_for(vv))
+	t.eq(gv8, ["stand", "walk", "trot", "canter", "race"], "tripo v8: 速さで 立ち姿・常歩・速歩・駈歩・走り（v5・v6 と同じ境）")
+	t.ok(absf(m8.walk_stride_m() - 1.6) < 1e-4 and absf(m8.gait_stride_m("trot") - 2.8) < 1e-4 and absf(m8.gait_stride_m("canter") - 4.5) < 1e-4 and absf(m8.stride_m() - 7.0) < 1e-4, "tripo v8: 倍率 2.6 の完歩 常歩 1.6・速歩 2.8・駈歩 4.5・襲歩 7m")
+	var horse8: MeshInstance3D = null
+	var tack8 := true
+	var tris8 := 0
+	for x in m8.meshes:
+		tris8 += x.mesh.surface_get_array_index_len(0) / 3
+		if String(x.name) == "Horse":
+			horse8 = x
+		elif x.material_override != null:
+			tack8 = false
+	t.ok(tack8 and m8.meshes.size() == 3, "tripo v8: 頭絡は元の材質のまま（%d の形）" % m8.meshes.size())
+	t.ok(tris8 <= 19168, "tripo v8: 三角形は v6（19,168）より増えない（%d）" % tris8)
+	# 常歩の補正が形に効く：WalkNeckCorrective のブレンドシェイプが首の下の皮を動かす（引き継ぎ：975 頂点・最大 0.087 モデル単位）
+	var wk8 := -1
+	for k in horse8.mesh.get_blend_shape_count():
+		if String(horse8.mesh.get_blend_shape_name(k)) == "WalkNeckCorrective":
+			wk8 = k
+	var wmv8 := 0
+	var wmx8 := 0.0
+	if wk8 >= 0:
+		var base8: PackedVector3Array = horse8.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		var bsv: PackedVector3Array = (horse8.mesh.surface_get_blend_shape_arrays(0)[wk8] as Array)[Mesh.ARRAY_VERTEX]
+		var rel8: bool = horse8.mesh.blend_shape_mode == Mesh.BLEND_SHAPE_MODE_RELATIVE
+		for i in base8.size():
+			var d8: float = bsv[i].length() if rel8 else bsv[i].distance_to(base8[i])
+			if d8 > 1e-5:
+				wmv8 += 1
+			wmx8 = maxf(wmx8, d8)
+	t.ok(wmv8 > 500 and wmx8 > 0.05 and wmx8 < 0.12, "tripo v8: 常歩の首の補正が形を動かす（%d 頂点・最大 %.3f モデル単位）" % [wmv8, wmx8])
+	# 歩き方の切り替えで混ざる：常歩→立ち姿の途中は 0〜1 の間、XFADE のあとは両方 0。立ち姿→常歩では 1 に戻る
+	m8.set_motion("walk", 0.2, 0.0)
+	m8.set_motion("stand", 0.1, 0.05)
+	m8.set_motion("stand", 0.1 + 0.05 / 3.0, 0.05)   # 替えた最初のコマはまだ混ぜが始まらない（Godot の AnimationPlayer）ので、次のコマで見る
+	var mid8: float = m8.morph_value("WalkNeckCorrective")
+	for k in 6:
+		m8.set_motion("stand", 0.1 + (k + 2) * 0.05 / 3.0, 0.05)
+	var end8: float = m8.morph_value("WalkNeckCorrective")
+	var endr8: float = m8.morph_value("RaceNeckCorrective")
+	for k in 6:
+		m8.set_motion("walk", 0.3 + k * 0.05 / 1.2, 0.05)
+	var back8: float = m8.morph_value("WalkNeckCorrective")
+	t.ok(mid8 > 0.05 and mid8 < 0.95 and absf(end8) < 1e-4 and absf(endr8) < 1e-4 and absf(back8 - 1.0) < 1e-4,
+		"tripo v8: 常歩↔立ち姿の切り替えで常歩の補正が混ざり（途中 %.2f）、立ち姿で両方 0（%.3f・%.3f）、常歩で 1（%.3f）" % [mid8, end8, endr8, back8])
+	var sm8: ShaderMaterial = horse8.material_override if horse8 != null else null
+	t.ok(sm8 != null and sm8.shader.resource_path.ends_with("v7/coat.gdshader"), "tripo v8: 毛色は v7/coat.gdshader（v8 付属のシェーダは v7 付属と同じ）")
+	if sm8 != null:
+		var code8 := sm8.shader.code
+		t.ok(code8.contains("dot(NORMAL, geometric_normal) < 0.15") and code8.contains("mix(body, muzzle_color.rgb, region_blend)") and code8.contains("mix(body, mane_color.rgb, region_blend)"), "tripo v8: v6 までの補正（法線・鼻先とたてがみの根元の混ぜ）がある")
+		t.ok(code8.contains("float face_gate = COLOR.a * smoothstep(0.003, 0.014, -face_front);") and code8.contains("float mouth_aa = max(fwidth(face_u) * 0.70, 0.0003);")
+			and code8.contains("if (region != 1 && region != 5 && region != 7) color = mix(color, muzzle_color.rgb, facial_crease);") and not code8.contains("ALBEDO = COLOR") and not code8.contains("color *= COLOR"),
+			"tripo v8: 付属の差分（COLOR_0 の頭の座標から鼻の穴と口の線。COLOR を色として掛けない）がある")
+		var un8 := []
+		for u in sm8.shader.get_shader_uniform_list():
+			un8.append(String(u.name))
+		t.ok(un8.has("muzzle_color") and un8.has("coat_color") and un8.has("sock_heights") and un8.has("normal_texture"), "tripo v8: シェーダが読める（uniform %d 個）" % un8.size())
+		t.ok(absf(float(sm8.get_shader_parameter("normal_strength")) - 0.03) < 1e-3 and sm8.get_shader_parameter("has_normal_map") == true, "tripo v8: 法線の絵は GLB の中の絵を強さ 0.03 で使う（%s）" % str(sm8.get_shader_parameter("normal_strength")))
+		m8.set_coat({"coatLook": UiArt.coat_look("芦毛", 7.0)})
+		t.ok((sm8.get_shader_parameter("coat_color") as Color).is_equal_approx(Color.html(String(UiArt.coat_look("芦毛", 7.0).body))), "tripo v8: 毛色の表（UiArt.coat_look）の色を渡す")
+		var arr8 := horse8.mesh.surface_get_arrays(0)
+		var uv8 = arr8[Mesh.ARRAY_TEX_UV2]
+		t.ok(uv8 != null and (uv8 as PackedVector2Array).size() == (arr8[Mesh.ARRAY_VERTEX] as PackedVector3Array).size(), "tripo v8: UV2 が全部の頂点にある（ライトマップ用に作り直していない）")
+		var rg8 := {}
+		var lg8 := {}
+		for uv in uv8:
+			rg8[int(floor(uv.x * 8.0))] = true
+			lg8[int(floor(uv.y * 8.0))] = true
+		t.ok(rg8.size() == 8 and lg8.size() == 5, "tripo v8: UV2 の領域 8・脚の番号 5（v5・v6 と同じ決まり）")
+		# COLOR_0：頭の座標。a＝1 は頭の皮だけ（脚・尾・蹄には無い）、r（左右）は 0.5 のまわりに両側へ
+		var col8 = arr8[Mesh.ARRAY_COLOR]
+		var head8 := 0
+		var off8 := 0
+		var rl8 := 1.0
+		var rh8 := 0.0
+		if col8 != null:
+			for i in (col8 as PackedColorArray).size():
+				var cc: Color = col8[i]
+				if cc.a > 0.5:
+					head8 += 1
+					rl8 = minf(rl8, cc.r); rh8 = maxf(rh8, cc.r)
+					var rgi := int(floor(uv8[i].x * 8.0))
+					if int(floor(uv8[i].y * 8.0)) != 0 or rgi == 2 or rgi == 3:
+						off8 += 1
+		t.ok(col8 != null and head8 > 300 and off8 == 0 and rl8 < 0.3 and rh8 > 0.7, "tripo v8: 取り込んだあとも COLOR_0（頭の座標）が残る（頭 %d 頂点・脚と尾に %d・左右 %.2f〜%.2f）" % [head8, off8, rl8, rh8])
+		t.ok(RenderingServer.mesh_get_surface(horse8.mesh.get_rid(), 0).get("lods", []).size() > 0, "tripo v8: LOD がある（.import の generate_lods）")
+	# import の設定（.import を読み直す）：ライトマップ用の UV を作らない・240 コマ・定数の軌跡を残す・LOD・AnimationPlayer の optimizer と compression を切る・5つのループ・法線の絵は GLB の中
+	var cf8 := ConfigFile.new()
+	t.eq(cf8.load("res://proto/tripo_horse/v8/horse-gallop-v8.glb.import"), OK, "tripo v8: .import が読める")
+	var sub8: Dictionary = cf8.get_value("params", "_subresources", {})
+	var apn8: Dictionary = sub8.get("nodes", {}).get("PATH:AnimationPlayer", {})
+	var loops8 := 0
+	for c in lens5:
+		if int(sub8.get("animations", {}).get(c, {}).get("settings/loop_mode", 0)) == 1:
+			loops8 += 1
+	t.ok(int(cf8.get_value("params", "meshes/light_baking", -1)) == 0 and int(cf8.get_value("params", "animation/fps", 0)) == 240
+		and cf8.get_value("params", "animation/remove_immutable_tracks", true) == false and cf8.get_value("params", "meshes/generate_lods", false) == true
+		and apn8.get("optimizer/enabled", true) == false and apn8.get("compression/enabled", true) == false and loops8 == 5
+		and int(cf8.get_value("params", "gltf/embedded_image_handling", -1)) == 3,
+		"tripo v8: import の設定（ライトマップ UV なし・240 コマ・定数の軌跡を残す・LOD・optimizer と compression なし・5つのループ %d・法線の絵は GLB の中）" % loops8)
+	# 取付点：v8 の attachment-tracks.json（全5動作・6点。v8/attachment-check.json はその間引き。走りは saddle-track.json と同じ 28 時点）
+	var ac8 = JSON.parse_string(FileAccess.get_file_as_string("res://proto/tripo_horse/v8/attachment-check.json"))
+	var err8 := {}
+	var ang8 := 0.0
+	var ns8 := 0
+	if ac8 is Dictionary:
+		for c in ac8.clips:
+			var g := String(gait5.get(c, ""))
+			var du := float(ac8.clips[c].duration)
+			for smp in ac8.clips[c].samples:
+				m8.set_motion(g, float(smp.t) / du, 0.0)
+				var inv8: Transform3D = m8.glb.global_transform.affine_inverse()
+				for n in smp.nodes:
+					var x8: Transform3D = inv8 * m8.socket_xf(String(n))
+					var pp: Array = smp.nodes[n].p
+					var qq: Array = smp.nodes[n].q
+					err8[c] = maxf(float(err8.get(c, 0.0)), x8.origin.distance_to(Vector3(pp[0], pp[1], pp[2])) * 2.6)
+					ang8 = maxf(ang8, x8.basis.orthonormalized().get_rotation_quaternion().angle_to(Quaternion(qq[0], qq[1], qq[2], qq[3])))
+				ns8 += 1
+	var emax8 := 0.0
+	for c in err8:
+		emax8 = maxf(emax8, err8[c])
+	t.ok(err8.size() == 5 and ns8 >= 70 and emax8 < 0.002 and ang8 < 0.01, "tripo v8: 取付点 6 つが v8 の記録に合う（Bit は v7 と混ぜない）（5 動作・%d 時点・最大 %.4fm・2mm まで・向き %.4f rad）" % [ns8, emax8, ang8])
+	# 走りの数：き甲の上下（v6 と同じ）・うなじの上下（v6 の 0.28m を保つ）・胴のピッチ（Spine_0→Spine_7。v6 の約 1.6° から大きく）
+	var nape8: int = m8.skel.find_bone("tripo__Head_5")
+	var sp08: int = m8.skel.find_bone("tripo__Spine_0")
+	var sp8: int = m8.skel.find_bone("tripo__Spine_7")
+	var wl8 := 1e9
+	var wh8 := -1e9
+	var nl8 := 1e9
+	var nh8 := -1e9
+	var pl8 := 1e9
+	var ph8 := -1e9
+	for k in 96:
+		m8.set_motion("race", k / 96.0, 0.0)
+		var wy8: float = m8.socket_xf("Withers").origin.y
+		wl8 = minf(wl8, wy8); wh8 = maxf(wh8, wy8)
+		var ny8: float = (m8.skel.global_transform * m8.skel.get_bone_global_pose(nape8).origin).y
+		nl8 = minf(nl8, ny8); nh8 = maxf(nh8, ny8)
+		var dv8: Vector3 = m8.skel.global_transform * m8.skel.get_bone_global_pose(sp8).origin - m8.skel.global_transform * m8.skel.get_bone_global_pose(sp08).origin
+		var pa8 := rad_to_deg(atan2(dv8.y, Vector2(dv8.x, dv8.z).length()))
+		pl8 = minf(pl8, pa8); ph8 = maxf(ph8, pa8)
+	t.ok(wh8 - wl8 > 0.13 and wh8 - wl8 < 0.17, "tripo v8: き甲が 0.13〜0.17m 上下する（v6 と同じ。%.3f）" % (wh8 - wl8))
+	t.ok(nh8 - nl8 > 0.2 and nh8 - nl8 < 0.35, "tripo v8: 走るとうなじが 0.20〜0.35m 上下する（v6 の首の振りを保つ。%.3f）" % (nh8 - nl8))
+	t.ok(ph8 - pl8 > 5.0, "tripo v8: 走ると胴が前後に揺れる（背の骨のピッチの幅 %.1f°。v6 は約 1.6°）" % (ph8 - pl8))
+	var ref8 = TripoModel.new()
+	sc.add_child(ref8)
+	ref8.setup("v8")
+	m8.set_motion("race", 0.5, 0.0)
+	var tt8 := 0.3
+	for k in 30:
+		tt8 += 0.05
+		m8.set_motion("stand", tt8 / 3.0, 0.05)
+	ref8.set_motion("stand", tt8 / 3.0, 0.0)
+	var sw8 := 0.0
+	for i in m8.skel.get_bone_count():
+		sw8 = maxf(sw8, m8.skel.get_bone_global_pose(i).origin.distance_to(ref8.skel.get_bone_global_pose(i).origin))
+	t.ok(sw8 < 1e-3 and is_equal_approx(m8.morph_value("RaceNeckCorrective"), 0.0) and is_equal_approx(m8.morph_value("WalkNeckCorrective"), 0.0), "tripo v8: 走りから立ち姿へ戻すと立ち姿の形に戻り首の補正は両方 0（ずれ %s）" % str(sw8))
+	ref8.free()
+	m8.mount_jockey(sc.race_info)
+	for gg in ["race", "walk"]:
+		m8.set_motion(gg, 0.4, 0.0)
+		m8.update_rider(0.4, 1.0 if gg == "race" else 0.35, 1.0, 0.0 if gg == "race" else 1.0)
+		var fwd8: Vector3 = m8.rider_hold.global_basis.z.normalized()
+		t.ok(m8.rider != null and (m8.rider_hold.global_transform * m8._seat0).distance_to(m8.socket_xf("Saddle").origin) < 1e-3 and fwd8.dot(m8.global_basis.z.normalized()) > 0.98 and m8.rider_hold.global_basis.y.normalized().y > 0.95,
+			"tripo v8: %s で騎手の鞍の上面が Saddle に重なり、前（+Z）・上（+Y）を向く（%s）" % [gg, str(fwd8)])
+	# v8 だけの確かめ（v8 の依頼の 1・2）：骨で測る（皮の点の測り方は measure.gd）。立ち姿の き甲（Withers）→うなじ（Head_5）が v7 より短い・
+	# 走りのうなじの平均の高さが v7 より低い（引き継ぎのゲーム測定：立ち姿の首 0.715→0.563m・走りのうなじ 1.83→1.71m）。頭の大きさは v7 のまま
+	var m7b = sc.tri["v7"]
+	var neck_len := {}
+	var nape_y := {}
+	for mm in [m7b, m8]:
+		var nb: int = mm.skel.find_bone("tripo__Head_5")
+		mm.set_motion("stand", 0.0, 0.0)
+		neck_len[mm] = mm.socket_xf("Withers").origin.distance_to(mm.skel.global_transform * mm.skel.get_bone_global_pose(nb).origin)
+		var ys := 0.0
+		for k in 96:
+			mm.set_motion("race", k / 96.0, 0.0)
+			ys += (mm.skel.global_transform * mm.skel.get_bone_global_pose(nb).origin).y - mm.global_position.y
+		nape_y[mm] = ys / 96.0
+	t.ok(neck_len[m8] < neck_len[m7b] - 0.08, "tripo v8: 立ち姿の き甲→うなじ が v7 より短い（%.3f・v7 %.3fm）" % [neck_len[m8], neck_len[m7b]])
+	t.ok(nape_y[m8] < nape_y[m7b] - 0.06, "tripo v8: 走りのうなじの平均の高さが v7 より低い（%.3f・v7 %.3fm）" % [nape_y[m8], nape_y[m7b]])
 	sc.free()
 	# ---- レース画面の差し替え（--proto-horse=v6） ----
 	var rv6 = load("res://scenes/race.tscn").instantiate()
@@ -709,6 +934,33 @@ func run(t) -> void:
 			fin7r = false
 	t.ok(fin7r, "tripo race v7: 走ったあとも全部の骨が有限")
 	rv7.free()
+	# ---- レース画面の差し替え（--proto-horse=v8） ----
+	var rv8 = load("res://scenes/race.tscn").instantiate()
+	rv8.proto_ver = "v8"
+	t.root.add_child(rv8)
+	rv8.set_process(false)
+	var riders8 := 0
+	var shader8 := 0
+	for p in rv8.proto:
+		if p.rider != null:
+			riders8 += 1
+		if p.coat != null and p.coat.shader.resource_path.ends_with("v7/coat.gdshader"):
+			shader8 += 1
+	t.ok(rv8.proto.size() == rv8.horses.size() and riders8 == rv8.horses.size() and shader8 == rv8.horses.size(), "tripo race v8: 全部の馬が v8 に替わり騎手が乗り v7 の毛色（%d・%d・%d 頭）" % [rv8.proto.size(), riders8, shader8])
+	rv8._jump_to(-1.0)
+	t.eq(String(rv8.proto[0].player.current_animation), "Stand", "tripo race v8: ゲートの中は立ち姿")
+	rv8._jump_to(8.0)
+	var me8: int = rv8.me
+	var x8: float = rv8._last_H[me8][0] if rv8._last_H.size() > me8 else -1.0
+	var want8 := fposmod((x8 / 7.0 + rv8.horses[me8].num * 0.137), 1.0) * 0.45
+	var got8: float = rv8.proto[me8].player.current_animation_position
+	t.ok(String(rv8.proto[me8].player.current_animation) == "RaceGallop" and absf(got8 - want8) < 1e-3, "tripo race v8: 走りの位相は 距離÷7m（%.3f・%.3f 秒）" % [got8, want8])
+	var fin8r := true
+	for p in rv8.proto:
+		if not p.bones_finite():
+			fin8r = false
+	t.ok(fin8r, "tripo race v8: 走ったあとも全部の骨が有限")
+	rv8.free()
 	# ---- レース画面の差し替え（--proto-horse=v4） ----
 	var rv4 = load("res://scenes/race.tscn").instantiate()
 	rv4.proto_ver = "v4"
