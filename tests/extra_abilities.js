@@ -21,6 +21,9 @@ module.exports = function (check, assert, HS) {
       }
       const a = T.fhShowPeak(H.fromHistoric(x, 'was')), b = T.fhShowPeak(H.fromHistoric(d, 'now'));
       assert(a.turf === b.turf && a.dirt === b.dirt, `${name} の総合力が動いた ${a.turf}/${a.dirt} → ${b.turf}/${b.dirt}`);
+      // 中の総合力（T.fhPeak。持ち主の1回目の見直しの値はこちらで持つ）も動かない
+      const ap = T.fhPeak(H.fromHistoric(x, 'was')), bp = T.fhPeak(H.fromHistoric(d, 'now'));
+      assert(ap.turf === bp.turf && ap.dirt === bp.dirt, `${name} の中の総合力が動いた ${ap.turf}/${ap.dirt} → ${bp.turf}/${bp.dirt}`);
       assert(/能力の洗い出し/.test(f.why || ''), `${name} の why に洗い出しの理由が無い`);
       n++;
     }
@@ -37,6 +40,22 @@ module.exports = function (check, assert, HS) {
     // 気性難の馬は、同じ強さのふつうの馬より気性が低い
     const e = h('エアシャカール'), base = H.fromHistoric(Object.assign({}, dataOf('エアシャカール'), { pot: undefined }), 'y');
     assert(e.pot.mind <= base.pot.mind - 9, `エアシャカールの気性 ${e.pot.mind}（ふつうなら ${base.pot.mind}）`);
+  });
+
+  check('abilities: 暦に無い史実のレース（data/hist_races.js）で勝った G1 の距離も、距離の幅に入る（2歳戦は除く）', () => {
+    const bad = [];
+    for (const d of D.historic) for (const w of d.wins || []) {
+      const y = +w.slice(0, 4), n = w.slice(4), on = r => r.name === n && r.from <= y && y <= (r.to || 9999);
+      if ((D.races || []).some(on)) continue;
+      const r = (D.histRaces || []).find(on);
+      if (!r || r.grade !== 'G1' || r.age === '2' || !r.dist) continue;
+      const m = Math.round(r.dist / 100) * 100;
+      if (m < (d.distMin || 1600) || m > (d.distMax || 2400)) bad.push(`${d.name}:${w}(${m}m)`);
+    }
+    assert(!bad.length, `幅の外：${bad.slice(0, 5).join('・')}`);
+    const h = n => H.fromHistoric(dataOf(n), 'x');
+    assert(h('テツノカチドキ').distMax >= 3000 && h('ファーラップ').distMax >= 3600, '東京大賞典・AJC プレートの距離が幅に無い');
+    assert(h('ヒカルタカイ').distMin === 2000, '2歳の全日本三才優駿で幅が広がった');
   });
 
   check('abilities: 一覧の道具（tools/review_abilities.js）が名馬を書き出し、食い違いの目安を付ける', () => {

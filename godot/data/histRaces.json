@@ -33,7 +33,7 @@
 {"name":"AJCプレート","short":"AJCプレート","grade":"G1","region":"海外","country":"豪","course":"ランドウィック","surface":"芝","dist":3600,"month":4,"week":4,"from":1930,"to":1930,"nameEn":"AJC Plate"},
 {"name":"グッドウッドカップ","short":"グッドウッドカップ","grade":"G2","region":"海外","country":"英","course":"グッドウッド","surface":"芝","dist":4000,"month":7,"week":4,"from":1884,"to":1884,"nameEn":"Goodwood Cup"},
 {"name":"カンタベリーギニー","short":"カンタベリーギニー","grade":"G1","region":"海外","country":"豪","course":"","surface":"芝","dist":1900,"month":3,"week":2,"from":1996,"to":1996,"nameEn":"Canterbury Guineas"},
-{"name":"全日本三才優駿","short":"全日本三才優駿","grade":"G1","region":"地方","course":"川崎","surface":"ダ","dist":1600,"month":11,"week":4,"from":1966,"to":1966,"nameEn":"Zen-Nippon Sansai Yushun"},
+{"name":"全日本三才優駿","short":"全日本三才優駿","grade":"G1","region":"地方","course":"川崎","surface":"ダ","dist":1600,"month":11,"week":4,"from":1966,"to":1966,"age":"2","nameEn":"Zen-Nippon Sansai Yushun"},
 {"name":"羽田盃","short":"羽田盃","grade":"G1","region":"地方","course":"大井","surface":"ダ","dist":2000,"month":5,"week":1,"from":1967,"to":1967,"nameEn":"Haneda Hai"},
 {"name":"羽田盃","short":"羽田盃","grade":"G1","region":"地方","course":"大井","surface":"ダ","dist":2000,"month":5,"week":3,"from":1978,"to":1978,"nameEn":"Haneda Hai"},
 {"name":"羽田盃","short":"羽田盃","grade":"G1","region":"地方","course":"大井","surface":"ダ","dist":2000,"month":5,"week":1,"from":1983,"to":1983,"nameEn":"Haneda Hai"},

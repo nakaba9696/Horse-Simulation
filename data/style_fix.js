@@ -5,6 +5,8 @@
 // js/core/datafix.js が史実馬の style に入れる（Godot へは書き出したデータで届く）。why：根拠（1行）
 // 見たが決めなかった馬（2026-10-20）：タロック・アカテナンゴ・リヴァーヴァードン・ヴォイッジバブル（名鑑にも出典にも走り方の記述が無い）、
 // ラッキースワイネス（主戦騎手が「後ろからも、逃げても、2番手でも」と言う自在な馬で、一つに決められない）
+// 見たが決めなかった馬（2026-10-25・能力の洗い出し E2 の2回目）：ヘクタープロテクター（開けた出典に序盤の位置の記述が無い）、
+// サイエダティ（2歳は逃げ、1993年の英1000ギニーは逃げ馬の後ろ、1995年のサセックスSは後方と、年で走り方が違う）。センダワールは確かめたら引きの差しで合っていた
 (function () {
   const HS = globalThis.HS = globalThis.HS || {}; HS.DATA = HS.DATA || {};
   HS.DATA.styleFix = {
@@ -27,5 +29,17 @@
     'リブチェスター': { style: '先行', why: '引きの差しから先行に（2017年のロッキンジSはハナ、クイーンアンS・ムーラン賞は前の集団。en.wikipedia「Ribchester (horse)」）（能力の洗い出し E2・2026-10-24）' },
     'マラサート': { style: '差し', why: '引きの追込から差しに（2021年のケンタッキーオークスは5番手、2022年のスピンスターSは4番手。en.wikipedia「Malathaat」）（能力の洗い出し E2・2026-10-24）' },
     'ノータブルスピーチ': { style: '差し', why: '引きの逃げから差しに（2024年の英2000ギニーは後方から差し切り、サセックスSは前の2頭の後ろで待つ。sportingpost.co.za・racing365.com）（能力の洗い出し E2・2026-10-24）' },
+    'カリフォルニアメモリー': { style: '差し', why: '引きの先行から差しに（2011年の香港ゴールドC・沙田トロフィーは「settled at the rear」、QEII カップは「Held up at the tail of the field」、2012年の香港Cは「restrained to race in midfield」。1角はおおむね12〜14頭の9番手前後（香港ジョッキークラブの通過順位と走りの寸評））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'ミリタリーアタック': { style: '先行', why: '引きの逃げから先行に（2013年の香港ゴールドCは「grab box seat」、QEII カップは5番手、2014年の香港ゴールドCは「settling behind leader」。ハナは2013年のプレミアプレートの1戦だけ（香港ジョッキークラブの通過順位と走りの寸評））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'ヴァジラバド': { style: '追込', why: '引きの先行から追込に（2016年のドバイゴールドCは調教師「he would be at the back」、2017年は「He likes to come from the back」、2018年のアスコットゴールドCは「Held up towards rear」。en.wikipedia に「restrained towards the rear as usual」（sportinglife.com・gulfnews.com・en.wikipedia「Vazirabad (horse)」））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'カリフォルニアスパングル': { style: '逃げ', why: '引きの先行から逃げに（1角はほぼ全走で先頭。2022年の香港マイルは「Led on the rail」、2023年のクイーンシルバージュビリーCは「Soon took up running」、チャンピオンズマイルは「Broke well from a wide draw to lead」（香港ジョッキークラブの通過順位と走りの寸評））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'ハイフィールドプリンセス': { style: '先行', why: '引きの差しから先行に（2022年のナンソープSは「Chased leaders」、フライングファイブSは「Prominent」、2023年のキングズスタンドSは「Tracked leaders」。モーリスドゲスト賞はハナから（sportinglife.com の走りの寸評））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'ビーチパトロール': { style: '先行', why: '引きの追込から先行に（2016年のセクレタリアトSは逃げ馬の直後、2017年のアーリントンミリオンは「raced in second place」、ジョーハーシュターフクラシックも2番手（americasbestracing.net・breednet.com.au・racingdudes.com））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'インエクセス': { style: '逃げ', why: '引きの差しから逃げに（「usually ran his fields off their legs from the start」（americanclassicpedigrees.com）、「In Excess was a front-running horse」（en.wikipedia「In Excess (horse)」）。1991年のウッドワードSは逃げ馬の内で並びかけてハナを争った（latimes.com））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'エルヴェディヤ': { style: '差し', why: '引きの先行から差しに（2015年の仏1000ギニーは「raced at the rear of the field」、コロネーションSは「restrained … in the early stages」「Held up towards rear」、2016年のクイーンアンSも「Held up」（en.wikipedia「Ervedya」・sportinglife.com））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'シックスパーフェクションズ': { style: '追込', why: '引きの先行から追込に（2003年のBCマイルは「near the back of the pack」、英1000ギニーは残り2ハロンで全馬が前、愛1000ギニーは「Held up in rear early」（thoroughbreddailynews.com の当時の紙面。2歳のマルセルブサック賞は11頭の5番手））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'ゴールデンライラック': { style: '先行', why: '引きの追込から先行に（2011年の仏1000ギニーは逃げ馬のすぐ後ろ、グロット賞は7頭の4番手、2012年のイスパーン賞は逃げたシリュスデゼーグルの直後、ファルマスSは「Close up」（bloodhorse.com・rte.ie・sportinglife.com・en.wikipedia「Golden Lilac」））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'ブルーローズセン': { style: '先行', why: '引きの差しから先行に（2023年の仏1000ギニーは逃げ馬の直後（「box seat behind the leader」）、仏オークスは逃げ馬に「quickly shadowed」、オペラ賞も前の馬の後ろ（france-galop.com・thoroughbreddailynews.com））（能力の洗い出し E2・2回目・2026-10-25）' },
+    'フォールンエンジェル': { style: '先行', why: '引きの差しから先行に（2023年のモイグレアスタッドSは「Tracked leader, 2nd halfway」、2024年の英1000ギニーは「Tracked leaders」、愛1000ギニー・2025年のサンチャリオットSはハナ（sportinglife.com の走りの寸評。8戦が番手、7戦が逃げ））（能力の洗い出し E2・2回目・2026-10-25）' },
   };
 })();

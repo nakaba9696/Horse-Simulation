@@ -109,7 +109,7 @@ module.exports = function (check, assert, HS) {
   check('ground: 史実馬の道悪の適性（得意 90・苦手 35・ほかは 66）', () => {
     const D = HS.DATA, SP = HS.Special;
     const of = n => { const d = (SP && SP.data(n)) || D.historic.find(x => x.name === n); assert(d, `${n} がデータに無い`); return H.fromHistoric(d, 'mudtest'); };
-    const good = of('ブローザホーン'), bad = of('モンテプリンス'), plain = of('テイエムオペラオー');
+    const good = of('ブローザホーン'), bad = of('モンテプリンス'), plain = of('シンボリルドルフ');
     assert(good.apt.heavy === 90 && S.mudLabel(good.apt.heavy) === '得意' && good.skills.includes('mud'), `ブローザホーンが得意でない ${good.apt.heavy} ${good.skills}`);
     // 名馬の表で特殊能力を決めた馬にも道悪○が付く
     const orf = of('オルフェーヴル');
