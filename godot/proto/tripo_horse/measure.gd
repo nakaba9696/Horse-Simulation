@@ -1,4 +1,4 @@
-# 馬モデル試作の比べの数を測る（v3・v4・v5・v6・いまの馬を同じ物差しで。速さ 16 m/秒・倍率 2.6）
+# 馬モデル試作の比べの数を測る（v4〜v7・いまの馬を同じ物差しで。速さ 16 m/秒・倍率 2.6）
 #   godot --headless --path godot -s res://proto/tripo_horse/measure.gd [-- --cpu=0]
 # 形の数：試作の場面（tripo_horse.gd）で 3 頭を同じ距離だけ走らせ、1/240 秒ごとに
 #   蹄（試作は UV2 の領域 3 と脚の番号、いまの馬は指と趾の骨が主な頂点）を CPU で皮に写して、
@@ -12,6 +12,11 @@
 # 首と頭の長さ（v6 の依頼の物差し）：同じ3点で、首の水平の長さ＝き甲→うなじの水平の距離・首の弦＝き甲→うなじの距離・頭の長さ＝うなじ→鼻先の距離（平均）。
 #   皮の点はたてがみの帯の上を取るので、点の選び方に左右されない 骨の首の水平の長さ（き甲の骨→頭の付け根の骨）も出す。
 #   引き継ぎの proportion-comparison.json（き甲は Spine_7 の真上の皮・うなじは決まった皮の点・鼻先は左右の中点。たてがみを除く）とは点が違うので、比は合わない
+# 首と頭の比（v7 の依頼の物差し）：同じ3点で、首の上の線＝き甲→うなじの弦（皮の点）・頭の長さ＝うなじ→鼻先・頭÷首の上の線。走りの平均と、立ち姿（Stand・0 m/秒）の値を出す。
+#   引き継ぎの anatomy-comparison.json（首の上の線は き甲→うなじの皮の 33 点の線の長さ・頭はうなじ→上唇）とは点と測り方が違うので、数そのものは合わない（並べる版どうしの比べの目安）
+# 胴と頭のピッチ（v7 の依頼の物差し）：胴＝背の骨（試作は Spine_0→Spine_7、いまの馬は腰の骨→首の付け根の骨）の向きの水平からの角、
+#   頭＝うなじ→鼻先の皮の点の向きの水平からの角。1周期の幅（最大−最小）を出す。引き継ぎは胴を Spine_0→Spine_7、頭を皮の点で測る（同じ考え）
+# 補正のブレンドシェイプ（RaceNeckCorrective・v7 の WalkNeckCorrective）は、どちらも今の値を掛けて皮を写す
 # 1コマの CPU：レース画面（scenes/race.tscn。16 頭）を 20 秒まで進め、advance(1/60) を 180 回まわした時間（描く所は含まない）
 extends SceneTree
 
@@ -28,12 +33,12 @@ func _initialize() -> void:
 	var sc = load("res://proto/tripo_horse/tripo_horse.tscn").instantiate()
 	root.add_child(sc)
 	await process_frame
-	sc.lay = "quad"
+	sc.lay = "quad7"
 	sc.v = 16.0
 	sc.mode = "slip"
 	sc.refresh()
 	var subj := {}
-	for vv in ["v4", "v5", "v6"]:
+	for vv in ["v4", "v5", "v6", "v7"]:
 		subj[vv] = tripo_subject(sc.tri[vv])
 	subj["old"] = old_subject(sc.old)
 	var t := 0.0
@@ -45,13 +50,69 @@ func _initialize() -> void:
 	var acc := {}
 	for k in subj:
 		acc[k] = {"air": 0, "n": 0, "slip_sum": 0.0, "slip_n": 0, "spread": 0.0, "swing": [[1e9, -1e9], [1e9, -1e9], [1e9, -1e9], [1e9, -1e9]],
-			"nape": [1e9, -1e9, 0.0], "neck": [1e9, -1e9], "headneck": [1e9, -1e9], "neckh": 0.0, "neckc": 0.0, "headl": 0.0, "neckb": 0.0, "lowest": 1e9, "stance_lo": [], "wither": [1e9, -1e9], "saddle": [1e9, -1e9], "prev": []}
+			"nape": [1e9, -1e9, 0.0], "neck": [1e9, -1e9], "headneck": [1e9, -1e9], "neckh": 0.0, "neckc": 0.0, "headl": 0.0, "neckb": 0.0, "bpitch": [1e9, -1e9], "hpitch": [1e9, -1e9], "hc": [1e9, -1e9], "lowest": 1e9, "stance_lo": [], "wither": [1e9, -1e9], "saddle": [1e9, -1e9], "prev": []}
 	t = 0.0
 	while t < SPAN - 1e-6:
 		sc.step(DT)
 		t += DT
 		for k in subj:
 			sample(subj[k], acc[k])
+	# 常歩（1.3 m/秒）：うなじ（頭の付け根の骨）の高さ−き甲の高さの平均と、1周期（試作 1.6m・いまの馬 ViewGait.WALK_STRIDE）でのうなじの上下の山の数（うなずき）
+	var walk := {}
+	sc.v = 1.3
+	sc.t = 0.0
+	sc.dist = 0.0
+	for i in 240:
+		sc.step(DT)
+	var wser := {}
+	for k in subj:
+		wser[k] = []
+	var wspan: float = 1.6 / 1.3
+	var tw := 0.0
+	while tw < wspan * 2.0 - 1e-6:
+		sc.step(DT)
+		tw += DT
+		for k in subj:
+			var sk2: Skeleton3D = subj[k].sk
+			var ny2 := (sk2.global_transform * sk2.get_bone_global_pose(subj[k].nape).origin).y
+			var wy2 := (sk2.global_transform * sk2.get_bone_global_pose(subj[k].wither).origin).y
+			wser[k].append([ny2, wy2])
+	for k in subj:
+		var ser: Array = wser[k]
+		var d := 0.0
+		var lo := 1e9
+		var hi := -1e9
+		for e in ser:
+			d += e[0] - e[1]
+			lo = minf(lo, e[0]); hi = maxf(hi, e[0])
+		# 山の数：前後 0.08 秒より高い点（2 周期ぶんを数えて半分）
+		var pk := 0
+		var w := int(0.08 / DT)
+		for i in range(w, ser.size() - w):
+			var top := true
+			for j in range(i - w, i + w + 1):
+				if j != i and ser[j][0] >= ser[i][0]:
+					top = false
+					break
+			if top:
+				pk += 1
+		walk[k] = [d / ser.size(), hi - lo, pk / 2.0 * (1.6 / ViewGait.WALK_STRIDE if k == "old" else 1.0)]
+	sc.v = 16.0
+	# 立ち姿（0 m/秒）：同じ3点で首の上の線と頭の長さ（Stand の 1 秒の所）
+	var stand := {}
+	sc.v = 0.0
+	sc.t = 0.0
+	sc.dist = 0.0
+	for i in 60:
+		sc.step(1.0 / 60.0)
+	for k in subj:
+		var s0: Dictionary = subj[k]
+		if s0.has("neck_pts"):
+			var pw := skinned(s0, s0.neck_pts[0])
+			var pp := skinned(s0, s0.neck_pts[1])
+			var pn := skinned(s0, s0.neck_pts[2])
+			stand[k] = [pw.distance_to(pp), pp.distance_to(pn), rad_to_deg(atan2(pp.y - pw.y, Vector2(pp.x - pw.x, pp.z - pw.z).length())), pp.y]
+	sc.v = 16.0
 	print("==== 比べの数（16 m/秒・倍率 2.6・%d コマ）====" % int(round(SPAN / DT)))
 	for k in subj:
 		var a: Dictionary = acc[k]
@@ -63,9 +124,13 @@ func _initialize() -> void:
 			k, s.stride, 16.0 / s.stride, a.nape[2] / a.n, a.nape[0], a.nape[1], a.nape[1] - a.nape[0], a.wither[1] - a.wither[0],
 			("%.2f〜%.2fm（幅 %.3f）" % [a.saddle[0], a.saddle[1], a.saddle[1] - a.saddle[0]]) if a.saddle[0] < 1e8 else "なし",
 			100.0 * a.air / a.n, a.spread, sw, a.slip_sum / maxf(1.0, a.slip_n), a.lowest, air_by(a.stance_lo), a.neck[0], a.neck[1], a.headneck[0], a.headneck[1], a.neckh / a.n, a.neckb / a.n, a.neckc / a.n, a.headl / a.n, s.tris, s.bones, s.length])
+		var st: Array = stand.get(k, [0.0, 0.0, 0.0, 0.0])
+		print("%s: 走り 頭の中心（うなじと鼻先の皮の点の中点）の上下 %.3fm・首の上の線（弦）%.3fm・頭 %.3fm・頭÷首 %.3f・胴のピッチの幅 %.2f°（%.1f〜%.1f）・頭のピッチの幅 %.2f°（%.1f〜%.1f）／立ち姿 首の上の線 %.3fm・頭 %.3fm・頭÷首 %.3f・首の傾き %.1f°・うなじの高さ %.2fm／常歩 うなじ−き甲 %.3fm・うなじの上下 %.3fm・1周期のうなずき %.1f 回" % [
+			k, a.hc[1] - a.hc[0], a.neckc / a.n, a.headl / a.n, (a.headl / a.n) / maxf(1e-6, a.neckc / a.n), a.bpitch[1] - a.bpitch[0], a.bpitch[0], a.bpitch[1], a.hpitch[1] - a.hpitch[0], a.hpitch[0], a.hpitch[1],
+			st[0], st[1], st[1] / maxf(1e-6, st[0]), st[2], st[3], walk[k][0], walk[k][1], walk[k][2]])
 	sc.free()
 	if do_cpu:
-		for pv in ["", "v3", "v4", "v4-nojockey", "v5", "v5-nojockey", "v6", "v6-nojockey"]:
+		for pv in ["", "v6", "v6-nojockey", "v7", "v7-nojockey"]:
 			cpu(pv)
 	quit()
 
@@ -97,12 +162,14 @@ func tripo_subject(m) -> Dictionary:
 	var sk: Skeleton3D = m.skel
 	var nape := -1
 	var wither := -1
+	var spine0 := -1
 	for i in sk.get_bone_count():
 		var n := sk.get_bone_name(i)
 		if n.ends_with("Head_5"): nape = i
 		if n.ends_with("Spine_7"): wither = i
+		if n.ends_with("Spine_0"): spine0 = i
 	var ab := mi.mesh.get_aabb()
-	return {"m": m, "mi": mi, "sk": sk, "skin": mi.skin, "arr": arr, "hoof": hoof, "nape": nape, "wither": wither,
+	return {"m": m, "mi": mi, "sk": sk, "skin": mi.skin, "arr": arr, "hoof": hoof, "nape": nape, "wither": wither, "body": [spine0, wither],
 		"saddle": m.sockets.get("Saddle"), "stride": m.stride_m(), "tris": tris, "bones": sk.get_bone_count(),
 		"length": maxf(ab.size.x, ab.size.z) * m.S, "binds": binds(mi.skin, sk), "hair": hair, "muzzle": muz, "neck_bs": neck_bs(mi)}
 
@@ -149,9 +216,9 @@ func old_subject(h: ViewHorse) -> Dictionary:
 	var b2 := {}
 	for k in mi.skin.get_bind_count():
 		b2[k] = k
-	return {"h": h, "mi": mi, "sk": h.skel, "skin": mi.skin, "arr": arr, "hoof": hoof, "nape": R.head, "wither": R.neck,
+	return {"h": h, "mi": mi, "sk": h.skel, "skin": mi.skin, "arr": arr, "hoof": hoof, "nape": R.head, "wither": R.neck, "body": [R.pelvis, R.neck],
 		"seat0": seat0, "stride": 7.2, "tris": tris, "bones": h.skel.get_bone_count(), "length": ab.size.z * M.place_s, "binds": b2,
-		"hair": {}, "muzzle": {}, "neck_bs": {}}
+		"hair": {}, "muzzle": {}, "neck_bs": []}
 
 func binds(skin: Skin, sk: Skeleton3D) -> Dictionary:
 	var d := {}
@@ -171,8 +238,7 @@ func skinned(s: Dictionary, i: int) -> Vector3:
 	var sk: Skeleton3D = s.sk
 	var skin: Skin = s.skin
 	var v0 := V[i]
-	var nb: Dictionary = s.get("neck_bs", {})
-	if not nb.is_empty():
+	for nb in s.get("neck_bs", []):
 		var bw: float = s.mi.get_blend_shape_value(nb.k)
 		if bw != 0.0:
 			var T: PackedVector3Array = nb.T
@@ -236,6 +302,14 @@ func sample(s: Dictionary, a: Dictionary) -> void:
 		a.neckh += Vector2(pp.x - pw.x, pp.z - pw.z).length()
 		a.neckc += pw.distance_to(pp)
 		a.headl += pp.distance_to(pn)
+		var hp := rad_to_deg(atan2(pn.y - pp.y, Vector2(pn.x - pp.x, pn.z - pp.z).length()))
+		a.hpitch[0] = minf(a.hpitch[0], hp); a.hpitch[1] = maxf(a.hpitch[1], hp)
+		var hcy := (pp.y + pn.y) * 0.5
+		a.hc[0] = minf(a.hc[0], hcy); a.hc[1] = maxf(a.hc[1], hcy)
+	var bb0 := sk.global_transform * sk.get_bone_global_pose(s.body[0]).origin
+	var bb1 := sk.global_transform * sk.get_bone_global_pose(s.body[1]).origin
+	var bp := rad_to_deg(atan2(bb1.y - bb0.y, Vector2(bb1.x - bb0.x, bb1.z - bb0.z).length()))
+	a.bpitch[0] = minf(a.bpitch[0], bp); a.bpitch[1] = maxf(a.bpitch[1], bp)
 	var bwp := sk.global_transform * sk.get_bone_global_pose(s.wither).origin
 	var bnp := sk.global_transform * sk.get_bone_global_pose(s.nape).origin
 	a.neckb += Vector2(bnp.x - bwp.x, bnp.z - bwp.z).length()
@@ -252,13 +326,14 @@ func sample(s: Dictionary, a: Dictionary) -> void:
 		a.saddle[0] = minf(a.saddle[0], sy)
 		a.saddle[1] = maxf(a.saddle[1], sy)
 
-# 首の補正（RaceNeckCorrective）のブレンドシェイプ：番号・形・混ぜ方
-func neck_bs(mi: MeshInstance3D) -> Dictionary:
+# 首の補正（RaceNeckCorrective・v7 の WalkNeckCorrective）のブレンドシェイプ：番号・形・混ぜ方
+func neck_bs(mi: MeshInstance3D) -> Array:
+	var out := []
+	var ba: Array = mi.mesh.surface_get_blend_shape_arrays(0)
 	for k in mi.mesh.get_blend_shape_count():
-		if String(mi.mesh.get_blend_shape_name(k)) == "RaceNeckCorrective":
-			var ba: Array = mi.mesh.surface_get_blend_shape_arrays(0)
-			return {"k": k, "T": (ba[k] as Array)[Mesh.ARRAY_VERTEX], "normalized": mi.mesh.blend_shape_mode == Mesh.BLEND_SHAPE_MODE_NORMALIZED}
-	return {}
+		if String(mi.mesh.get_blend_shape_name(k)) in ["RaceNeckCorrective", "WalkNeckCorrective"]:
+			out.append({"k": k, "T": (ba[k] as Array)[Mesh.ARRAY_VERTEX], "normalized": mi.mesh.blend_shape_mode == Mesh.BLEND_SHAPE_MODE_NORMALIZED})
+	return out
 
 # 首の3点（き甲・うなじ・鼻先）の頂点をいまの形で選ぶ（上の説明）。前は根の +Z、左右は根の X
 func pick_neck(s: Dictionary) -> void:
