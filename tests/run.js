@@ -1471,6 +1471,7 @@ require('./extra_growth.js')(check, assert, HS); // 成長型の8つ（ピーク
 require('./extra_inbreed.js')(check, assert, HS); // インブリード（選べない組み合わせ・因子の上がり・健康・上限・オリジナルホースが祖先・99に届かない）
 require('./extra_gf.js')(check, assert, HS); // グランドフェスティバル（6つ・GF の週・連戦・伝説級の担当・店と牧場・トロフィー・キンチェム）
 require('./extra_trophy.js')(check, assert, HS); // トロフィー（仕様書の表・お金・引退の能力）・足したレース・トロフィーの隠し馬（入れ替わり）
+require('./extra_debut.js')(check, assert, HS); // 毎年のデビュー（隠し馬は基本プールにいない・総合力の帯ごとの割合）
 require('./extra_oponly.js')(check, assert, HS); // レースは OP 以上だけ・G1 の獲得賞金の条件・海外の仮の条件・前のセーブの条件戦の予約
 require('./extra_oneride.js')(check, assert, HS); // おまかせ騎乗は無い・1つのレースに自分が乗るのは1頭（自分の馬・依頼）
 require('./extra_ground.js')(check, assert, HS); // 馬場の状態（スタミナの減り・切れは全馬共通・スピードの下がりは道悪の適性で変わる・走破タイム）

@@ -102,7 +102,7 @@ static func used_names() -> Dictionary:
 static func _reset_caches() -> void:
 	_wcache = null; _cache = null; _soon = null; _week = null; _jk = {}; _jkName = {}
 	HSOwners._own = null
-	HSEraless._mk = null
+	HSEraless._mk = null; HSEraless._tier = {}
 
 # ---------- 新しいゲーム ----------
 static func new_game(opts: Dictionary) -> Dictionary:

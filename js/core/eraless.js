@@ -1,6 +1,7 @@
 // 年代なしのゲーム（騎手のゲーム。持ち主の決定 2026-10-16）
 // - 番組・物価・走りの速さは U.ERA の年で固定する。年は「n年目」で見せる
-// - 1989〜2026年に走った史実馬（＝馬の店に並ぶ馬）から、毎年ランダムにデビューさせる。生年をずらして世界に出す（G.lineup にずらした年数）
+// - 1989〜2026年に走った史実馬（＝馬の店に並ぶ馬。トロフィーの隠し馬は除く）から、毎年デビューさせる。総合力の帯ごとの割合で種付きの乱数で選ぶ（E.TIERS）。
+//   生年をずらして世界に出す（G.lineup にずらした年数）
 // - デビューした馬は、引退するまで馬の店に並ばない。1989年より前に走り終えた馬（スペシャルホース）は js/core/special.js が扱う
 (function () {
   const HS = globalThis.HS = globalThis.HS || {};
@@ -19,8 +20,15 @@
   // noDebut：血統表の母などとしてだけ持つ馬（重賞を勝っていない名牝の母。持ち主の決定 2026-10-20「オリエンタルアートは登場する馬から外す」）
   E.isPool = d => lastYear(d) >= 1989 && d.born <= 2023 && !d.noDebut;
   E.isLegend = d => lastYear(d) < 1989;
+  // トロフィーの隠し馬（data/trophy_horses.js に名前のある馬。香港の三冠の1989年からの馬も）は基本プールから外す（持ち主の決定 2026-10-24
+  // 「隠し馬は基本プールからはずしたい」）。毎年のデビューにも始めの世界にも馬の店の品ぞろえにも出ず、トロフィーのリーチで出てきて、倒すと店に並ぶ道だけになる
+  let hiddenSet = null;
+  E.isHidden = d => {
+    if (!hiddenSet) { hiddenSet = new Set(); for (const xs of Object.values(HS.DATA.trophyHorses || {})) for (const x of xs || []) hiddenSet.add(x.name); }
+    return hiddenSet.has(d.name);
+  };
   let poolCache = null;
-  E.pool = () => poolCache || (poolCache = (HS.DATA.historic || []).filter(E.isPool));
+  E.pool = () => poolCache || (poolCache = (HS.DATA.historic || []).filter(d => E.isPool(d) && !E.isHidden(d)));
 
   // いま世界で走っている（入厩・牧場の）馬の名前
   E.activeNames = function () {
@@ -43,14 +51,46 @@
     if (h) G.lineup[d.name] = off;
     return h;
   };
-  // ランダムに n 頭（走っていない馬から）
-  // 倒した隠し馬（G.unlocked。香港の三冠の隠し馬は1989年からの馬）は、店にいつも並ぶので、デビューに選ばない
-  E.pick = function (n, rng) {
-    const act = E.activeNames(), un = new Set(W.get().unlocked || []);
-    const free = E.pool().filter(d => !act.has(d.name) && !un.has(d.name));
+  // デビューの選び方（持ち主の決定 2026-10-24「デビューする馬は完全ランダムじゃなくて70以上、65-70、64-60、59以下から割合になるようにしたい」）：
+  // その馬の総合力（画面の数・芝とダートの高いほう。HS.Season.fhShowPeak）で帯に分け、帯ごとの割合で選ぶ。
+  // 帯は上から 70.0以上・65.0〜69.5・60.0〜64.5・59.5以下、割合は 5・20・35・40％（300頭なら 15・60・105・120頭）。数と測った結果は docs/BALANCE.md「21」
+  E.TIERS = [{ min: 70, pct: 5 }, { min: 65, pct: 20 }, { min: 60, pct: 35 }, { min: 0, pct: 40 }];
+  // 帯の番号（0 がいちばん上）。能力はデータだけで決まるので名前で覚える（エディットを当て直したら数え直す）
+  let tierCache = null;
+  E.tierOf = function (d) {
+    const ver = HS.Edits ? HS.Edits.version || 0 : 0;
+    if (!tierCache || tierCache.ver !== ver) tierCache = { ver, map: new Map() };
+    let t = tierCache.map.get(d.name);
+    if (t == null) {
+      const f = HS.Season.fhShowPeak(H.fromHistoric(d, 'tier:' + d.name)), v = Math.max(f.turf, f.dirt);
+      t = E.TIERS.findIndex(x => v >= x.min);
+      tierCache.map.set(d.name, t);
+    }
+    return t;
+  };
+  // n 頭を帯に割る（端数はいちばん下の帯へ）
+  E.tierCounts = function (n) {
+    const c = E.TIERS.map(x => Math.floor(n * x.pct / 100));
+    c[c.length - 1] = n - c.slice(0, -1).reduce((a, b) => a + b, 0);
+    return c;
+  };
+  // 帯ごとの馬の並び free（free[0] がいちばん上の帯。中身は取り出して減る）から n 頭を選ぶ。帯ごとに種付きの乱数で選び、
+  // 帯に残りが足りなければ1つ下の帯から埋める。いちばん下の帯も足りなければ、下から順に上の帯へ戻って埋める
+  E.pickTiers = function (free, n, rng) {
     const out = [];
-    for (let i = 0; i < n && free.length; i++) out.push(free.splice(rng.int(0, free.length - 1), 1)[0]);
+    const take = (i, k) => { const L = free[i]; let got = 0; for (; got < k && L.length; got++) out.push(L.splice(rng.int(0, L.length - 1), 1)[0]); return got; };
+    const want = E.tierCounts(n);
+    let carry = 0;
+    for (let i = 0; i < want.length; i++) carry += want[i] - take(i, want[i] + carry);
+    for (let i = want.length - 2; i >= 0 && carry > 0; i--) carry -= take(i, carry);
     return out;
+  };
+  // n 頭を選ぶ（走っていない馬から。帯ごとの割合で）
+  E.pick = function (n, rng) {
+    const act = E.activeNames();
+    const free = E.TIERS.map(() => []);
+    for (const d of E.pool()) if (!act.has(d.name)) free[E.tierOf(d)].push(d);
+    return E.pickTiers(free, n, rng);
   };
   // 始めたとき：2〜6歳の世代をそろえる（それまでの実績も、本当の勝ち鞍をずらして持たせる）
   E.populate = function () {

@@ -400,7 +400,7 @@ module.exports = function (check, assert, HS) {
     return '前のセーブの autumn・arima2・au2 を消した';
   });
 
-  check('trophy: 香港の三冠の隠し馬は1989年からの有名な馬。その年に世界で走っているときは出てこず、倒すと店にいつも並び、デビューに選ばれない', () => {
+  check('trophy: 香港の三冠の隠し馬は1989年からの有名な馬。デビューせず（基本プールにいない）、前のセーブで世界で走っているときは出てこず、倒すと店にいつも並ぶ', () => {
     const E = HS.Eraless;
     for (const id of ['hk3', 'hksp']) {
       const ms = SP.members(SP.BY['t:' + id]).map(d => d.name);
@@ -409,9 +409,9 @@ module.exports = function (check, assert, HS) {
     assert(SP.members(SP.BY['t:hk3']).some(d => d.name === 'ロマンチックウォリアー') && SP.members(SP.BY['t:hksp']).some(d => d.name === 'サイレントウィットネス'), '香港の名馬がいない');
     // ほかのトロフィー・グループに1989年からの馬は入らない
     assert(SP.list().every(x => !E.isPool(x.d) || (x.groups.length === 1 && ['t:hk3', 't:hksp'].includes(x.groups[0]))), '1989年からの馬が香港の三冠のほかにいる');
-    // 種はロマンチックウォリアーが始めの世界でデビューしていないもの（外した馬を戻すと世界の顔ぶれが変わり、種 68 ではデビューしていた）
+    // 隠し馬は基本プールにいないので、どの種でも始めの世界にいない（持ち主の決定 2026-10-24。前は種でデビューしていることがあった）
     const G = newGame(69);
-    assert(!HS.Eraless.activeNames().has('ロマンチックウォリアー'), '始めの世界にロマンチックウォリアーがいる（種を替える）');
+    assert(!SP.members(SP.BY['t:hk3']).concat(SP.members(SP.BY['t:hksp'])).some(d => HS.Eraless.activeNames().has(d.name)), '始めの世界に香港の隠し馬がいる');
     G.player.money = 1e9;
     const m = cal();
     const h = myHorse(G, '牡');
@@ -422,7 +422,7 @@ module.exports = function (check, assert, HS) {
     const names = () => SP.pending(h, race).map(x => x.d.name);
     const rw = 'ロマンチックウォリアー';
     assert(names().includes(rw), `香港三冠のリーチで出てこない（${names()}）`);
-    // 同じ馬がその年に世界で走っている（ランダムにデビューした）ときは出てこない
+    // 前のセーブで同じ馬が世界で走っている（基本プールにいたころにデビューした）ときは出てこない
     const d = SP.data(rw);
     const live = E.spawn(d, 5, true);
     assert(live && E.activeNames().has(rw) && !names().includes(rw) && names().length, `世界にいるのに隠し馬で出る（${names()}）`);

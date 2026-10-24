@@ -191,7 +191,8 @@
   // 自分の馬 h が、このレースでグループ g にリーチをかけているか
   SP.reach = (h, g, race) => h.owner === 'P' && (!g.finals || g.finals.includes(race.short)) && g.legs(h, race);
   // 出てこられるか：ふつうはまだ店に並んでいない名馬だけ。伝説級（again）は、自分のお手馬（引退していない）になっていなければ何度でも。
-  // 1989年からの隠し馬（SP.isModern）は、その年に世界で走っている（入厩・牧場の）ときは出さない（同じ馬が2頭にならないように）
+  // 隠し馬は毎年のデビューにも始めの世界にも選ばない（js/core/eraless.js の E.isHidden。持ち主の決定 2026-10-24）。ただ前のセーブでは、
+  // 1989年からの隠し馬（SP.isModern）がもうデビューしていたり店で買われていたりするので、世界で走っている（入厩・牧場の）間は出さない（同じ馬が2頭にならないように）
   SP.canAppear = (g, d, un) => (!SP.isModern(d) || !HS.Eraless.activeNames().has(d.name)) && (g.again ? !W.mine().some(x => x.name === d.name && x.loc !== 'retired') : !un.includes(d.name));
   // このレースに出てくるスペシャルホース
   SP.pending = function (h, race) {

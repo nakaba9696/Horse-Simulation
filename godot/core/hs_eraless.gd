@@ -1,4 +1,5 @@
-# 年代なしのゲーム（js/core/eraless.js の HS.Eraless と同じ）：番組・物価・騎手は ERA の年で固定。1989〜2026年に走った史実馬を毎年ランダムにデビューさせる（生年をずらす）。
+# 年代なしのゲーム（js/core/eraless.js の HS.Eraless と同じ）：番組・物価・騎手は ERA の年で固定。1989〜2026年に走った史実馬（トロフィーの隠し馬は除く）を
+# 毎年、総合力の帯ごとの割合でデビューさせる（TIERS。生年をずらす）。
 # 馬の店（走っていない馬を売る。6〜12月は2歳・1〜5月は3歳。品ぞろえは月ごと・鍵で少しずつ開く）
 class_name HSEraless
 
@@ -11,10 +12,19 @@ static func _last_year(d: Dictionary) -> float: return float(HSU.or_(d.get("reti
 # noDebut：血統表の母などとしてだけ持つ馬（持ち主の決定 2026-10-20）
 static func is_pool(d: Dictionary) -> bool: return _last_year(d) >= 1989 and d.born <= 2023 and not d.get("noDebut", false)
 static func is_legend(d: Dictionary) -> bool: return _last_year(d) < 1989
+# トロフィーの隠し馬（data/trophy_horses.js に名前のある馬。香港の三冠の1989年からの馬も）は基本プールから外す（持ち主の決定 2026-10-24
+# 「隠し馬は基本プールからはずしたい」）。毎年のデビューにも始めの世界にも馬の店の品ぞろえにも出ず、トロフィーのリーチで出てきて、倒すと店に並ぶ道だけになる
+static var _hidden: Variant = null
+static func is_hidden(d: Dictionary) -> bool:
+	if _hidden == null:
+		_hidden = {}
+		for xs in HSData.d().get("trophyHorses", {}).values():
+			for x in xs: _hidden[x.name] = true
+	return _hidden.has(d.name)
 static var _pool: Variant = null
 static var _pc: Variant = null
 static func pool() -> Array:
-	if _pool == null: _pool = HSData.d().get("historic", []).filter(func(d): return is_pool(d))
+	if _pool == null: _pool = HSData.d().get("historic", []).filter(func(d): return is_pool(d) and not is_hidden(d))
 	# owners.js の包み：まだやり終えていないミッションの依頼の馬は、デビューと馬の店に出さない（騎手のゲーム）
 	var g = HSWorld.G
 	if not g or g.get("mode") != "jockey" or not g.get("eraless"): return _pool
@@ -45,19 +55,55 @@ static func spawn(d: Dictionary, age: float, at_start: bool) -> Variant:
 	var h = HSWorld.spawn_historic(shift(d, off), at_start)
 	if h: G.lineup[d.name] = off
 	return h
-# ランダムに n 頭（走っていない馬から）
-# 倒した隠し馬（G.unlocked。香港の三冠の隠し馬は1989年からの馬）は、店にいつも並ぶので、デビューに選ばない
+# デビューの選び方（持ち主の決定 2026-10-24。eraless.js の E.TIERS と同じ）：総合力（画面の数・芝とダートの高いほう。HSSeason.fh_show_peak）で帯に分け、
+# 帯ごとの割合で選ぶ。帯は上から 70.0以上・65.0〜69.5・60.0〜64.5・59.5以下、割合は 5・20・35・40％（300頭なら 15・60・105・120頭）。数は docs/BALANCE.md「21」
+const TIERS := [{ min = 70.0, pct = 5 }, { min = 65.0, pct = 20 }, { min = 60.0, pct = 35 }, { min = 0.0, pct = 40 }]
+# 帯の番号（0 がいちばん上）。能力はデータだけで決まるので名前で覚える（新しいゲーム・セーブを読んだとき＝エディットを当て直したときに空にする。HSWorld._reset_caches）
+static var _tier := {}
+static func tier_of(d: Dictionary) -> int:
+	if _tier.has(d.name): return _tier[d.name]
+	var f := HSSeason.fh_show_peak(HSHorse.from_historic(d, "tier:" + d.name))
+	var v: float = maxf(f.turf, f.dirt)
+	var t := 0
+	while t < TIERS.size() - 1 and v < TIERS[t].min: t += 1
+	_tier[d.name] = t
+	return t
+# n 頭を帯に割る（端数はいちばん下の帯へ）
+static func tier_counts(n: int) -> Array:
+	var c: Array = []
+	var sum := 0
+	for i in TIERS.size() - 1:
+		c.append(n * int(TIERS[i].pct) / 100); sum += c[i]
+	c.append(n - sum)
+	return c
+# 帯ごとの馬の並び free（free[0] がいちばん上の帯。中身は取り出して減る）から n 頭を選ぶ。帯ごとに種付きの乱数で選び、
+# 帯に残りが足りなければ1つ下の帯から埋める。いちばん下の帯も足りなければ、下から順に上の帯へ戻って埋める
+static func pick_tiers(free: Array, n: int, rng: HSRng) -> Array:
+	var out: Array = []
+	var take := func(i: int, k: int) -> int:
+		var L: Array = free[i]
+		var got := 0
+		while got < k and L.size():
+			var j := rng.int_(0, L.size() - 1)
+			out.append(L[j]); L.remove_at(j)
+			got += 1
+		return got
+	var want := tier_counts(n)
+	var carry := 0
+	for i in want.size(): carry += want[i] - take.call(i, want[i] + carry)
+	var up := want.size() - 2
+	while up >= 0 and carry > 0:
+		carry -= take.call(up, carry)
+		up -= 1
+	return out
+# n 頭を選ぶ（走っていない馬から。帯ごとの割合で）
 static func pick(n: int, rng: HSRng) -> Array:
 	var act := active_names()
-	var un: Array = HSU.or_(HSWorld.G.get("unlocked"), [])
-	var free: Array = pool().filter(func(d): return not act.has(d.name) and not un.has(d.name))
-	var out: Array = []
-	var i := 0
-	while i < n and free.size():
-		var k := rng.int_(0, free.size() - 1)
-		out.append(free[k]); free.remove_at(k)
-		i += 1
-	return out
+	var free: Array = []
+	for i in TIERS.size(): free.append([])
+	for d in pool():
+		if not act.has(d.name): free[tier_of(d)].append(d)
+	return pick_tiers(free, n, rng)
 static func populate() -> void:
 	var G = HSWorld.G
 	var rng := HSRng.new(G.seed + 7.0)
