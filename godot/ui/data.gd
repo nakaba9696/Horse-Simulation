@@ -42,6 +42,7 @@ func build() -> void:
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiScreen.back_under(scroll, list)
 	scroll.add_child(list)
 	if OS.get_cmdline_user_args().has("--setup=hall_view"):
 		UiHorseScreen._setup_hall_view()   # 撮影の見本：殿堂入りした馬が1頭いる

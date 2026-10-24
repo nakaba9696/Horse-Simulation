@@ -261,7 +261,7 @@ func _mud_of(i: int) -> Array:
 
 func _build_table() -> void:
 	table = PanelContainer.new()
-	table.add_theme_stylebox_override("panel", UiTheme.box(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, Vector4(0, 0, 0, 0)))
+	table.add_theme_stylebox_override("panel", UiTheme.backing_around(8))   # 表は面の台に載せる（docs/UI.md「色の役目」）
 	table.position = Vector2(24, 104)
 	table.custom_minimum_size = Vector2(TABLE_W, 0)
 	root.add_child(table)
@@ -292,9 +292,10 @@ func _build_table() -> void:
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(0, ROW_H)
 		b.focus_mode = Control.FOCUS_ALL
+		b.set_meta("ui_row", true)
 		b.add_theme_stylebox_override("normal", UiTheme.row_box(i, false, mine))
 		var hov := UiTheme.row_box(i, false, mine)
-		hov.bg_color = Color(UiTheme.SURFACE_3.r, UiTheme.SURFACE_3.g, UiTheme.SURFACE_3.b, 0.92)
+		hov.bg_color = UiTheme.ROW_HI
 		b.add_theme_stylebox_override("hover", hov)
 		for st in ["focus", "pressed", "hover_pressed"]:
 			b.add_theme_stylebox_override(st, UiTheme.row_box(i, true, mine))
@@ -410,7 +411,13 @@ func _build_right() -> void:
 	var bh := HBoxContainer.new()
 	bh.add_theme_constant_override("separation", 14)
 	bh.alignment = BoxContainer.ALIGNMENT_END
-	right.add_child(bh)
+	# ボタンは面の台に載せる（パドックの 3D の上に直に置かない。docs/UI.md「色の役目」）
+	var bp := PanelContainer.new()
+	bp.add_theme_stylebox_override("panel", UiTheme.backing(Vector4(10, 10, 10, 12)))
+	bp.size_flags_horizontal = Control.SIZE_SHRINK_END
+	bp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bp.add_child(bh)
+	right.add_child(bp)
 	btn_paddock = Button.new()
 	btn_paddock.text = HSText.t("パドック")
 	btn_paddock.custom_minimum_size = Vector2(170, 56)
@@ -747,7 +754,10 @@ func _capture() -> void:
 		_layout()
 		for k in 2:
 			await RenderingServer.frame_post_draw
-		get_viewport().get_texture().get_image().save_png(out_dir.path_join(String(sh.name) + ".png"))
+		var img := get_viewport().get_texture().get_image()
+		img.save_png(out_dir.path_join(String(sh.name) + ".png"))
+		if OS.get_cmdline_user_args().has("--contrast"):
+			UiScreen.measure_contrast(self, img, out_dir.path_join(String(sh.name) + "_contrast.json"))
 		if not String(sh.name).contains("_0"):
 			print("shot ", sh.name)
 	print("done")

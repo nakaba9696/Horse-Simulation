@@ -88,6 +88,8 @@ sh godot/tools/run_scene.sh res://scenes/race_card.tscn -- --out=DIR --shot=秒:
 sh godot/tools/run_scene.sh res://scenes/horse_lab.tscn -- --out=DIR --cam=side|close|front|back|head --seq=枚数
 sh godot/tools/run_scene.sh res://scenes/home.tscn -- --demo=1 --out=DIR --shot=0.8:名前   # title・home・program・shop・week_result も同じ。race_card・race も --demo=1 で週のレース
 sh godot/tools/run_scene.sh res://scenes/home.tscn -- --demo=1 --lang=en --out=DIR --shot=0.8:名前   # 英語の画面で撮る（--lang=en|ja。docs/I18N.md）
+sh godot/tools/shot_screens.sh 出力先 --contrast              # 騎乗の外の 16 画面を 1600×1000 で撮り、押せる物が背景から浮いているかを測る（docs/UI.md「色の役目」）
+python3 godot/tools/ui_roles.py                                 # 部品の絵の面を色の役目（theme.gd の INK・ACT…）に塗り替えた絵（assets/ui/role/）を作る
 godot --headless --path godot -s res://tools/check_scripts.gd   # 画面のスクリプトがすべて読めるか
 godot --headless --path godot -s res://tools/autoplay.gd -- --weeks=52 --seed=1   # 本物の画面で1年を自動で遊ぶ（止まる所・実行時の誤りを探す。node tests/run.js は10週）
 godot --headless --path godot -s res://tools/autoplay.gd -- --weeks=60 --lang=en  # 英語で遊び、表に無い文を「i18n missing」で書き出す

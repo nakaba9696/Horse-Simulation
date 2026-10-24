@@ -12,6 +12,7 @@ extends UiScreen
 const COL_W := 492.0     # 左右の表の幅
 const MID_W := 520.0     # 真ん中の札の幅
 const ROW_H := 68.0
+const BACK_PAD := 8.0    # 表の下の面の台の余白
 
 var sire := ""
 var dam := ""
@@ -52,12 +53,18 @@ func build() -> void:
 	var y0 := TOP + 8.0
 	var gap := (1600.0 - PAD_X * 2.0 - COL_W * 2.0 - MID_W) / 2.0
 	for k in 2:
+		# 表は面の台に載せる（押せる行を牧場の写真の上に直に置かない。docs/UI.md「色の役目」）
+		var bk := PanelContainer.new()
+		bk.add_theme_stylebox_override("panel", UiTheme.backing(Vector4(BACK_PAD, BACK_PAD, BACK_PAD, BACK_PAD + 2)))
+		bk.position = Vector2(PAD_X + (COL_W + gap + MID_W + gap) * k - BACK_PAD, y0 - BACK_PAD)
+		bk.custom_minimum_size = Vector2(COL_W + BACK_PAD * 2.0, 0)
+		bk.size = Vector2(COL_W + BACK_PAD * 2.0, 0)
+		bk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(bk)
 		var v := VBoxContainer.new()
-		v.position = Vector2(PAD_X + (COL_W + gap + MID_W + gap) * k, y0)
 		v.custom_minimum_size = Vector2(COL_W, 0)
-		v.size = Vector2(COL_W, 0)
 		v.add_theme_constant_override("separation", 6)
-		add_child(v)
+		bk.add_child(v)
 		cols.append(v)
 	var pb := UiScreen.panel_box(true, 10, true)
 	var p: PanelContainer = pb[0]

@@ -47,6 +47,7 @@ func build() -> void:
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UiScreen.back_under(sc, list)
 	sc.add_child(list)
 	_fill()
 

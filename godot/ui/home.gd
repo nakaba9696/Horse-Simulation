@@ -19,7 +19,7 @@ func on_back() -> void:
 	pass   # ホームがいちばん上（タイトルへはコマンドの札から）
 
 func build() -> void:
-	backdrop("bg_home.png", 0.6)
+	backdrop("bg_home.png", 0.72)
 	var G = HSWorld.G
 	var j = HSJockey.me()
 	var wi := HSWorld.w_idx()
