@@ -144,7 +144,7 @@
   // 強さの下限は無い（持ち主の決定 2026-10-16「スペシャルホースは別に強さの下限はないです」。前は評価92以上）。
   // SP.WITH_BIG を true にすると、名鑑の無い大レース（SP.bigWins）の勝ち馬も入る（名鑑を書くまでは入れない）
   SP.WITH_BIG = false;
-  // 1989年からの隠し馬（香港の三冠だけ。data/trophy_horses.js の modern）の名前
+  // 1989年からの隠し馬（data/trophy_horses.js の modern）の名前
   SP.MODERN = [];
   for (const xs of Object.values(HS.DATA.trophyHorses || {})) for (const x of xs) if (x.modern && !SP.MODERN.includes(x.name)) SP.MODERN.push(x.name);
   SP.isModern = d => SP.MODERN.includes(d.name);
@@ -153,8 +153,9 @@
     if (pool) return pool;
     const prof = new Set((HS.DATA.profiles || []).map(f => HS.normName(f.name))); // 名鑑と史実馬は小さいカナをそろえて比べる（ホスピタリテイ＝ホスピタリティ）
     pool = (HS.DATA.historic || []).filter(d => HS.Eraless.isLegend(d) && (prof.has(HS.normName(d.name)) || (SP.WITH_BIG && SP.bigWins(d).length))).concat(HS.DATA.legendsExtra || []);
-    // 香港の三冠の隠し馬は1989年からの馬でもよい（data/trophy_horses.js の modern。持ち主の決定 2026-10-20）
-    for (const n of SP.MODERN) { const d = (HS.DATA.historic || []).find(x => x.name === n); if (d && !pool.includes(d)) pool.push(d); }    return pool;
+    // トロフィーの隠し馬は1989年からの馬でもよい（data/trophy_horses.js の modern。持ち主の決定 2026-10-20・2026-10-24）
+    for (const n of SP.MODERN) { const d = (HS.DATA.historic || []).find(x => x.name === n); if (d && !pool.includes(d)) pool.push(d); }
+    return pool;
   };
   SP.data = name => SP.pool().find(d => d.name === name) || null;
   SP.isTop = d => d.tier === 'legend'; // 伝説級：グランドフェスティバルのグループ（gf・gfall）だけに入る（担当の GF はデータの gf）。固有の能力は伝説級かどうかで決めない（data/uniques.js に名前があるか。js/core/skills.js の K.hasUnique。持ち主の決定 2026-10-17）
@@ -194,13 +195,39 @@
   // 1989年からの隠し馬（SP.isModern）は、その年に世界で走っている（入厩・牧場の）ときは出さない（同じ馬が2頭にならないように）
   SP.canAppear = (g, d, un) => (!SP.isModern(d) || !HS.Eraless.activeNames().has(d.name)) && (g.again ? !W.mine().some(x => x.name === d.name && x.loc !== 'retired') : !un.includes(d.name));
   // このレースに出てくるスペシャルホース
-  SP.pending = function (h, race) {
+  // 出てこられる名馬の全部（トロフィーのグループも1頭に絞る前）
+  SP.candidates = function (h, race) {
     const G = W.get(), un = G.unlocked || [];
     const out = [];
-    // 条件の組み合わせのグループを先に（強い順）、大レースのグループはそのあと（強い順）
     for (const g of SP.GROUPS) if (SP.reach(h, g, race)) for (const d of SP.members(g)) if (SP.canAppear(g, d, un) && SP.whenOk(g, d, h, race) && !out.some(x => x.d === d) && (!g.fit || g.fit(d, race))) out.push({ d, g });
+    return out;
+  };
+  SP.pending = function (h, race) {
+    const all = SP.candidates(h, race), out = [];
+    for (const g of SP.GROUPS) {
+      const ds = all.filter(x => x.g === g).map(x => x.d);
+      if (!ds.length) continue;
+      for (const d of g.trophy ? SP.pickOne(ds, h, g, race) : ds) out.push({ d, g });
+    }
+    // 条件の組み合わせのグループを先に（強い順）、大レースのグループはそのあと（強い順）
     const key = x => (x.g.race ? 1000 : 0) - (x.d.rating || 0);
     return out.sort((a, b) => key(a) - key(b));
+  };
+  // トロフィーのリーチで出てくるのは、そのトロフィーの名馬からランダムに1頭（持ち主の決定 2026-10-24「リーチででてくるのはその条件からランダム1頭です」）。
+  // 牝馬限定のレースでは牝馬から選ぶ。同じ馬・同じレース・同じ年なら何度呼んでも同じ馬（世界の乱数は使わない）
+  SP.pickOne = function (ds, h, g, race) {
+    const xs = race.sex === '牝' ? ds.filter(d => d.sex === '牝') : ds;
+    return xs.length ? [xs[HS.U.hash(`${h.id}|${g.id}|${race.year}|${race.short}`) % xs.length]] : [];
+  };
+  // トロフィーを手にすると、そのトロフィーの名馬が全部店に並ぶ（持ち主の決定 2026-10-24「達成したらそのプールの全隠し馬が店で並ぶようになります」。js/core/trophy.js の TR.give から）
+  SP.unlockTrophy = function (id) {
+    const g = SP.BY['t:' + id]; if (!g) return [];
+    const G = W.get();
+    G.unlocked = G.unlocked || [];
+    const got = SP.members(g).map(d => d.name).filter(n => !G.unlocked.includes(n));
+    G.unlocked.push(...got);
+    if (got.length) W.news(`${g.label}の名馬 ${got.join('・')}が馬の店に並ぶようになった。`, 'g1');
+    return got;
   };
   // 自分の馬のリーチ（次に勝てばよいレースと、出てくるグループ）。ホームに出す
   SP.reachInfo = function (h) {

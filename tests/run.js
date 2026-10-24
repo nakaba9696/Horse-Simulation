@@ -1167,7 +1167,7 @@ check('special: 1989年より前の名馬はグループごとの条件にリー
   assert(mem('local').includes('ハイセイコー'), `地方から来た名馬 ${mem('local').join('・')}`);
   assert(mem('arima2').includes('スピードシンボリ') && mem('t:arc2').includes('リボー') && mem('t:usf3').includes('ラフィアン') && mem('unbeaten').includes('トキノミノル'), 'スピードシンボリ・リボー・ラフィアン・トキノミノルのグループが違う');
   assert(!SP.list().some(x => x.groups.length !== 1), '2つ以上のグループに入る名馬がいる');
-  assert(!SP.list().some(x => HS.Eraless.isPool(x.d) && !(SP.isModern(x.d) && ['t:hk3', 't:hksp'].includes(x.groups[0]))), '1989年以降の馬がスペシャルホースになっている（香港の三冠の隠し馬のほか）');
+  assert(!SP.list().some(x => HS.Eraless.isPool(x.d) && !(SP.isModern(x.d) && x.groups.length === 1 && x.groups[0].startsWith('t:'))), '1989年以降の馬がスペシャルホースになっている（M(…) で書いたトロフィーの隠し馬のほか）');
   // 皐月賞と日本ダービーを勝った馬が菊花賞に出ると、歴代の三冠馬が出てくる
   const kk = R.gradedYear(G.year).find(r => r.short === '菊花賞');
   const h = W.all().find(x => x.hist && x.sex !== '牝' && !x.gelding && G.year - x.born === 3 && x.loc === 'stable' && !x.injury);

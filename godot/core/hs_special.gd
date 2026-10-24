@@ -199,14 +199,14 @@ static func pool() -> Array:
 	var prof := {}
 	for f in HSData.d().get("profiles", []): prof[HSDatafix.norm_name(f.name)] = true
 	_pool = HSData.d().get("historic", []).filter(func(d): return HSEraless.is_legend(d) and (prof.has(HSDatafix.norm_name(d.name)) or (WITH_BIG and big_wins(d).size()))) + HSData.d().get("legendsExtra", [])
-	# 香港の三冠の隠し馬は1989年からの馬でもよい（data/trophy_horses.js の modern。持ち主の決定 2026-10-20）
+	# トロフィーの隠し馬は1989年からの馬でもよい（data/trophy_horses.js の modern。持ち主の決定 2026-10-20・2026-10-24）
 	for n in modern():
 		for d in HSData.d().get("historic", []):
 			if d.name == n:
 				if not _pool.has(d): _pool.append(d)
 				break
 	return _pool
-# 1989年からの隠し馬（香港の三冠だけ。data/trophy_horses.js の modern）の名前
+# 1989年からの隠し馬（data/trophy_horses.js の modern）の名前
 static var _modern: Variant = null
 static func modern() -> Array:
 	if _modern == null:
@@ -260,15 +260,40 @@ static func can_appear(g: Dictionary, d: Dictionary, un: Array) -> bool:
 	if is_modern(d) and HSEraless.active_names().has(d.name): return false
 	if g.get("again"): return not HSWorld.mine().any(func(x): return x.name == d.name and x.get("loc") != "retired")
 	return not un.has(d.name)
-static func pending(h: Dictionary, race: Dictionary) -> Array:
+# 出てこられる名馬の全部（トロフィーのグループも1頭に絞る前）
+static func candidates(h: Dictionary, race: Dictionary) -> Array:
 	var un: Array = HSU.or_(HSWorld.G.get("unlocked"), [])
 	var out: Array = []
 	for g in groups():
 		if reach(h, g, race):
 			for d in members(g):
 				if can_appear(g, d, un) and when_ok(g, d, h, race) and not out.any(func(x): return is_same(x.d, d)) and (not g.get("fit") or d.get("gf") == race.get("gf")): out.append({ d = d, g = g })
+	return out
+static func pending(h: Dictionary, race: Dictionary) -> Array:
+	var all_: Array = candidates(h, race)
+	var out: Array = []
+	for g in groups():
+		var ds: Array = all_.filter(func(x): return x.g.id == g.id).map(func(x): return x.d)
+		if ds.is_empty(): continue
+		for d in (pick_one(ds, h, g, race) if g.get("trophy") else ds): out.append({ d = d, g = g })
 	var key := func(x): return (1000.0 if x.g.get("race") else 0.0) - float(HSU.or_(x.d.get("rating"), 0.0))
 	return HSU.stable_sort(out, func(a, b): return key.call(a) < key.call(b))
+# トロフィーのリーチで出てくるのは、そのトロフィーの名馬からランダムに1頭（持ち主の決定 2026-10-24「リーチででてくるのはその条件からランダム1頭です」）。
+# 牝馬限定のレースでは牝馬から選ぶ。同じ馬・同じレース・同じ年なら何度呼んでも同じ馬（世界の乱数は使わない。JS の SP.pickOne と同じ）
+static func pick_one(ds: Array, h: Dictionary, g: Dictionary, race: Dictionary) -> Array:
+	var xs: Array = ds.filter(func(d): return d.get("sex") == "牝") if race.get("sex") == "牝" else ds
+	if xs.is_empty(): return []
+	return [xs[HSU.hash32("%s|%s|%d|%s" % [str(h.id), g.id, int(race.year), str(race.short)]) % xs.size()]]
+# トロフィーを手にすると、そのトロフィーの名馬が全部店に並ぶ（持ち主の決定 2026-10-24「達成したらそのプールの全隠し馬が店で並ぶようになります」。HSTrophy.give から）
+static func unlock_trophy(id: String) -> Array:
+	if not by_id().has("t:" + id): return []
+	var g: Dictionary = by_id()["t:" + id]
+	var G = HSWorld.G
+	if not G.get("unlocked"): G.unlocked = []
+	var got: Array = members(g).map(func(d): return d.name).filter(func(n): return not G.unlocked.has(n))
+	G.unlocked.append_array(got)
+	if got.size(): HSWorld.news("%sの名馬 %sが馬の店に並ぶようになった。" % [g.label, "・".join(got)], "g1")
+	return got
 static func reach_info(h: Dictionary) -> Array:
 	var un: Array = HSU.or_(HSWorld.G.get("unlocked"), [])
 	if h.get("owner") != "P": return []

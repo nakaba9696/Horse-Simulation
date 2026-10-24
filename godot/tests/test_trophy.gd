@@ -24,7 +24,18 @@ func run(t) -> void:
 	t.ok(HSSpecial.members(HSSpecial.by_id()["t:bc2"]).any(func(d): return d.name == "ジョンヘンリー"), "ジョンヘンリーはクラウンオブブリーダーズ")
 	t.ok(not HSSpecial.members(HSSpecial.by_id()["t:legend"]).any(func(d): return d.name == "ジョンヘンリー"), "ジョンヘンリーはホールオブフェイムにいない")
 	t.ok(HSSpecial.members(HSSpecial.by_id()["t:gs_jp"]).any(func(d): return d.name == "テンポイント"), "テンポイントはジャパン GS")
-	t.ok(not HSSpecial.by_id().has("t:gs_us"), "アメリカン GS の隠し馬はいない")
+	t.ok(HSSpecial.members(HSSpecial.by_id()["t:gs_us"]).all(func(d): return HSSpecial.is_modern(d)), "アメリカン GS の隠し馬は1989年からの馬だけ")
+	# リーチで出てくるのはランダムに1頭（持ち主の決定 2026-10-24）：JS の SP.pickOne と同じ式。同じ馬・同じレース・同じ年なら同じ馬
+	var ds: Array = HSSpecial.members(g)
+	var kk := { year = 2030.0, short = "菊花賞", sex = "" }
+	var p1: Array = HSSpecial.pick_one(ds, { id = "h1" }, g, kk)
+	t.ok(p1.size() == 1 and is_same(p1[0], HSSpecial.pick_one(ds, { id = "h1" }, g, kk)[0]), "ランダムに1頭・同じ馬なら同じ馬")
+	t.ok(is_same(p1[0], ds[HSU.hash32("h1|t:triple|2030|菊花賞") % ds.size()]), "選び方が JS と同じ")
+	var seen := {}
+	for i in 40: seen[HSSpecial.pick_one(ds, { id = "h%d" % i }, g, kk)[0].name] = true
+	t.ok(seen.size() >= 3, "馬が替わればばらける（%d頭）" % seen.size())
+	var fds: Array = HSSpecial.members(HSSpecial.by_id()["t:ftriple"])
+	t.ok(HSSpecial.pick_one(ds + fds, { id = "h1" }, g, { year = 2030.0, short = "オークス", sex = "牝" })[0].sex == "牝", "牝馬限定のレースは牝馬から")
 	for n in ["カーバイン", "ロベルト", "ロイヤルパレス", "ギャロレット", "トムフール"]:
 		var x = HSSpecial.list().filter(func(e): return e.name == n)
 		t.ok(x.is_empty() or not String(x[0].groups[0]).begins_with("t:"), "%s はトロフィーの隠し馬でない" % n)

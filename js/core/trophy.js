@@ -84,6 +84,7 @@
     else (G.trophies[t.id].more = G.trophies[t.id].more || []).push(rec);
     G.player.money += bonus;
     W.news(`トロフィー「${t.label}」を手にした！（${h.name}）ボーナス賞金 ${HS.U.money(bonus)}`, 'g1');
+    if (HS.Special) HS.Special.unlockTrophy(t.id);
     return true;
   };
 

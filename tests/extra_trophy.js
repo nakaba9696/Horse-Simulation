@@ -164,13 +164,13 @@ module.exports = function (check, assert, HS) {
   });
 
   check('trophy: 隠し馬はトロフィーのリーチで出てきて、手持ちでない最低人気の馬と入れ替わる（お手馬の馬は出ない・勝つと店に並び、また達成をねらうと出てくる）', () => {
-    // 紐づけの表：1989年より前の名馬だけ（香港の三冠2つだけは1989年からの馬も。持ち主の決定 2026-10-20）・1頭は1つのトロフィーだけ・伝説級（GF の担当）は入れない
+    // 紐づけの表：1989年より前の名馬と、M(…) で書いた1989年からの馬（持ち主の決定 2026-10-20・2026-10-24）・1頭は1つのトロフィーだけ・伝説級（GF の担当）は入れない
     const seen = new Set();
     for (const [id, xs] of Object.entries(D.trophyHorses)) {
       assert(TR.BY[id], `トロフィー ${id} が無い`);
       for (const x of xs) {
         const d = SP.data(x.name);
-        const modernOk = ['hk3', 'hksp'].includes(id) && x.modern;
+        const modernOk = !!x.modern;
         assert(d && (modernOk ? HS.Eraless.isPool(d) : !HS.Eraless.isPool(d)) && !SP.isTop(d) && x.why, `${x.name}（${id}）は隠し馬にできない`);
         assert(!seen.has(x.name), `${x.name}が2つのトロフィーにいる`); seen.add(x.name);
         assert(SP.byName(x.name).groups.join() === 't:' + id, `${x.name}のグループ ${SP.byName(x.name).groups}`);
@@ -193,8 +193,10 @@ module.exports = function (check, assert, HS) {
     const race = W.weekRaces().find(r => r.short === '菊花賞');
     assert(!W.enter(h.id, race.key), '菊花賞に登録できない');
     const lg = SP.forRace(race, [{ horse: h, mine: true }]);
-    const names = lg.map(x => x.horse.name);
-    assert(names.includes('シンザン') && !names.includes('シンボリルドルフ'), `出てくる名馬 ${names}`);
+    const names = lg.map(x => x.horse.name), cands = SP.candidates(h, race).map(x => x.d.name);
+    // 日本三冠の名馬は、出てこられる馬（お手馬のシンボリルドルフは出ない）からランダムに1頭（持ち主の決定 2026-10-24）
+    assert(names.filter(n => SP.byName(n).groups.includes('t:triple')).length === 1 && !names.includes('シンボリルドルフ'), `出てくる名馬 ${names}`);
+    assert(cands.includes('シンザン') && !cands.includes('シンボリルドルフ'), `出てこられる名馬 ${cands}`);
     // 入れ替わり：隠し馬なしで作った出走表と比べる（同じ種）
     const wk = W.prepareWeek(), card = wk.cards.find(c => c.race.key === race.key);
     const base = W.buildField(race, [{ horse: h, mine: true }].concat(card.runners.filter(x => !x.legend && !x.mine && !x.horse.filler).map(x => ({ horse: x.horse }))), wk.wIdx, new U.RNG(card.seed));
@@ -213,15 +215,17 @@ module.exports = function (check, assert, HS) {
     const res = rep.races.find(r => r.race.key === race.key).sim.results;
     assert(res[0].horse === h, `勝てなかった（1着 ${res[0].horse.name}）`);
     assert(sps.every(n => G.unlocked.includes(n)) && TR.has(h, 'triple'), '店に並ばないか、トロフィーが付かない');
+    // トロフィーを手にすると、出てこなかった名馬も含めて日本三冠の名馬が全部店に並ぶ（持ち主の決定 2026-10-24）
+    assert(SP.members(SP.BY['t:triple']).every(d => G.unlocked.includes(d.name)), `日本三冠の名馬が全部は店に並ばない（${G.unlocked}）`);
     assert(W.marketHistoric().some(x => sps.includes(x.horse.name) && x.legend), '店に並ばない');
     // 店に並んだあとも、別の馬がまた日本三冠をねらうと出てくる（again）。一度も達成していない条件のグループ（大レース）は、倒した馬は出てこない
     const h2 = Object.assign({}, h, { id: 'h2', gradedWins: [{ y: G.year + 1, race: '皐月賞', short: '皐月賞', grade: 'G1' }, { y: G.year + 1, race: '東京優駿', short: '日本ダービー', grade: 'G1' }] });
     // 見るのは日本三冠（t:triple）の名馬。出走表には「歴代の菊花賞馬」（r:菊花賞。大レースのグループで、倒すと出てこない）の名馬もいて、枠の並びしだいで先頭に来る
     const tri = sps.find(n => SP.byName(n).groups.includes('t:triple'));
     assert(tri, `日本三冠の名馬が出走表にいない（${sps}）`);
-    assert(SP.pending(h2, Object.assign({}, race, { year: G.year + 1 })).some(x => x.d.name === tri), `再達成のときに出てこない（${tri}）`);
+    assert(SP.candidates(h2, Object.assign({}, race, { year: G.year + 1 })).some(x => x.d.name === tri), `再達成のときに出てこない（${tri}）`);
     const kikka = sps.find(n => SP.byName(n).groups.includes('r:菊花賞'));
-    if (kikka) assert(!SP.pending(h2, Object.assign({}, race, { year: G.year + 1 })).some(x => x.d.name === kikka), `倒した大レースの名馬がまた出てくる（${kikka}）`);
+    if (kikka) assert(!SP.candidates(h2, Object.assign({}, race, { year: G.year + 1 })).some(x => x.d.name === kikka), `倒した大レースの名馬がまた出てくる（${kikka}）`);
     return `菊花賞に ${sps.join('・')}（入れ替わり ${gone.map(x => x.horse.name).join('・')}）`;
   });
 
@@ -250,7 +254,7 @@ module.exports = function (check, assert, HS) {
       assert(!all(n).length, `${n}が隠し馬に残る`);
       assert(!SP.members(SP.BY['t:' + id] || { id: 'x' }).some(d => d.name === n), `${n}がトロフィーのグループにいる`);
     }
-    assert(!SP.BY['t:gs_us'], 'アメリカン GS の隠し馬が残る');
+    assert(SP.members(SP.BY['t:gs_us']).every(d => SP.isModern(d)), 'アメリカン GS に1989年より前の隠し馬が残る'); // いまは1989年からの2頭（持ち主の決定 2026-10-24）
     assert(all('ジョンヘンリー').join() === 'bc2' && SP.byName('ジョンヘンリー').groups.join() === 't:bc2', 'ジョンヘンリーがクラウンオブブリーダーズにいない');
     assert(all('テンポイント').join() === 'gs_jp' && SP.byName('テンポイント').groups.join() === 't:gs_jp', 'テンポイントがジャパン GS にいない');
     assert(all('シアトルスルー').join() === 'us3' && SP.byName('シアトルスルー').groups.join() === 't:us3', 'シアトルスルーが米国三冠にいない');
@@ -275,18 +279,19 @@ module.exports = function (check, assert, HS) {
       const h = myHorse(G, t.cat === 'filly' || id === 'gs_tiara' ? '牝' : '牡');
       const race = reachRace(h, t);
       assert(TR.reach(h, t, race), `${t.label}：リーチにならない`);
-      const names = () => SP.pending(h, race).filter(x => x.g.id === 't:' + id).map(x => x.d.name);
+      const names = () => SP.candidates(h, race).filter(x => x.g.id === 't:' + id).map(x => x.d.name);
+      const one = () => { const ns = names(), ps = SP.pending(h, race).filter(x => x.g.id === 't:' + id).map(x => x.d.name); assert(ps.length === Math.min(1, ns.length) && ps.every(n => ns.includes(n)), `${t.label}：出てくるのが1頭でない（${ps}／${ns}）`); };
       const live = HS.Eraless.activeNames();
       const check1 = (unbeaten) => {
         const ns = names();
         for (const x of xs) {
-          if (x.modern && live.has(x.name)) continue; // 1989年からの馬で、その年に世界で走っている
+          if (x.modern && !SP.canAppear({ again: true }, SP.data(x.name), [])) continue; // 1989年からの馬で、その年に世界で走っている・オーナーの依頼の馬（やり終えるまで出ない）
           const want = (!x.when || unbeaten) && (!x.surf || x.surf === race.surface);
           assert(ns.includes(x.name) === want, `${t.label}：${x.name}が${unbeaten ? '無敗' : '負けたことのある馬'}で${want ? '出てこない' : '出てくる'}（${ns}）`);
         }
       };
-      h.starts = 4; h.wins = 4; check1(true);
-      h.starts = 5; h.wins = 4; check1(false);
+      h.starts = 4; h.wins = 4; check1(true); one();
+      h.starts = 5; h.wins = 4; check1(false); one();
       // ホームのリーチの案内も、出てくる馬がいないグループは出さない
       const onlyUnb = xs.every(x => x.when === 'unbeaten');
       if (onlyUnb) assert(!SP.whenOk(SP.BY['t:' + id], SP.data(xs[0].name), h), `${t.label}：負けた馬で無敗のときの馬が通る`);
@@ -298,10 +303,10 @@ module.exports = function (check, assert, HS) {
     hj.gradedWins.push({ y: G.year - 1, race: bt.name, short: bt.short, grade: bt.grade, region: bt.region }); hj.starts = 3; hj.wins = 1;
     assert(SP.pending(hj, Object.assign({}, bt, { year: G.year })).some(x => x.d.name === 'ジョンヘンリー' && x.g.id === 't:bc2'), 'ジョンヘンリーが出てこない');
     const ht = myHorse(G, '牡'), tp = reachRace(ht, TR.BY.gs_jp); ht.starts = 9; ht.wins = 4;
-    assert(SP.pending(ht, tp).some(x => x.d.name === 'テンポイント' && x.g.id === 't:gs_jp'), 'テンポイントが出てこない');
+    assert(SP.candidates(ht, tp).some(x => x.d.name === 'テンポイント' && x.g.id === 't:gs_jp'), 'テンポイントが出てこない');
     // ホールオブフェイムのリーチにはジョンヘンリーが出てこない
     const hl = myHorse(G, '牡'), lr = reachRace(hl, TR.BY.legend);
-    assert(!SP.pending(hl, lr).some(x => x.d.name === 'ジョンヘンリー'), 'ホールオブフェイムでジョンヘンリーが出てくる');
+    assert(!SP.candidates(hl, lr).some(x => x.d.name === 'ジョンヘンリー'), 'ホールオブフェイムでジョンヘンリーが出てくる');
     return `お金 ${s1}〜${s6}・無敗のときの馬 ${nUnb}頭・いつでもの馬 ${nAny}頭`;
   });
 
@@ -350,7 +355,7 @@ module.exports = function (check, assert, HS) {
       if (t.kind === 'immortal') hh.g1Streak = D.trophyRule.IMMORTAL_STREAK - 1;
       if (t.kind === 'wonder') hh.winLen = D.trophyRule.WONDER_LEN - 1;
       const race = Object.assign({}, m.get(finalShort), { year: G.year });
-      const ns = SP.pending(hh, race).filter(x => x.g.id === 't:' + id).map(x => x.d.name);
+      const ns = SP.candidates(hh, race).filter(x => x.g.id === 't:' + id).map(x => x.d.name);
       hh.owner = 'AI';
       return { surface: race.surface, ns };
     };
@@ -359,7 +364,7 @@ module.exports = function (check, assert, HS) {
     const seen = [];
     for (const [id, fin, prev] of cases) {
       const { surface, ns } = reachOn(id, fin, prev);
-      const want = HS.DATA.trophyHorses[id].filter(x => x.surf === surface && !x.when).map(x => x.name);
+      const want = HS.DATA.trophyHorses[id].filter(x => x.surf === surface && !x.when && !(x.modern && !SP.canAppear({ again: true }, SP.data(x.name), []))).map(x => x.name);
       assert(want.length && want.every(n => ns.includes(n)) && ns.every(n => HS.DATA.trophyHorses[id].find(x => x.name === n).surf === surface), `${TR.BY[id].label}・${fin}（${surface}）：${ns}`);
       seen.push(`${fin}${ns.join('・')}`);
     }
@@ -400,6 +405,41 @@ module.exports = function (check, assert, HS) {
     return '前のセーブの autumn・arima2・au2 を消した';
   });
 
+  check('trophy: リーチで出てくるのはトロフィーの名馬からランダムに1頭（同じ馬・レース・年なら同じ馬。馬が替わればばらける）・手にするとその名馬が全部店に並ぶ', () => {
+    // 持ち主の決定 2026-10-24「リーチででてくるのはその条件からランダム1頭です　達成したらそのプールの全隠し馬が店で並ぶようになります」
+    const G = newGame(66);
+    const m = cal();
+    const kk = Object.assign({}, m.get('菊花賞'), { year: G.year });
+    const seen = new Map();
+    for (let i = 0; i < 60; i++) {
+      const h = myHorse(G, '牡'); h.starts = 3; h.wins = 2;
+      for (const n of ['皐月賞', '日本ダービー']) winIt(h, m.get(n), G.year);
+      const ps = SP.pending(h, kk).filter(x => x.g.id === 't:triple').map(x => x.d.name);
+      assert(ps.length === 1, `日本三冠のリーチで ${ps.length} 頭`);
+      assert(SP.pending(h, kk).filter(x => x.g.id === 't:triple')[0].d.name === ps[0], '同じ馬・同じレースで出てくる馬が変わる');
+      const lg = SP.forRace(kk, [{ horse: h, mine: true }]).filter(x => SP.byName(x.horse.name).groups.includes('t:triple'));
+      assert(lg.length === 1 && lg[0].horse.name === ps[0], `出走表の日本三冠の名馬 ${lg.map(x => x.horse.name)}`);
+      seen.set(ps[0], (seen.get(ps[0]) || 0) + 1);
+      h.owner = 'AI';
+    }
+    assert(seen.size >= 3, `出てくる馬がばらけない（${[...seen.keys()]}）`);
+    // 牝馬限定のレースでは牝馬から選ぶ
+    const ok = Object.assign({}, m.get('オークス'), { year: G.year });
+    const f = myHorse(G, '牝'); f.starts = 1; f.wins = 1; winIt(f, m.get('桜花賞'), G.year);
+    const fp = SP.pending(f, ok).filter(x => x.g.id === 't:ftriple');
+    assert(fp.length <= 1 && fp.every(x => x.d.sex === '牝'), `牝馬三冠 ${fp.map(x => x.d.name)}`);
+    f.owner = 'AI';
+    // 手にすると全部が店に並ぶ
+    const g = SP.BY['t:gs_jp'];
+    G.unlocked = [];
+    const got = SP.unlockTrophy('gs_jp');
+    assert(got.length === SP.members(g).length && SP.members(g).every(d => G.unlocked.includes(d.name)), `ジャパン GS の名馬 ${got}`);
+    const act = HS.Eraless.activeNames(); // 1989年からの馬で、その年に世界で走っている馬は店に出ない
+    assert(SP.members(g).every(d => act.has(d.name) || W.marketHistoric().some(x => x.horse.name === d.name && x.legend)), 'ジャパン GS の名馬が店に並ばない');
+    assert(SP.unlockTrophy('gs_jp').length === 0, '二度目にも並ぶ');
+    return `日本三冠の60頭で ${[...seen.entries()].map(([n, c]) => `${n}${c}`).join('・')}`;
+  });
+
   check('trophy: 香港の三冠の隠し馬は1989年からの有名な馬。その年に世界で走っているときは出てこず、倒すと店にいつも並び、デビューに選ばれない', () => {
     const E = HS.Eraless;
     for (const id of ['hk3', 'hksp']) {
@@ -407,8 +447,8 @@ module.exports = function (check, assert, HS) {
       assert(ms.length >= 1 && ms.length <= 3 && ms.every(n => E.isPool(SP.data(n))), `${id} の隠し馬 ${ms}`);
     }
     assert(SP.members(SP.BY['t:hk3']).some(d => d.name === 'ロマンチックウォリアー') && SP.members(SP.BY['t:hksp']).some(d => d.name === 'サイレントウィットネス'), '香港の名馬がいない');
-    // ほかのトロフィー・グループに1989年からの馬は入らない
-    assert(SP.list().every(x => !E.isPool(x.d) || (x.groups.length === 1 && ['t:hk3', 't:hksp'].includes(x.groups[0]))), '1989年からの馬が香港の三冠のほかにいる');
+    // 1989年からの馬は、M(…) で書いたトロフィーのグループ1つだけに入る（持ち主の決定 2026-10-24。条件のグループ・大レースのグループには入らない）
+    assert(SP.list().every(x => !E.isPool(x.d) || (x.groups.length === 1 && x.groups[0].startsWith('t:') && SP.isModern(x.d))), '1989年からの馬がトロフィーのほかのグループにいる');
     // 種はロマンチックウォリアーが始めの世界でデビューしていないもの（外した馬を戻すと世界の顔ぶれが変わり、種 68 ではデビューしていた）
     const G = newGame(69);
     assert(!HS.Eraless.activeNames().has('ロマンチックウォリアー'), '始めの世界にロマンチックウォリアーがいる（種を替える）');
@@ -419,7 +459,7 @@ module.exports = function (check, assert, HS) {
     const r3 = m.get('チャンピオンズ＆チャターC');
     for (const n of ['スチュワーズC', '香港ゴールドカップ']) winIt(h, m.get(n), G.year);
     const race = Object.assign({}, r3, { year: G.year });
-    const names = () => SP.pending(h, race).map(x => x.d.name);
+    const names = () => SP.candidates(h, race).map(x => x.d.name);
     const rw = 'ロマンチックウォリアー';
     assert(names().includes(rw), `香港三冠のリーチで出てこない（${names()}）`);
     // 同じ馬がその年に世界で走っている（ランダムにデビューした）ときは出てこない
