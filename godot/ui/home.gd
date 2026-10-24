@@ -28,15 +28,33 @@ func build() -> void:
 	var wins := int(HSU.or_(yr.get("wins"), 0.0))
 	var sub := HSText.t("%s所属・%s・騎乗技術 %d") % [HSText.t(j.region), HSText.t(HSJockey.rep_label(float(j.rep))), int(round(float(j.skill)))]
 	make_band("厩", HSText.jockey_name(j), sub, [["暦", UiFlow.date_label()], ["リーディング", HSText.t("%d位") % int(rank) if rank != null else "－"], ["今年", HSText.t("%d勝") % wins], ["資金", UiFlow.money_label(), "money"]], "saddle")
+	# 中身は y 104〜872 に収める（持ち主の指示 2026-10-24「基本的にスクロールはさせないで　画面に収めてかつ情報量を抑えて」）。
+	# 左右の列は高さを決めて、最後の札（今週の重賞・ニュース）を下まで伸ばし、入らない行は後ろから隠す（UiFit）
 	lcol = VBoxContainer.new()
 	lcol.position = Vector2(PAD_X, TOP + 2)
-	lcol.custom_minimum_size = Vector2(1000, 0)
-	lcol.size = Vector2(1000, 0)
+	lcol.custom_minimum_size = Vector2(1000, UiFit.BOTTOM - TOP - 2)
+	lcol.size = lcol.custom_minimum_size
 	lcol.add_theme_constant_override("separation", 8)
 	add_child(lcol)
 	_build_hero()
 	_build_stable()
 	_build_right()
+	_fit()
+
+const OWN_ROWS := 5        # ホームに出すお手馬の行（ほかは厩舎で）
+var fill_lines: Array = []  # 下まで伸ばす札の行（今週の重賞）
+var news_lines: Array = []
+var news_box: Array = []    # ニュースの見出しと札
+
+# 並べたあと、下の端（872）に入らない行を隠す。行が全部隠れた札は見出しごと隠す
+func _fit() -> void:
+	await UiFit.cut(self, fill_lines, UiFit.BOTTOM - 14)
+	await UiFit.cut(self, news_lines, UiFit.BOTTOM - 14)
+	if news_lines.size() and news_lines.all(func(l): return not is_instance_valid(l) or not l.visible):
+		for c in news_box: if is_instance_valid(c): c.visible = false
+	await UiFit.cut(self, right.get_children())
+	if news_box.size() == 2 and is_instance_valid(news_box[1]) and not news_box[1].visible: news_box[0].visible = false
+	await UiFit.cut(self, lcol.get_children())
 
 # ---- 今週すること・暦の札・コマンドの札 ----
 func _build_hero() -> void:
@@ -159,7 +177,8 @@ func _build_stable() -> void:
 	left.add_theme_constant_override("separation", 4)
 	lcol.add_child(left)
 	var own := HSWorld.mine("stable") + HSWorld.mine("farm")
-	left.add_child(UiScreen.section("お手馬", HSText.t("%d/%d頭") % [own.size(), int(HSSeason.MAX_OWN)], true))
+	var more := HSText.t("・ほか%d頭は厩舎で") % (own.size() - OWN_ROWS) if own.size() > OWN_ROWS else ""
+	left.add_child(UiScreen.section("お手馬", HSText.t("%d/%d頭") % [own.size(), int(HSSeason.MAX_OWN)] + more, true))
 	if own.is_empty():
 		var pb := UiScreen.panel_box()
 		(pb[1] as VBoxContainer).add_child(UiTheme.label("まだお手馬がいません。馬の店でデビュー前の史実馬を買いましょう", 15, UiTheme.MUTED))
@@ -177,9 +196,14 @@ func _build_stable() -> void:
 	hm.add_theme_constant_override("margin_left", 40)
 	hm.add_theme_constant_override("margin_right", 40)
 	hm.add_child(head)
-	left.add_child(hm)
-	for h in own.slice(0, 10):
-		var rb := UiScreen.row_button(46, false, true)
+	# 列の見出しと行は面の台の上（見出しを写真の上に直に置かない。docs/review/UI_REVIEW.md 2-3）
+	var tbl := VBoxContainer.new()
+	tbl.add_theme_constant_override("separation", 4)
+	left.add_child(tbl)
+	UiScreen.back_under(tbl, null, 4.0)
+	tbl.add_child(hm)
+	for h in own.slice(0, OWN_ROWS):
+		var rb := UiScreen.row_button(44, false, true)
 		var b: Button = rb[0]
 		var hb: HBoxContainer = rb[1]
 		var nm := HBoxContainer.new()
@@ -229,7 +253,7 @@ func _build_stable() -> void:
 		UiScreen.pass_mouse(hb)
 		var id: String = h.id
 		b.pressed.connect(func(): UiFlow.program_id = id; go("stable"))
-		left.add_child(b)
+		tbl.add_child(b)
 	_build_lower()
 
 # 予約（近い順）・これからのG1（8週先まで）を左右に
@@ -245,7 +269,7 @@ func _build_lower() -> void:
 	var rs := HSSeason.reserves()
 	a.add_child(UiScreen.section("予約", HSText.t("%d件") % rs.size(), true))
 	var pa := _card(3)
-	for x in rs.slice(0, 5):
+	for x in rs.slice(0, 3):
 		var h = HSWorld.horse(x.id)
 		var l := UiTheme.label("%s　%s　%s" % [HSText.week_label(x.m, x.w), HSText.race_name(String(x.label)), HSText.horse_name(h) if h else ""], 14, UiTheme.IVORY)
 		l.clip_text = true
@@ -276,20 +300,27 @@ func _build_lower() -> void:
 	if n == 0:
 		(pb[1] as VBoxContainer).add_child(UiTheme.label("8週先までなし", 14, UiTheme.FAINT))
 	b.add_child(pb[0])
-	# 今週の重賞（お手馬が少ないときに空く下半分を、今週の様子で埋める）
-	var gr: Array = HSWorld.week_races().filter(func(r): return r.get("graded") and r.get("region") in ["JRA", "海外"])
-	if gr.size() and HSWorld.mine("stable").size() + HSWorld.mine("farm").size() < 7:
-		left.add_child(UiScreen.section("今週の重賞", "%d" % gr.size(), true))
+	# 今週の重賞（左の下の端まで伸ばす。お手馬が少ないときも下が空かない。docs/review/UI_REVIEW.md 2-4）
+	var gr: Array = HSWorld.upcoming_graded(2).filter(func(r): return r.get("region") in ["JRA", "海外"])
+	fill_lines.clear()
+	if gr.size():
+		left.add_child(UiScreen.section("今週と来週の重賞", "%d" % gr.size(), true))
 		var pw := _card(3)
-		for r in gr.slice(0, 5):
+		(pw[0] as Control).size_flags_vertical = Control.SIZE_EXPAND_FILL
+		left.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		for r in gr.slice(0, 12):
 			var row := HBoxContainer.new()
 			row.add_theme_constant_override("separation", 8)
+			var wl := UiTheme.label("今週" if float(r.inWeeks) == 0.0 else "来週", 13, UiTheme.GOLD_BRIGHT if float(r.inWeeks) == 0.0 else UiTheme.MUTED)
+			wl.custom_minimum_size.x = 40
+			row.add_child(wl)
 			row.add_child(UiTheme.class_chip(HSRaces.grade_badge(r), true, 11))
 			var nl := UiTheme.label("%s　%s　%s" % [HSText.race_label(r), HSText.course_dist(r), _age_cond(r)], 14)
 			nl.clip_text = true
 			nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(nl)
 			(pw[1] as VBoxContainer).add_child(row)
+			fill_lines.append(row)
 		left.add_child(pw[0])
 
 static func _age_cond(r: Dictionary) -> String:
@@ -299,7 +330,8 @@ static func _age_cond(r: Dictionary) -> String:
 func _build_right() -> void:
 	right = VBoxContainer.new()
 	right.position = Vector2(PAD_X + 1000 + 24, TOP + 2)
-	right.size = Vector2(1600 - (PAD_X * 2 + 1000 + 24), 0)
+	right.custom_minimum_size = Vector2(1600 - (PAD_X * 2 + 1000 + 24), UiFit.BOTTOM - TOP - 2)
+	right.size = right.custom_minimum_size
 	right.add_theme_constant_override("separation", 8)
 	add_child(right)
 	var offers := HSOwners.offers()
@@ -335,16 +367,21 @@ func _build_right() -> void:
 		var rs = UiSkin.row(false, 44, Vector4(48, 6, 50, 6), 0.8)   # 今週の騎乗は表の行の絵
 		(pb[0] as PanelContainer).add_theme_stylebox_override("panel", rs if rs != null else UiTheme.box(UiTheme.SURFACE, UiTheme.LINE, 1, 10, Vector4(14, 7, 14, 7)))
 		right.add_child(pb[0])
-	right.add_child(UiScreen.section("ニュース", "", true))
+	var ns := UiScreen.section("ニュース", "", true)
+	right.add_child(ns)
 	var nb := _card(3)
+	(nb[0] as Control).size_flags_vertical = Control.SIZE_EXPAND_FILL   # 右の下の端まで伸ばす
+	news_box = [ns, nb[0]]
+	news_lines.clear()
 	var G = HSWorld.G
-	for nw in G.news.slice(0, 5):
+	for nw in G.news.slice(0, 10):
 		var l := UiTheme.label("%s　%s" % [HSText.week_label(nw.m, nw.w), HSText.tx(String(nw.text))], 13, UiTheme.GOLD_BRIGHT if nw.get("kind") in ["g1", "good"] else UiTheme.MUTED)
 		l.autowrap_mode = TextServer.AUTOWRAP_OFF
 		l.clip_text = true
 		l.custom_minimum_size.x = 100
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		(nb[1] as VBoxContainer).add_child(l)
+		news_lines.append(l)
 	right.add_child(nb[0])
 
 # 部品の絵の札（panel_card を低い札に合うよう縮めたもの）に縦の並び。絵が無ければ前の板
@@ -393,7 +430,7 @@ func _offer_card(o: Dictionary) -> Variant:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 12)
 	p.add_child(hb)
-	hb.add_child(UiScreen.owner_face(ow, "smile" if riding else "base", 92, 112))
+	hb.add_child(UiScreen.owner_face(ow, "smile" if riding else "base", 80, 98))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -407,7 +444,8 @@ func _offer_card(o: Dictionary) -> Variant:
 	var line := HSOwners.job_line(o.oid, { k = o.k, horse = h.name, race = HSRaces.label(race), retry = o.retry, y = o.y })
 	var say := UiTheme.label(HSText.t("「%s」") % HSText.owner_line(line), 13, UiTheme.MUTED)
 	say.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	say.max_lines_visible = 2
+	say.max_lines_visible = 1   # ひと言は1行（全文は依頼の場面で読む）
+	say.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	say.custom_minimum_size.x = 100
 	say.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_child(say)

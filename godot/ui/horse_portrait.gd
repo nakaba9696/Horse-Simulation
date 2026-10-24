@@ -1,5 +1,5 @@
 # 見本の馬の絵（docs/UI.md「右の見本」の 2:1 の絵）：3D の馬（ViewHorse・毛色と白徴は UiArt の決まり）を小さな窓に立たせ、
-# 息・見回し・尾振りの立ち姿で動かす。騎手と鞍は隠す。空と芝の地。馬を替えるときは set_horse
+# 息・見回し・尾振りの立ち姿で動かす。騎手と鞍は隠す。地は面の色で、床は影だけ。馬を替えるときは set_horse
 class_name UiHorsePortrait
 extends SubViewportContainer
 
@@ -9,6 +9,8 @@ var cam: Camera3D
 var t := 0.0
 var _key := ""
 
+const BACK := Color("16261e")   # 見本の絵の地（面 INK より少しだけ明るい墨の緑）
+
 func _init() -> void:
 	stretch = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -17,8 +19,10 @@ func _init() -> void:
 	vp.msaa_3d = Viewport.MSAA_2X
 	vp.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	add_child(vp)
+	# 地は面の色（明るい空と緑一色の床の帯にしない。docs/review/UI_REVIEW.md 2-2）。空は馬を照らす光にだけ使う
 	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = BACK
 	var sky := Sky.new()
 	var pm := PanoramaSkyMaterial.new()
 	pm.panorama = load("res://assets/sky/kloofendal_48d_partly_cloudy_puresky_2k.hdr")
@@ -41,9 +45,12 @@ func _init() -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(80, 80)
 	g.mesh = plane
+	# 床は見えない板で、影だけを落とす（shadow_to_opacity）
 	var gm := StandardMaterial3D.new()
-	gm.albedo_color = Color(0.12, 0.24, 0.08)
-	gm.roughness = 0.95
+	gm.albedo_color = Color(0.0, 0.0, 0.0)
+	gm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	gm.shadow_to_opacity = true
+	gm.roughness = 1.0
 	g.material_override = gm
 	vp.add_child(g)
 	cam = Camera3D.new()

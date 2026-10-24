@@ -17,7 +17,7 @@ var shown: Array = []
 var rows: Array[Button] = []
 var sel := 0
 var top_box: VBoxContainer
-var scroll: ScrollContainer
+const PER := 12            # 1ページの行
 var list: VBoxContainer
 var pv: VBoxContainer
 var portrait: UiHorsePortrait
@@ -53,20 +53,17 @@ func build() -> void:
 	top_box.custom_minimum_size = Vector2(1180, 0)
 	top_box.add_theme_constant_override("separation", 8)
 	add_child(top_box)
-	scroll = ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.follow_focus = true
-	scroll.position = Vector2(PAD_X, 212)
-	scroll.size = Vector2(1180, 1000 - 212 - 56)
-	add_child(scroll)
+	# 表（列の見出しも面の台の中）。スクロールせず PER 行ずつのページ送り（持ち主の指示 2026-10-24）
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 4)
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiScreen.back_under(scroll, list)
-	scroll.add_child(list)
+	list.position = Vector2(PAD_X, 176)
+	list.custom_minimum_size = Vector2(1180, 0)
+	list.size = Vector2(1180, 0)
+	add_child(list)
+	UiScreen.back_under(list)
 	var pb := UiScreen.panel_box(true, 8)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X + 1180 + 20, TOP + 4)
-	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 1180 - 20, 820)
+	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 1180 - 20, UiFit.BOTTOM - TOP - 4)
 	add_child(pb[0])
 	pv = pb[1]
 	_load_items()
@@ -145,9 +142,11 @@ func _fill() -> void:
 	hm.add_theme_constant_override("margin_left", 12)
 	hm.add_theme_constant_override("margin_right", 12)
 	hm.add_child(head)
-	top_box.add_child(hm)
+	list.add_child(hm)
 	var money := float(HSWorld.G.player.money)
-	for i in shown.size():
+	var np := UiFit.pages(shown.size(), PER)
+	var page := clampi(floori(float(sel) / PER), 0, np - 1)
+	for i in range(page * PER, mini(shown.size(), page * PER + PER)):
 		var x: Dictionary = shown[i]
 		var h: Dictionary = x.it.horse
 		var rb := UiScreen.row_button(46, x.it.get("legend") == true)
@@ -194,13 +193,25 @@ func _fill() -> void:
 		b.pressed.connect(func(): open_detail(k2))
 		list.add_child(b)
 		rows.append(b)
+	if np > 1:
+		var pg := UiFit.pager(page, np, shown.size(), _page)
+		pg.custom_minimum_size.y = 40
+		list.add_child(pg)
+		UiFit.page_keys(rows, page, np, _page)
 	if shown.is_empty():
 		list.add_child(UiTheme.label(HSText.t("いま並んでいる%sはいません") % HSText.t(["牡馬", "牝馬"][sex]), 15, UiTheme.MUTED))
 		_preview(-1)
 	else:
 		sel = clampi(sel, 0, shown.size() - 1)
 		_preview(sel)
-		rows[sel].grab_focus.call_deferred()
+		rows[sel - page * PER].grab_focus.call_deferred()
+
+# ページを替える（d：前後。to_last：前のページの最後の行へ）
+func _page(d: int, to_last: bool) -> void:
+	var np := UiFit.pages(shown.size(), PER)
+	var page := posmod(floori(float(sel) / PER) + d, np)
+	sel = mini(shown.size() - 1, page * PER + (PER - 1 if to_last else 0))
+	_fill()
 
 func _sort_by(k: String) -> void:
 	if sort_key == k:
@@ -239,7 +250,7 @@ func _preview(i: int) -> void:
 	# 毛色の帯（絵の代わりに、毛色と勝負服の色）
 	if portrait == null:
 		portrait = UiHorsePortrait.new()
-		portrait.custom_minimum_size = Vector2(0, 170)
+		portrait.custom_minimum_size = Vector2(0, 160)
 		pv.add_child(portrait)
 	portrait.visible = true
 	portrait.set_horse(String(h.name), String(HSU.or_(h.get("coat"), "鹿毛")), 2.0)
@@ -340,7 +351,7 @@ func open_detail(i: int) -> void:
 	var wi := HSWorld.w_idx()
 	var pb := UiScreen.panel_box(true, 12)
 	var p: PanelContainer = pb[0]
-	p.custom_minimum_size = Vector2(1240, 800)
+	p.custom_minimum_size = Vector2(1240, 740)   # 下の固定メニューにかからない高さ（真ん中に置くと y 130〜870）
 	var root: VBoxContainer = pb[1]
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 26)
@@ -352,7 +363,7 @@ func open_detail(i: int) -> void:
 	lv.add_theme_constant_override("separation", 8)
 	cols.add_child(lv)
 	var por := UiHorsePortrait.new()
-	por.custom_minimum_size = Vector2(560, 290)
+	por.custom_minimum_size = Vector2(560, 250)
 	lv.add_child(por)
 	por.set_horse(String(h.name), String(HSU.or_(h.get("coat"), "鹿毛")), G.year - float(h.born))
 	var nh := HBoxContainer.new()
@@ -477,4 +488,4 @@ func buy_now(i: int) -> void:
 
 func focus_first() -> void:
 	if rows.size():
-		rows[clampi(sel, 0, rows.size() - 1)].grab_focus()
+		rows[clampi(sel - floori(float(sel) / PER) * PER, 0, rows.size() - 1)].grab_focus()

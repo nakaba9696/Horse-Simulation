@@ -20,7 +20,8 @@ var hall_mode := false
 var tab := 0
 var h: Dictionary = {}
 var tab_box: VBoxContainer
-var scroll: ScrollContainer
+var page := 0                # 戦績のページ
+const REC_PER := 13          # 戦績の1ページの行
 var list: VBoxContainer
 var rows: Array[Button] = []
 var results: Array = []      # 戦績（新しい順）
@@ -54,6 +55,7 @@ func on_tab(d: int) -> void:
 	if _modal != null: return
 	tab = posmod(tab + d, tabs_.size())
 	sel = 0
+	page = 0
 	_fill()
 	refresh_keybar()
 	focus_first()
@@ -100,18 +102,16 @@ func build() -> void:
 	var pbr := UiScreen.panel_box(false, 0)
 	var rp: PanelContainer = pbr[0]
 	rp.position = Vector2(PAD_X + LEFT_W + 20, TOP + 66)
-	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, 1000 - TOP - 66 - 60)
+	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, UiFit.BOTTOM - TOP - 66)
 	rp.size = rp.custom_minimum_size
 	add_child(rp)
-	scroll = ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.follow_focus = true
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	(pbr[1] as VBoxContainer).add_child(scroll)
+	# スクロールしない（持ち主の指示 2026-10-24）。戦績はページ送り、ほかのタブは入らない札を後ろから隠す（UiFit）
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 6)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(list)
+	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	list.clip_contents = true
+	(pbr[1] as VBoxContainer).add_child(list)
 	var want := String(UiFlow.focus.get("horse_tab", "stat"))
 	for a in args:
 		if a.begins_with("--tab="): want = a.substr(6)   # 撮影：開くタブ
@@ -167,7 +167,7 @@ func _build_hall(args: PackedStringArray) -> void:
 	var pb := UiScreen.panel_box(true, 8)
 	var p: PanelContainer = pb[0]
 	p.position = Vector2(PAD_X, TOP + 4)
-	p.custom_minimum_size = Vector2(LEFT_W, 1000 - TOP - 4 - 60)
+	p.custom_minimum_size = Vector2(LEFT_W, UiFit.BOTTOM - TOP - 4)
 	add_child(p)
 	var v: VBoxContainer = pb[1]
 	portrait = UiHorsePortrait.new()
@@ -198,18 +198,16 @@ func _build_hall(args: PackedStringArray) -> void:
 	var pbr := UiScreen.panel_box(false, 0)
 	var rp: PanelContainer = pbr[0]
 	rp.position = Vector2(PAD_X + LEFT_W + 20, TOP + 66)
-	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, 1000 - TOP - 66 - 60)
+	rp.custom_minimum_size = Vector2(1600 - PAD_X * 2 - LEFT_W - 20, UiFit.BOTTOM - TOP - 66)
 	rp.size = rp.custom_minimum_size
 	add_child(rp)
-	scroll = ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.follow_focus = true
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	(pbr[1] as VBoxContainer).add_child(scroll)
+	# スクロールしない（持ち主の指示 2026-10-24）。戦績はページ送り、ほかのタブは入らない札を後ろから隠す（UiFit）
 	list = VBoxContainer.new()
 	list.add_theme_constant_override("separation", 6)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(list)
+	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	list.clip_contents = true
+	(pbr[1] as VBoxContainer).add_child(list)
 	var want := "rec"
 	for a in args:
 		if a.begins_with("--tab="): want = a.substr(6)
@@ -256,7 +254,7 @@ func _build_left() -> void:
 	var pb := UiScreen.panel_box(true, 8)
 	var p: PanelContainer = pb[0]
 	p.position = Vector2(PAD_X, TOP + 4)
-	p.custom_minimum_size = Vector2(LEFT_W, 1000 - TOP - 4 - 60)
+	p.custom_minimum_size = Vector2(LEFT_W, UiFit.BOTTOM - TOP - 4)
 	add_child(p)
 	var v: VBoxContainer = pb[1]
 	portrait = UiHorsePortrait.new()
@@ -315,14 +313,15 @@ func _fill() -> void:
 	for c in list.get_children(): c.queue_free()
 	rows.clear()
 	if not hall_mode: UiFlow.focus["horse_tab"] = tabs_[tab][0]
-	tab_box.add_child(UiTheme.tabs(tabs_.map(func(x): return x[1]), tab, pad, func(k): tab = k; sel = 0; _fill(); refresh_keybar(); focus_first()))
-	scroll.scroll_vertical = 0
+	tab_box.add_child(UiTheme.tabs(tabs_.map(func(x): return x[1]), tab, pad, func(k): tab = k; sel = 0; page = 0; _fill(); refresh_keybar(); focus_first()))
 	match tabs_[tab][0]:
 		"stat": _stat()
 		"hall": _hall_info()
 		"rec": _rec()
 		"rating": _rating()
 		"ped": _ped()
+	if tabs_[tab][0] != "rec":
+		UiFit.cut(self, list.get_children(), UiFit.BOTTOM - 14)   # 板の下の余白の内に入らない札は隠す
 
 # ---- 能力 ----
 func _stat() -> void:
@@ -355,19 +354,29 @@ func _stat() -> void:
 	kn.custom_minimum_size.x = 60
 	grid.add_child(kn)
 	grid.add_child(UiTheme.stat_chip(float(HSU.or_(h.get("kire"), 4.0)), "kire"))
-	list.add_child(grid)
-	var kv := HBoxContainer.new()
-	kv.add_theme_constant_override("separation", 30)
+	# 能力の格子の右に距離・脚質・成長型・健康、下に成長の山（いまの印）。前は下が大きく空いていた（docs/review/UI_REVIEW.md 2-6）
+	var gh := HBoxContainer.new()
+	gh.add_theme_constant_override("separation", 40)
+	gh.add_child(grid)
+	var kv := VBoxContainer.new()
+	kv.add_theme_constant_override("separation", 10)
+	kv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# 成長型は型の色で、ピークのめやすを添える（8つの型。HSHorse.GROWTH_INFO）
 	var gr: Variant = h.get("growth")
 	var gtxt := HSText.t(String(HSU.or_(gr, ""))) + (HSText.t("（%s）") % HSText.t(HSHorse.growth_note(gr)) if HSHorse.growth_note(gr) != "" else "")
 	for x in [["距離", "%s〜%sm" % [HSU.num(h.distMin), HSU.num(h.distMax)]], ["脚質", HSText.style_text(h)], ["成長型", gtxt, HSHorse.growth_color(gr)], ["健康", "%d" % int(HSU.or_(h.get("health"), 70.0))]]:
 		var pr := HBoxContainer.new()
 		pr.add_theme_constant_override("separation", 8)
-		pr.add_child(UiTheme.label(String(x[0]), 14, UiTheme.MUTED))
+		var kl := UiTheme.label(String(x[0]), 14, UiTheme.MUTED)
+		kl.custom_minimum_size.x = 64
+		pr.add_child(kl)
 		pr.add_child(UiTheme.label(String(x[1]), 16, x[2] if x.size() > 2 else UiTheme.IVORY))
 		kv.add_child(pr)
-	list.add_child(kv)
+	gh.add_child(kv)
+	list.add_child(gh)
+	if not h.get("legend"):
+		list.add_child(UiScreen.section("成長の山", "いまの位置と、伸びきる年齢（薄い帯）"))
+		list.add_child(UiGrowthCurve.make(h, wi, 150))
 	var sk := HSSkills.of(h, wi)
 	if sk.size():
 		list.add_child(UiScreen.section("特殊能力"))
@@ -423,7 +432,11 @@ func _rec() -> void:
 	if results.is_empty():
 		list.add_child(UiTheme.label("まだ走っていません", 15, UiTheme.MUTED))
 		return
-	for i in results.size():
+	# スクロールせずページ送り（1ページ REC_PER 行。←→ か端の ↑↓ で替える）
+	var np := UiFit.pages(results.size(), REC_PER)
+	page = clampi(floori(float(sel) / REC_PER), 0, np - 1)
+	var from := page * REC_PER
+	for i in range(from, mini(results.size(), from + REC_PER)):
 		var r: Dictionary = results[i]
 		var rb := UiScreen.row_button(38, int(r.pos) == 1)
 		var b: Button = rb[0]
@@ -456,6 +469,18 @@ func _rec() -> void:
 		b.pressed.connect(func(): race_detail(results[k2]))
 		list.add_child(b)
 		rows.append(b)
+	var sp := Control.new()
+	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	list.add_child(sp)
+	list.add_child(UiFit.pager(page, np, results.size(), _rec_page))
+	UiFit.page_keys(rows, page, np, _rec_page)
+
+func _rec_page(d: int, to_last: bool) -> void:
+	var np := UiFit.pages(results.size(), REC_PER)
+	page = posmod(page + d, np)
+	sel = mini(results.size() - 1, page * REC_PER + (REC_PER - 1 if to_last else 0))
+	_fill()
+	focus_first()
 
 func _head(cols: Array) -> Control:
 	var head := HBoxContainer.new()
@@ -535,7 +560,7 @@ func _ped() -> void:
 func focus_first() -> void:
 	if h.is_empty(): return
 	if tabs_[tab][0] == "rec" and rows.size():
-		rows[clampi(sel, 0, rows.size() - 1)].grab_focus()
+		rows[clampi(sel - page * REC_PER, 0, rows.size() - 1)].grab_focus()
 	elif b_prog:
 		b_prog.grab_focus()
 

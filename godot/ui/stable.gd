@@ -42,20 +42,17 @@ func build() -> void:
 	top_box.custom_minimum_size = Vector2(1060, 0)
 	top_box.add_theme_constant_override("separation", 8)
 	add_child(top_box)
-	var sc := ScrollContainer.new()
-	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	sc.follow_focus = true
-	sc.position = Vector2(PAD_X, 212)
-	sc.size = Vector2(1060, 1000 - 212 - 56)
-	add_child(sc)
+	# 表（列の見出しも面の台の中）。お手馬・牧場の馬はどちらも10頭までなので、スクロールせずに y 872 までに入る
 	list_v = VBoxContainer.new()
 	list_v.add_theme_constant_override("separation", 4)
-	list_v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiScreen.back_under(sc, list_v)
-	sc.add_child(list_v)
+	list_v.position = Vector2(PAD_X, 176)
+	list_v.custom_minimum_size = Vector2(1060, 0)
+	list_v.size = Vector2(1060, 0)
+	add_child(list_v)
+	UiScreen.back_under(list_v)
 	var pb := UiScreen.panel_box(true, 8)
 	(pb[0] as PanelContainer).position = Vector2(PAD_X + 1060 + 20, TOP + 4)
-	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 1060 - 20, 830)
+	(pb[0] as PanelContainer).custom_minimum_size = Vector2(1600 - PAD_X * 2 - 1060 - 20, UiFit.BOTTOM - TOP - 4)
 	add_child(pb[0])
 	pv = pb[1]
 	if UiFlow.program_id != "":
@@ -87,7 +84,7 @@ func _fill() -> void:
 	hm.add_theme_constant_override("margin_left", 12)
 	hm.add_theme_constant_override("margin_right", 12)
 	hm.add_child(head)
-	top_box.add_child(hm)
+	list_v.add_child(hm)
 	var wi := HSWorld.w_idx()
 	var G = HSWorld.G
 	for i in horses.size():
@@ -189,7 +186,7 @@ func _preview(i: int) -> void:
 	var wi := HSWorld.w_idx()
 	if portrait == null:
 		portrait = UiHorsePortrait.new()
-		portrait.custom_minimum_size = Vector2(0, 170)
+		portrait.custom_minimum_size = Vector2(0, 160)
 		pv.add_child(portrait)
 	portrait.visible = true
 	portrait.set_horse(String(h.name), String(HSU.or_(h.get("coat"), "鹿毛")), G.year - float(h.born))
@@ -246,7 +243,7 @@ func _preview(i: int) -> void:
 		var fl := HFlowContainer.new()
 		fl.add_theme_constant_override("h_separation", 6)
 		fl.add_theme_constant_override("v_separation", 6)
-		for id in sk.slice(0, 8):
+		for id in sk.slice(0, 6):
 			fl.add_child(UiTheme.chip(HSText.skill_label(String(id)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT if HSSkills.is_unique(id) else UiTheme.IVORY, 12))
 		pv.add_child(fl)
 	var tro := HSHall.trophies_of(h)
@@ -257,9 +254,6 @@ func _preview(i: int) -> void:
 		for x in tro: tl.add_child(UiTheme.chip("🏆 " + HSText.tx(String(x.label)), UiTheme.GOLD_DIM, UiTheme.ON_GOLD, 12))
 		for x in tit: tl.add_child(UiTheme.chip(HSText.t("冠 %s") % HSText.tx(String(x)), UiTheme.SURFACE_3, UiTheme.GOLD_BRIGHT, 12))
 		pv.add_child(tl)
-	var gw: Array = HSU.or_(h.get("gradedWins"), [])
-	for g in gw.slice(maxi(0, gw.size() - 3)):
-		pv.add_child(UiTheme.label("%s %s" % [String(HSU.or_(g.get("grade"), "")), HSText.race_name(String(HSU.or_(g.get("short"), g.race)))], 13, UiTheme.MUTED))
 	var sp := Control.new()
 	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	pv.add_child(sp)
