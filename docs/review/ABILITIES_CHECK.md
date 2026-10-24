@@ -4,14 +4,14 @@
 
 史実馬の、総合力（芝・ダートの画面の数）の下にある能力が、出典と世間の評判に合っているかを洗い出した。**総合力そのものは持ち主が決めたので変えていない**（直しで総合力が動く馬は、スピード・スタミナを直す前の値に止めた。`tests/extra_abilities.js` で確かめる）。
 
-- 一覧：[abilities.csv](abilities.csv)（`node tools/review_abilities.js` で作る。名馬 1,512頭＝画面の総合力 65.0 以上・名鑑のある馬・G1 を3つ以上勝った馬）
+- 一覧：[abilities.csv](abilities.csv)（`node tools/review_abilities.js` で作る。名馬 1,522頭＝画面の総合力 65.0 以上・名鑑のある馬・G1 を3つ以上勝った馬）
 - 外の目の依頼文：[codex/ABILITIES_REVIEW_REQUEST.md](codex/ABILITIES_REVIEW_REQUEST.md)（答えは枝 `codex/ability-review` の `docs/review/codex/ABILITIES_REVIEW.md`）
 
 ## 1. 能力の決まり方（いま）
 
 どの値がどこで決まるか（`js/core/horse.js` の `H.fromHistoric`・`js/core/datafix.js`・`data/horse_fix.js`・`data/mud.js`・`data/style_fix.js`・`data/famous*.js`）。r は実績の格から決めた強さ（`rating`。総合力の元）。
 
-| 能力 | 決め方 | 名馬 1,512頭のうち手で決めた馬 |
+| 能力 | 決め方 | 名馬 1,512頭のうち手で決めた馬（1回目の数え） |
 |---|---|---|
 | 根性 | r − 1 ＋ 勝率の補正（−3〜＋5）＋ 無敗（5戦以上）で ＋2 | 0（全部自動） |
 | 気性 | r − 6 ＋ 脚質（逃げ −3・先行 ＋2・差し 0・追込 −2）。掛かり癖・出遅れ癖があれば −14 | 17（ほかに癖で下げた馬 24） |

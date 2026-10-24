@@ -541,5 +541,66 @@ HS.DATA.historic = (HS.DATA.historic || []).concat([
  // uncertain：南半球生まれ（1963年8月10日）。アルゼンチンの競走は data/races_world.js に無いので ja.wikipedia の記事名（ジョッキークラブ大賞は「ジョッキークラブ大賞 (アルゼンチン)」）。母父 Advocate のカナは推定。
  // 出典：https://ja.wikipedia.org/wiki/フォルリ_(競走馬) ・ https://en.wikipedia.org/wiki/Forli_(horse)
  { name:'フォルリ', nameEn:'Forli', country:'亜', born:1963, sex:'牡', coat:'栗毛', sire:'アリストファネス', dam:'トレヴィサ', damsire:'アドヴォケイト', rating:86, surface:'芝ダ', distMin:1400, distMax:3000, style:'逃げ', growth:'普通', retire:1967, wins:['1966ポージャ・デ・ポトリロス','1966ジョッキークラブ大賞','1966ナシオナル大賞','1966カルロスペルグリニ大賞'], note:'10戦9勝。アルゼンチンの四冠馬。1967年に米国へ渡り、コロナドステークスをコースレコードで勝つ。サイテーションハンデキャップ2着が唯一の負け', uncertain:true },
+ // 2026-10-24 に足した殿堂馬（持ち主の決定 2026-10-24「強さで殿堂入りしてるなら入れたい　それ以外なら不要」。E4）。
+ // 勝ち鞍は暦にあるレースだけ wins に入れ、暦に無い G1 は記録の補い（data/src/winners_world_hand.jsonl・data/hist_races.js）から tools/build_auto.js が足す。G1 の一覧は data/main_wins_world.js。
+ // 距離の幅は勝った重賞の距離から、成長型は勝った年齢から決めた。脚質は出典で確かめた馬のほかは推定（note に書く）。カナは ja.wikipedia・日本の競馬メディアの表記、無ければ英語の名前を音で写した。
+ // 出典：https://en.wikipedia.org/wiki/Housebuster ・ https://ja.wikipedia.org/wiki/ハウスバスター
+ { name:'ハウスバスター', nameEn:'Housebuster', country:'米', born:1987, sex:'牡', coat:'黒鹿毛', sire:'マウントリヴァーモア', dam:'ビッグドリームズ', damsire:'グレートアバヴ', rating:85, surface:'ダ', distMin:1400, distMax:1600, style:'先行', growth:'早め', retire:1991, wins:[], note:'22戦15勝。1990・1991年の米最優秀スプリンター。2013年に米国の競馬の殿堂入り' },
+ // 出典：https://en.wikipedia.org/wiki/Flawlessly
+ { name:'フローレスリー', nameEn:'Flawlessly', country:'米', born:1988, sex:'牝', coat:'鹿毛', sire:'アファームド', dam:'ラコンフィダンス', damsire:'ニジンスキー', rating:85, surface:'芝', distMin:1600, distMax:2000, style:'差し', growth:'普通', retire:1994, wins:[], note:'28戦16勝。G1を9勝し、1992・1993年の米最優秀芝牝馬。2004年に米国の競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Xtra_Heat ・ https://ja.wikipedia.org/wiki/エクストラヒート
+ { name:'エクストラヒート', nameEn:'Xtra Heat', country:'米', born:1998, sex:'牝', coat:'鹿毛', sire:'ディキシーランドヒート', dam:'ビギン', damsire:'ハチェットマン', rating:85, surface:'ダ', distMin:1200, distMax:1400, style:'先行', growth:'早め', retire:2003, wins:[], note:'35戦26勝。2001年の米最優秀3歳牝馬。2015年に米国の競馬の殿堂入り' },
+ // 出典：https://en.wikipedia.org/wiki/Sky_Classic
+ { name:'スカイクラシック', nameEn:'Sky Classic', country:'加', born:1987, sex:'牡', coat:'栗毛', sire:'ニジンスキー', dam:'ノークラス', damsire:'ノーダブル', rating:85, surface:'芝', distMin:1800, distMax:2400, style:'差し', growth:'普通', retire:1993, wins:['1992ジョーハーシュターフクラシック'], note:'29戦15勝。1992年の米最優秀芝牡馬。1998年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Wilderness_Song
+ { name:'ウィルダネスソング', nameEn:'Wilderness Song', country:'加', born:1988, sex:'牝', coat:'鹿毛', sire:'ワイルドアゲイン', dam:'ナリーズリズム', damsire:'ナリーズマン', rating:85, surface:'ダ', distMin:1600, distMax:1800, style:'先行', growth:'普通', retire:1993, wins:[], note:'37戦15勝。1992年の加最優秀古牝馬。2008年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Alydeed
+ { name:'アリディード', nameEn:'Alydeed', country:'加', born:1989, sex:'牡', coat:'黒鹿毛', sire:'シャディード', dam:'ビアリー', damsire:'アリダー', rating:85, surface:'ダ', distMin:1400, distMax:2000, style:'先行', growth:'普通', retire:1993, wins:[], note:'15戦9勝。1992年のクイーンズプレートを勝った。2022年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Langfuhr_(horse) ・ https://ja.wikipedia.org/wiki/ラングフール
+ { name:'ラングフール', nameEn:'Langfuhr', country:'加', born:1992, sex:'牡', coat:'鹿毛', sire:'ダンジグ', dam:'スウィートブライアートゥー', damsire:'ブライアーティック', rating:85, surface:'ダ', distMin:1400, distMax:1600, style:'先行', growth:'遅め', retire:1997, wins:['1997メトロポリタンハンデキャップ'], note:'23戦9勝。G1を3勝し、1996年の加最優秀スプリンター。2004年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Dancethruthedawn
+ { name:'ダンススルーザドーン', nameEn:'Dancethruthedawn', country:'加', born:1998, sex:'牝', coat:'黒鹿毛', sire:'ミスタープロスペクター', dam:'ダンススマートリー', damsire:'ダンジグ', rating:85, surface:'ダ', distMin:1800, distMax:2000, style:'先行', growth:'早め', retire:2002, wins:[], note:'16戦7勝。2001年のクイーンズプレートを勝ち、加最優秀3歳牝馬。2011年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Soaring_Free
+ { name:'ソアリングフリー', nameEn:'Soaring Free', country:'加', born:1999, sex:'セ', coat:'黒鹿毛', sire:'スマートストライク', dam:'ダンシングウィズウイングズ', damsire:'ダンジグ', rating:85, surface:'芝', distMin:1100, distMax:1600, style:'先行', growth:'遅め', retire:2005, wins:[], note:'27戦15勝。2004年の加年度代表馬。2013年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Maryfield_(horse) ・ https://ja.wikipedia.org/wiki/メアリーフィールド
+ { name:'メアリーフィールド', nameEn:'Maryfield', country:'米', born:2001, sex:'牝', coat:'鹿毛', sire:'エルーシヴクオリティ', dam:'スライメイド', damsire:'デザートワイン', rating:85, surface:'ダ', distMin:1200, distMax:1400, style:'先行', growth:'遅め', retire:2007, wins:[], note:'28戦9勝。2007年のブリーダーズカップフィリー＆メアスプリントを勝ち（その年は G1 でない）、米最優秀牝馬スプリンター。2009年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Arravale
+ { name:'アラヴェイル', nameEn:'Arravale', country:'加', born:2003, sex:'牝', coat:'黒鹿毛', sire:'アーチ', dam:'カロスカ', damsire:'カルドゥン', rating:85, surface:'芝', distMin:1600, distMax:2000, style:'差し', growth:'早め', retire:2006, wins:[], note:'8戦5勝。2006年の加年度代表馬。2012年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Rahy%27s_Attorney ・ https://ja.wikipedia.org/wiki/ラーイズアトーニー
+ { name:'ラーイズアトーニー', nameEn:'Rahy\'s Attorney', country:'加', born:2004, sex:'セ', coat:'鹿毛', sire:'クラウンアトーニー', dam:'ラーイズホープ', damsire:'ラーイ', rating:85, surface:'芝', distMin:1600, distMax:2400, style:'差し', growth:'遅め', retire:2011, wins:[], note:'41戦14勝。2008年の加最優秀芝牡馬。2026年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Judy_the_Beauty
+ { name:'ジュディザビューティー', nameEn:'Judy the Beauty', country:'米', born:2009, sex:'牝', coat:'栗毛', sire:'ゴーストザッパー', dam:'ホーリーブリッツ', damsire:'ホーリーブル', rating:85, surface:'ダ', distMin:1200, distMax:1400, style:'先行', growth:'遅め', retire:2015, wins:[], note:'18戦9勝。2014年の米最優秀牝馬スプリンター。2018年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Heart_to_Heart_(horse)
+ { name:'ハートトゥハート', nameEn:'Heart to Heart', country:'米', born:2011, sex:'牡', coat:'鹿毛', sire:'イングリッシュチャンネル', dam:'アスクザクエスチョン', damsire:'シルバーデピュティ', rating:85, surface:'芝', distMin:1600, distMax:1800, style:'先行', growth:'晩成', retire:2019, wins:[], note:'41戦15勝。2014年の加最優秀3歳牡馬。2021年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Starship_Jubilee
+ { name:'スターシップジュビリー', nameEn:'Starship Jubilee', country:'加', born:2013, sex:'牝', coat:'鹿毛', sire:'インディウインド', dam:'パーフェクトリーワイルド', damsire:'フォレストワイルドキャット', rating:85, surface:'芝', distMin:1600, distMax:2000, style:'先行', growth:'晩成', retire:2020, wins:['2019E.P.テイラーステークス','2020ウッドバインマイル'], note:'38戦19勝。2019年の加年度代表馬、加最優秀芝牝馬を3度。2024年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://truenicks.com/articles/276453/channel-maker-among-canadian-hall-of-fame-class-of-2024 ・ https://oldfriendsequine.org/?p=6526
+ { name:'チャンネルメーカー', nameEn:'Channel Maker', country:'米', born:2014, sex:'セ', coat:'栗毛', sire:'イングリッシュチャンネル', dam:'インリターン', damsire:'ホースチェスナット', rating:85, surface:'芝', distMin:2200, distMax:2400, style:'差し', growth:'遅め', retire:2023, wins:['2018ジョーハーシュターフクラシック','2020ジョーハーシュターフクラシック','2020ソードダンサーステークス'], note:'56戦10勝。G1を4勝し、2020年の米最優秀芝牡馬。2024年にカナダの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Mahogany_(horse) ・ https://www.vrc.com.au/latest-news/hall-of-fame-honour-for-mahogany
+ { name:'マホガニー', nameEn:'Mahogany', country:'豪', born:1990, sex:'セ', coat:'黒鹿毛', sire:'ラストタイクーン', dam:'アルシャンデガ', damsire:'アリダー', rating:85, surface:'芝', distMin:1000, distMax:2500, style:'先行', growth:'早め', retire:1998, wins:['1994オーストラリアンダービー','1995ブラックキャビアライトニング','1997ブラックキャビアライトニング'], note:'43戦19勝。G1を8勝し、1993/94年の豪年度代表馬。2025年に豪州の競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Miss_Andretti ・ https://ja.wikipedia.org/wiki/ミスアンドレッティ
+ { name:'ミスアンドレッティ', nameEn:'Miss Andretti', country:'豪', born:2001, sex:'牝', coat:'鹿毛', sire:'イフティラーム', dam:'ペギーズビッド', damsire:'マルーンド', rating:85, surface:'芝', distMin:1000, distMax:1200, style:'先行', growth:'遅め', retire:2008, wins:['2007ブラックキャビアライトニング'], note:'31戦19勝。2007年の豪年度代表馬。英国のキングズスタンドS（当時 G2）も勝った。2023年に豪州の競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Tie_the_Knot
+ { name:'タイザノット', nameEn:'Tie the Knot', country:'豪', born:1994, sex:'セ', coat:'栗毛', sire:'ナシプール', dam:'ウィスクト', damsire:'ウイスキーロード', rating:85, surface:'芝', distMin:1600, distMax:3200, style:'差し', growth:'持続', retire:2002, wins:['1998ローズヒルギニー'], note:'62戦21勝。G1を13勝し、1999/2000年の豪最優秀ステイヤー。2021年に豪州の競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Vo_Rogue
+ { name:'ヴォーローグ', nameEn:'Vo Rogue', country:'豪', born:1983, sex:'セ', coat:'鹿毛', sire:'アイヴァープリンス', dam:'ヴァウ', damsire:'ディグニタス', rating:85, surface:'芝', distMin:1200, distMax:2000, style:'逃げ', growth:'遅め', retire:1991, wins:[], note:'83戦26勝。逃げてG1を6勝した。2019年に豪州の競馬の殿堂入り' },
+ // 出典：https://en.wikipedia.org/wiki/Choisir
+ { name:'ショワジール', nameEn:'Choisir', country:'豪', born:1999, sex:'牡', coat:'栗毛', sire:'デインヒルダンサー', dam:'グレートセレクション', damsire:'ランチタイム', rating:85, surface:'芝', distMin:1000, distMax:1200, style:'逃げ', growth:'普通', retire:2003, wins:['2003クイーンエリザベス2世ジュビリーステークス','2003ブラックキャビアライトニング'], note:'23戦7勝。2003年に英国のゴールデンジュビリーSを逃げ切り、キングズスタンドS（当時 G2）も勝った。2015年に豪州の競馬の殿堂入り' },
+ // 出典：https://en.wikipedia.org/wiki/Melody_Belle
+ { name:'メロディーベル', nameEn:'Melody Belle', country:'新', born:2014, sex:'牝', coat:'鹿毛', sire:'コマンズ', dam:'メレカベル', damsire:'イフラージ', rating:85, surface:'芝', distMin:1400, distMax:2000, style:'差し', growth:'持続', retire:2021, wins:[], note:'41戦19勝。G1を14勝し、2018/19・2019/20年の新年度代表馬。2023年にニュージーランドの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Imperatriz_(horse) ・ https://ja.wikipedia.org/wiki/インペラトリス
+ { name:'インペラトリス', nameEn:'Imperatriz', country:'新', born:2018, sex:'牝', coat:'鹿毛', sire:'アイアムインヴィンシブル', dam:'ベリンバウ', damsire:'シャマーダル', rating:85, surface:'芝', distMin:1000, distMax:1600, style:'差し', growth:'普通', retire:2024, wins:['2024ブラックキャビアライトニング'], note:'27戦19勝。G1を10勝し、2023/24年の新年度代表馬・豪最優秀スプリンター。2025年にニュージーランドの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Dundeel
+ { name:'イッツアダンディール', nameEn:'It\'s A Dundeel', country:'新', born:2009, sex:'牡', coat:'鹿毛', sire:'ハイシャパラル', dam:'スターリール', damsire:'ザビール', rating:85, surface:'芝', distMin:1600, distMax:2400, style:'追込', growth:'早め', retire:2014, wins:['2013オーストラリアンダービー','2013ローズヒルギニー'], note:'19戦10勝。ニュージーランドの名は Dundeel。豪州で G1 を6勝し、2014年の新年度代表馬。2025年にニュージーランドの競馬の殿堂入り' },
+ // 出典：https://en.wikipedia.org/wiki/Mufhasa
+ { name:'ムファサ', nameEn:'Mufhasa', country:'新', born:2004, sex:'セ', coat:'黒鹿毛', sire:'ペンタイア', dam:'シーラシュヴァル', damsire:'ミプレフェリード', rating:85, surface:'芝', distMin:1200, distMax:1600, style:'先行', growth:'晩成', retire:2013, wins:[], note:'62戦20勝。G1を10勝し、2009・2012年の新年度代表馬。2021年にニュージーランドの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Rough_Habit ・ https://ja.wikipedia.org/wiki/ラフハビット
+ { name:'ラフハビット', nameEn:'Rough Habit', country:'新', born:1986, sex:'セ', coat:'鹿毛', sire:'ラフキャスト', dam:'サーテンハビット', damsire:'アシャビット', rating:85, surface:'芝', distMin:1400, distMax:2400, style:'差し', growth:'持続', retire:1995, wins:[], note:'74戦29勝。G1を11勝し、1992・1995年の新年度代表馬。2012年にニュージーランドの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Veandercross ・ https://www.asianracing.org/news/2018-nz-racing-hall-of-fame-inductees
+ { name:'ヴィアンダークロス', nameEn:'Veandercross', country:'新', born:1988, sex:'セ', coat:'鹿毛', sire:'クロスウェイズ', dam:'ラヴェンダー', damsire:'スーパーグレイ', rating:85, surface:'芝', distMin:1400, distMax:2000, style:'追込', growth:'普通', retire:1998, wins:[], note:'40戦15勝。G1を8勝し、1992/93年の豪年度代表馬。2018年にニュージーランドの競馬の殿堂入り' },
+ // 出典：https://en.wikipedia.org/wiki/Mr_Tiz
+ { name:'ミスターティズ', nameEn:'Mr Tiz', country:'新', born:1984, sex:'セ', coat:'鹿毛', sire:'ブレッチングリー', dam:'ユアティズ', damsire:'ビスマーク', rating:85, surface:'芝', distMin:1100, distMax:1400, style:'先行', growth:'遅め', retire:1991, wins:[], note:'36戦17勝。ニュージーランドのスプリントの G1 を重ね、豪州のザギャラクシーも勝った。2014年にニュージーランドの競馬の殿堂入り。脚質は推定' },
+ // 出典：https://en.wikipedia.org/wiki/Castletown_(horse)
+ { name:'キャッスルタウン', nameEn:'Castletown', country:'新', born:1986, sex:'セ', coat:'鹿毛', sire:'ワンパウンドスターリング', dam:'モナカラ', damsire:'レヴモス', rating:85, surface:'芝', distMin:2000, distMax:3200, style:'差し', growth:'持続', retire:1994, wins:[], note:'103戦16勝。ウェリントンカップを3度勝った長距離馬。2014年にニュージーランドの競馬の殿堂入り。脚質は推定' },
 ]);
 })();
